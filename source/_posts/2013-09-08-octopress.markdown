@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "octopress"
+title: "octopress 始めました"
 date: 2013-09-08 22:58
 comments: true
 categories: octopress
