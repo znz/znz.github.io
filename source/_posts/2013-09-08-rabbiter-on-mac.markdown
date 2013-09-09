@@ -5,7 +5,7 @@ date: 2013-09-08 21:30
 comments: true
 categories: ruby rabbit
 ---
-homebrew を使った Mac 環境で rabbiter が動くようになりました。
+homebrew を使った Mac OS X 10.8.4 環境で rabbiter (2.0.1) が動くようになりました。
 
 <!--more-->
 
