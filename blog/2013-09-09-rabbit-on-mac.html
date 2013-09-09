@@ -5,12 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>octopress 始めました - ZnZ Blog</title>
+  <title>Mac で rabbit が動かなくなったので brew reinstall したら直った - ZnZ Blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="octopress で github pages を作ってみました。
-インストール記事などは複数あるので気になった点を列挙するだけにします。 ruby のバージョン 2.0.0 ではなく 1.9.3 になっていたが、 github-pages という gem でわかるように github &hellip;">
+  <meta name="description" content="いつの間にか動かなくなっていた rabbit (2.1.1) が brew reinstall で動くようになったという話です。 現象としては rabbit のウィンドウが出てくるのに無反応で、スライドの内容も表示されないし、クリックにも反応せず、 Ctrl+C での停止もきかないので kill &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-09-08-octopress.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-09-09-rabbit-on-mac.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="ZnZ Blog" type="application/atom+xml">
@@ -77,7 +76,7 @@
   
   <header>
     
-      <h1 class="entry-title">octopress 始めました</h1>
+      <h1 class="entry-title">Mac で rabbit が動かなくなったので brew reinstall したら直った</h1>
     
     
       <p class="meta">
@@ -93,7 +92,7 @@
   
 
 
-<time datetime="2013-09-08T22:58:00+09:00" pubdate data-updated="true">2013-09-08 (Sun)</time>
+<time datetime="2013-09-09T23:00:00+09:00" pubdate data-updated="true">2013-09-09 (Mon)</time>
         
          | <a href="#disqus_thread">Comments</a>
         
@@ -102,71 +101,36 @@
   </header>
 
 
-<div class="entry-content"><p>octopress で github pages を作ってみました。
-インストール記事などは複数あるので気になった点を列挙するだけにします。</p>
+<div class="entry-content"><p>いつの間にか動かなくなっていた rabbit (2.1.1) が <code>brew reinstall</code> で動くようになったという話です。</p>
 
 <!--more-->
 
 
-<ul>
-<li>ruby のバージョン
+<p>現象としては rabbit のウィンドウが出てくるのに無反応で、スライドの内容も表示されないし、クリックにも反応せず、 <code>Ctrl+C</code> での停止もきかないので <code>kill -KILL</code> で強制終了するしかないという状態でした。</p>
 
-<ul>
-<li>2.0.0 ではなく 1.9.3 になっていたが、 github-pages という gem でわかるように github pages で使われているのが 1.9.3 のようなので、 1.9.3 を使うことにした。</li>
-<li>後でわかったんですが、 octopress の場合はローカルで生成するようなので、 2.0.0 でも問題なく使えそうでした。</li>
-<li><code>.ruby-version</code> に <code>1.9.3</code> とだけあって、 rbenv のパッチレベル付きのバージョンにマッチしなかったので、最初は <code>rbenv shell 1.9.3-p448</code> で作業していました。 (後で <code>rbenv local 1.9.3-p448</code> にしました。)</li>
-</ul>
-</li>
-<li>使い始め
+<p>現象から考えて、リンクしているライブラリとの不整合が原因だろうと予想してインストール手順をやり直すことにしました。</p>
 
-<ul>
-<li><code>git clone git://github.com/imathis/octopress.git octopress</code></li>
-<li><code>cd octopress</code></li>
-<li><code>rake setup_github_pages</code>
+<p><a href="http://rabbit-shocker.org/ja/install/homebrew.html">Mac OS XでHomebrewを使ったインストール方法</a> の「brew install と brew link の実行」の手順を以下のようにちょっと変更してやり直したら動くようになりました。</p>
 
-<ul>
-<li><code>Repository url: git@github.com:znz/znz.github.io</code></li>
-</ul>
-</li>
-<li><code>_config.yml</code> を設定</li>
-<li><code>rake install</code></li>
-<li><code>_config.yml</code> を設定</li>
-<li><code>rake deploy</code></li>
-<li><code>rake new_post</code>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>brew reinstall cairo
+</span><span class='line'>brew unlink cairo
+</span><span class='line'>brew link cairo
+</span><span class='line'>brew unlink pixman
+</span><span class='line'>brew link --overwrite pixman
+</span><span class='line'>brew reinstall pango
+</span><span class='line'>brew reinstall gtk+
+</span><span class='line'>brew reinstall poppler --with-glib</span></code></pre></td></tr></table></div></figure>
 
-<ul>
-<li><code>Enter a title for your post:</code> ときいてくるので <code>rake new_post[title]</code> よりも楽</li>
-</ul>
-</li>
-<li><code>rake preview</code> で確認しながら書く</li>
-<li><code>rake gen_deploy</code>
 
-<ul>
-<li><code>rake generate</code> 相当がないと変更が反映されない (<code>_config.yml</code> を変更したときなど)</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><code>CNAME</code>
-
-<ul>
-<li>octopress 側では <code>source/CNAME</code> に置く必要がありました。</li>
-</ul>
-</li>
-<li>Excerpts
-
-<ul>
-<li><a href="http://octopress.org/docs/blogging/plugins/">http://octopress.org/docs/blogging/plugins/</a> にあるように <code>&lt;!--more--&gt;</code> と書いておくとトップに表示される内容を最初の方だけに出来ました。</li>
-</ul>
-</li>
-<li>ブランチ
-
-<ul>
-<li>手元では source ブランチで作業するようになっていて、 github pages へ deploy される master ブランチは <code>_deploy</code> ディレクトリにある別レポジトリにありました。</li>
-</ul>
-</li>
-</ul>
-
+<p>これでも動かなければ gem も uninstall して install し直す予定でした。</p>
 </div>
 
 
@@ -189,12 +153,12 @@
   
 
 
-<time datetime="2013-09-08T22:58:00+09:00" pubdate data-updated="true">2013-09-08 (Sun)</time>
+<time datetime="2013-09-09T23:00:00+09:00" pubdate data-updated="true">2013-09-09 (Mon)</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/octopress/'>octopress</a>
+    <a class='category' href='/blog/categories/homebrew/'>homebrew</a>, <a class='category' href='/blog/categories/mac/'>mac</a>, <a class='category' href='/blog/categories/rabbit/'>rabbit</a>
   
 </span>
 
@@ -203,7 +167,7 @@
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-09-08-octopress.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-09-08-octopress.html" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-09-09-rabbit-on-mac.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-09-09-rabbit-on-mac.html" >Tweet</a>
   
   
   
@@ -214,10 +178,8 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-09-08-rabbiter-on-mac.html" title="Previous Post: Mac で rabbiter が動いた">&laquo; Mac で rabbiter が動いた</a>
+        <a class="basic-alignment left" href="/blog/2013-09-08-octopress.html" title="Previous Post: octopress 始めました">&laquo; octopress 始めました</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-09-09-rabbit-on-mac.html" title="Next Post: Mac で rabbit が動かなくなったので brew reinstall したら直った">Mac で rabbit が動かなくなったので brew reinstall したら直った &raquo;</a>
       
     </p>
   </footer>
@@ -304,8 +266,8 @@
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-09-08-octopress.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-09-08-octopress.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-09-09-rabbit-on-mac.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-09-09-rabbit-on-mac.html';
         var disqus_script = 'embed.js';
       
     (function () {
