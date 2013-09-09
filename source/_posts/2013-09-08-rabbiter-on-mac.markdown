@@ -14,6 +14,7 @@ rabbiter の issues に報告していた
 と
 [glib-networking のルート証明書の問題](https://github.com/rabbit-shocker/rabbiter/issues/2)
 が解決したので、 `glib-networking` を `brew reinstall glib-networking --with-curl-ca-bundle` でインストールすれば使えるようになりました。
+ちなみに、初回のインストールでも `brew install` ではなく `brew reinstall` で大丈夫のようです。
 
 以下のように `configure` に `--with-ca-certificates` が付いていれば使えます。
 
