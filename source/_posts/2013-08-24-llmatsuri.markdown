@@ -3,7 +3,7 @@ layout: post
 title: "LLまつりでLTしました"
 date: 2013-08-24
 comments: true
-categories: event shell LL
+categories: event jus shell
 ---
 [LLまつり](http://ll.jus.or.jp/2013/) で「シェルスクリプトで簡易ping監視」というタイトルでライトニングトークをしてきました。
 

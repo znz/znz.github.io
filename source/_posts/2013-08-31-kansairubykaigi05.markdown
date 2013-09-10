@@ -3,7 +3,7 @@ layout: post
 title: "関西Ruby会議05で migrate to magazine.rubyist.net という発表をしました"
 date: 2013-08-31
 comments: true
-categories: event ruby rubykaigi
+categories: event rubykaigi rubima ruby
 ---
 [関西Ruby会議05](http://regional.rubykaigi.org/kansai05) というイベントで
 「migrate to magazine.rubyist.net」というタイトルで、
