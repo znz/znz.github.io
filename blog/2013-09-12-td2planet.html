@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: mac - ZnZ Blog</title>
+  <title>td2planet を rubyforge から github に移行してリリース - ZnZ Blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Category: mac">
+  <meta name="description" content="tDiary の日付ごとのまとまりを意識したフィードアグリゲータの td2planet を rubyforge から github に移行して、 ruby 2.0.0 対応を確認して、 0.3.0 としてリリースしました。 rubyforge から github への移行 rubyforge は &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jpblog/categories/mac/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-09-12-td2planet.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="ZnZ Blog" type="application/atom+xml">
@@ -72,50 +72,180 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: mac</h1>
+    
+      <h1 class="entry-title">td2planet を rubyforge から github に移行してリリース</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-12T22:43:00+09:00" pubdate data-updated="true">2013-09-12 (Thu)</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
+<div class="entry-content"><p>tDiary の日付ごとのまとまりを意識したフィードアグリゲータの td2planet を rubyforge から github に移行して、 ruby 2.0.0 対応を確認して、 0.3.0 としてリリースしました。</p>
 
-  
-  <h2>2013</h2>
-
-<article>
-  
-<h1><a href="/blog/2013-09-09-rabbit-on-mac.html">Mac で rabbit が動かなくなったので brew reinstall したら直った</a></h1>
-<time datetime="2013-09-09T23:00:00+09:00" pubdate><span class='month'>Sep</span> <span class='day'>09</span> <span class='year'>2013</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/homebrew/'>homebrew</a>, <a class='category' href='/blog/categories/mac/'>mac</a>, <a class='category' href='/blog/categories/rabbit/'>rabbit</a></span>
-</footer>
+<!--more-->
 
 
-</article>
+<h2>rubyforge から github への移行</h2>
+
+<p>rubyforge は
+<a href="http://rubyforge.org/scm/?group_id=3122">RubyForge: TD2Planet: SCM Repository</a>
+に書いてあるように http か svn か svn+ssh でアクセス出来ますが、
+今回は svn から取得したものを github に移行しました。</p>
+
+<p>小さいレポジトリだったこともあり、手順としては以下のように単純に移行出来ました。</p>
+
+<ol>
+<li><code>git svn clone -s svn://rubyforge.org/var/svn/td2planet</code></li>
+<li>github 上でレポジトリ作成</li>
+<li><code>git remote add origin git@github.com:znz/td2planet.git</code></li>
+<li><code>git push -u origin master</code></li>
+</ol>
 
 
+<h2>ruby 2.0.0 対応確認</h2>
 
-<article>
-  
-<h1><a href="/blog/2013-09-08-rabbiter-on-mac.html">Mac で rabbiter が動いた</a></h1>
-<time datetime="2013-09-08T21:30:00+09:00" pubdate><span class='month'>Sep</span> <span class='day'>08</span> <span class='year'>2013</span></time>
+<p>単純に README に書いてある <code>ruby -I lib bin/td2planet.rb config.yaml</code> で問題なく動きました。</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/homebrew/'>homebrew</a>, <a class='category' href='/blog/categories/mac/'>mac</a>, <a class='category' href='/blog/categories/rabbit/'>rabbit</a></span>
-</footer>
+<p><a href="https://gist.github.com/unak/3038095">The History of Ruby</a>
+によると作り始めた 2007 年はまだ 1.9.0 の開発中だったので、
+その頃でも magic comment をちゃんと書いたり、
+内部エンコーディングは UTF-8 に統一したりなどを
+気をつけていれば、
+ruby 自体の互換性は高いと言うことがわかります。</p>
+
+<p>他には以下のような変更をしました。</p>
+
+<ul>
+<li><code>setup.rb</code> と関連する LGPL 削除など</li>
+<li>README と README.ja に拡張子の <code>.rdoc</code> を追加</li>
+<li>gemspec 更新
+
+<ul>
+<li>homepage を rubyforge から github に変更</li>
+<li>README のファイル名変更対応</li>
+<li>license 追加</li>
+</ul>
+</li>
+<li>バージョン変更</li>
+<li><code>-Ku</code> から ruby が 1.9 未満のときだけ <code>$KCODE</code> を設定に変更</li>
+</ul>
 
 
-</article>
+<p><code>setup.rb</code> は ruby 1.9 以降に対応しているのかわからなかったのと、
+ライセンスを MIT に統一するために削除しました。</p>
+
+<h2>リリース</h2>
+
+<p>別のリリース作業をした時に <code>~/.gem/credentials</code> は作成済みだったので、
+リリースは以下の手順だけで出来ました。
+<code>~/.gem/credentials</code> がまだないときは <code>gem push</code> の時に <code>rubygems.org</code> のアカウントか <code>rubyforge.org</code> のアカウントが必要になります。</p>
+
+<ul>
+<li><code>gem build *.gemspec</code></li>
+<li><code>gem push *.gem</code></li>
+</ul>
+
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% gem build *.gemspec
+</span><span class='line'>  Successfully built RubyGem
+</span><span class='line'>  Name: td2planet
+</span><span class='line'>  Version: 0.3.0
+</span><span class='line'>  File: td2planet-0.3.0.gem
+</span><span class='line'>% gem push td2planet-0.3.0.gem
+</span><span class='line'>Pushing gem to https://rubygems.org...
+</span><span class='line'>Successfully registered gem: td2planet (0.3.0)</span></code></pre></td></tr></table></div></figure>
 
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-12T22:43:00+09:00" pubdate data-updated="true">2013-09-12 (Thu)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ruby/'>ruby</a>, <a class='category' href='/blog/categories/td2planet/'>td2planet</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-09-12-td2planet.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-09-12-td2planet.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-09-12-td2planet.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013-09-11-tagcloud.html" title="Previous Post: タグクラウドプラグインを入れた">&laquo; タグクラウドプラグインを入れた</a>
+      
+      
+    </p>
+  </footer>
 </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -211,7 +341,10 @@
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-09-12-td2planet.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-09-12-td2planet.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
