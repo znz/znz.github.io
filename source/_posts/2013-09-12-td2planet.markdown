@@ -1,0 +1,69 @@
+---
+layout: post
+title: "td2planet を rubyforge から github に移行してリリース"
+date: 2013-09-12 22:43
+comments: true
+categories: ruby td2planet
+---
+tDiary の日付ごとのまとまりを意識したフィードアグリゲータの td2planet を rubyforge から github に移行して、 ruby 2.0.0 対応を確認して、 0.3.0 としてリリースしました。
+
+<!--more-->
+
+## rubyforge から github への移行
+
+rubyforge は
+[RubyForge: TD2Planet: SCM Repository](http://rubyforge.org/scm/?group_id=3122)
+に書いてあるように http か svn か svn+ssh でアクセス出来ますが、
+今回は svn から取得したものを github に移行しました。
+
+小さいレポジトリだったこともあり、手順としては以下のように単純に移行出来ました。
+
+1. `git svn clone -s svn://rubyforge.org/var/svn/td2planet`
+2. github 上でレポジトリ作成
+3. `git remote add origin git@github.com:znz/td2planet.git`
+4. `git push -u origin master`
+
+## ruby 2.0.0 対応確認
+
+単純に README に書いてある `ruby -I lib bin/td2planet.rb config.yaml` で問題なく動きました。
+
+[The History of Ruby](https://gist.github.com/unak/3038095)
+によると作り始めた 2007 年はまだ 1.9.0 の開発中だったので、
+その頃でも magic comment をちゃんと書いたり、
+内部エンコーディングは UTF-8 に統一したりなどを
+気をつけていれば、
+ruby 自体の互換性は高いと言うことがわかります。
+
+他には以下のような変更をしました。
+
+* `setup.rb` と関連する LGPL 削除など
+* README と README.ja に拡張子の `.rdoc` を追加
+* gemspec 更新
+  * homepage を rubyforge から github に変更
+  * README のファイル名変更対応
+  * license 追加
+* バージョン変更
+* `-Ku` から ruby が 1.9 未満のときだけ `$KCODE` を設定に変更
+
+`setup.rb` は ruby 1.9 以降に対応しているのかわからなかったのと、
+ライセンスを MIT に統一するために削除しました。
+
+## リリース
+
+別のリリース作業をした時に `~/.gem/credentials` は作成済みだったので、
+リリースは以下の手順だけで出来ました。
+`~/.gem/credentials` がまだないときは `gem push` の時に `rubygems.org` のアカウントか `rubyforge.org` のアカウントが必要になります。
+
+* `gem build *.gemspec`
+* `gem push *.gem`
+
+```
+% gem build *.gemspec
+  Successfully built RubyGem
+  Name: td2planet
+  Version: 0.3.0
+  File: td2planet-0.3.0.gem
+% gem push td2planet-0.3.0.gem
+Pushing gem to https://rubygems.org...
+Successfully registered gem: td2planet (0.3.0)
+```
