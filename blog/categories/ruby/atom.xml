@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | ZnZ Blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-09-13T22:06:01+09:00</updated>
+  <updated>2013-09-14T23:49:31+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,74 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[独自ビルドした ruby を rbenv で使う]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-09-14-use-custom-ruby-with-rbenv.html"/>
+    <updated>2013-09-14T23:22:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/use-custom-ruby-with-rbenv</id>
+    <content type="html"><![CDATA[<p><a href="https://github.com/sstephenson/rbenv">rbenv</a>
+を使っているなら、
+<a href="https://github.com/sstephenson/ruby-build">ruby-build</a>
+でインストールしたもの以外にも
+自分でビルドした ruby も rbenv で切り替えたくなることがありますが、
+これは簡単に出来ます。</p>
+
+<!--more-->
+
+
+<p>元々 <code>rbenv</code> に <code>ruby-build</code> が必須というわけではないので、
+<code>configure</code> の <code>--prefix</code> に
+<code>~/.rbenv/versions/some-name</code>
+を指定してインストールすれば良いだけです。</p>
+
+<p>名前にはシェルで特別な意味を持つ文字を避ければ
+何でも良さそうですが、
+<code>rbenv install</code> で上書きされてしまう危険があるのと
+単純に紛らわしいので、
+<code>ruby-build</code> でインストール出来る名前は避けた方が無難だと思います。</p>
+
+<p>例えば以下のように <code>configure</code> してインストールすれば <code>rbenv shell trunk</code> などで <code>ruby-build</code> でインストールしたものと同様に使えます。</p>
+
+<ul>
+<li><code>./configure --prefix=$HOME/.rbenv/versions/trunk --enable-shared --enable-debug-env CPPFLAGS=-DRUBY_DEBUG_ENV</code></li>
+<li><code>./configure --prefix=$HOME/.rbenv/versions/git --enable-shared --enable-debug-env CPPFLAGS='-DRUBY_DEBUG_ENV -DARRAY_DEBUG'</code></li>
+<li><code>./configure --prefix=$HOME/.rbenv/versions/git-debug --enable-shared --enable-debug-env CPPFLAGS='-DRUBY_DEBUG_ENV -DARRAY_DEBUG -DBIGDECIMAL_DEBUG'</code></li>
+</ul>
+
+
+<p><code>$HOME</code> を使っている理由は
+<code>--prefix=~/path/to/somewhere</code>
+だと <code>configure</code> の実行前には展開されず、
+<code>autoconf</code> の <code>configure</code> ではなかったと思いますが、
+<code>./~/path/to/somewhere</code>
+にインストールされてしまうという問題が起きたことがあったので、
+それ以来
+<code>$HOME</code>
+を使って目の前でフルパスに展開されるようにしています。</p>
+
+<p><code>-DRUBY_DEBUG_ENV</code> などを渡すのに <code>CPPFLAGS</code> を使うのは
+<a href="https://github.com/akr/chkbuild">chkbuild</a>
+のやり方を
+<a href="http://rubyci.org/">Ruby CI</a>
+のログをみて参考にしました。</p>
+
+<p>安定したビルドを使いたいのなら、
+Ruby CI
+で使われているのと同じような引数を使うのが良いと思います。</p>
+
+<p>普段私が使っているのは
+<code>CPPFLAGS='-DRUBY_DEBUG_ENV -DARRAY_DEBUG</code>
+です。</p>
+
+<p><code>-DBIGDECIMAL_DEBUG</code>
+まで付けると、デバッグ出力が多すぎたり、
+<code>make test-all</code>
+が途中で止まってしまったりして
+問題が起きそうなので、
+おすすめしません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[td2planet を rubyforge から github に移行してリリース]]></title>

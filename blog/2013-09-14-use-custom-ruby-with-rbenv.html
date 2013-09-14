@@ -5,11 +5,17 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: octopress - ZnZ Blog</title>
+  <title>独自ビルドした ruby を rbenv で使う - ZnZ Blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Category: octopress">
+  <meta name="description" content="rbenv
+を使っているなら、
+ruby-build
+でインストールしたもの以外にも
+自分でビルドした ruby も rbenv で切り替えたくなることがありますが、
+これは簡単に出来ます。 元々 rbenv に ruby-build が必須というわけではないので、
+configure の -- &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +24,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jpblog/categories/octopress/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-09-14-use-custom-ruby-with-rbenv.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="ZnZ Blog" type="application/atom+xml">
@@ -76,50 +82,167 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: octopress</h1>
+    
+      <h1 class="entry-title">独自ビルドした ruby を rbenv で使う</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-14T23:22:00+09:00" pubdate data-updated="true">2013-09-14 (Sat)</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
+<div class="entry-content"><p><a href="https://github.com/sstephenson/rbenv">rbenv</a>
+を使っているなら、
+<a href="https://github.com/sstephenson/ruby-build">ruby-build</a>
+でインストールしたもの以外にも
+自分でビルドした ruby も rbenv で切り替えたくなることがありますが、
+これは簡単に出来ます。</p>
 
-  
-  <h2>2013</h2>
-
-<article>
-  
-<h1><a href="/blog/2013-09-11-tagcloud.html">タグクラウドプラグインを入れた</a></h1>
-<time datetime="2013-09-11T00:00:00+09:00" pubdate><span class='month'>Sep</span> <span class='day'>11</span> <span class='year'>2013</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/octopress/'>octopress</a></span>
-</footer>
+<!--more-->
 
 
-</article>
+<p>元々 <code>rbenv</code> に <code>ruby-build</code> が必須というわけではないので、
+<code>configure</code> の <code>--prefix</code> に
+<code>~/.rbenv/versions/some-name</code>
+を指定してインストールすれば良いだけです。</p>
+
+<p>名前にはシェルで特別な意味を持つ文字を避ければ
+何でも良さそうですが、
+<code>rbenv install</code> で上書きされてしまう危険があるのと
+単純に紛らわしいので、
+<code>ruby-build</code> でインストール出来る名前は避けた方が無難だと思います。</p>
+
+<p>例えば以下のように <code>configure</code> してインストールすれば <code>rbenv shell trunk</code> などで <code>ruby-build</code> でインストールしたものと同様に使えます。</p>
+
+<ul>
+<li><code>./configure --prefix=$HOME/.rbenv/versions/trunk --enable-shared --enable-debug-env CPPFLAGS=-DRUBY_DEBUG_ENV</code></li>
+<li><code>./configure --prefix=$HOME/.rbenv/versions/git --enable-shared --enable-debug-env CPPFLAGS='-DRUBY_DEBUG_ENV -DARRAY_DEBUG'</code></li>
+<li><code>./configure --prefix=$HOME/.rbenv/versions/git-debug --enable-shared --enable-debug-env CPPFLAGS='-DRUBY_DEBUG_ENV -DARRAY_DEBUG -DBIGDECIMAL_DEBUG'</code></li>
+</ul>
 
 
+<p><code>$HOME</code> を使っている理由は
+<code>--prefix=~/path/to/somewhere</code>
+だと <code>configure</code> の実行前には展開されず、
+<code>autoconf</code> の <code>configure</code> ではなかったと思いますが、
+<code>./~/path/to/somewhere</code>
+にインストールされてしまうという問題が起きたことがあったので、
+それ以来
+<code>$HOME</code>
+を使って目の前でフルパスに展開されるようにしています。</p>
 
-<article>
-  
-<h1><a href="/blog/2013-09-08-octopress.html">octopress 始めました</a></h1>
-<time datetime="2013-09-08T22:58:00+09:00" pubdate><span class='month'>Sep</span> <span class='day'>08</span> <span class='year'>2013</span></time>
+<p><code>-DRUBY_DEBUG_ENV</code> などを渡すのに <code>CPPFLAGS</code> を使うのは
+<a href="https://github.com/akr/chkbuild">chkbuild</a>
+のやり方を
+<a href="http://rubyci.org/">Ruby CI</a>
+のログをみて参考にしました。</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/octopress/'>octopress</a></span>
-</footer>
+<p>安定したビルドを使いたいのなら、
+Ruby CI
+で使われているのと同じような引数を使うのが良いと思います。</p>
 
+<p>普段私が使っているのは
+<code>CPPFLAGS='-DRUBY_DEBUG_ENV -DARRAY_DEBUG</code>
+です。</p>
 
-</article>
-
+<p><code>-DBIGDECIMAL_DEBUG</code>
+まで付けると、デバッグ出力が多すぎたり、
+<code>make test-all</code>
+が途中で止まってしまったりして
+問題が起きそうなので、
+おすすめしません。</p>
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-14T23:22:00+09:00" pubdate data-updated="true">2013-09-14 (Sat)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/rbenv/'>rbenv</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-09-14-use-custom-ruby-with-rbenv.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-09-14-use-custom-ruby-with-rbenv.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-09-14-use-custom-ruby-with-rbenv.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013-09-13-homebrew-used-options.html" title="Previous Post: homebrew の reinstall で使われるオプションの保存場所">&laquo; homebrew の reinstall で使われるオプションの保存場所</a>
+      
+      
+    </p>
+  </footer>
 </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -215,7 +338,10 @@
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-09-14-use-custom-ruby-with-rbenv.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-09-14-use-custom-ruby-with-rbenv.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
