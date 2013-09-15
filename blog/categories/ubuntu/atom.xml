@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: mac | ZnZ Blog]]></title>
-  <link href="http://blog.n-z.jp/blog/categories/mac/atom.xml" rel="self"/>
+  <title><![CDATA[Category: ubuntu | ZnZ Blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
   <updated>2013-09-15T21:45:50+09:00</updated>
   <id>http://blog.n-z.jp/</id>
@@ -335,118 +335,6 @@ Found linux image: /boot/vmlinuz-3.8.0-29-generic
 Found initrd image: /boot/initrd.img-3.8.0-29-generic
 Found memtest86+ image: /memtest86+.bin
 done
-</code></p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[homebrew の reinstall で使われるオプションの保存場所]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-13-homebrew-used-options.html"/>
-    <updated>2013-09-13T21:58:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/homebrew-used-options</id>
-    <content type="html"><![CDATA[<p><a href="/blog/2013-09-08-rabbiter-on-mac.html">rabbiter の記事</a>
-で、
-「一度 <code>--with-curl-ca-bundle</code> 付きでインストールした後だと、以下のようにオプションなしの reinstall でもオプションが付くようです。」
-と書きましたが、そのオプションがどこに保存されているのかを調べました。</p>
-
-<!--more-->
-
-
-<p>実際に調べるのはソースをたどったりして結構大変だったのですが、
-最終的に
-<code>/usr/local/Cellar/glib-networking/2.36.2/INSTALL_RECEIPT.json</code>
-に <code>used_options</code> というキーで保存されているということがわかりました。</p>
-
-<p><code>Cellar</code> はインストールしたファイルの実体が入るところなので、
-あらかじめダミーの <code>INSTALL_RECEIPT.json</code> を用意しておいて
-オプションなしの <code>brew reinstall</code> の時に使われるオプションを
-埋め込んでおくという用途に使うのには向いていないということが
-わかりました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Mac で rabbit が動かなくなったので brew reinstall したら直った]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-09-rabbit-on-mac.html"/>
-    <updated>2013-09-09T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rabbit-on-mac</id>
-    <content type="html"><![CDATA[<p>いつの間にか動かなくなっていた rabbit (2.1.1) が <code>brew reinstall</code> で動くようになったという話です。</p>
-
-<!--more-->
-
-
-<p>現象としては rabbit のウィンドウが出てくるのに無反応で、スライドの内容も表示されないし、クリックにも反応せず、 <code>Ctrl+C</code> での停止もきかないので <code>kill -KILL</code> で強制終了するしかないという状態でした。</p>
-
-<p>現象から考えて、リンクしているライブラリとの不整合が原因だろうと予想してインストール手順をやり直すことにしました。</p>
-
-<p><a href="http://rabbit-shocker.org/ja/install/homebrew.html">Mac OS XでHomebrewを使ったインストール方法</a> の「brew install と brew link の実行」の手順を以下のようにちょっと変更してやり直したら動くようになりました。</p>
-
-<p><code>
-brew reinstall cairo
-brew unlink cairo
-brew link cairo
-brew unlink pixman
-brew link --overwrite pixman
-brew reinstall pango
-brew reinstall gtk+
-brew reinstall poppler --with-glib
-</code></p>
-
-<p>これでも動かなければ gem も uninstall して install し直す予定でした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Mac で rabbiter が動いた]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-08-rabbiter-on-mac.html"/>
-    <updated>2013-09-08T21:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rabbiter-on-mac</id>
-    <content type="html"><![CDATA[<p>homebrew を使った Mac OS X 10.8.4 環境で rabbiter (2.0.1) が動くようになりました。</p>
-
-<!--more-->
-
-
-<p>rabbiter の issues に報告していた
-<a href="https://github.com/rabbit-shocker/rabbiter/issues/1">show_uri の問題</a>
-と
-<a href="https://github.com/rabbit-shocker/rabbiter/issues/2">glib-networking のルート証明書の問題</a>
-が解決したので、 <code>glib-networking</code> を <code>brew reinstall glib-networking --with-curl-ca-bundle</code> でインストールすれば使えるようになりました。
-ちなみに、初回のインストールでも <code>brew install</code> ではなく <code>brew reinstall</code> で大丈夫のようです。</p>
-
-<p>以下のように <code>configure</code> に <code>--with-ca-certificates</code> が付いていれば使えます。</p>
-
-<p><code>
-% brew reinstall glib-networking --with-curl-ca-bundle
-==&gt; Reinstalling glib-networking --with-curl-ca-bundle
-==&gt; Downloading http://ftp.gnome.org/pub/GNOME/sources/glib-networking/2.36/glib-networkin
-Already downloaded: /Library/Caches/Homebrew/glib-networking-2.36.2.tar.xz
-==&gt; ./configure --with-ca-certificates=/usr/local/opt/curl-ca-bundle/share/ca-bundle.crt -
-==&gt; make install
-🍺  /usr/local/Cellar/glib-networking/2.36.2: 68 files, 352K, built in 18 seconds
-</code></p>
-
-<p>以下のように <code>configure</code> に <code>--without-ca-certificates</code> と付いているときは rabbiter が使えません。</p>
-
-<p><code>
-% brew reinstall glib-networking
-==&gt; Reinstalling glib-networking
-==&gt; Downloading http://ftp.gnome.org/pub/GNOME/sources/glib-networking/2.36/glib-networkin
-Already downloaded: /Library/Caches/Homebrew/glib-networking-2.36.2.tar.xz
-==&gt; ./configure --without-ca-certificates --prefix=/usr/local/Cellar/glib-networking/2.36.
-==&gt; make install
-🍺  /usr/local/Cellar/glib-networking/2.36.2: 68 files, 352K, built in 21 seconds
-</code></p>
-
-<p>一度 <code>--with-curl-ca-bundle</code> 付きでインストールした後だと、以下のようにオプションなしの reinstall でもオプションが付くようです。</p>
-
-<p><code>
-% brew reinstall glib-networking
-==&gt; Reinstalling glib-networking --with-curl-ca-bundle
-==&gt; Downloading http://ftp.gnome.org/pub/GNOME/sources/glib-networking/2.36/glib-networkin
-Already downloaded: /Library/Caches/Homebrew/glib-networking-2.36.2.tar.xz
-==&gt; ./configure --with-ca-certificates=/usr/local/opt/curl-ca-bundle/share/ca-bundle.crt -
-==&gt; make install
-🍺  /usr/local/Cellar/glib-networking/2.36.2: 68 files, 352K, built in 18 seconds
 </code></p>
 ]]></content>
   </entry>

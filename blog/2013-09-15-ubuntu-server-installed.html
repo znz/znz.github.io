@@ -1,0 +1,748 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Ubuntu Server 12.04.3 LTS をインストールした - ZnZ Blog</title>
+  <meta name="author" content="Kazuhiro NISHIYAMA">
+
+  
+  <meta name="description" content="自宅サーバーのシステムディスク (sda) が壊れたので、 HDD を入れ替えて、せっかくなのでシステムをきれいな状態にするために ubuntu-12.04.3-server-amd64.iso からインストールし直しました。
+その初期設定の話です。 インストール準備 ISO イメージダウンロード &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-09-15-ubuntu-server-installed.html">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="ZnZ Blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-43859023-1', 'n-z.jp');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">ZnZ Blog</a></h1>
+  
+    <h2>znz memo</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://www.google.co.jp/cse" id="cse-search-box">
+  <div>
+    <input type="hidden" name="cx" value="partner-pub-4711975605457723:5173725094" />
+    <input type="hidden" name="ie" value="UTF-8" />
+    <input type="text" name="q" size="40" />
+    <input type="submit" name="sa" value="検索" />
+  </div>
+</form>
+
+<script type="text/javascript" src="http://www.google.co.jp/coop/cse/brand?form=cse-search-box&amp;lang=ja"></script>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Ubuntu Server 12.04.3 LTS をインストールした</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-15T20:02:00+09:00" pubdate data-updated="true">2013-09-15 (Sun)</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>自宅サーバーのシステムディスク (sda) が壊れたので、 HDD を入れ替えて、せっかくなのでシステムをきれいな状態にするために <code>ubuntu-12.04.3-server-amd64.iso</code> からインストールし直しました。
+その初期設定の話です。</p>
+
+<!--more-->
+
+
+<h2>インストール準備</h2>
+
+<h3>ISO イメージダウンロード</h3>
+
+<p>まずインストール用の ISO ファイルをダウンロードしました。
+<a href="http://www.ubuntu.com/download">Get Ubuntu</a>
+からだと海外ミラーでダウンロードが遅かったので、
+国内のミラーを探してみたところ、
+<code>ftp://ftp.riken.go.jp/Linux/ubuntu-iso/CDs/precise/</code>
+だと torrent ファイルや metalink のファイルしか見えなくて、
+<code>ftp</code> ではなく <code>http</code> の
+<code>http://ftp.riken.go.jp/Linux/ubuntu-iso/CDs/precise/</code>
+からだとダウンロード出来ました。</p>
+
+<h3>起動用 USB メモリ準備</h3>
+
+<p>ダウンロードした ISO を <code>dd</code> で USB メモリに書き込んで、そこからインストールしました。
+categories につけた Mac を使っている部分はここだけです。</p>
+
+<p>ネットで調べればいろいろ情報がみつかるように
+<code>diskutil list</code>
+でディスクの番号を確認して、
+<code>dd</code> で読み書きします。
+<code>rdisk</code> の方が速いらしいので、
+実際の書き込みには <code>rdisk</code> を使ったのですが、
+パーティションを <code>unmount</code> しておかないと
+<code>Resource busy</code> で書き込ませんでした。
+eject してしまって <code>diskutil list</code> にも
+出てこない状態にしてしまうと読み書き出来ないので、
+Finder から取り出したり <code>diskutil unmountDisk</code> だと
+ダメでした。</p>
+
+<p>読み込みの例として MBR の部分をバックアップしてダンプしてみました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+<span class='line-number'>70</span>
+<span class='line-number'>71</span>
+<span class='line-number'>72</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% diskutil list
+</span><span class='line'>/dev/disk0
+</span><span class='line'>   #:                       TYPE NAME                    SIZE       IDENTIFIER
+</span><span class='line'>   0:      GUID_partition_scheme                        *251.0 GB   disk0
+</span><span class='line'>   1:                        EFI                         209.7 MB   disk0s1
+</span><span class='line'>   2:          Apple_CoreStorage                         250.1 GB   disk0s2
+</span><span class='line'>   3:                 Apple_Boot Recovery HD             650.0 MB   disk0s3
+</span><span class='line'>/dev/disk1
+</span><span class='line'>   #:                       TYPE NAME                    SIZE       IDENTIFIER
+</span><span class='line'>   0:                  Apple_HFS Macintosh HD           *249.8 GB   disk1
+</span><span class='line'>/dev/disk2
+</span><span class='line'>   #:                       TYPE NAME                    SIZE       IDENTIFIER
+</span><span class='line'>   0:     FDisk_partition_scheme                        *16.1 GB    disk2
+</span><span class='line'>   1:             Windows_FAT_32 NO NAME                 16.1 GB    disk2s1
+</span><span class='line'>% sudo dd if=/dev/disk2 of=MF-AU316GBS.mbr bs=512 count=1
+</span><span class='line'>% hexdump -C MF-AU316GBS.mbr
+</span><span class='line'>00000000  33 c0 8e d0 bc 00 7c fb  50 07 50 1f fc be 1b 7c  |3.....|.P.P....||
+</span><span class='line'>00000010  bf 1b 06 50 57 b9 e5 01  f3 a4 cb bd be 07 b1 04  |...PW...........|
+</span><span class='line'>00000020  38 6e 00 7c 09 75 13 83  c5 10 e2 f4 cd 18 8b f5  |8n.|.u..........|
+</span><span class='line'>00000030  83 c6 10 49 74 19 38 2c  74 f6 a0 b5 07 b4 07 8b  |...It.8,t.......|
+</span><span class='line'>00000040  f0 ac 3c 00 74 fc bb 07  00 b4 0e cd 10 eb f2 88  |..&lt;.t...........|
+</span><span class='line'>00000050  4e 10 e8 46 00 73 2a fe  46 10 80 7e 04 0b 74 0b  |N..F.s*.F..~..t.|
+</span><span class='line'>00000060  80 7e 04 0c 74 05 a0 b6  07 75 d2 80 46 02 06 83  |.~..t....u..F...|
+</span><span class='line'>00000070  46 08 06 83 56 0a 00 e8  21 00 73 05 a0 b6 07 eb  |F...V...!.s.....|
+</span><span class='line'>00000080  bc 81 3e fe 7d 55 aa 74  0b 80 7e 10 00 74 c8 a0  |..&gt;.}U.t..~..t..|
+</span><span class='line'>00000090  b7 07 eb a9 8b fc 1e 57  8b f5 cb bf 05 00 8a 56  |.......W.......V|
+</span><span class='line'>000000a0  00 b4 08 cd 13 72 23 8a  c1 24 3f 98 8a de 8a fc  |.....r#..$?.....|
+</span><span class='line'>000000b0  43 f7 e3 8b d1 86 d6 b1  06 d2 ee 42 f7 e2 39 56  |C..........B..9V|
+</span><span class='line'>000000c0  0a 77 23 72 05 39 46 08  73 1c b8 01 02 bb 00 7c  |.w#r.9F.s......||
+</span><span class='line'>000000d0  8b 4e 02 8b 56 00 cd 13  73 51 4f 74 4e 32 e4 8a  |.N..V...sQOtN2..|
+</span><span class='line'>000000e0  56 00 cd 13 eb e4 8a 56  00 60 bb aa 55 b4 41 cd  |V......V.`..U.A.|
+</span><span class='line'>000000f0  13 72 36 81 fb 55 aa 75  30 f6 c1 01 74 2b 61 60  |.r6..U.u0...t+a`|
+</span><span class='line'>00000100  6a 00 6a 00 ff 76 0a ff  76 08 6a 00 68 00 7c 6a  |j.j..v..v.j.h.|j|
+</span><span class='line'>00000110  01 6a 10 b4 42 8b f4 cd  13 61 61 73 0e 4f 74 0b  |.j..B....aas.Ot.|
+</span><span class='line'>00000120  32 e4 8a 56 00 cd 13 eb  d6 61 f9 c3 49 6e 76 61  |2..V.....a..Inva|
+</span><span class='line'>00000130  6c 69 64 20 70 61 72 74  69 74 69 6f 6e 20 74 61  |lid partition ta|
+</span><span class='line'>00000140  62 6c 65 00 45 72 72 6f  72 20 6c 6f 61 64 69 6e  |ble.Error loadin|
+</span><span class='line'>00000150  67 20 6f 70 65 72 61 74  69 6e 67 20 73 79 73 74  |g operating syst|
+</span><span class='line'>00000160  65 6d 00 4d 69 73 73 69  6e 67 20 6f 70 65 72 61  |em.Missing opera|
+</span><span class='line'>00000170  74 69 6e 67 20 73 79 73  74 65 6d 00 00 00 00 00  |ting system.....|
+</span><span class='line'>00000180  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+</span><span class='line'>*
+</span><span class='line'>000001b0  00 00 00 00 00 2c 44 63  18 2e 07 c3 00 00 00 00  |.....,Dc........|
+</span><span class='line'>000001c0  31 00 0c fe ff ff 30 00  00 00 50 f6 de 01 00 00  |1.....0...P.....|
+</span><span class='line'>000001d0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+</span><span class='line'>*
+</span><span class='line'>000001f0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 55 aa  |..............U.|
+</span><span class='line'>00000200
+</span><span class='line'>%  sudo dd if=Downloads/ubuntu-12.04.3-server-amd64.iso of=/dev/rdisk2 bs=1m
+</span><span class='line'>Password:
+</span><span class='line'>dd: /dev/rdisk2: Resource busy
+</span><span class='line'>%  diskutil unmount disk2s1
+</span><span class='line'>Volume NO NAME on disk2s1 unmounted
+</span><span class='line'>%  diskutil list
+</span><span class='line'>/dev/disk0
+</span><span class='line'>   #:                       TYPE NAME                    SIZE       IDENTIFIER
+</span><span class='line'>   0:      GUID_partition_scheme                        *251.0 GB   disk0
+</span><span class='line'>   1:                        EFI                         209.7 MB   disk0s1
+</span><span class='line'>   2:          Apple_CoreStorage                         250.1 GB   disk0s2
+</span><span class='line'>   3:                 Apple_Boot Recovery HD             650.0 MB   disk0s3
+</span><span class='line'>/dev/disk1
+</span><span class='line'>   #:                       TYPE NAME                    SIZE       IDENTIFIER
+</span><span class='line'>   0:                  Apple_HFS Macintosh HD           *249.8 GB   disk1
+</span><span class='line'>/dev/disk2
+</span><span class='line'>   #:                       TYPE NAME                    SIZE       IDENTIFIER
+</span><span class='line'>   0:     FDisk_partition_scheme                        *16.1 GB    disk2
+</span><span class='line'>   1:             Windows_FAT_32 NO NAME                 16.1 GB    disk2s1
+</span><span class='line'>%  sudo dd if=Downloads/ubuntu-12.04.3-server-amd64.iso of=/dev/rdisk2 bs=1m
+</span><span class='line'>665+0 records in
+</span><span class='line'>665+0 records out
+</span><span class='line'>697303040 bytes transferred in 41.551843 secs (16781519 bytes/sec)
+</span><span class='line'>%</span></code></pre></td></tr></table></div></figure>
+
+
+<p>この USB メモリを自作マシンにさして起動してインストールすることになります。</p>
+
+<h2>インストール</h2>
+
+<p>インストール作業は暗号化する以外はあまり特殊なことをせずに最小インストールにしました。</p>
+
+<ul>
+<li>Del キーで EFI BOIS Menu を開いて、起動メニューを開いて USB メモリからを選んで起動しました。</li>
+<li>タスク (tasksel) は何も選択せずにインストールしました。</li>
+<li>1TB の HDD (sda) を暗号化 LVM で初期化しました。</li>
+</ul>
+
+
+<h2>初期設定</h2>
+
+<h3>etckeeper</h3>
+
+<ul>
+<li><code>sudo aptitude install git</code></li>
+<li><code>sudo aptitude install etckeeper</code></li>
+<li><code>sudoedit /etc/etckeeper/etckeeper.conf</code> で <code>VCS="git"</code> と <code>GIT_COMMIT_OPTIONS="-v"</code> を設定</li>
+<li><code>sudo etckeeper init</code></li>
+<li><code>sudo etckeeper commit "Initial commit"</code></li>
+</ul>
+
+
+<h3>ssh</h3>
+
+<p>まず <code>ufw</code> で接続制限をしました。
+多段防御の一つ目としてここではポート番号だけの制限にしています。</p>
+
+<ul>
+<li><code>sudo ufw enable</code></li>
+<li><code>sudo ufw allow 22/tcp</code></li>
+<li><code>sudo ufw limit 22/tcp</code>
+
+<ul>
+<li><code>サポートされていない IPv6 'limit' ルールを飛ばします</code> と出るので、
+IPv6 用に allow と limit の両方を実行しています。</li>
+</ul>
+</li>
+<li><code>sudo ufw allow 3843/tcp</code>
+
+<ul>
+<li>22 以外のポートでも待ち受けるなら、それも許可します。</li>
+<li>ここでは例として 3843 番ポートにしています。
+(実際に使っているポート番号は違います。)</li>
+<li>アタックは少なそうなので、<code>limit</code> は付けていません。</li>
+</ul>
+</li>
+</ul>
+
+
+<p>次に tcp wrapper で接続制限をしました。
+ここでは接続元の制限をしています。
+接続元として使っていて、逆引きが <code>.jp</code> でないところなどは
+別途 <code>sshd: 10.1.2.3</code> のように許可していきます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ egrep '^[^#]' /etc/hosts.deny
+</span><span class='line'>ALL: ALL
+</span><span class='line'>$ egrep '^[^#]' /etc/hosts.allow
+</span><span class='line'>sshd: 127.0.0.1 [::1]
+</span><span class='line'>sshd: 192.168.0.0/16
+</span><span class='line'>sshd: .jp</span></code></pre></td></tr></table></div></figure>
+
+
+<p>最後に <code>/etc/sshd/sshd_config</code> の設定例です。
+<code>ssh_config</code> とは別物なので注意が必要です。</p>
+
+<ul>
+<li><code>Port 3843</code> を追加します。
+
+<ul>
+<li>複数ポートで待ち受けるには <code>Port</code> 設定の行を複数書けば良いです。</li>
+</ul>
+</li>
+<li><code>PermitRootLogin no</code> にします。
+<code>root</code> ログインが必要なら
+<code>PermitRootLogin forced-commands-only</code> か
+<code>PermitRootLogin without-password</code> にすればよく、
+公開サーバーで <code>PermitRootLogin yes</code> にする必要はないはずです。</li>
+<li><code>AllowUsers firstuser</code> で最初のユーザーのログインを許可します。</li>
+<li>ログインするユーザーの <code>.ssh/authorized_keys</code> の設定をしてから
+<code>PasswordAuthentication no</code> の設定をします。
+<code>ChallengeResponseAuthentication no</code> になっていることを
+確認しておかないと
+<code>UsePAM yes</code> との組み合わせで <code>keyboard-interactive</code> 認証が
+発生してパスワードで入れてしまうことがあるので注意が必要です。
+昔はこれが原因で公開鍵認証のみに制限出来ていないという話が多かった気がします。</li>
+</ul>
+
+
+<h3>quota 設定</h3>
+
+<p>ユーザー ID ごとのディスク使用量の把握のために、 <code>quota</code> を設定します。</p>
+
+<p><code>/etc/fstab</code> の
+<code>errors=remount-ro</code> を
+<code>errors=remount-ro,noatime,usrquota,grpquota,user_xattr</code>
+に書き換えます。</p>
+
+<p><code>quota</code> パッケージを入れておけば、次回起動時に自動で
+<code>quotacheck</code> が動いて <code>repquota</code> が使えるようになります。
+ファイルが多いと <code>quotacheck</code> に時間がかかるので、
+出来るだけ最小インストールでファイルが少ないうちに
+有効にした方が時間の節約になります。</p>
+
+<h3>IP アドレス設定</h3>
+
+<p><code>bridge-utils</code> パッケージを入れて、
+<code>sudoedit /etc/network/interfaces</code> で
+<code>br0</code> ありの固定 IP アドレスの設定に変更しました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'># The primary network interface
+</span><span class='line'>auto eth0
+</span><span class='line'>iface eth0 inet manual
+</span><span class='line'>auto br0
+</span><span class='line'>iface br0 inet static
+</span><span class='line'>  address 192.168.xx.yy
+</span><span class='line'>  netmask 255.255.255.0
+</span><span class='line'>  gateway 192.168.253.1
+</span><span class='line'>  dns-nameservers 192.168.xx.yy
+</span><span class='line'>  dns-search home.example.jp
+</span><span class='line'>  bridge_ports eth0
+</span><span class='line'>  bridge_stp off
+</span><span class='line'>  bridge_fd 0
+</span><span class='line'>  bridge_maxwait 0</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>パスフレーズなし起動設定</h3>
+
+<p>リモートから再起動した時などに止まってしまうことを防ぐ設定をします。</p>
+
+<p>これは鍵を暗号化の外に平文で置いておくということで、
+セキュリティ的には弱くなってしまうので、
+そのトレードオフを許容出来るかどうかを
+考えておく必要があります。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ sudo dd if=/dev/random of=/root/sda5_crypt.key bs=512 count=4
+</span><span class='line'>dd: warning: partial read (128 bytes); suggest iflag=fullblock
+</span><span class='line'>0+4 レコード入力
+</span><span class='line'>0+4 レコード出力
+</span><span class='line'>447 バイト (447 B) コピーされました、 0.000294833 秒、 1.5 MB/秒
+</span><span class='line'>$ sudo chmod 400 /root/sda5_crypt.key
+</span><span class='line'>$ sudo cryptsetup luksAddKey /dev/sda5 /root/sda5_crypt.key
+</span><span class='line'>パスフレーズを入力:
+</span><span class='line'>$ sudo mv /root/sda5_crypt.key /boot/sda5_crypt.key
+</span><span class='line'>$ sudoedit /etc/crypttab
+</span><span class='line'>$ sudo update-initramfs -u
+</span><span class='line'>update-initramfs: Generating /boot/initrd.img-3.8.0-30-generic</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Ubuntu 12.04 では、
+<code>crypttab</code> は
+<code>sda5_crypt UUID=(/dev/sda5のUUID) none luks</code>
+を
+<code>sda5_crypt UUID=(/dev/sda5のUUID) /dev/disk/by-uuid/(/bootのUUID):sda5_crypt.key luks,keyscript=/lib/cryptsetup/scripts/passdev</code>
+のように書き換えます。
+<code>/bootのUUID</code> は <code>/etc/fstab</code> を参照するのがわかりやすいと思います。
+<code>by-uuid</code> だけではなく <code>by-label</code> などのパスも使えると思いますが、
+一番誤動作が少なそうな <code>by-uuid</code> を使っています。</p>
+
+<p>その後、
+<code>update-initramfs</code>
+で
+<code>/boot/initrd.img-*</code>
+に変更を反映させておく必要があります。</p>
+
+<h3>GRUB で止まるのを防ぐ</h3>
+
+<p><code>/etc/default/grub</code> に
+<code>GRUB_RECORDFAIL_TIMEOUT=5</code>
+のような設定を追加しておくと
+起動時の GRUB で止まることがなくなります。</p>
+
+<p>なぜか前回起動失敗扱いになってしまって、
+GRUB で止まってしまう環境があったのですが、
+この設定を入れてからは止まらなくなりました。</p>
+
+<p><code>/etc/default/grub</code> の変更は
+<code>update-grub</code> で
+<code>/boot/grub/grub.cfg</code> に
+反映させる必要があります。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ sudoedit /etc/default/grub
+</span><span class='line'>$ sudo update-grub
+</span><span class='line'>Generating grub.cfg ...
+</span><span class='line'>Found linux image: /boot/vmlinuz-3.8.0-30-generic
+</span><span class='line'>Found initrd image: /boot/initrd.img-3.8.0-30-generic
+</span><span class='line'>Found linux image: /boot/vmlinuz-3.8.0-29-generic
+</span><span class='line'>Found initrd image: /boot/initrd.img-3.8.0-29-generic
+</span><span class='line'>Found memtest86+ image: /memtest86+.bin
+</span><span class='line'>done</span></code></pre></td></tr></table></div></figure>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-15T20:02:00+09:00" pubdate data-updated="true">2013-09-15 (Sun)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/mac/'>mac</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-09-15-ubuntu-server-installed.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-09-15-ubuntu-server-installed.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-09-15-ubuntu-server-installed.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013-09-14-use-custom-ruby-with-rbenv.html" title="Previous Post: 独自ビルドした ruby を rbenv で使う">&laquo; 独自ビルドした ruby を rbenv で使う</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>About Me</h1>
+  <p><a href="http://rubycommitters.org/">Ruby のコミッター</a>とかやってます。</p>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013-09-15-ubuntu-server-installed.html">Ubuntu Server 12.04.3 LTS をインストールした</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-09-14-use-custom-ruby-with-rbenv.html">独自ビルドした ruby を rbenv で使う</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-09-13-homebrew-used-options.html">homebrew の reinstall で使われるオプションの保存場所</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-09-12-td2planet.html">td2planet を rubyforge から github に移行してリリース</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-09-11-tagcloud.html">タグクラウドプラグインを入れた</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>Categories</h1>
+    <ul id="category-list"><li><a href='/blog/categories/event/'>event (3)</a></li><li><a href='/blog/categories/homebrew/'>homebrew (3)</a></li><li><a href='/blog/categories/jus/'>jus (1)</a></li><li><a href='/blog/categories/mac/'>mac (4)</a></li><li><a href='/blog/categories/octopress/'>octopress (2)</a></li><li><a href='/blog/categories/rabbit/'>rabbit (2)</a></li><li><a href='/blog/categories/rbenv/'>rbenv (1)</a></li><li><a href='/blog/categories/rubima/'>rubima (1)</a></li><li><a href='/blog/categories/ruby/'>ruby (3)</a></li><li><a href='/blog/categories/rubykaigi/'>rubykaigi (1)</a></li><li><a href='/blog/categories/shell/'>shell (1)</a></li><li><a href='/blog/categories/td2planet/'>td2planet (1)</a></li><li><a href='/blog/categories/ubuntu/'>ubuntu (1)</a></li></ul>
+</section>
+<section>
+  <h1>Tag Cloud</h1>
+    <span id="tag-cloud"><a href='/blog/categories/event' style='font-size: 145.0%'>event(3)</a> <a href='/blog/categories/homebrew' style='font-size: 145.0%'>homebrew(3)</a> <a href='/blog/categories/jus' style='font-size: 115.0%'>jus(1)</a> <a href='/blog/categories/mac' style='font-size: 160.0%'>mac(4)</a> <a href='/blog/categories/octopress' style='font-size: 130.0%'>octopress(2)</a> <a href='/blog/categories/rabbit' style='font-size: 130.0%'>rabbit(2)</a> <a href='/blog/categories/rbenv' style='font-size: 115.0%'>rbenv(1)</a> <a href='/blog/categories/rubima' style='font-size: 115.0%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 145.0%'>ruby(3)</a> <a href='/blog/categories/rubykaigi' style='font-size: 115.0%'>rubykaigi(1)</a> <a href='/blog/categories/shell' style='font-size: 115.0%'>shell(1)</a> <a href='/blog/categories/td2planet' style='font-size: 115.0%'>td2planet(1)</a> <a href='/blog/categories/ubuntu' style='font-size: 115.0%'>ubuntu(1)</a> </span>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/znz">@znz</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'znz',
+            count: 3,
+            skip_forks: false,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - Kazuhiro NISHIYAMA -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'znzblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-09-15-ubuntu-server-installed.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-09-15-ubuntu-server-installed.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+<script type="text/javascript" src="http://b.st-hatena.com/js/bookmark_button.js" charset="utf-8" async="async"></script>
+
+
+</body>
+</html>
