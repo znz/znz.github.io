@@ -1,0 +1,83 @@
+---
+layout: post
+title: "devise 3.0.3 と devise 3.1.0 で自動生成されるファイルの違い"
+date: 2013-09-18 15:09
+comments: true
+categories: ruby rails devise
+---
+[devise 3.0.3 と devise 3.1.0 で自動生成されるファイルの差分](https://gist.github.com/znz/6603471)
+をとって、バージョンアップした時に対応が必要な場所を調べました。
+
+<!--more-->
+
+## 対応が必要な場所
+
+最初に結論をまとめておきます。
+
+* `config/initializers/devise.rb` に `config.secret_key` を追加。
+  * これは `rails` コマンドを実行しようとした時などにエラーとどういう内容を追加すれば良いのかが出るのですぐに気付きます。
+* `rails generate devise:views` をしていたのなら
+  * `app/views/devise/mailer` の `token` 周り
+  * `app/views/devise/shared/_links.erb` の `devise_mapping.recoverable?` の行
+  の修正が必要です。
+* `app/models/user.rb` の `:token_authenticatable` の削除の検討
+  * 削除しなくても動いているので、すぐに削除する必要はなさそうですが、
+    `rails generate devise User` で生成される例からなくなっているので
+    削除を検討した方が良さそうです。
+* データベースのテーブルの変更に追従するなら
+  `migration` を作って対応すれば良さそうです。
+
+## 対象バージョン
+
+rails 3.2.14 との組み合わせで devise 3.0.3 と devise 3.1.0 で比較しました。
+細かいバージョンは
+[devise 3.0.3 の時の bundle list](https://gist.github.com/znz/6603471#file-bundle-list-in-devise30-txt)
+と
+[devise 3.1.0 の時の bundle list](https://gist.github.com/znz/6603471#file-bundle-list-in-devise31-txt)
+を参照してください。
+
+## `rails generate devise:install` の差分
+
+`rails generate devise:install` の差分のうち、
+[config/initializers/devise.rb の差分](https://gist.github.com/znz/6603471#file-initializer-diff)
+は `"` から `'` への変更などもあって本質的ではない部分も多かったので、
+[tr で処理した差分](https://gist.github.com/znz/6603471#file-initializer-tr-diff)
+を作ってみたところ、本質的には
+`config.secret_key =`
+の行の追加だけでした。
+
+[config/locales/devise.en.yml の差分](https://gist.github.com/znz/6603471#file-locale-diff)
+もあるので、
+`locales`
+のファイルも更新しておくと良さそうです。
+
+## `rails generate devise User` の差分
+
+`rails generate devise User` の差分として、
+[migration の差分](https://gist.github.com/znz/6603471#file-devise_create_users-diff)
+は
+`sign_in_count` と `failed_attempts` への `NOT NULL` 制約の追加と
+Token authenticatable 用の `authentication_token` の削除なので、
+対応する変更をする `migration` を作って対応するか、
+気にせず古いまま使えば良さそうです。
+
+`app/models/user.rb` からもコメントの中のモジュール例にあった
+`token_authenticatable` が削除されています。
+
+`config/routes.rb` に追加される `devise_for :users` は同じでした。
+
+## `rails generate devise:views` の差分
+
+[app/views の差分](https://gist.github.com/znz/6603471#file-views-diff)
+は
+`@resource.なんとか_token`
+だったものが
+`@token`
+に変わっているのと、
+`app/views/devise/shared/_links.erb`
+の
+`if devise_mapping.recoverable? && controller_name != 'passwords'`
+が
+`if devise_mapping.recoverable? && controller_name != 'passwords' && controller_name != 'registrations'`
+に変わっているのが
+主な変更でした。
