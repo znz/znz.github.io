@@ -5,14 +5,14 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>タグクラウドプラグインを入れた - ZnZ Blog</title>
+  <title>jQuery UI Autocomplete を自動で開く - ZnZ Blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="探してみて見つけた中で今もちゃんとメンテナンスされてそうだった
-Tag cloud plugin for Octopress
-を入れてタグクラウドが出るようにしてみました。
-">
+  <meta name="description" content="Google カレンダーの時刻入力のように combobox 的な入力欄で、
+デフォルトは選択肢から選んで、
+選択肢にないときは直接入力も出来るようにしたいと思いました。 いくつかの方法を試した結果、
+jQuery UI の Autocomplete に少しコードを足したら &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -21,7 +21,7 @@ Tag cloud plugin for Octopress
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-09-11-tagcloud.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-09-18-auto-open-autocomplete.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="ZnZ Blog" type="application/atom+xml">
@@ -83,7 +83,7 @@ Tag cloud plugin for Octopress
   
   <header>
     
-      <h1 class="entry-title">タグクラウドプラグインを入れた</h1>
+      <h1 class="entry-title">jQuery UI Autocomplete を自動で開く</h1>
     
     
       <p class="meta">
@@ -99,7 +99,7 @@ Tag cloud plugin for Octopress
   
 
 
-<time datetime="2013-09-11T00:00:00+09:00" pubdate data-updated="true">2013-09-11 (Wed)</time>
+<time datetime="2013-09-18T15:43:00+09:00" pubdate data-updated="true">2013-09-18 (Wed)</time>
         
          | <a href="#disqus_thread">Comments</a>
         
@@ -108,9 +108,114 @@ Tag cloud plugin for Octopress
   </header>
 
 
-<div class="entry-content"><p>探してみて見つけた中で今もちゃんとメンテナンスされてそうだった
-<a href="https://github.com/tokkonopapa/octopress-tagcloud">Tag cloud plugin for Octopress</a>
-を入れてタグクラウドが出るようにしてみました。</p>
+<div class="entry-content"><p>Google カレンダーの時刻入力のように combobox 的な入力欄で、
+デフォルトは選択肢から選んで、
+選択肢にないときは直接入力も出来るようにしたいと思いました。</p>
+
+<p>いくつかの方法を試した結果、
+jQuery UI の Autocomplete に少しコードを足したら
+希望通りの挙動に出来ました。</p>
+
+<!--more-->
+
+
+<h2>HTML5 の datalist と autocomplete</h2>
+
+<p>最初は HTML5 の datalist 要素を試しました。
+<code>simple_form</code> gem を使っているので、
+以下のように書きました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="p">=</span> <span class="n">f</span><span class="o">.</span><span class="n">input</span> <span class="ss">:drink</span><span class="p">,</span> <span class="n">input_html</span><span class="p">:</span> <span class="p">{</span> <span class="ss">autocomplete</span><span class="p">:</span> <span class="s2">&quot;on&quot;</span><span class="p">,</span> <span class="ss">list</span><span class="p">:</span> <span class="s2">&quot;drink_list&quot;</span> <span class="p">}</span>
+</span><span class='line'><span class="nt">%datalist</span><span class="nf">#drink_list</span>
+</span><span class='line'>  <span class="nt">%options</span>(<span class="na">value=</span><span class="s">&quot;不要&quot;</span>)
+</span><span class='line'>  <span class="nt">%options</span>(<span class="na">value=</span><span class="s">&quot;水&quot;</span>)
+</span><span class='line'>  <span class="nt">%options</span>(<span class="na">value=</span><span class="s">&quot;お茶&quot;</span>)
+</span><span class='line'>  <span class="nt">%options</span>(<span class="na">value=</span><span class="s">&quot;コーヒー&quot;</span>)
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>この方法の問題点としては、
+IE は IE10 (以降?) しか対応していなかったり、
+Mobile Safari も対応してなさそうだったりして
+対応環境が微妙だったのと、
+入力欄にフォーカスだけで自動で開くという挙動が出来なくて、
+矢印の上下で開く必要があったので、
+諦めました。</p>
+
+<h2>Bootstrap Typeahead</h2>
+
+<p>挙動としては
+HTML5 の datalist の方法や
+jQuery UI Autocomplete と似ていたのですが、
+Bootstrap 3 では外されているという話があったり、
+別途新しい typeahead.js が開発されているという話があったりして、
+先にある程度 jQuery UI Autocomplete を試していたこともあり、
+別途新しいライブラリを入れるなどの深追いはせずに
+jQuery UI Autocomplete を使うことにしました。</p>
+
+<h2>jQuery UI Autocomplete</h2>
+
+<p><code>jquery-ui-rails</code> gem を使っていて、
+必要なものだけ CSS や JS を require していたので、
+まず <code>app/assets/stylesheets/application.css</code> に</p>
+
+<figure class='code'><figcaption><span>application.css</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'> *= require jquery.ui.autocomplete
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>を追加しました。</p>
+
+<p>次に <code>app/assets/javascripts/autocomplete.js.coffee</code> として
+以下のような内容で作成しました。</p>
+
+<figure class='code'><figcaption><span>autocomplete.js.coffee</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='coffeescript'><span class='line'><span class="c1">#= require jquery.ui.autocomplete</span>
+</span><span class='line'><span class="nx">jQuery</span> <span class="nf">-&gt;</span>
+</span><span class='line'>  <span class="nv">drink_list = </span><span class="p">[</span>
+</span><span class='line'>    <span class="s">&quot;不要&quot;</span>
+</span><span class='line'>    <span class="s">&quot;水&quot;</span>
+</span><span class='line'>    <span class="s">&quot;お茶&quot;</span>
+</span><span class='line'>    <span class="s">&quot;コーヒー&quot;</span>
+</span><span class='line'>  <span class="p">]</span>
+</span><span class='line'>  <span class="nx">$</span><span class="p">(</span><span class="s">&quot;</span><span class="err">#</span><span class="s">somemodel_drink&quot;</span><span class="p">).</span><span class="nx">autocomplete</span>
+</span><span class='line'>    <span class="nv">source: </span><span class="nx">drink_list</span>
+</span><span class='line'>    <span class="nv">autoFocus: </span><span class="kc">true</span>
+</span><span class='line'>    <span class="nv">delay: </span><span class="mi">0</span>
+</span><span class='line'>    <span class="nv">minLength: </span><span class="mi">0</span>
+</span><span class='line'>  <span class="p">.</span><span class="nx">on</span> <span class="s">&quot;focus&quot;</span><span class="p">,</span> <span class="nf">-&gt;</span>
+</span><span class='line'>    <span class="nx">$</span><span class="p">(</span><span class="s">&quot;</span><span class="err">#</span><span class="s">somemodel_drink&quot;</span><span class="p">).</span><span class="nx">autocomplete</span><span class="p">(</span><span class="s">&quot;search&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>余談</h2>
+
+<p>今回の話とは直接は関係ないのですが、
+ファイルを細かく分割すると管理しやすくなるのは良いのですが、
+他のライブラリの中のファイル名と重ならないようにしないと
+<code>bootstrap.js.coffee</code> の中で <code>#= require bootstrap</code> しても
+自分自身を <code>require</code> してしまって空っぽになって悩むことに
+なるので注意が必要でした。</p>
 </div>
 
 
@@ -133,12 +238,12 @@ Tag cloud plugin for Octopress
   
 
 
-<time datetime="2013-09-11T00:00:00+09:00" pubdate data-updated="true">2013-09-11 (Wed)</time>
+<time datetime="2013-09-18T15:43:00+09:00" pubdate data-updated="true">2013-09-18 (Wed)</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/octopress/'>octopress</a>
+    <a class='category' href='/blog/categories/coffeescript/'>coffeescript</a>, <a class='category' href='/blog/categories/html5/'>html5</a>, <a class='category' href='/blog/categories/javascript/'>javascript</a>, <a class='category' href='/blog/categories/jquery-ui/'>jquery-ui</a>, <a class='category' href='/blog/categories/rails/'>rails</a>
   
 </span>
 
@@ -147,12 +252,12 @@ Tag cloud plugin for Octopress
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-09-11-tagcloud.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-09-11-tagcloud.html" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-09-18-auto-open-autocomplete.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-09-18-auto-open-autocomplete.html" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
   
-  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-09-11-tagcloud.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-09-18-auto-open-autocomplete.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
   
     <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
   
@@ -171,10 +276,8 @@ Tag cloud plugin for Octopress
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-09-10-add-old-posts.html" title="Previous Post: 先月のイベントでの発表の記事を追加">&laquo; 先月のイベントでの発表の記事を追加</a>
+        <a class="basic-alignment left" href="/blog/2013-09-18-devise30-devise31.html" title="Previous Post: devise 3.0.3 と devise 3.1.0 で自動生成されるファイルの違い">&laquo; devise 3.0.3 と devise 3.1.0 で自動生成されるファイルの違い</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-09-12-td2planet.html" title="Next Post: td2planet を rubyforge から github に移行してリリース">td2planet を rubyforge から github に移行してリリース &raquo;</a>
       
     </p>
   </footer>
@@ -281,8 +384,8 @@ Tag cloud plugin for Octopress
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-09-11-tagcloud.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-09-11-tagcloud.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-09-18-auto-open-autocomplete.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-09-18-auto-open-autocomplete.html';
         var disqus_script = 'embed.js';
       
     (function () {

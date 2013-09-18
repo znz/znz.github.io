@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: devise | ZnZ Blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/devise/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2013-09-18T16:15:13+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[devise 3.0.3 と devise 3.1.0 で自動生成されるファイルの違い]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-09-18-devise30-devise31.html"/>
+    <updated>2013-09-18T15:09:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/devise30-devise31</id>
+    <content type="html"><![CDATA[<p><a href="https://gist.github.com/znz/6603471">devise 3.0.3 と devise 3.1.0 で自動生成されるファイルの差分</a>
+をとって、バージョンアップした時に対応が必要な場所を調べました。</p>
+
+<!--more-->
+
+
+<h2>対応が必要な場所</h2>
+
+<p>最初に結論をまとめておきます。</p>
+
+<ul>
+<li><code>config/initializers/devise.rb</code> に <code>config.secret_key</code> を追加。
+
+<ul>
+<li>これは <code>rails</code> コマンドを実行しようとした時などにエラーとどういう内容を追加すれば良いのかが出るのですぐに気付きます。</li>
+</ul>
+</li>
+<li><code>rails generate devise:views</code> をしていたのなら
+
+<ul>
+<li><code>app/views/devise/mailer</code> の <code>token</code> 周り</li>
+<li><code>app/views/devise/shared/_links.erb</code> の <code>devise_mapping.recoverable?</code> の行
+の修正が必要です。</li>
+</ul>
+</li>
+<li><code>app/models/user.rb</code> の <code>:token_authenticatable</code> の削除の検討
+
+<ul>
+<li>削除しなくても動いているので、すぐに削除する必要はなさそうですが、
+<code>rails generate devise User</code> で生成される例からなくなっているので
+削除を検討した方が良さそうです。</li>
+</ul>
+</li>
+<li>データベースのテーブルの変更に追従するなら
+<code>migration</code> を作って対応すれば良さそうです。</li>
+</ul>
+
+
+<h2>対象バージョン</h2>
+
+<p>rails 3.2.14 との組み合わせで devise 3.0.3 と devise 3.1.0 で比較しました。
+細かいバージョンは
+<a href="https://gist.github.com/znz/6603471#file-bundle-list-in-devise30-txt">devise 3.0.3 の時の bundle list</a>
+と
+<a href="https://gist.github.com/znz/6603471#file-bundle-list-in-devise31-txt">devise 3.1.0 の時の bundle list</a>
+を参照してください。</p>
+
+<h2><code>rails generate devise:install</code> の差分</h2>
+
+<p><code>rails generate devise:install</code> の差分のうち、
+<a href="https://gist.github.com/znz/6603471#file-initializer-diff">config/initializers/devise.rb の差分</a>
+は <code>"</code> から <code>'</code> への変更などもあって本質的ではない部分も多かったので、
+<a href="https://gist.github.com/znz/6603471#file-initializer-tr-diff">tr で処理した差分</a>
+を作ってみたところ、本質的には
+<code>config.secret_key =</code>
+の行の追加だけでした。</p>
+
+<p><a href="https://gist.github.com/znz/6603471#file-locale-diff">config/locales/devise.en.yml の差分</a>
+もあるので、
+<code>locales</code>
+のファイルも更新しておくと良さそうです。</p>
+
+<h2><code>rails generate devise User</code> の差分</h2>
+
+<p><code>rails generate devise User</code> の差分として、
+<a href="https://gist.github.com/znz/6603471#file-devise_create_users-diff">migration の差分</a>
+は
+<code>sign_in_count</code> と <code>failed_attempts</code> への <code>NOT NULL</code> 制約の追加と
+Token authenticatable 用の <code>authentication_token</code> の削除なので、
+対応する変更をする <code>migration</code> を作って対応するか、
+気にせず古いまま使えば良さそうです。</p>
+
+<p><code>app/models/user.rb</code> からもコメントの中のモジュール例にあった
+<code>token_authenticatable</code> が削除されています。</p>
+
+<p><code>config/routes.rb</code> に追加される <code>devise_for :users</code> は同じでした。</p>
+
+<h2><code>rails generate devise:views</code> の差分</h2>
+
+<p><a href="https://gist.github.com/znz/6603471#file-views-diff">app/views の差分</a>
+は
+<code>@resource.なんとか_token</code>
+だったものが
+<code>@token</code>
+に変わっているのと、
+<code>app/views/devise/shared/_links.erb</code>
+の
+<code>if devise_mapping.recoverable? &amp;&amp; controller_name != 'passwords'</code>
+が
+<code>if devise_mapping.recoverable? &amp;&amp; controller_name != 'passwords' &amp;&amp; controller_name != 'registrations'</code>
+に変わっているのが
+主な変更でした。</p>
+]]></content>
+  </entry>
+  
+</feed>
