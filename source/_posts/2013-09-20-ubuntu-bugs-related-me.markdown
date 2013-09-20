@@ -17,8 +17,13 @@ categories: ubuntu bts community
 
 コミュニティ運営のアンチパターンの例として使えるのかもしれません。
 
-最初の4項目は ubuntu の launchpad での話で、
+最初の4項目は Ubuntu の Launchpad での話で、
 後の2項目は ubuntu-jp での話です。
+
+もちろん、対応が悪かったものだけ集めているので、
+他の多数のバグの対応は良かったことが多いです。
+全体的に Ubuntu のバグ対応は
+Debian に比べると遅いという気はしますが。
 
 ## 最近の例 (bind9)
 
