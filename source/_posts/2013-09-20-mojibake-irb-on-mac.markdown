@@ -10,6 +10,10 @@ categories: mac irb rails mojibake
 のやり方そのままで、
 one liner としてまとめただけです。
 
+先に結論を書いておくと
+`install_name_tool -change /usr/lib/libedit.3.dylib $(brew list readline | grep libreadline.dylib) $(ruby -r readline -e 'puts $".grep /readline/')`
+になりました。
+
 <!--more-->
 
 ## `readline.bundle` の探し方
