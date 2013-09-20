@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: mojibake | ZnZ Blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/mojibake/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2013-09-20T18:34:00+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Macでirbなどでの文字化けを直した]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-09-20-mojibake-irb-on-mac.html"/>
+    <updated>2013-09-20T18:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/mojibake-irb-on-mac</id>
+    <content type="html"><![CDATA[<p>基本的には
+<a href="http://qiita.com/irohiroki/items/c82657b5cb4bdb2aaac4">rails cで日本語が通らないときの直し方</a>
+のやり方そのままで、
+one liner としてまとめただけです。</p>
+
+<!--more-->
+
+
+<h2><code>readline.bundle</code> の探し方</h2>
+
+<p>まず <code>readline.bundle</code> の探し方です。</p>
+
+<p>実際に <code>require 'readline'</code> した時の
+<code>$LOADED_FEATURES</code> から
+探すのが確実ということで、
+<code>ruby -r readline -e 'puts $".grep /readline/'</code>
+としました。
+試したところ、
+<code>Array#grep</code>
+で見つかるのが1個だけだったので、
+そのまま <code>puts</code> しています。
+複数見つかるようならもう少し調整が必要だと思います。</p>
+
+<p><code>
+% ruby -r readline -e 'puts $".grep /readline/'
+/Users/kazu/.rbenv/versions/2.0.0-p247/lib/ruby/2.0.0/x86_64-darwin12.4.1/readline.bundle
+% otool -L $(ruby -r readline -e 'puts $".grep /readline/')
+</code></p>
+
+<h2>readline のインストール</h2>
+
+<p>homebrew を使っているので、
+<code>brew install readline</code>
+でインストールしました。</p>
+
+<p>インストールされた
+<code>libreadline</code>
+の場所は
+<code>brew list readline | grep libreadline.dylib</code>
+で調べました。</p>
+
+<p><code>libedit</code>
+が
+<code>/usr/lib/libedit.3.dylib</code>
+という名前でリンクされているので、
+<code>libreadline.6.dylib</code>
+という名前を使った方が良いのかもしれませんが、
+homebrew でインストールされているパスに
+バージョンが含まれていて、
+ファイル名にバージョンを含めても意味がないと思って、
+バージョンなしにしました。</p>
+
+<p><code>
+% brew list readline | grep libreadline.dylib
+/usr/local/Cellar/readline/6.2.4/lib/libreadline.dylib
+</code></p>
+
+<h2><code>install_name_tool</code></h2>
+
+<p>Qiita の記事にあったように
+<code>install_name_tool -change /usr/lib/libedit.3.dylib $(brew list readline | grep libreadline.dylib) $(ruby -r readline -e 'puts $".grep /readline/')</code>
+でリンクを変更しました。
+念のため、実行前に
+<code>ruby -rpp -e 'pp ARGV' --</code>
+で実行内容を確認してから実行しました。</p>
+
+<p><code>
+% ruby -rpp -e 'pp ARGV' -- install_name_tool -change /usr/lib/libedit.3.dylib $(brew list readline | grep libreadline.dylib) $(ruby -r readline -e 'puts $".grep /readline/')
+["install_name_tool",
+ "-change",
+ "/usr/lib/libedit.3.dylib",
+ "/usr/local/Cellar/readline/6.2.4/lib/libreadline.dylib",
+ "/Users/kazu/.rbenv/versions/2.0.0-p247/lib/ruby/2.0.0/x86_64-darwin12.4.1/readline.bundle"]
+% install_name_tool -change /usr/lib/libedit.3.dylib $(brew list readline | grep libreadline.dylib) $(ruby -r readline -e 'puts $".grep /readline/')
+</code></p>
+]]></content>
+  </entry>
+  
+</feed>
