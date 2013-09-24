@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: elscreen | ZnZ Blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/elscreen/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2013-09-24T14:14:00+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[elscreen で Symbol's value as variable is void: last-command-char]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-09-24-elscreen-last-command-char.html"/>
+    <updated>2013-09-24T13:50:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/elscreen-last-command-char</id>
+    <content type="html"><![CDATA[<p>elscreen で
+<code>Symbol's value as variable is void: last-command-char</code>
+というエラーになったので、
+<a href="http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=705436">elscreen: From Emacs 24.3: Symbol&rsquo;s value as variable is void: last-command-char</a>
+のパッチを参考にして解決しました。</p>
+
+<!--more-->
+
+
+<p><code>Symbol's value as variable is void: last-command-char</code>
+で検索すると
+<a href="http://oku.edu.mie-u.ac.jp/~okumura/texwiki/?YaTeX">Emacs 24.3 は last-input-char, last-command-char が削除されています</a>
+という話が一番目に見つかって、
+<code>last-command-char elscreen</code>
+で検索すると
+<a href="http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=705436">elscreen: From Emacs 24.3: Symbol&rsquo;s value as variable is void: last-command-char</a>
+が一番目に見つかって解決方法がわかりました。</p>
+
+<p>パッチを見てみると、
+<code>xemacs</code>
+の時は
+<code>(event-to-character last-command-event)</code>
+で、それ以外は
+<code>last-command-event</code>
+となっていて、
+手元では GNU Emacs だけ対応出来れば良いので、
+<a href="https://github.com/znz/dot-emacs/commit/12599e870f9b1a5b4411ef875c3cb647ef3096dd">defadvice で last-command-event を last-command-char に設定</a>
+することにしました。</p>
+
+<p>```scheme
+  (defadvice elscreen-jump (around elscreen-last-command-char-event activate)</p>
+
+<pre><code>(let ((last-command-char last-command-event))
+  ad-do-it))
+</code></pre>
+
+<p>```</p>
+]]></content>
+  </entry>
+  
+</feed>

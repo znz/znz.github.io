@@ -4,7 +4,7 @@
   <title><![CDATA[ZnZ Blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-09-22T22:10:56+09:00</updated>
+  <updated>2013-09-24T14:14:00+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,51 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[elscreen で Symbol's value as variable is void: last-command-char]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-09-24-elscreen-last-command-char.html"/>
+    <updated>2013-09-24T13:50:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/elscreen-last-command-char</id>
+    <content type="html"><![CDATA[<p>elscreen で
+<code>Symbol's value as variable is void: last-command-char</code>
+というエラーになったので、
+<a href="http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=705436">elscreen: From Emacs 24.3: Symbol&rsquo;s value as variable is void: last-command-char</a>
+のパッチを参考にして解決しました。</p>
+
+<!--more-->
+
+
+<p><code>Symbol's value as variable is void: last-command-char</code>
+で検索すると
+<a href="http://oku.edu.mie-u.ac.jp/~okumura/texwiki/?YaTeX">Emacs 24.3 は last-input-char, last-command-char が削除されています</a>
+という話が一番目に見つかって、
+<code>last-command-char elscreen</code>
+で検索すると
+<a href="http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=705436">elscreen: From Emacs 24.3: Symbol&rsquo;s value as variable is void: last-command-char</a>
+が一番目に見つかって解決方法がわかりました。</p>
+
+<p>パッチを見てみると、
+<code>xemacs</code>
+の時は
+<code>(event-to-character last-command-event)</code>
+で、それ以外は
+<code>last-command-event</code>
+となっていて、
+手元では GNU Emacs だけ対応出来れば良いので、
+<a href="https://github.com/znz/dot-emacs/commit/12599e870f9b1a5b4411ef875c3cb647ef3096dd">defadvice で last-command-event を last-command-char に設定</a>
+することにしました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='scheme'><span class='line'>  <span class="p">(</span><span class="nf">defadvice</span> <span class="nv">elscreen-jump</span> <span class="p">(</span><span class="nf">around</span> <span class="nv">elscreen-last-command-char-event</span> <span class="nv">activate</span><span class="p">)</span>
+</span><span class='line'>    <span class="p">(</span><span class="k">let </span><span class="p">((</span><span class="nf">last-command-char</span> <span class="nv">last-command-event</span><span class="p">))</span>
+</span><span class='line'>      <span class="nv">ad-do-it</span><span class="p">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 76 回 関西 Debian 勉強会に参加した]]></title>
