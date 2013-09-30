@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rails | ZnZ Blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rails/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-09-25T23:42:33+09:00</updated>
+  <updated>2013-09-30T15:25:13+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,103 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[aasm gem の初期状態設定]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-09-30-aasm.html"/>
+    <updated>2013-09-30T15:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/aasm</id>
+    <content type="html"><![CDATA[<p><code>aasm</code> gem の使い方が悪くて、初期状態の値としてデータベースに nil が保存されてしまっていたという話です。</p>
+
+<!--more-->
+
+
+<p>確認したバージョンは ruby 2.0.0 + rails 3.2.14 + aasm 3.0.22 です。</p>
+
+<p>例として以下のような感じの使い方をしてしまっていて、
+<code>status</code> メソッドで <code>nil</code> を返さないようにしていたら
+データベースには <code>nil</code> が保存されるようになってしまって、
+<code>aasm</code> 以外 (<code>ransack</code> とか) からデータベースにアクセスした時に
+問題になりました。</p>
+
+<p>```ruby
+  def status</p>
+
+<pre><code># このメソッドがダメ
+read_attribute(:status) || :starting
+</code></pre>
+
+<p>  end</p>
+
+<p>  include AASM
+  aasm column: &ldquo;status&rdquo; do</p>
+
+<pre><code>state :starting, initial: true
+state :running
+state :stopped
+state :finished
+
+event :run do
+  transitions from: [:starting, :stopped], to: :running
+end
+
+event :stop do
+  transitions from: [:starting, :running], to: :stopped
+end
+
+event :finish do
+  transitions from: [:running], to: :finished
+end
+</code></pre>
+
+<p>  end
+```</p>
+
+<p><code>aasm</code> としては
+<a href="https://github.com/aasm/aasm/blob/master/lib/aasm/persistence/active_record_persistence.rb">AASM::Persistence::ActiveRecordPersistence</a>
+で
+<code>before_validation :aasm_ensure_initial_state, :on =&gt; :create</code>
+相当のフックを追加していて、
+<code>model.valid?</code>
+を実行すれば
+<code>model.status</code>
+が設定されるようになっていました。</p>
+
+<p>たぶん使い始めた時に
+<code>rails console</code>
+で
+<code>model = Model.new</code>
+した直後の
+<code>model.status</code>
+が
+<code>nil</code>
+だったので、
+どうにかしようと思って
+getter メソッドを定義してしまったのだと思います。</p>
+
+<p>このせいで以下のような
+<code>ransack</code>
+を使った検索フォームで初期状態のチェックを入れても
+うまく検索出来ないという問題が起きていました。</p>
+
+<p>```haml
+= search_form_for @q, html: { class: &ldquo;form-search&rdquo; } do |f|
+  %table</p>
+
+<pre><code>-# ...
+%tr
+  %td= f.label :status_in
+  %td
+    - Model.aasm.states.each do |status|
+      %label
+        = check_box_tag "q[status_in][]", status.to_s, params.try(:[], :q).try(:[], :status_in).try(:include?, status.to_s), id: "q_status_in_#{status.to_s}"
+        = status.localized_name
+-# ...
+</code></pre>
+
+<p>```</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Macでirbなどでの文字化けを直した]]></title>

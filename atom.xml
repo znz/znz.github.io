@@ -4,7 +4,7 @@
   <title><![CDATA[ZnZ Blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-09-25T23:42:33+09:00</updated>
+  <updated>2013-09-30T15:25:13+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,129 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[aasm gem の初期状態設定]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-09-30-aasm.html"/>
+    <updated>2013-09-30T15:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/aasm</id>
+    <content type="html"><![CDATA[<p><code>aasm</code> gem の使い方が悪くて、初期状態の値としてデータベースに nil が保存されてしまっていたという話です。</p>
+
+<!--more-->
+
+
+<p>確認したバージョンは ruby 2.0.0 + rails 3.2.14 + aasm 3.0.22 です。</p>
+
+<p>例として以下のような感じの使い方をしてしまっていて、
+<code>status</code> メソッドで <code>nil</code> を返さないようにしていたら
+データベースには <code>nil</code> が保存されるようになってしまって、
+<code>aasm</code> 以外 (<code>ransack</code> とか) からデータベースにアクセスした時に
+問題になりました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">status</span>
+</span><span class='line'>    <span class="c1"># このメソッドがダメ</span>
+</span><span class='line'>    <span class="n">read_attribute</span><span class="p">(</span><span class="ss">:status</span><span class="p">)</span> <span class="o">||</span> <span class="ss">:starting</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kp">include</span> <span class="no">AASM</span>
+</span><span class='line'>  <span class="n">aasm</span> <span class="ss">column</span><span class="p">:</span> <span class="s2">&quot;status&quot;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">state</span> <span class="ss">:starting</span><span class="p">,</span> <span class="ss">initial</span><span class="p">:</span> <span class="kp">true</span>
+</span><span class='line'>    <span class="n">state</span> <span class="ss">:running</span>
+</span><span class='line'>    <span class="n">state</span> <span class="ss">:stopped</span>
+</span><span class='line'>    <span class="n">state</span> <span class="ss">:finished</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">event</span> <span class="ss">:run</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">transitions</span> <span class="ss">from</span><span class="p">:</span> <span class="o">[</span><span class="ss">:starting</span><span class="p">,</span> <span class="ss">:stopped</span><span class="o">]</span><span class="p">,</span> <span class="ss">to</span><span class="p">:</span> <span class="ss">:running</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">event</span> <span class="ss">:stop</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">transitions</span> <span class="ss">from</span><span class="p">:</span> <span class="o">[</span><span class="ss">:starting</span><span class="p">,</span> <span class="ss">:running</span><span class="o">]</span><span class="p">,</span> <span class="ss">to</span><span class="p">:</span> <span class="ss">:stopped</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">event</span> <span class="ss">:finish</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">transitions</span> <span class="ss">from</span><span class="p">:</span> <span class="o">[</span><span class="ss">:running</span><span class="o">]</span><span class="p">,</span> <span class="ss">to</span><span class="p">:</span> <span class="ss">:finished</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>aasm</code> としては
+<a href="https://github.com/aasm/aasm/blob/master/lib/aasm/persistence/active_record_persistence.rb">AASM::Persistence::ActiveRecordPersistence</a>
+で
+<code>before_validation :aasm_ensure_initial_state, :on =&gt; :create</code>
+相当のフックを追加していて、
+<code>model.valid?</code>
+を実行すれば
+<code>model.status</code>
+が設定されるようになっていました。</p>
+
+<p>たぶん使い始めた時に
+<code>rails console</code>
+で
+<code>model = Model.new</code>
+した直後の
+<code>model.status</code>
+が
+<code>nil</code>
+だったので、
+どうにかしようと思って
+getter メソッドを定義してしまったのだと思います。</p>
+
+<p>このせいで以下のような
+<code>ransack</code>
+を使った検索フォームで初期状態のチェックを入れても
+うまく検索出来ないという問題が起きていました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="p">=</span> <span class="n">search_form_for</span> <span class="vi">@q</span><span class="p">,</span> <span class="ss">html</span><span class="p">:</span> <span class="p">{</span> <span class="ss">class</span><span class="p">:</span> <span class="s2">&quot;form-search&quot;</span> <span class="p">}</span> <span class="k">do</span> <span class="o">|</span><span class="n">f</span><span class="o">|</span>
+</span><span class='line'>  <span class="nt">%table</span>
+</span><span class='line'>    <span class="cp">-# ...</span>
+</span><span class='line'>    <span class="nt">%tr</span>
+</span><span class='line'>      <span class="nt">%td</span><span class="p">=</span> <span class="n">f</span><span class="o">.</span><span class="n">label</span> <span class="ss">:status_in</span>
+</span><span class='line'>      <span class="nt">%td</span>
+</span><span class='line'>        <span class="p">-</span> <span class="no">Model</span><span class="o">.</span><span class="n">aasm</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">status</span><span class="o">|</span>
+</span><span class='line'>          <span class="nt">%label</span>
+</span><span class='line'>            <span class="p">=</span> <span class="n">check_box_tag</span> <span class="s2">&quot;q[status_in][]&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">.</span><span class="n">to_s</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">try</span><span class="p">(</span><span class="ss">:[]</span><span class="p">,</span> <span class="ss">:q</span><span class="p">)</span><span class="o">.</span><span class="n">try</span><span class="p">(</span><span class="ss">:[]</span><span class="p">,</span> <span class="ss">:status_in</span><span class="p">)</span><span class="o">.</span><span class="n">try</span><span class="p">(</span><span class="ss">:include?</span><span class="p">,</span> <span class="n">status</span><span class="o">.</span><span class="n">to_s</span><span class="p">),</span> <span class="nb">id</span><span class="p">:</span> <span class="s2">&quot;q_status_in_</span><span class="si">#{</span><span class="n">status</span><span class="o">.</span><span class="n">to_s</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span class='line'>            <span class="p">=</span> <span class="n">status</span><span class="o">.</span><span class="n">localized_name</span>
+</span><span class='line'>    <span class="cp">-# ...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 3 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -1627,73 +1750,6 @@ ruby 自体の互換性は高いと言うことがわかります。</p>
 <div style="margin-bottom: 5px">
   <a href="http://slide.rabbit-shocker.org/authors/znz/migrate-rubima-2013/" title="migrate to magazine.rubyist.net">migrate to magazine.rubyist.net</a>
 </div>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[LLまつりでLTしました]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-08-24-llmatsuri.html"/>
-    <updated>2013-08-24T00:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/llmatsuri</id>
-    <content type="html"><![CDATA[<p><a href="http://ll.jus.or.jp/2013/">LLまつり</a> で「シェルスクリプトで簡易ping監視」というタイトルでライトニングトークをしてきました。</p>
-
-<!--more-->
-
-
-<p>スライドは <a href="http://slide.rabbit-shocker.org/authors/znz/simple-ping-summary/">http://slide.rabbit-shocker.org/authors/znz/simple-ping-summary/</a> や slideshare で公開しています。
-スライドのソースも <a href="https://github.com/znz/simple-ping-summary-slide">https://github.com/znz/simple-ping-summary-slide</a> で公開しています。</p>
-
-<p>監視プログラム自体は <a href="https://github.com/znz/simple-ping-summary">https://github.com/znz/simple-ping-summary</a> で公開しています。</p>
-
-<h2>バージョンソート</h2>
-
-<p><a href="http://linuxjm.sourceforge.jp/html/GNU_coreutils/man1/sort.1.html">GNU coreutils の sort</a>
-や
-<a href="http://linuxjm.sourceforge.jp/html/GNU_coreutils/man1/ls.1.html">ls</a>
-にバージョンソートという機能があるのですが、
-それが IPv4 アドレスのソートにも使えるということが
-一番言いたかったことでした。</p>
-
-<h2>画像生成</h2>
-
-<p>画像を作成する時はテキストエディタで作成出来る XBM や XPM を使うことが多いのですが、
-後で twitter の反応を確認してみると SVG という案もあったようなので、
-機会があれば使ってみたいと思いました。</p>
-
-<h2>会場での実行結果</h2>
-
-<p>最後にデモとしてちょっと見せようとして、説明は間に合わなかったLLまつりの会場でのデータは <a href="https://github.com/znz/simple-ping-summary/tree/llmatsuri">llmatsuri ブランチ</a> にあるので <code>git clone https://github.com/znz/simple-ping-summary</code> して <code>git checkout llmatsuri</code> で <code>llmatsuri</code> ブランチに切り替えて <code>_img/summary.html</code> を開くと見えます。
-発表後のデータもあるので、ちらっと見せたものよりちょっと増えています。</p>
-
-<p>会場では一般の PC などが対象なので、監視対象になることが前提で PING 応答が許可されているルーターとは違って、 DHCP で IP アドレスが割り当てられていても応答がないことが多いので、結構歯抜けになっています。</p>
-
-<p>DHCP の割り当て範囲がどうなっていたのかわからなかったので、対象は適当な範囲だったのですが、 <a href="https://github.com/znz/simple-ping-summary/blob/llmatsuri/_img/192.168.4/20130824.png">192.168.4.1から254の範囲の結果</a> をみると、徐々にこの範囲の割り当てが増えていっていると推測出来そうです。</p>
-
-<h2>slideshare</h2>
-
-<iframe src="http://www.slideshare.net/slideshow/embed_code/25545146" width="427" height="356" frameborder="0" marginwidth="0" marginheight="0" scrolling="no" style="border:1px solid #CCC;border-width:1px 1px 0;margin-bottom:5px" allowfullscreen webkitallowfullscreen mozallowfullscreen> </iframe>
-
-
-<p> <div style="margin-bottom:5px"> <strong> <a href="https://www.slideshare.net/znzjp/simple-ping-summary" title="シェルスクリプトで簡易ping監視" target="_blank">シェルスクリプトで簡易ping監視</a> </strong> from <strong><a href="http://www.slideshare.net/znzjp" target="_blank">Kazuhiro Nishiyama</a></strong> </div></p>
-
-<h2>Rabbit SlideShow</h2>
-
-<iframe src="http://slide.rabbit-shocker.org/authors/znz/simple-ping-summary/viewer.html"
-        width="640" height="524"
-        frameborder="0"
-        marginwidth="0"
-        marginheight="0"
-        scrolling="no"
-        style="border: 1px solid #ccc; border-width: 1px 1px 0; margin-bottom: 5px"
-        allowfullscreen> </iframe>
-
-
-<div style="margin-bottom: 5px">
-  <a href="http://slide.rabbit-shocker.org/authors/znz/simple-ping-summary/" title="シェルスクリプトで簡易ping監視">シェルスクリプトで簡易ping監視</a>
-</div>
-
-
 
 ]]></content>
   </entry>

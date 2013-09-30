@@ -5,11 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>td2planet を rubyforge から github に移行してリリース - ZnZ Blog</title>
+  <title>aasm gem の初期状態設定 - ZnZ Blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="tDiary の日付ごとのまとまりを意識したフィードアグリゲータの td2planet を rubyforge から github に移行して、 ruby 2.0.0 対応を確認して、 0.3.0 としてリリースしました。 rubyforge から github への移行 rubyforge は &hellip;">
+  <meta name="description" content="aasm gem の使い方が悪くて、初期状態の値としてデータベースに nil が保存されてしまっていたという話です。 確認したバージョンは ruby 2.0.0 + rails 3.2.14 + aasm 3.0.22 です。 例として以下のような感じの使い方をしてしまっていて、
+status &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-09-12-td2planet.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-09-30-aasm.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="ZnZ Blog" type="application/atom+xml">
@@ -80,7 +81,7 @@
   
   <header>
     
-      <h1 class="entry-title">td2planet を rubyforge から github に移行してリリース</h1>
+      <h1 class="entry-title">aasm gem の初期状態設定</h1>
     
     
       <p class="meta">
@@ -96,7 +97,7 @@
   
 
 
-<time datetime="2013-09-12T22:43:00+09:00" pubdate data-updated="true">2013-09-12 (Thu)</time>
+<time datetime="2013-09-30T15:00:00+09:00" pubdate data-updated="true">2013-09-30 (Mon)</time>
         
          | <a href="#disqus_thread">Comments</a>
         
@@ -105,73 +106,20 @@
   </header>
 
 
-<div class="entry-content"><p>tDiary の日付ごとのまとまりを意識したフィードアグリゲータの td2planet を rubyforge から github に移行して、 ruby 2.0.0 対応を確認して、 0.3.0 としてリリースしました。</p>
+<div class="entry-content"><p><code>aasm</code> gem の使い方が悪くて、初期状態の値としてデータベースに nil が保存されてしまっていたという話です。</p>
 
 <!--more-->
 
 
-<h2>rubyforge から github への移行</h2>
+<p>確認したバージョンは ruby 2.0.0 + rails 3.2.14 + aasm 3.0.22 です。</p>
 
-<p>rubyforge は
-<a href="http://rubyforge.org/scm/?group_id=3122">RubyForge: TD2Planet: SCM Repository</a>
-に書いてあるように http か svn か svn+ssh でアクセス出来ますが、
-今回は svn から取得したものを github に移行しました。</p>
+<p>例として以下のような感じの使い方をしてしまっていて、
+<code>status</code> メソッドで <code>nil</code> を返さないようにしていたら
+データベースには <code>nil</code> が保存されるようになってしまって、
+<code>aasm</code> 以外 (<code>ransack</code> とか) からデータベースにアクセスした時に
+問題になりました。</p>
 
-<p>小さいレポジトリだったこともあり、手順としては以下のように単純に移行出来ました。</p>
-
-<ol>
-<li><code>git svn clone -s svn://rubyforge.org/var/svn/td2planet</code></li>
-<li>github 上でレポジトリ作成</li>
-<li><code>git remote add origin git@github.com:znz/td2planet.git</code></li>
-<li><code>git push -u origin master</code></li>
-</ol>
-
-
-<h2>ruby 2.0.0 対応確認</h2>
-
-<p>単純に README に書いてある <code>ruby -I lib bin/td2planet.rb config.yaml</code> で問題なく動きました。</p>
-
-<p><a href="https://gist.github.com/unak/3038095">The History of Ruby</a>
-によると作り始めた 2007 年はまだ 1.9.0 の開発中だったので、
-その頃でも magic comment をちゃんと書いたり、
-内部エンコーディングは UTF-8 に統一したりなどを
-気をつけていれば、
-ruby 自体の互換性は高いと言うことがわかります。</p>
-
-<p>他には以下のような変更をしました。</p>
-
-<ul>
-<li><code>setup.rb</code> と関連する LGPL 削除など</li>
-<li>README と README.ja に拡張子の <code>.rdoc</code> を追加</li>
-<li>gemspec 更新
-
-<ul>
-<li>homepage を rubyforge から github に変更</li>
-<li>README のファイル名変更対応</li>
-<li>license 追加</li>
-</ul>
-</li>
-<li>バージョン変更</li>
-<li><code>-Ku</code> から ruby が 1.9 未満のときだけ <code>$KCODE</code> を設定に変更</li>
-</ul>
-
-
-<p><code>setup.rb</code> は ruby 1.9 以降に対応しているのかわからなかったのと、
-ライセンスを MIT に統一するために削除しました。</p>
-
-<h2>リリース</h2>
-
-<p>別のリリース作業をした時に <code>~/.gem/credentials</code> は作成済みだったので、
-リリースは以下の手順だけで出来ました。
-<code>~/.gem/credentials</code> がまだないときは <code>gem push</code> の時に <code>rubygems.org</code> のアカウントか <code>rubyforge.org</code> のアカウントが必要になります。</p>
-
-<ul>
-<li><code>gem build *.gemspec</code></li>
-<li><code>gem push *.gem</code></li>
-</ul>
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -179,14 +127,99 @@ ruby 自体の互換性は高いと言うことがわかります。</p>
 <span class='line-number'>6</span>
 <span class='line-number'>7</span>
 <span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% gem build *.gemspec
-</span><span class='line'>  Successfully built RubyGem
-</span><span class='line'>  Name: td2planet
-</span><span class='line'>  Version: 0.3.0
-</span><span class='line'>  File: td2planet-0.3.0.gem
-</span><span class='line'>% gem push td2planet-0.3.0.gem
-</span><span class='line'>Pushing gem to https://rubygems.org...
-</span><span class='line'>Successfully registered gem: td2planet (0.3.0)</span></code></pre></td></tr></table></div></figure>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">status</span>
+</span><span class='line'>    <span class="c1"># このメソッドがダメ</span>
+</span><span class='line'>    <span class="n">read_attribute</span><span class="p">(</span><span class="ss">:status</span><span class="p">)</span> <span class="o">||</span> <span class="ss">:starting</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kp">include</span> <span class="no">AASM</span>
+</span><span class='line'>  <span class="n">aasm</span> <span class="ss">column</span><span class="p">:</span> <span class="s2">&quot;status&quot;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">state</span> <span class="ss">:starting</span><span class="p">,</span> <span class="ss">initial</span><span class="p">:</span> <span class="kp">true</span>
+</span><span class='line'>    <span class="n">state</span> <span class="ss">:running</span>
+</span><span class='line'>    <span class="n">state</span> <span class="ss">:stopped</span>
+</span><span class='line'>    <span class="n">state</span> <span class="ss">:finished</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">event</span> <span class="ss">:run</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">transitions</span> <span class="ss">from</span><span class="p">:</span> <span class="o">[</span><span class="ss">:starting</span><span class="p">,</span> <span class="ss">:stopped</span><span class="o">]</span><span class="p">,</span> <span class="ss">to</span><span class="p">:</span> <span class="ss">:running</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">event</span> <span class="ss">:stop</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">transitions</span> <span class="ss">from</span><span class="p">:</span> <span class="o">[</span><span class="ss">:starting</span><span class="p">,</span> <span class="ss">:running</span><span class="o">]</span><span class="p">,</span> <span class="ss">to</span><span class="p">:</span> <span class="ss">:stopped</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">event</span> <span class="ss">:finish</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">transitions</span> <span class="ss">from</span><span class="p">:</span> <span class="o">[</span><span class="ss">:running</span><span class="o">]</span><span class="p">,</span> <span class="ss">to</span><span class="p">:</span> <span class="ss">:finished</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>aasm</code> としては
+<a href="https://github.com/aasm/aasm/blob/master/lib/aasm/persistence/active_record_persistence.rb">AASM::Persistence::ActiveRecordPersistence</a>
+で
+<code>before_validation :aasm_ensure_initial_state, :on =&gt; :create</code>
+相当のフックを追加していて、
+<code>model.valid?</code>
+を実行すれば
+<code>model.status</code>
+が設定されるようになっていました。</p>
+
+<p>たぶん使い始めた時に
+<code>rails console</code>
+で
+<code>model = Model.new</code>
+した直後の
+<code>model.status</code>
+が
+<code>nil</code>
+だったので、
+どうにかしようと思って
+getter メソッドを定義してしまったのだと思います。</p>
+
+<p>このせいで以下のような
+<code>ransack</code>
+を使った検索フォームで初期状態のチェックを入れても
+うまく検索出来ないという問題が起きていました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="p">=</span> <span class="n">search_form_for</span> <span class="vi">@q</span><span class="p">,</span> <span class="ss">html</span><span class="p">:</span> <span class="p">{</span> <span class="ss">class</span><span class="p">:</span> <span class="s2">&quot;form-search&quot;</span> <span class="p">}</span> <span class="k">do</span> <span class="o">|</span><span class="n">f</span><span class="o">|</span>
+</span><span class='line'>  <span class="nt">%table</span>
+</span><span class='line'>    <span class="cp">-# ...</span>
+</span><span class='line'>    <span class="nt">%tr</span>
+</span><span class='line'>      <span class="nt">%td</span><span class="p">=</span> <span class="n">f</span><span class="o">.</span><span class="n">label</span> <span class="ss">:status_in</span>
+</span><span class='line'>      <span class="nt">%td</span>
+</span><span class='line'>        <span class="p">-</span> <span class="no">Model</span><span class="o">.</span><span class="n">aasm</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">status</span><span class="o">|</span>
+</span><span class='line'>          <span class="nt">%label</span>
+</span><span class='line'>            <span class="p">=</span> <span class="n">check_box_tag</span> <span class="s2">&quot;q[status_in][]&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">.</span><span class="n">to_s</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">try</span><span class="p">(</span><span class="ss">:[]</span><span class="p">,</span> <span class="ss">:q</span><span class="p">)</span><span class="o">.</span><span class="n">try</span><span class="p">(</span><span class="ss">:[]</span><span class="p">,</span> <span class="ss">:status_in</span><span class="p">)</span><span class="o">.</span><span class="n">try</span><span class="p">(</span><span class="ss">:include?</span><span class="p">,</span> <span class="n">status</span><span class="o">.</span><span class="n">to_s</span><span class="p">),</span> <span class="nb">id</span><span class="p">:</span> <span class="s2">&quot;q_status_in_</span><span class="si">#{</span><span class="n">status</span><span class="o">.</span><span class="n">to_s</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span class='line'>            <span class="p">=</span> <span class="n">status</span><span class="o">.</span><span class="n">localized_name</span>
+</span><span class='line'>    <span class="cp">-# ...</span>
+</span></code></pre></td></tr></table></div></figure>
 
 </div>
 
@@ -210,12 +243,12 @@ ruby 自体の互換性は高いと言うことがわかります。</p>
   
 
 
-<time datetime="2013-09-12T22:43:00+09:00" pubdate data-updated="true">2013-09-12 (Thu)</time>
+<time datetime="2013-09-30T15:00:00+09:00" pubdate data-updated="true">2013-09-30 (Mon)</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/ruby/'>ruby</a>, <a class='category' href='/blog/categories/td2planet/'>td2planet</a>
+    <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
   
 </span>
 
@@ -224,12 +257,12 @@ ruby 自体の互換性は高いと言うことがわかります。</p>
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-09-12-td2planet.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-09-12-td2planet.html" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-09-30-aasm.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-09-30-aasm.html" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
   
-  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-09-12-td2planet.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-09-30-aasm.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
   
     <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
   
@@ -248,10 +281,8 @@ ruby 自体の互換性は高いと言うことがわかります。</p>
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-09-11-tagcloud.html" title="Previous Post: タグクラウドプラグインを入れた">&laquo; タグクラウドプラグインを入れた</a>
+        <a class="basic-alignment left" href="/blog/2013-09-25-rubymotion-mokumoku-osaka.html" title="Previous Post: 第 3 回 RubyMotion もくもく会 in Osaka に参加した">&laquo; 第 3 回 RubyMotion もくもく会 in Osaka に参加した</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-09-13-homebrew-used-options.html" title="Next Post: homebrew の reinstall で使われるオプションの保存場所">homebrew の reinstall で使われるオプションの保存場所 &raquo;</a>
       
     </p>
   </footer>
@@ -354,8 +385,8 @@ ruby 自体の互換性は高いと言うことがわかります。</p>
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-09-12-td2planet.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-09-12-td2planet.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-09-30-aasm.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-09-30-aasm.html';
         var disqus_script = 'embed.js';
       
     (function () {

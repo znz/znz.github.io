@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | ZnZ Blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-09-25T23:42:33+09:00</updated>
+  <updated>2013-09-30T15:25:13+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,103 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[aasm gem の初期状態設定]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-09-30-aasm.html"/>
+    <updated>2013-09-30T15:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/aasm</id>
+    <content type="html"><![CDATA[<p><code>aasm</code> gem の使い方が悪くて、初期状態の値としてデータベースに nil が保存されてしまっていたという話です。</p>
+
+<!--more-->
+
+
+<p>確認したバージョンは ruby 2.0.0 + rails 3.2.14 + aasm 3.0.22 です。</p>
+
+<p>例として以下のような感じの使い方をしてしまっていて、
+<code>status</code> メソッドで <code>nil</code> を返さないようにしていたら
+データベースには <code>nil</code> が保存されるようになってしまって、
+<code>aasm</code> 以外 (<code>ransack</code> とか) からデータベースにアクセスした時に
+問題になりました。</p>
+
+<p>```ruby
+  def status</p>
+
+<pre><code># このメソッドがダメ
+read_attribute(:status) || :starting
+</code></pre>
+
+<p>  end</p>
+
+<p>  include AASM
+  aasm column: &ldquo;status&rdquo; do</p>
+
+<pre><code>state :starting, initial: true
+state :running
+state :stopped
+state :finished
+
+event :run do
+  transitions from: [:starting, :stopped], to: :running
+end
+
+event :stop do
+  transitions from: [:starting, :running], to: :stopped
+end
+
+event :finish do
+  transitions from: [:running], to: :finished
+end
+</code></pre>
+
+<p>  end
+```</p>
+
+<p><code>aasm</code> としては
+<a href="https://github.com/aasm/aasm/blob/master/lib/aasm/persistence/active_record_persistence.rb">AASM::Persistence::ActiveRecordPersistence</a>
+で
+<code>before_validation :aasm_ensure_initial_state, :on =&gt; :create</code>
+相当のフックを追加していて、
+<code>model.valid?</code>
+を実行すれば
+<code>model.status</code>
+が設定されるようになっていました。</p>
+
+<p>たぶん使い始めた時に
+<code>rails console</code>
+で
+<code>model = Model.new</code>
+した直後の
+<code>model.status</code>
+が
+<code>nil</code>
+だったので、
+どうにかしようと思って
+getter メソッドを定義してしまったのだと思います。</p>
+
+<p>このせいで以下のような
+<code>ransack</code>
+を使った検索フォームで初期状態のチェックを入れても
+うまく検索出来ないという問題が起きていました。</p>
+
+<p>```haml
+= search_form_for @q, html: { class: &ldquo;form-search&rdquo; } do |f|
+  %table</p>
+
+<pre><code>-# ...
+%tr
+  %td= f.label :status_in
+  %td
+    - Model.aasm.states.each do |status|
+      %label
+        = check_box_tag "q[status_in][]", status.to_s, params.try(:[], :q).try(:[], :status_in).try(:include?, status.to_s), id: "q_status_in_#{status.to_s}"
+        = status.localized_name
+-# ...
+</code></pre>
+
+<p>```</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 3 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -325,90 +422,6 @@ Ruby CI
 が途中で止まってしまったりして
 問題が起きそうなので、
 おすすめしません。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[td2planet を rubyforge から github に移行してリリース]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-12-td2planet.html"/>
-    <updated>2013-09-12T22:43:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/td2planet</id>
-    <content type="html"><![CDATA[<p>tDiary の日付ごとのまとまりを意識したフィードアグリゲータの td2planet を rubyforge から github に移行して、 ruby 2.0.0 対応を確認して、 0.3.0 としてリリースしました。</p>
-
-<!--more-->
-
-
-<h2>rubyforge から github への移行</h2>
-
-<p>rubyforge は
-<a href="http://rubyforge.org/scm/?group_id=3122">RubyForge: TD2Planet: SCM Repository</a>
-に書いてあるように http か svn か svn+ssh でアクセス出来ますが、
-今回は svn から取得したものを github に移行しました。</p>
-
-<p>小さいレポジトリだったこともあり、手順としては以下のように単純に移行出来ました。</p>
-
-<ol>
-<li><code>git svn clone -s svn://rubyforge.org/var/svn/td2planet</code></li>
-<li>github 上でレポジトリ作成</li>
-<li><code>git remote add origin git@github.com:znz/td2planet.git</code></li>
-<li><code>git push -u origin master</code></li>
-</ol>
-
-
-<h2>ruby 2.0.0 対応確認</h2>
-
-<p>単純に README に書いてある <code>ruby -I lib bin/td2planet.rb config.yaml</code> で問題なく動きました。</p>
-
-<p><a href="https://gist.github.com/unak/3038095">The History of Ruby</a>
-によると作り始めた 2007 年はまだ 1.9.0 の開発中だったので、
-その頃でも magic comment をちゃんと書いたり、
-内部エンコーディングは UTF-8 に統一したりなどを
-気をつけていれば、
-ruby 自体の互換性は高いと言うことがわかります。</p>
-
-<p>他には以下のような変更をしました。</p>
-
-<ul>
-<li><code>setup.rb</code> と関連する LGPL 削除など</li>
-<li>README と README.ja に拡張子の <code>.rdoc</code> を追加</li>
-<li>gemspec 更新
-
-<ul>
-<li>homepage を rubyforge から github に変更</li>
-<li>README のファイル名変更対応</li>
-<li>license 追加</li>
-</ul>
-</li>
-<li>バージョン変更</li>
-<li><code>-Ku</code> から ruby が 1.9 未満のときだけ <code>$KCODE</code> を設定に変更</li>
-</ul>
-
-
-<p><code>setup.rb</code> は ruby 1.9 以降に対応しているのかわからなかったのと、
-ライセンスを MIT に統一するために削除しました。</p>
-
-<h2>リリース</h2>
-
-<p>別のリリース作業をした時に <code>~/.gem/credentials</code> は作成済みだったので、
-リリースは以下の手順だけで出来ました。
-<code>~/.gem/credentials</code> がまだないときは <code>gem push</code> の時に <code>rubygems.org</code> のアカウントか <code>rubyforge.org</code> のアカウントが必要になります。</p>
-
-<ul>
-<li><code>gem build *.gemspec</code></li>
-<li><code>gem push *.gem</code></li>
-</ul>
-
-
-<p><code>
-% gem build *.gemspec
-  Successfully built RubyGem
-  Name: td2planet
-  Version: 0.3.0
-  File: td2planet-0.3.0.gem
-% gem push td2planet-0.3.0.gem
-Pushing gem to https://rubygems.org...
-Successfully registered gem: td2planet (0.3.0)
-</code></p>
 ]]></content>
   </entry>
   
