@@ -1,0 +1,86 @@
+---
+layout: post
+title: "aasm gem の初期状態設定"
+date: 2013-09-30 15:00
+comments: true
+categories: ruby rails
+---
+`aasm` gem の使い方が悪くて、初期状態の値としてデータベースに nil が保存されてしまっていたという話です。
+
+<!--more-->
+
+確認したバージョンは ruby 2.0.0 + rails 3.2.14 + aasm 3.0.22 です。
+
+例として以下のような感じの使い方をしてしまっていて、
+`status` メソッドで `nil` を返さないようにしていたら
+データベースには `nil` が保存されるようになってしまって、
+`aasm` 以外 (`ransack` とか) からデータベースにアクセスした時に
+問題になりました。
+
+```ruby
+  def status
+    # このメソッドがダメ
+    read_attribute(:status) || :starting
+  end
+
+  include AASM
+  aasm column: "status" do
+    state :starting, initial: true
+    state :running
+    state :stopped
+    state :finished
+
+    event :run do
+      transitions from: [:starting, :stopped], to: :running
+    end
+
+    event :stop do
+      transitions from: [:starting, :running], to: :stopped
+    end
+
+    event :finish do
+      transitions from: [:running], to: :finished
+    end
+  end
+```
+
+`aasm` としては
+[AASM::Persistence::ActiveRecordPersistence](https://github.com/aasm/aasm/blob/master/lib/aasm/persistence/active_record_persistence.rb)
+で
+`before_validation :aasm_ensure_initial_state, :on => :create`
+相当のフックを追加していて、
+`model.valid?`
+を実行すれば
+`model.status`
+が設定されるようになっていました。
+
+たぶん使い始めた時に
+`rails console`
+で
+`model = Model.new`
+した直後の
+`model.status`
+が
+`nil`
+だったので、
+どうにかしようと思って
+getter メソッドを定義してしまったのだと思います。
+
+このせいで以下のような
+`ransack`
+を使った検索フォームで初期状態のチェックを入れても
+うまく検索出来ないという問題が起きていました。
+
+```haml
+= search_form_for @q, html: { class: "form-search" } do |f|
+  %table
+    -# ...
+    %tr
+      %td= f.label :status_in
+      %td
+        - Model.aasm.states.each do |status|
+          %label
+            = check_box_tag "q[status_in][]", status.to_s, params.try(:[], :q).try(:[], :status_in).try(:include?, status.to_s), id: "q_status_in_#{status.to_s}"
+            = status.localized_name
+    -# ...
+```
