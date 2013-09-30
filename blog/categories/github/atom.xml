@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: github | ZnZ Blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/github/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2013-09-30T23:25:36+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[www.ruby-lang.org への pull request の出し方]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-09-30-how-to-pull-request.html"/>
+    <updated>2013-09-30T22:43:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/how-to-pull-request</id>
+    <content type="html"><![CDATA[<p><a href="https://www.ruby-lang.org/en/news/2013/09/23/ruby-2-1-0-preview1-is-released/">Ruby 2.1.0-preview1 is released</a>
+というアナウンスが一週間経ってもまだ日本語訳が出来ていなかったので、
+ちょっとの暇を見つけて pull request を出してみたので、
+その手順をまとめておきます。</p>
+
+<!--more-->
+
+
+<p>まず github のアカウントは持っているというのは前提として話を進めます。</p>
+
+<p>初回は
+<a href="https://github.com/ruby/www.ruby-lang.org">https://github.com/ruby/www.ruby-lang.org</a>
+の右上から自分のアカウントに Fork します。</p>
+
+<p>すでに Fork していて二回目以降は upstream の変更を merge する必要があります。
+<a href="https://help.github.com/articles/syncing-a-fork">Syncing a fork</a>
+を参考にして merge します。</p>
+
+<p>実行したコマンドだけまとめておきます。
+詳細は github のヘルプを参照してください。</p>
+
+<p><code>console
+% git clone git@github.com:znz/www.ruby-lang.org.git
+% cd www.ruby-lang.org
+% git remote add upstream https://github.com/ruby/www.ruby-lang.org.git
+% git remote -v
+% git fetch upstream
+% git branch -va
+% git checkout master
+% git merge upstream/master
+% git push
+</code></p>
+
+<p>英語版を元にして日本語版を作成します。</p>
+
+<p><code>console
+% cp {en,ja}/news/_posts/2013-09-23-ruby-2-1-0-preview1-is-released.md
+% git add ja/news/_posts/2013-09-23-ruby-2-1-0-preview1-is-released.md
+% vi ja/news/_posts/2013-09-23-ruby-2-1-0-preview1-is-released.md
+</code></p>
+
+<p>プレビュー用に <code>bundle install</code> します。</p>
+
+<p><code>console
+% bundle install
+% rake -T
+% rake preview
+</code></p>
+
+<p><code>rake preview</code>
+でサーバーが起動しているので、
+ブラウザで
+<code>http://localhost:4000/</code>
+を開いて表示を確認します。</p>
+
+<p>github に push して、
+ブラウザから pull request を出します。</p>
+
+<p>ブランチを切り忘れていたので、
+ここで作りました。</p>
+
+<p><code>console
+% git checkout -b ruby210preview1
+% git commit -av
+% git push --set-upstream origin ruby210preview1
+</code></p>
+
+<p>最後に
+<code>git checkout master</code>
+で master ブランチに戻るなり、
+消してしまって、
+また作業する時に clone し直すなりします。</p>
+]]></content>
+  </entry>
+  
+</feed>

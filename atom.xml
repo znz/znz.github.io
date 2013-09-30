@@ -4,7 +4,7 @@
   <title><![CDATA[ZnZ Blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-09-30T15:25:13+09:00</updated>
+  <updated>2013-09-30T23:25:36+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,104 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[www.ruby-lang.org への pull request の出し方]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-09-30-how-to-pull-request.html"/>
+    <updated>2013-09-30T22:43:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/how-to-pull-request</id>
+    <content type="html"><![CDATA[<p><a href="https://www.ruby-lang.org/en/news/2013/09/23/ruby-2-1-0-preview1-is-released/">Ruby 2.1.0-preview1 is released</a>
+というアナウンスが一週間経ってもまだ日本語訳が出来ていなかったので、
+ちょっとの暇を見つけて pull request を出してみたので、
+その手順をまとめておきます。</p>
+
+<!--more-->
+
+
+<p>まず github のアカウントは持っているというのは前提として話を進めます。</p>
+
+<p>初回は
+<a href="https://github.com/ruby/www.ruby-lang.org">https://github.com/ruby/www.ruby-lang.org</a>
+の右上から自分のアカウントに Fork します。</p>
+
+<p>すでに Fork していて二回目以降は upstream の変更を merge する必要があります。
+<a href="https://help.github.com/articles/syncing-a-fork">Syncing a fork</a>
+を参考にして merge します。</p>
+
+<p>実行したコマンドだけまとめておきます。
+詳細は github のヘルプを参照してください。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> git clone git@github.com:znz/www.ruby-lang.org.git
+</span><span class='line'><span class="gp">%</span> <span class="nb">cd </span>www.ruby-lang.org
+</span><span class='line'><span class="gp">%</span> git remote add upstream https://github.com/ruby/www.ruby-lang.org.git
+</span><span class='line'><span class="gp">%</span> git remote -v
+</span><span class='line'><span class="gp">%</span> git fetch upstream
+</span><span class='line'><span class="gp">%</span> git branch -va
+</span><span class='line'><span class="gp">%</span> git checkout master
+</span><span class='line'><span class="gp">%</span> git merge upstream/master
+</span><span class='line'><span class="gp">%</span> git push
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>英語版を元にして日本語版を作成します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> cp <span class="o">{</span>en,ja<span class="o">}</span>/news/_posts/2013-09-23-ruby-2-1-0-preview1-is-released.md
+</span><span class='line'><span class="gp">%</span> git add ja/news/_posts/2013-09-23-ruby-2-1-0-preview1-is-released.md
+</span><span class='line'><span class="gp">%</span> vi ja/news/_posts/2013-09-23-ruby-2-1-0-preview1-is-released.md
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>プレビュー用に <code>bundle install</code> します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> bundle install
+</span><span class='line'><span class="gp">%</span> rake -T
+</span><span class='line'><span class="gp">%</span> rake preview
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>rake preview</code>
+でサーバーが起動しているので、
+ブラウザで
+<code>http://localhost:4000/</code>
+を開いて表示を確認します。</p>
+
+<p>github に push して、
+ブラウザから pull request を出します。</p>
+
+<p>ブランチを切り忘れていたので、
+ここで作りました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> git checkout -b ruby210preview1
+</span><span class='line'><span class="gp">%</span> git commit -av
+</span><span class='line'><span class="gp">%</span> git push --set-upstream origin ruby210preview1
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>最後に
+<code>git checkout master</code>
+で master ブランチに戻るなり、
+消してしまって、
+また作業する時に clone し直すなりします。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[aasm gem の初期状態設定]]></title>
@@ -1701,55 +1799,6 @@ ruby 自体の互換性は高いと言うことがわかります。</p>
 </span><span class='line'>==&gt; ./configure --with-ca-certificates=/usr/local/opt/curl-ca-bundle/share/ca-bundle.crt -
 </span><span class='line'>==&gt; make install
 </span><span class='line'>🍺  /usr/local/Cellar/glib-networking/2.36.2: 68 files, 352K, built in 18 seconds</span></code></pre></td></tr></table></div></figure>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[関西Ruby会議05で migrate to magazine.rubyist.net という発表をしました]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-08-31-kansairubykaigi05.html"/>
-    <updated>2013-08-31T00:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansairubykaigi05</id>
-    <content type="html"><![CDATA[<p><a href="http://regional.rubykaigi.org/kansai05">関西Ruby会議05</a> というイベントで
-「migrate to magazine.rubyist.net」というタイトルで、
-<a href="http://jp.rubyist.net/magazine/">http://jp.rubyist.net/magazine/</a> から <a href="http://magazine.rubyist.net/">http://magazine.rubyist.net/</a> への移行で何をしたのか、そして何がまだ出来ていないのか、ということについて話しました。</p>
-
-<!--more-->
-
-
-<p>スライドは <a href="http://slide.rabbit-shocker.org/authors/znz/migrate-rubima-2013/">http://slide.rabbit-shocker.org/authors/znz/migrate-rubima-2013/</a> や slideshare で公開しています。
-スライドのソースも <a href="https://github.com/znz/migrate-rubima-2013">https://github.com/znz/migrate-rubima-2013</a> で公開しています。</p>
-
-<p>朝は JR の遅延の影響で開始が遅れていました。
-自分の発表も20分の枠の予定だったのに、後で確認してみると25分ぐらいになってしまっていたようでした。</p>
-
-<p>自分の発表の後は座っていたのが前の方だったり、ゆっくり聞けたりしたので、非常に楽しめました。
-「じこはおこるさ」の上映があったり、スイーツタイムというおやつの時間があったのが独特な感じでした。</p>
-
-<p>内容では、発表するのは「売名行為」で懇親会とかでのぼっちの可能性を減らすためとか「睡眠重要。寸暇を惜しんで寝る。」とかが特に印象深かったです。</p>
-
-<h2>slideshare</h2>
-
-<iframe src="http://www.slideshare.net/slideshow/embed_code/25754630" width="427" height="356" frameborder="0" marginwidth="0" marginheight="0" scrolling="no" style="border:1px solid #CCC;border-width:1px 1px 0;margin-bottom:5px" allowfullscreen webkitallowfullscreen mozallowfullscreen> </iframe>
-
-
-<p> <div style="margin-bottom:5px"> <strong> <a href="https://www.slideshare.net/znzjp/migrate-rubima-2013" title="migrate to magazine.rubyist.net" target="_blank">migrate to magazine.rubyist.net</a> </strong> from <strong><a href="http://www.slideshare.net/znzjp" target="_blank">Kazuhiro Nishiyama</a></strong> </div></p>
-
-<h2>Rabbit SlideShow</h2>
-
-<iframe src="http://slide.rabbit-shocker.org/authors/znz/migrate-rubima-2013/viewer.html"
-        width="640" height="524"
-        frameborder="0"
-        marginwidth="0"
-        marginheight="0"
-        scrolling="no"
-        style="border: 1px solid #ccc; border-width: 1px 1px 0; margin-bottom: 5px"
-        allowfullscreen> </iframe>
-
-
-<div style="margin-bottom: 5px">
-  <a href="http://slide.rabbit-shocker.org/authors/znz/migrate-rubima-2013/" title="migrate to magazine.rubyist.net">migrate to magazine.rubyist.net</a>
-</div>
 
 ]]></content>
   </entry>
