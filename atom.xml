@@ -4,7 +4,7 @@
   <title><![CDATA[ZnZ Blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-09-30T23:25:36+09:00</updated>
+  <updated>2013-10-01T15:15:25+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,281 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[jQuery Mobile 1.3.2 の日本語化]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-01-jquery-mobile-l10n.html"/>
+    <updated>2013-10-01T15:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/jquery-mobile-l10n</id>
+    <content type="html"><![CDATA[<p>jQuery Mobile の l10n についてちゃんと調べたのでまとめておきます。
+今回は日本語化だけですが、
+翻訳対象は網羅できていると思います。</p>
+
+<p>ちゃんと他の言語にも対応させるためには
+<code>mobileinit</code>
+の中で設定する文字列を別途 i18n 用の仕組みを用意して
+翻訳し分けることになると思います。</p>
+
+<!--more-->
+
+
+<h2>mobileinit</h2>
+
+<p>まず最初に注意すべき点として
+<a href="http://api.jquerymobile.com/global-config/">Configuring Defaults | jQuery Mobile API Documentation</a>
+にも書いてありますが、
+ <code>mobileinit</code>
+のイベントハンドラは
+<code>jquery.mobile.js</code>
+の読み込み前に設定しておく必要があります。
+(<code>$</code> や <code>on</code> を使うので <code>jquery.js</code> よりは後にします。)</p>
+
+<p>これを知らないと設定が反映されなくて悩むことになります。</p>
+
+<p>rails 3.1 以降との組み合わせなら、例えば
+<code>app/assets/javascripts/mobile.js</code>
+に以下のように書いておいて、
+<code>app/assets/javascripts/mobile/jqm_ja.js</code>
+などにローカライズ用の
+<code>mobileinit</code>
+を書くということになります。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>//= require jquery
+</span><span class='line'>//= require jquery_ujs
+</span><span class='line'>//= require_tree ./mobile
+</span><span class='line'>//= require jquery.mobile</span></code></pre></td></tr></table></div></figure>
+
+
+<p>例えば以下のような感じになります。</p>
+
+<figure class='code'><figcaption><span>app/assets/javascripts/mobile/jqm_ja.js.coffee</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='coffeescript'><span class='line'><span class="nx">$</span><span class="p">(</span><span class="nb">document</span><span class="p">).</span><span class="nx">on</span> <span class="s">&quot;mobileinit&quot;</span><span class="p">,</span> <span class="nf">-&gt;</span>
+</span><span class='line'>  <span class="c1">#$.mobile.loadingMessageTextVisible = true</span>
+</span><span class='line'>  <span class="c1">#$.mobile.loadingMessage = &quot;読み込み中...&quot;</span>
+</span><span class='line'>  <span class="nv">$.mobile.loader.prototype.options.text = </span><span class="s">&quot;読み込み中です...&quot;</span>
+</span><span class='line'>  <span class="nv">$.mobile.loader.prototype.options.textVisible = </span><span class="kc">false</span>
+</span><span class='line'>  <span class="nv">$.mobile.pageLoadErrorMessage = </span><span class="s">&quot;読み込みに失敗しました。&quot;</span>
+</span><span class='line'>  <span class="nv">$.mobile.page.prototype.options.backBtnText = </span><span class="s">&quot;戻る&quot;</span>
+</span><span class='line'>  <span class="nv">$.mobile.listview.prototype.options.filterPlaceholder = </span><span class="s">&quot;検索...&quot;</span>
+</span><span class='line'>  <span class="nv">$.mobile.table.prototype.options.columnBtnText = </span><span class="s">&quot;列の増減...&quot;</span>
+</span><span class='line'>  <span class="nv">$.mobile.dialog.prototype.options.closeBtnText =</span>
+</span><span class='line'>    <span class="nv">$.mobile.selectmenu.prototype.options.closeText = </span><span class="s">&quot;閉じる&quot;</span>
+</span><span class='line'>  <span class="nv">$.mobile.collapsible.prototype.options.expandCueText = </span><span class="s">&quot;クリックで開く&quot;</span>
+</span><span class='line'>  <span class="nv">$.mobile.collapsible.prototype.options.collapseCueText = </span><span class="s">&quot;クリックで閉じる&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Error Loading Page</h2>
+
+<p>読み込みエラーの時のメッセージは
+<code>$.mobile.pageLoadErrorMessage</code>
+で設定できます。</p>
+
+<p>いろいろな理由で表示されることが多いので、
+真っ先に変更したくなるメッセージだと思います。</p>
+
+<p>見た目は
+<code>$.mobile.pageLoadErrorMessageTheme</code>
+で変更できます。</p>
+
+<h2>loading</h2>
+
+<p>1.3.2 でしか確認していませんが、
+jQuery Mobile 1.2 からは
+<a href="http://api.jquerymobile.com/loader/">Loader Widget</a>
+に変わっていて、
+<code>$.mobile.loader.prototype.options.text</code>
+で設定するようになっています。
+ドキュメントによると、
+メッセージの変更やテーマの変更以外にも
+独自の HTML を表示するなど
+いろいろとカスタマイズ出来るようです。</p>
+
+<p><code>$.mobile.loader.prototype.options.textVisible</code>
+で有効にした時だけ表示されるようなので、
+不要なら無視しても良いかもしれません。</p>
+
+<p>deprecated になっていますが、互換性のため、
+<code>$.mobile.loadingMessage</code>
+や
+<code>$.mobile.loadingMessageTextVisible</code>
+もまだ使えるようです。
+(
+<code>$.mobile.loader.prototype.options.text</code>
+や
+<code>$.mobile.loader.prototype.options.textVisible</code>
+より優先されるようです。)</p>
+
+<h2>pageloadfailed</h2>
+
+<p>ローカライズとはちょっと離れて、
+読み込みエラーのときに別処理をする方法を書いておきます。</p>
+
+<p>devise の timeoutable を使っていると
+普通の画面遷移をしようとしたときに
+401 Unauthorized になることがあります。
+そのときに読み込みエラーメッセージだけ出されても困るので、
+<a href="http://api.jquerymobile.com/pageloadfailed/">pageloadfailed</a>
+で認証画面に飛ぶためのリダイレクト処理を入れてみました。</p>
+
+<p><code>event.preventDefault()</code>
+を呼んでいないので、
+<code>data.deferred</code>
+の
+<code>resolve()</code>
+か
+<code>reject()</code>
+も呼ばず、
+リダイレクト前のページの処理はデフォルトのままにしています。</p>
+
+<figure class='code'><figcaption><span>app/assets/javascripts/mobile/pageloadfailed.js.coffee</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='coffeescript'><span class='line'><span class="nx">$</span><span class="p">(</span><span class="nb">document</span><span class="p">).</span><span class="nx">on</span> <span class="s">&quot;pageloadfailed&quot;</span><span class="p">,</span> <span class="nf">(event, data) -&gt;</span>
+</span><span class='line'>  <span class="k">if</span> <span class="nx">data</span><span class="p">.</span><span class="nx">xhr</span><span class="p">.</span><span class="nx">status</span> <span class="o">==</span> <span class="mi">401</span>
+</span><span class='line'>    <span class="nb">window</span><span class="p">.</span><span class="nv">location.href = </span><span class="nx">data</span><span class="p">.</span><span class="nx">absUrl</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Back</h2>
+
+<p><code>data-role="page"</code>
+の要素に
+<code>data-add-back-btn="true"</code>
+を追加したときに
+<a href="http://api.jquerymobile.com/header/">Header Widget</a>
+に出てくる戻るボタンのテキストです。</p>
+
+<p><code>$.mobile.page.prototype.options.backBtnText</code>
+で設定できます。</p>
+
+<h2>Filter items&hellip;</h2>
+
+<p>ここからはページ全体ではなく
+Widget ごとの翻訳の話になります。</p>
+
+<p>まず
+<a href="http://api.jquerymobile.com/listview/">Listview Widget</a>
+で
+<code>data-filter="true"</code>
+の時に出てくる検索入力欄の placeholder のテキストです。</p>
+
+<p>まとめてデフォルトを変更するには
+今までのものと同様に
+<code>mobileinit</code>
+で
+<code>$.mobile.listview.prototype.options.filterPlaceholder</code>
+に設定します。</p>
+
+<p>個別に変更するには
+listview
+に
+<code>data-filter-placeholder</code>
+属性を設定します。</p>
+
+<p>この後のものも同様に全体のデフォルト設定を
+<code>mobileinit</code>
+で設定したり、
+属性で個別に設定したりできます。</p>
+
+<h2>Columns&hellip;</h2>
+
+<p><a href="http://api.jquerymobile.com/table-columntoggle/">Column-Toggle Table Widget</a>
+の列を増減させるポップアップを表示させるボタンのテキストです。</p>
+
+<p><code>mobileinit</code>
+で
+<code>$.mobile.table.prototype.options.columnBtnText</code>
+を設定するか、
+<code>data-column-btn-text</code>
+属性で設定します。</p>
+
+<h2>Close</h2>
+
+<p><a href="http://api.jquerymobile.com/dialog/">Dialog Widget</a>
+の閉じるボタンのテキストは
+<code>mobileinit</code>
+で
+<code>$.mobile.dialog.prototype.options.closeBtnText</code>
+を設定するか、
+<code>data-close-btn-text</code>
+属性で設定します。</p>
+
+<p>ダイアログの閉じるボタンはデフォルトではアイコンのみでテキストは表示されないのですが、
+スクリーンリーダーで読み上げられるので、
+アクセシビリティ的には重要と jQuery Mobile のドキュメントには書いてありました。</p>
+
+<p>ドキュメントには書いてありませんが、
+jQuery Mobile 1.3.2 のソースをみると
+<a href="http://api.jquerymobile.com/selectmenu/">Selectmenu Widget</a>
+の
+Multiple selects
+の閉じるボタンのテキストとして
+<code>$.mobile.selectmenu.prototype.options.closeText</code>
+も設定しておくと良さそうです。</p>
+
+<h2>clear text</h2>
+
+<p>検索入力はデフォルトで、
+その他のテキスト入力では
+<code>data-clear-btn=true</code>
+の時に、
+何かテキストを入力すると右に出てくるクリアボタンのオプションとして、
+<code>data-clear-btn-text</code> があります。</p>
+
+<p>これもデフォルトでは表示されず、スクリーンリーダーなどのアクセシビリティ用です。</p>
+
+<p><code>$.mobile.textinput.prototype.options.clearBtnText</code>
+でまとめて設定すれば良いと思います。</p>
+
+<p><code>$.mobile.textinput.prototype.options.clearSearchButtonText</code>
+という設定も残っていますが、
+<code>deprecating for 1.3...</code>
+とコメントに書いてあるので、
+1.3 以降なら
+<code>clearBtnText</code>
+だけ設定しておけば良いと思います。</p>
+
+<h2>click to expand contents, click to collapse contents</h2>
+
+<p>最後に
+<a href="http://api.jquerymobile.com/collapsible/">Collapsible Widget</a>
+の翻訳です。</p>
+
+<p>これもデフォルトでは表示されず、スクリーンリーダーなどのアクセシビリティ用です。</p>
+
+<p>デフォルトが
+<code>" click to expand contents"</code>
+の方が
+<code>$.mobile.collapsible.prototype.options.expandCueText</code>
+や
+<code>data-expand-cue-text</code>
+で変更できて、
+デフォルトが
+<code>" click to collapse contents"</code>
+の方が
+<code>$.mobile.collapsible.prototype.options.collapseCueText</code>
+や
+<code>data-collapse-cue-text</code>
+で変更できます。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[www.ruby-lang.org への pull request の出し方]]></title>
@@ -1726,79 +2001,6 @@ ruby 自体の互換性は高いと言うことがわかります。</p>
 </ul>
 </li>
 </ul>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Mac で rabbiter が動いた]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-08-rabbiter-on-mac.html"/>
-    <updated>2013-09-08T21:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rabbiter-on-mac</id>
-    <content type="html"><![CDATA[<p>homebrew を使った Mac OS X 10.8.4 環境で rabbiter (2.0.1) が動くようになりました。</p>
-
-<!--more-->
-
-
-<p>rabbiter の issues に報告していた
-<a href="https://github.com/rabbit-shocker/rabbiter/issues/1">show_uri の問題</a>
-と
-<a href="https://github.com/rabbit-shocker/rabbiter/issues/2">glib-networking のルート証明書の問題</a>
-が解決したので、 <code>glib-networking</code> を <code>brew reinstall glib-networking --with-curl-ca-bundle</code> でインストールすれば使えるようになりました。
-ちなみに、初回のインストールでも <code>brew install</code> ではなく <code>brew reinstall</code> で大丈夫のようです。</p>
-
-<p>以下のように <code>configure</code> に <code>--with-ca-certificates</code> が付いていれば使えます。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% brew reinstall glib-networking --with-curl-ca-bundle
-</span><span class='line'>==&gt; Reinstalling glib-networking --with-curl-ca-bundle
-</span><span class='line'>==&gt; Downloading http://ftp.gnome.org/pub/GNOME/sources/glib-networking/2.36/glib-networkin
-</span><span class='line'>Already downloaded: /Library/Caches/Homebrew/glib-networking-2.36.2.tar.xz
-</span><span class='line'>==&gt; ./configure --with-ca-certificates=/usr/local/opt/curl-ca-bundle/share/ca-bundle.crt -
-</span><span class='line'>==&gt; make install
-</span><span class='line'>🍺  /usr/local/Cellar/glib-networking/2.36.2: 68 files, 352K, built in 18 seconds</span></code></pre></td></tr></table></div></figure>
-
-
-<p>以下のように <code>configure</code> に <code>--without-ca-certificates</code> と付いているときは rabbiter が使えません。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% brew reinstall glib-networking
-</span><span class='line'>==&gt; Reinstalling glib-networking
-</span><span class='line'>==&gt; Downloading http://ftp.gnome.org/pub/GNOME/sources/glib-networking/2.36/glib-networkin
-</span><span class='line'>Already downloaded: /Library/Caches/Homebrew/glib-networking-2.36.2.tar.xz
-</span><span class='line'>==&gt; ./configure --without-ca-certificates --prefix=/usr/local/Cellar/glib-networking/2.36.
-</span><span class='line'>==&gt; make install
-</span><span class='line'>🍺  /usr/local/Cellar/glib-networking/2.36.2: 68 files, 352K, built in 21 seconds</span></code></pre></td></tr></table></div></figure>
-
-
-<p>一度 <code>--with-curl-ca-bundle</code> 付きでインストールした後だと、以下のようにオプションなしの reinstall でもオプションが付くようです。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% brew reinstall glib-networking
-</span><span class='line'>==&gt; Reinstalling glib-networking --with-curl-ca-bundle
-</span><span class='line'>==&gt; Downloading http://ftp.gnome.org/pub/GNOME/sources/glib-networking/2.36/glib-networkin
-</span><span class='line'>Already downloaded: /Library/Caches/Homebrew/glib-networking-2.36.2.tar.xz
-</span><span class='line'>==&gt; ./configure --with-ca-certificates=/usr/local/opt/curl-ca-bundle/share/ca-bundle.crt -
-</span><span class='line'>==&gt; make install
-</span><span class='line'>🍺  /usr/local/Cellar/glib-networking/2.36.2: 68 files, 352K, built in 18 seconds</span></code></pre></td></tr></table></div></figure>
 
 ]]></content>
   </entry>
