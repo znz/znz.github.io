@@ -4,7 +4,7 @@
   <title><![CDATA[Category: jquery-mobile | ZnZ Blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/jquery-mobile/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-01T15:15:25+09:00</updated>
+  <updated>2013-10-02T16:20:07+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,78 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[jquery_mobile_rails と production 環境と画像ファイル]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-02-jquery-mobile-rails.html"/>
+    <updated>2013-10-02T15:58:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/jquery-mobile-rails</id>
+    <content type="html"><![CDATA[<p>rails 4.0.0
+と
+<a href="https://rubygems.org/gems/jquery_mobile_rails">jquery_mobile_rails</a> 1.3.2
+で production 環境だと画像が表示されないという現象が起きていました。</p>
+
+<!--more-->
+
+
+<p><code>RAILS_ENV=production rake assets:precompile</code>
+で調べてみると <code>public/assets/</code> 以下には
+<code>jquery_mobile_rails</code> の画像は入っていませんでした。</p>
+
+<p>いろいろ調べた結果、
+<code>config.assets.precompile</code>
+に
+<code>*.gif</code>
+と
+<code>*.png</code>
+を足せば良いとわかったので、
+<code>jquery_mobile_rails</code>
+用に
+<code>application.css</code>
+や
+<code>application.js</code>
+とは別に作成した
+<code>mobile.css</code>
+や
+<code>mobile.js</code>
+と合わせて、以下のように追加して解決しました。
+<code>jquery_mobile_rails</code> 1.3.2
+には
+<code>*.jpg</code>
+は入っていないのですが、
+念のため追加しておきました。</p>
+
+<p><code>ruby config/environments/production.rb
+   config.assets.precompile += %w( mobile.js mobile.css *.gif *.png *.jpg )
+</code></p>
+
+<p>この状態で再度
+<code>RAILS_ENV=production rake assets:precompile</code>
+で調べてみると <code>public/assets/</code>
+は以下のようになっていました。</p>
+
+<p><code>console
+% ls public/assets/jquery-mobile
+ajax-loader-5c6592c3263e7de88985668db733b08f.gif
+icons-18-black-dbc49700bc8bd5a9d3e0120cb111ea62.png
+icons-18-white-f8f5999f3ea0d9ebea6a4ec193442c1f.png
+icons-36-black-76b4944fda10128b365344f06377dad5.png
+icons-36-white-178cc38be265514b341e111ed7d38712.png
+</code></p>
+
+<p>rails 4 になって、ハッシュなしの
+<code>ajax-loader.gif</code>
+のようなファイルは作成されなくなっているので、
+ちゃんと view の中では
+<code>image_path</code>
+を使ったり、
+スタイルシートの中では
+<code>image-url</code>
+を使ったりしていないと
+production
+環境だけ問題がおきることがあるようです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[jQuery Mobile 1.3.2 の日本語化]]></title>

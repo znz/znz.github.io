@@ -4,7 +4,7 @@
   <title><![CDATA[ZnZ Blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-01T15:15:25+09:00</updated>
+  <updated>2013-10-02T16:20:07+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,85 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[jquery_mobile_rails と production 環境と画像ファイル]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-02-jquery-mobile-rails.html"/>
+    <updated>2013-10-02T15:58:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/jquery-mobile-rails</id>
+    <content type="html"><![CDATA[<p>rails 4.0.0
+と
+<a href="https://rubygems.org/gems/jquery_mobile_rails">jquery_mobile_rails</a> 1.3.2
+で production 環境だと画像が表示されないという現象が起きていました。</p>
+
+<!--more-->
+
+
+<p><code>RAILS_ENV=production rake assets:precompile</code>
+で調べてみると <code>public/assets/</code> 以下には
+<code>jquery_mobile_rails</code> の画像は入っていませんでした。</p>
+
+<p>いろいろ調べた結果、
+<code>config.assets.precompile</code>
+に
+<code>*.gif</code>
+と
+<code>*.png</code>
+を足せば良いとわかったので、
+<code>jquery_mobile_rails</code>
+用に
+<code>application.css</code>
+や
+<code>application.js</code>
+とは別に作成した
+<code>mobile.css</code>
+や
+<code>mobile.js</code>
+と合わせて、以下のように追加して解決しました。
+<code>jquery_mobile_rails</code> 1.3.2
+には
+<code>*.jpg</code>
+は入っていないのですが、
+念のため追加しておきました。</p>
+
+<figure class='code'><figcaption><span>config/environments/production.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>   <span class="n">config</span><span class="o">.</span><span class="n">assets</span><span class="o">.</span><span class="n">precompile</span> <span class="o">+=</span> <span class="sx">%w( mobile.js mobile.css *.gif *.png *.jpg )</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>この状態で再度
+<code>RAILS_ENV=production rake assets:precompile</code>
+で調べてみると <code>public/assets/</code>
+は以下のようになっていました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> ls public/assets/jquery-mobile
+</span><span class='line'><span class="go">ajax-loader-5c6592c3263e7de88985668db733b08f.gif</span>
+</span><span class='line'><span class="go">icons-18-black-dbc49700bc8bd5a9d3e0120cb111ea62.png</span>
+</span><span class='line'><span class="go">icons-18-white-f8f5999f3ea0d9ebea6a4ec193442c1f.png</span>
+</span><span class='line'><span class="go">icons-36-black-76b4944fda10128b365344f06377dad5.png</span>
+</span><span class='line'><span class="go">icons-36-white-178cc38be265514b341e111ed7d38712.png</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>rails 4 になって、ハッシュなしの
+<code>ajax-loader.gif</code>
+のようなファイルは作成されなくなっているので、
+ちゃんと view の中では
+<code>image_path</code>
+を使ったり、
+スタイルシートの中では
+<code>image-url</code>
+を使ったりしていないと
+production
+環境だけ問題がおきることがあるようです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[jQuery Mobile 1.3.2 の日本語化]]></title>
@@ -1929,79 +2008,6 @@ ruby 自体の互換性は高いと言うことがわかります。</p>
 
 
 <p>これでも動かなければ gem も uninstall して install し直す予定でした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[octopress 始めました]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-08-octopress.html"/>
-    <updated>2013-09-08T22:58:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/octopress</id>
-    <content type="html"><![CDATA[<p>octopress で github pages を作ってみました。
-インストール記事などは複数あるので気になった点を列挙するだけにします。</p>
-
-<!--more-->
-
-
-<ul>
-<li>ruby のバージョン
-
-<ul>
-<li>2.0.0 ではなく 1.9.3 になっていたが、 github-pages という gem でわかるように github pages で使われているのが 1.9.3 のようなので、 1.9.3 を使うことにした。</li>
-<li>後でわかったんですが、 octopress の場合はローカルで生成するようなので、 2.0.0 でも問題なく使えそうでした。</li>
-<li><code>.ruby-version</code> に <code>1.9.3</code> とだけあって、 rbenv のパッチレベル付きのバージョンにマッチしなかったので、最初は <code>rbenv shell 1.9.3-p448</code> で作業していました。 (後で <code>rbenv local 1.9.3-p448</code> にしました。)</li>
-</ul>
-</li>
-<li>使い始め
-
-<ul>
-<li><code>git clone git://github.com/imathis/octopress.git octopress</code></li>
-<li><code>cd octopress</code></li>
-<li><code>rake setup_github_pages</code>
-
-<ul>
-<li><code>Repository url: git@github.com:znz/znz.github.io</code></li>
-</ul>
-</li>
-<li><code>_config.yml</code> を設定</li>
-<li><code>rake install</code></li>
-<li><code>_config.yml</code> を設定</li>
-<li><code>rake deploy</code></li>
-<li><code>rake new_post</code>
-
-<ul>
-<li><code>Enter a title for your post:</code> ときいてくるので <code>rake new_post[title]</code> よりも楽</li>
-</ul>
-</li>
-<li><code>rake preview</code> で確認しながら書く</li>
-<li><code>rake gen_deploy</code>
-
-<ul>
-<li><code>rake generate</code> 相当がないと変更が反映されない (<code>_config.yml</code> を変更したときなど)</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><code>CNAME</code>
-
-<ul>
-<li>octopress 側では <code>source/CNAME</code> に置く必要がありました。</li>
-</ul>
-</li>
-<li>Excerpts
-
-<ul>
-<li><a href="http://octopress.org/docs/blogging/plugins/">http://octopress.org/docs/blogging/plugins/</a> にあるように <code>&lt;!--more--&gt;</code> と書いておくとトップに表示される内容を最初の方だけに出来ました。</li>
-</ul>
-</li>
-<li>ブランチ
-
-<ul>
-<li>手元では source ブランチで作業するようになっていて、 github pages へ deploy される master ブランチは <code>_deploy</code> ディレクトリにある別レポジトリにありました。</li>
-</ul>
-</li>
-</ul>
-
 ]]></content>
   </entry>
   
