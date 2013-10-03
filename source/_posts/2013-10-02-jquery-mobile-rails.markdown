@@ -10,6 +10,10 @@ rails 4.0.0
 [jquery_mobile_rails](https://rubygems.org/gems/jquery_mobile_rails) 1.3.2
 で production 環境だと画像が表示されないという現象が起きていました。
 
+2013-10-03 追記:
+`jquery_mobile_rails` gem のファイル配置の問題もあるのかもしれません。
+詳細は次の記事を参照してください。
+
 <!--more-->
 
 `RAILS_ENV=production rake assets:precompile`
