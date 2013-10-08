@@ -3,7 +3,7 @@ layout: post
 title: "doorkeeper gem の API のクライアント"
 date: 2013-10-08 21:06
 comments: true
-categories: ruby rails doorkeeper omniauth oauth2
+categories: ruby rails doorkeeper devise omniauth oauth2
 ---
 [doorkeeper gem](http://rubygems.org/gems/doorkeeper)
 で API を作る方は
