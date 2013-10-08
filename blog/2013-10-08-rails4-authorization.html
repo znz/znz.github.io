@@ -5,14 +5,20 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>jQuery UI Autocomplete を自動で開く - ZnZ Blog</title>
+  <title>rails 4 対応の認可の gem - ZnZ Blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Google カレンダーの時刻入力のように combobox 的な入力欄で、
-デフォルトは選択肢から選んで、
-選択肢にないときは直接入力も出来るようにしたいと思いました。 いくつかの方法を試した結果、
-jQuery UI の Autocomplete に少しコードを足したら &hellip;">
+  <meta name="description" content="rails 4 に対応している認可のライブラリとして
+cancan
+からの移行先候補を選ぶために
+the_role
+と
+pundit
+という gem を試してみました。 cancan からの移行 認証は rails 4 でも
+devise
+を使い続ければ良さそうな感じなのですが、
+認可の方は &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -21,7 +27,7 @@ jQuery UI の Autocomplete に少しコードを足したら &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-09-18-auto-open-autocomplete.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-10-08-rails4-authorization.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="ZnZ Blog" type="application/atom+xml">
@@ -83,7 +89,7 @@ jQuery UI の Autocomplete に少しコードを足したら &hellip;">
   
   <header>
     
-      <h1 class="entry-title">jQuery UI Autocomplete を自動で開く</h1>
+      <h1 class="entry-title">rails 4 対応の認可の gem</h1>
     
     
       <p class="meta">
@@ -99,7 +105,7 @@ jQuery UI の Autocomplete に少しコードを足したら &hellip;">
   
 
 
-<time datetime="2013-09-18T15:43:00+09:00" pubdate data-updated="true">2013-09-18 (Wed)</time>
+<time datetime="2013-10-08T23:04:00+09:00" pubdate data-updated="true">2013-10-08 (Tue)</time>
         
          | <a href="#disqus_thread">Comments</a>
         
@@ -108,114 +114,169 @@ jQuery UI の Autocomplete に少しコードを足したら &hellip;">
   </header>
 
 
-<div class="entry-content"><p>Google カレンダーの時刻入力のように combobox 的な入力欄で、
-デフォルトは選択肢から選んで、
-選択肢にないときは直接入力も出来るようにしたいと思いました。</p>
-
-<p>いくつかの方法を試した結果、
-jQuery UI の Autocomplete に少しコードを足したら
-希望通りの挙動に出来ました。</p>
+<div class="entry-content"><p>rails 4 に対応している認可のライブラリとして
+<code>cancan</code>
+からの移行先候補を選ぶために
+<code>the_role</code>
+と
+<code>pundit</code>
+という gem を試してみました。</p>
 
 <!--more-->
 
 
-<h2>HTML5 の datalist と autocomplete</h2>
+<h2>cancan からの移行</h2>
 
-<p>最初は HTML5 の datalist 要素を試しました。
-<code>simple_form</code> gem を使っているので、
-以下のように書きました。</p>
+<p>認証は rails 4 でも
+<code>devise</code>
+を使い続ければ良さそうな感じなのですが、
+認可の方は
+<code>cancan</code>
+の rails 4 対応がいまいちで
+<a href="http://ready4rails4.net/gems/cancan">Ready for Rails 4?</a>
+でも <em>not ready</em> のままで
+<a href="https://github.com/ryanb/cancan/issues">issues</a>
+も溜まっていることもあり、
+rails 4 では他の gem への移行を検討していました。</p>
+
+<h2>移行先候補</h2>
+
+<p>移行先候補として、まず最初に試したのは
+<a href="https://github.com/the-teacher/the_role">the_role</a>
+という gem でした。
+後述しますが、これは最初から組み込むなら良さそうなのですが、
+今回はちょっと目的にあわなかったので諦めました。</p>
+
+<p>次に試したのは
+<a href="https://github.com/elabs/pundit">pundit</a>
+という gem で、
+これは
+<a href="http://www.elabs.se/blog/52-simple-authorization-in-ruby-on-rails-apps">Simple authorization in Ruby on Rails apps — Elabs</a>
+という blog の説明で実装のほぼすべてが理解できるぐらいシンプルな gem でした。
+rails 自体の変化にも強そうだと思って、
+今回はこれを採用しました。</p>
+
+<p>その後、
+検索用キーワードとして使えそうな名前が増えたことで
+<a href="http://www.plugingeek.com/categories/user-authorization-ruby">User Authorization (Ruby) on pluginGeek</a>
+という一覧を見つけました。</p>
+
+<p>後で知ったので今回は試していないのですが、
+<a href="https://github.com/nathanl/authority">Authority</a>
+は高機能そうなので、高機能なものがほしい場合や
+<code>cancan</code>
+で複雑なことをしていた場合の移行先としては良さそうです。</p>
+
+<h2><code>the_role</code></h2>
+
+<p>最初に試した
+<a href="https://github.com/the-teacher/the_role">the_role</a> 2.1.1
+は
+「TheRole &ndash; Authorization Gem for Ruby on Rails with administrative interface」
+と書いてある通り、設定画面も付いているのが特徴です。</p>
+
+<p>認可の設定画面は
+<code>localhost:3000/admin/roles</code>
+で出てくるのですが、
+layout に</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="p">=</span> <span class="n">f</span><span class="o">.</span><span class="n">input</span> <span class="ss">:drink</span><span class="p">,</span> <span class="n">input_html</span><span class="p">:</span> <span class="p">{</span> <span class="ss">autocomplete</span><span class="p">:</span> <span class="s2">&quot;on&quot;</span><span class="p">,</span> <span class="ss">list</span><span class="p">:</span> <span class="s2">&quot;drink_list&quot;</span> <span class="p">}</span>
-</span><span class='line'><span class="nt">%datalist</span><span class="nf">#drink_list</span>
-</span><span class='line'>  <span class="nt">%options</span>(<span class="na">value=</span><span class="s">&quot;不要&quot;</span>)
-</span><span class='line'>  <span class="nt">%options</span>(<span class="na">value=</span><span class="s">&quot;水&quot;</span>)
-</span><span class='line'>  <span class="nt">%options</span>(<span class="na">value=</span><span class="s">&quot;お茶&quot;</span>)
-</span><span class='line'>  <span class="nt">%options</span>(<span class="na">value=</span><span class="s">&quot;コーヒー&quot;</span>)
+</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="p">=</span> <span class="k">yield</span> <span class="ss">:role_sidebar</span>
+</span><span class='line'><span class="p">=</span> <span class="k">yield</span> <span class="ss">:role_main</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>この方法の問題点としては、
-IE は IE10 (以降?) しか対応していなかったり、
-Mobile Safari も対応してなさそうだったりして
-対応環境が微妙だったのと、
-入力欄にフォーカスだけで自動で開くという挙動が出来なくて、
-矢印の上下で開く必要があったので、
-諦めました。</p>
+<p>を入れていないと真っ白なページで何も内容が出てこないので注意が必要です。
+<code>assets</code>
+もちゃんと設定していないと
+<code>Enable</code>, <code>Disable</code> のところが動かないなど、
+使い始めにはまりどころがいくつかありました。</p>
 
-<h2>Bootstrap Typeahead</h2>
+<p>他にも</p>
 
-<p>挙動としては
-HTML5 の datalist の方法や
-jQuery UI Autocomplete と似ていたのですが、
-Bootstrap 3 では外されているという話があったり、
-別途新しい typeahead.js が開発されているという話があったりして、
-先にある程度 jQuery UI Autocomplete を試していたこともあり、
-別途新しいライブラリを入れるなどの深追いはせずに
-jQuery UI Autocomplete を使うことにしました。</p>
-
-<h2>jQuery UI Autocomplete</h2>
-
-<p><code>jquery-ui-rails</code> gem を使っていて、
-必要なものだけ CSS や JS を require していたので、
-まず <code>app/assets/stylesheets/application.css</code> に</p>
-
-<figure class='code'><figcaption><span>application.css</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'> *= require jquery.ui.autocomplete
-</span></code></pre></td></tr></table></div></figure>
+<ul>
+<li>管理画面が <code>admin/roles</code> 決めうち (gem の中の <code>config/routes.rb</code>)</li>
+<li><code>User</code> というモデル名も決めうち (<code>Admin::User</code> などは使えない)</li>
+<li>1 ユーザーは 1 ロールのみ (例えば、あるユーザーにカレンダーの管理者とお知らせの管理者のロールをつけるということは出来ないので複合権限のロールを別途作る必要がある)</li>
+</ul>
 
 
-<p>を追加しました。</p>
+<p>という点など柔軟性はなさそうな感じでした。
+このうち、管理画面のパスが決めうちという点が
+<code>rails_admin</code>
+との組み合わせで問題になったので、
+今回は採用を見送りました。
+<code>rails_admin</code>
+の方を <code>admin</code> 以外のパスに変更して良いのなら
+一緒に使えると思います。</p>
 
-<p>次に <code>app/assets/javascripts/autocomplete.js.coffee</code> として
-以下のような内容で作成しました。</p>
+<p>使うのに必要な設定は
+<code>rake rails:template LOCATION=/path/to/file.rb</code>
+のように使うことを想定して作っているアプリケーションテンプレートの
+<a href="https://github.com/znz/rails-app-template/blob/master/the_role.rb">https://github.com/znz/rails-app-template/blob/master/the_role.rb</a>
+も参考になると思います。</p>
 
-<figure class='code'><figcaption><span>autocomplete.js.coffee</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-</pre></td><td class='code'><pre><code class='coffeescript'><span class='line'><span class="c1">#= require jquery.ui.autocomplete</span>
-</span><span class='line'><span class="nx">jQuery</span> <span class="nf">-&gt;</span>
-</span><span class='line'>  <span class="nv">drink_list = </span><span class="p">[</span>
-</span><span class='line'>    <span class="s">&quot;不要&quot;</span>
-</span><span class='line'>    <span class="s">&quot;水&quot;</span>
-</span><span class='line'>    <span class="s">&quot;お茶&quot;</span>
-</span><span class='line'>    <span class="s">&quot;コーヒー&quot;</span>
-</span><span class='line'>  <span class="p">]</span>
-</span><span class='line'>  <span class="nx">$</span><span class="p">(</span><span class="s">&quot;</span><span class="err">#</span><span class="s">somemodel_drink&quot;</span><span class="p">).</span><span class="nx">autocomplete</span>
-</span><span class='line'>    <span class="nv">source: </span><span class="nx">drink_list</span>
-</span><span class='line'>    <span class="nv">autoFocus: </span><span class="kc">true</span>
-</span><span class='line'>    <span class="nv">delay: </span><span class="mi">0</span>
-</span><span class='line'>    <span class="nv">minLength: </span><span class="mi">0</span>
-</span><span class='line'>  <span class="p">.</span><span class="nx">on</span> <span class="s">&quot;focus&quot;</span><span class="p">,</span> <span class="nf">-&gt;</span>
-</span><span class='line'>    <span class="nx">$</span><span class="p">(</span><span class="s">&quot;</span><span class="err">#</span><span class="s">somemodel_drink&quot;</span><span class="p">).</span><span class="nx">autocomplete</span><span class="p">(</span><span class="s">&quot;search&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
-</span></code></pre></td></tr></table></div></figure>
+<h2>pundit</h2>
 
+<p>こちらも初期設定などの一部は
+<a href="https://github.com/znz/rails-app-template/blob/master/pundit.rb">https://github.com/znz/rails-app-template/blob/master/pundit.rb</a>
+で出来るようにアプリケーションテンプレートを作成中です。</p>
 
-<h2>余談</h2>
+<p>認可の仕組みとしては簡単に言うと
+<code>Post</code> の <code>update</code> の認可なら
+<code>PostPolicy.new(current_user, @post).update?</code>
+で判断出来るような <code>Policy</code> クラスを用意しましょう、というだけです。</p>
 
-<p>今回の話とは直接は関係ないのですが、
-ファイルを細かく分割すると管理しやすくなるのは良いのですが、
-他のライブラリの中のファイル名と重ならないようにしないと
-<code>bootstrap.js.coffee</code> の中で <code>#= require bootstrap</code> しても
-自分自身を <code>require</code> してしまって空っぽになって悩むことに
-なるので注意が必要でした。</p>
+<p><code>index</code> などのようなアクション用として
+<code>@posts = PostPolicy::Scope.new(current_user, Post.scoped).resolve</code>
+のような <code>Scope</code> も用意する、ということになっています。</p>
+
+<p>そういうものを用意した上で便利に使えるようにいくつかのヘルパーメソッドなどを
+用意したものが <code>pundit</code> gem になっています。</p>
+
+<p>つまり仕組み自体は <code>pundit</code> gem なしでも使えるので、
+細かく制御したい部分では <code>pundit</code> gem に関係なく
+<code>Policy</code> や <code>Scope</code> を直接扱うこともできます。</p>
+
+<h2>pundit と rails_admin</h2>
+
+<p>というわけで直接扱ったり、
+モデルとは関連ない <code>Policy</code> を用意したりして、
+<code>rails_admin</code>
+との連携を作成している途中のものを
+<a href="https://github.com/znz/rails-app-template/blob/master/pundit-with-rails_admin.rb">https://github.com/znz/rails-app-template/blob/master/pundit-with-rails_admin.rb</a>
+に公開しています。</p>
+
+<h2>pundit と scaffold</h2>
+
+<p><code>cancan</code>
+の
+<code>load_and_authorize_resource</code>
+のようなものは
+<code>pundit</code>
+自体には用意されていないので、
+scaffold
+で生成したコントローラーに埋め込む処理を
+<a href="https://github.com/znz/rails-app-template/blob/master/pundit-with-scaffold.rb">https://github.com/znz/rails-app-template/blob/master/pundit-with-scaffold.rb</a>
+で公開しています。</p>
+
+<h2>まとめ</h2>
+
+<p>今回は初期設定をアプリケーションテンプレートにまとめつつ、
+認可用の gem を試しました。</p>
+
+<p>アプリケーションテンプレートはどれもひな形としての利用を想定しているので、
+この後さらに変更していくことになると思います。</p>
+
+<p>アプリケーションテンプレート自体も使っていった上で必要に応じて変更していく予定なので、
+リンク先はこの記事を書いた時点の内容とは合わなくなっている可能性もあります。</p>
+
+<p>認可用のライブラリとしては権限管理画面付きのものを簡単に組み込みたければ
+<code>the_role</code>、
+シンプルな部品を組み合わせるのが良ければ <code>pundit</code>、
+高機能なものが欲しければ <code>authority</code> を試すのが
+良さそうだと思いました。</p>
 </div>
 
 
@@ -238,12 +299,12 @@ jQuery UI Autocomplete を使うことにしました。</p>
   
 
 
-<time datetime="2013-09-18T15:43:00+09:00" pubdate data-updated="true">2013-09-18 (Wed)</time>
+<time datetime="2013-10-08T23:04:00+09:00" pubdate data-updated="true">2013-10-08 (Tue)</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/coffeescript/'>coffeescript</a>, <a class='category' href='/blog/categories/html5/'>html5</a>, <a class='category' href='/blog/categories/javascript/'>javascript</a>, <a class='category' href='/blog/categories/jquery-ui/'>jquery-ui</a>, <a class='category' href='/blog/categories/rails/'>rails</a>
+    <a class='category' href='/blog/categories/authorization/'>authorization</a>, <a class='category' href='/blog/categories/pundit/'>pundit</a>, <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
   
 </span>
 
@@ -252,12 +313,12 @@ jQuery UI Autocomplete を使うことにしました。</p>
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-09-18-auto-open-autocomplete.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-09-18-auto-open-autocomplete.html" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-10-08-rails4-authorization.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-10-08-rails4-authorization.html" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
   
-  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-09-18-auto-open-autocomplete.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-10-08-rails4-authorization.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
   
     <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
   
@@ -276,10 +337,8 @@ jQuery UI Autocomplete を使うことにしました。</p>
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-09-18-devise30-devise31.html" title="Previous Post: devise 3.0.3 と devise 3.1.0 で自動生成されるファイルの違い">&laquo; devise 3.0.3 と devise 3.1.0 で自動生成されるファイルの違い</a>
+        <a class="basic-alignment left" href="/blog/2013-10-08-doorkeeper-api-client.html" title="Previous Post: doorkeeper gem の API のクライアント">&laquo; doorkeeper gem の API のクライアント</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-09-20-mojibake-irb-on-mac.html" title="Next Post: Macでirbなどでの文字化けを直した">Macでirbなどでの文字化けを直した &raquo;</a>
       
     </p>
   </footer>
@@ -391,8 +450,8 @@ jQuery UI Autocomplete を使うことにしました。</p>
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-09-18-auto-open-autocomplete.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-09-18-auto-open-autocomplete.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-10-08-rails4-authorization.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-10-08-rails4-authorization.html';
         var disqus_script = 'embed.js';
       
     (function () {

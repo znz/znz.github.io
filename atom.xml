@@ -4,7 +4,7 @@
   <title><![CDATA[ZnZ Blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-08T22:56:54+09:00</updated>
+  <updated>2013-10-09T00:28:31+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,177 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[rails 4 対応の認可の gem]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-08-rails4-authorization.html"/>
+    <updated>2013-10-08T23:04:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rails4-authorization</id>
+    <content type="html"><![CDATA[<p>rails 4 に対応している認可のライブラリとして
+<code>cancan</code>
+からの移行先候補を選ぶために
+<code>the_role</code>
+と
+<code>pundit</code>
+という gem を試してみました。</p>
+
+<!--more-->
+
+
+<h2>cancan からの移行</h2>
+
+<p>認証は rails 4 でも
+<code>devise</code>
+を使い続ければ良さそうな感じなのですが、
+認可の方は
+<code>cancan</code>
+の rails 4 対応がいまいちで
+<a href="http://ready4rails4.net/gems/cancan">Ready for Rails 4?</a>
+でも <em>not ready</em> のままで
+<a href="https://github.com/ryanb/cancan/issues">issues</a>
+も溜まっていることもあり、
+rails 4 では他の gem への移行を検討していました。</p>
+
+<h2>移行先候補</h2>
+
+<p>移行先候補として、まず最初に試したのは
+<a href="https://github.com/the-teacher/the_role">the_role</a>
+という gem でした。
+後述しますが、これは最初から組み込むなら良さそうなのですが、
+今回はちょっと目的にあわなかったので諦めました。</p>
+
+<p>次に試したのは
+<a href="https://github.com/elabs/pundit">pundit</a>
+という gem で、
+これは
+<a href="http://www.elabs.se/blog/52-simple-authorization-in-ruby-on-rails-apps">Simple authorization in Ruby on Rails apps — Elabs</a>
+という blog の説明で実装のほぼすべてが理解できるぐらいシンプルな gem でした。
+rails 自体の変化にも強そうだと思って、
+今回はこれを採用しました。</p>
+
+<p>その後、
+検索用キーワードとして使えそうな名前が増えたことで
+<a href="http://www.plugingeek.com/categories/user-authorization-ruby">User Authorization (Ruby) on pluginGeek</a>
+という一覧を見つけました。</p>
+
+<p>後で知ったので今回は試していないのですが、
+<a href="https://github.com/nathanl/authority">Authority</a>
+は高機能そうなので、高機能なものがほしい場合や
+<code>cancan</code>
+で複雑なことをしていた場合の移行先としては良さそうです。</p>
+
+<h2><code>the_role</code></h2>
+
+<p>最初に試した
+<a href="https://github.com/the-teacher/the_role">the_role</a> 2.1.1
+は
+「TheRole &ndash; Authorization Gem for Ruby on Rails with administrative interface」
+と書いてある通り、設定画面も付いているのが特徴です。</p>
+
+<p>認可の設定画面は
+<code>localhost:3000/admin/roles</code>
+で出てくるのですが、
+layout に</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="p">=</span> <span class="k">yield</span> <span class="ss">:role_sidebar</span>
+</span><span class='line'><span class="p">=</span> <span class="k">yield</span> <span class="ss">:role_main</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>を入れていないと真っ白なページで何も内容が出てこないので注意が必要です。
+<code>assets</code>
+もちゃんと設定していないと
+<code>Enable</code>, <code>Disable</code> のところが動かないなど、
+使い始めにはまりどころがいくつかありました。</p>
+
+<p>他にも</p>
+
+<ul>
+<li>管理画面が <code>admin/roles</code> 決めうち (gem の中の <code>config/routes.rb</code>)</li>
+<li><code>User</code> というモデル名も決めうち (<code>Admin::User</code> などは使えない)</li>
+<li>1 ユーザーは 1 ロールのみ (例えば、あるユーザーにカレンダーの管理者とお知らせの管理者のロールをつけるということは出来ないので複合権限のロールを別途作る必要がある)</li>
+</ul>
+
+
+<p>という点など柔軟性はなさそうな感じでした。
+このうち、管理画面のパスが決めうちという点が
+<code>rails_admin</code>
+との組み合わせで問題になったので、
+今回は採用を見送りました。
+<code>rails_admin</code>
+の方を <code>admin</code> 以外のパスに変更して良いのなら
+一緒に使えると思います。</p>
+
+<p>使うのに必要な設定は
+<code>rake rails:template LOCATION=/path/to/file.rb</code>
+のように使うことを想定して作っているアプリケーションテンプレートの
+<a href="https://github.com/znz/rails-app-template/blob/master/the_role.rb">https://github.com/znz/rails-app-template/blob/master/the_role.rb</a>
+も参考になると思います。</p>
+
+<h2>pundit</h2>
+
+<p>こちらも初期設定などの一部は
+<a href="https://github.com/znz/rails-app-template/blob/master/pundit.rb">https://github.com/znz/rails-app-template/blob/master/pundit.rb</a>
+で出来るようにアプリケーションテンプレートを作成中です。</p>
+
+<p>認可の仕組みとしては簡単に言うと
+<code>Post</code> の <code>update</code> の認可なら
+<code>PostPolicy.new(current_user, @post).update?</code>
+で判断出来るような <code>Policy</code> クラスを用意しましょう、というだけです。</p>
+
+<p><code>index</code> などのようなアクション用として
+<code>@posts = PostPolicy::Scope.new(current_user, Post.scoped).resolve</code>
+のような <code>Scope</code> も用意する、ということになっています。</p>
+
+<p>そういうものを用意した上で便利に使えるようにいくつかのヘルパーメソッドなどを
+用意したものが <code>pundit</code> gem になっています。</p>
+
+<p>つまり仕組み自体は <code>pundit</code> gem なしでも使えるので、
+細かく制御したい部分では <code>pundit</code> gem に関係なく
+<code>Policy</code> や <code>Scope</code> を直接扱うこともできます。</p>
+
+<h2>pundit と rails_admin</h2>
+
+<p>というわけで直接扱ったり、
+モデルとは関連ない <code>Policy</code> を用意したりして、
+<code>rails_admin</code>
+との連携を作成している途中のものを
+<a href="https://github.com/znz/rails-app-template/blob/master/pundit-with-rails_admin.rb">https://github.com/znz/rails-app-template/blob/master/pundit-with-rails_admin.rb</a>
+に公開しています。</p>
+
+<h2>pundit と scaffold</h2>
+
+<p><code>cancan</code>
+の
+<code>load_and_authorize_resource</code>
+のようなものは
+<code>pundit</code>
+自体には用意されていないので、
+scaffold
+で生成したコントローラーに埋め込む処理を
+<a href="https://github.com/znz/rails-app-template/blob/master/pundit-with-scaffold.rb">https://github.com/znz/rails-app-template/blob/master/pundit-with-scaffold.rb</a>
+で公開しています。</p>
+
+<h2>まとめ</h2>
+
+<p>今回は初期設定をアプリケーションテンプレートにまとめつつ、
+認可用の gem を試しました。</p>
+
+<p>アプリケーションテンプレートはどれもひな形としての利用を想定しているので、
+この後さらに変更していくことになると思います。</p>
+
+<p>アプリケーションテンプレート自体も使っていった上で必要に応じて変更していく予定なので、
+リンク先はこの記事を書いた時点の内容とは合わなくなっている可能性もあります。</p>
+
+<p>認可用のライブラリとしては権限管理画面付きのものを簡単に組み込みたければ
+<code>the_role</code>、
+シンプルな部品を組み合わせるのが良ければ <code>pundit</code>、
+高機能なものが欲しければ <code>authority</code> を試すのが
+良さそうだと思いました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[doorkeeper gem の API のクライアント]]></title>
@@ -2458,17 +2629,6 @@ ruby 自体の互換性は高いと言うことがわかります。</p>
 </span><span class='line'>Pushing gem to https://rubygems.org...
 </span><span class='line'>Successfully registered gem: td2planet (0.3.0)</span></code></pre></td></tr></table></div></figure>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[タグクラウドプラグインを入れた]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-11-tagcloud.html"/>
-    <updated>2013-09-11T00:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/tagcloud</id>
-    <content type="html"><![CDATA[<p>探してみて見つけた中で今もちゃんとメンテナンスされてそうだった
-<a href="https://github.com/tokkonopapa/octopress-tagcloud">Tag cloud plugin for Octopress</a>
-を入れてタグクラウドが出るようにしてみました。</p>
 ]]></content>
   </entry>
   
