@@ -4,7 +4,7 @@
   <title><![CDATA[ZnZ Blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-03T10:57:13+09:00</updated>
+  <updated>2013-10-08T22:38:00+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,461 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[doorkeeper gem の API のクライアント]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-08-doorkeeper-api-client.html"/>
+    <updated>2013-10-08T21:06:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/doorkeeper-api-client</id>
+    <content type="html"><![CDATA[<p><a href="http://rubygems.org/gems/doorkeeper">doorkeeper gem</a>
+で API を作る方は
+<a href="https://github.com/applicake/doorkeeper-provider-app">doorkeeper-provider-app</a>
+というサンプルの
+<code>app/controllers/api/</code>
+以下などをみればすぐにわかったのですが、
+API を呼び出す方は
+<a href="https://github.com/applicake/doorkeeper/wiki/Create-a-OmniAuth-strategy-for-your-provider">OmniAuth の中でユーザーの情報を取り出す</a>
+だけならすぐに出来たのですが、
+コントローラーの中など呼び出す方法は
+<a href="https://github.com/applicake/doorkeeper-devise-client">doorkeeper-devise-client</a>
+を見てもよくわからなかったので、まとめてみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>provider 側
+
+<ul>
+<li>rails 3.2.14</li>
+<li>doorkeeper 0.7.3</li>
+</ul>
+</li>
+<li>client 側
+
+<ul>
+<li>rails 4.0.0</li>
+<li>devise 3.1.1</li>
+<li>omniauth 1.1.4</li>
+<li>omniauth-oauth2 1.1.1</li>
+<li>oauth2 0.8.1</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>準備</h2>
+
+<p>まず
+<a href="https://github.com/applicake/doorkeeper/wiki/Create-a-OmniAuth-strategy-for-your-provider">Create a OmniAuth strategy for your provider</a>
+を参考にして、
+OmniAuth の中で
+<code>access_token.get('/api/v1/me.json').parsed</code>
+は出来るところまでは準備しておきます。</p>
+
+<p>目的としては、
+この
+<code>access_token</code>
+が認証より後で呼ばれる他のコントローラーの中で取得できれば良いということになります。</p>
+
+<p>余談ですが、
+doorkeeper の wiki は
+<a href="https://github.com/applicake/doorkeeper/wiki/Supported-Ruby-&amp;-Rails-versions">Supported Ruby &amp; Rails versions</a>
+のように情報が古いまま放置されているページもあるようなので、
+<a href="https://github.com/applicake/doorkeeper">README</a>
+などのソースコード側のドキュメントも参照した方が良さそうです。</p>
+
+<h2>必要なもの</h2>
+
+<p><code>access_token</code>
+は
+<code>OAuth2::AccessToken</code>
+クラスのオブジェクトです。</p>
+
+<p>生成するには</p>
+
+<ul>
+<li><code>OAuth2::Client</code> のオブジェクト</li>
+<li>認証で取得した <code>token</code></li>
+</ul>
+
+
+<p>が必要になります。</p>
+
+<p><code>OAuth2::Client</code>
+の生成には</p>
+
+<ul>
+<li><code>client_id</code></li>
+<li><code>client_secret</code></li>
+<li>URL</li>
+</ul>
+
+
+<p>が必要になります。</p>
+
+<h2>token の保存</h2>
+
+<p>まず
+<code>OAuth2</code>
+の認証で取得した
+<code>token</code>
+を保存しておく必要があります。</p>
+
+<p><code>Users::OmniauthCallbacksController#doorkeeper</code>
+で
+<code>session[:doorkeeper_token] = request.env["omniauth.auth"]["credentials"]["token"]</code>
+のようにしてセッションなどの後で使える場所に保存しておきます。</p>
+
+<p>後で調べてわかったのですが、
+<a href="https://github.com/applicake/doorkeeper-devise-client/blob/master/app/controllers/users/omniauth_callbacks_controller.rb">doorkeeper-devise-client の Users::OmniauthCallbacksController</a>
+では
+<code>request.env["omniauth.auth"].credentials.token</code>
+を
+<code>user.doorkeeper_access_token</code>
+でデータベースに保存していました。</p>
+
+<h2>OAuth2::Client の作成</h2>
+
+<p><a href="https://github.com/applicake/doorkeeper-devise-client/blob/master/app/controllers/application_controller.rb">doorkeeper-devise-client の ApplicationController</a>
+では必要な情報は定数経由で受け取るようになっていました。</p>
+
+<p>今回は
+<code>devise</code>
+と
+<code>omniauth-oauth2</code>
+を使っているので、
+その情報を使って生成するようにしました。
+要点だけまとめると以下のコードになります。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span> <span class="o">=</span> <span class="no">Devise</span><span class="o">.</span><span class="n">omniauth_configs</span><span class="o">[</span><span class="ss">:doorkeeper</span><span class="o">]</span>
+</span><span class='line'><span class="n">strategy</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">strategy_class</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="o">*</span><span class="n">config</span><span class="o">.</span><span class="n">args</span><span class="p">)</span>
+</span><span class='line'><span class="n">client</span> <span class="o">=</span> <span class="n">strategy</span><span class="o">.</span><span class="n">client</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>OAuth2::AccessToken の生成</h2>
+
+<p>ここまで準備ができれば後は
+<code>OAuth2::AccessToken.new</code>
+するだけです。</p>
+
+<p>まとめると以下のコードになります。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">access_token</span>
+</span><span class='line'>    <span class="k">return</span> <span class="vi">@access_token</span> <span class="k">if</span> <span class="n">defined?</span><span class="p">(</span><span class="vi">@access_token</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">config</span> <span class="o">=</span> <span class="no">Devise</span><span class="o">.</span><span class="n">omniauth_configs</span><span class="o">[</span><span class="ss">:doorkeeper</span><span class="o">]</span>
+</span><span class='line'>    <span class="n">strategy</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">strategy_class</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="o">*</span><span class="n">config</span><span class="o">.</span><span class="n">args</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">token</span> <span class="o">=</span> <span class="n">session</span><span class="o">[</span><span class="ss">:doorkeeper_token</span><span class="o">]</span>
+</span><span class='line'>    <span class="vi">@access_token</span> <span class="o">=</span> <span class="ss">OAuth2</span><span class="p">:</span><span class="ss">:AccessToken</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">strategy</span><span class="o">.</span><span class="n">client</span><span class="p">,</span> <span class="n">token</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>API 呼び出し</h2>
+
+<p><code>access_token</code>
+が出来たら後は呼び出しに使うだけです。</p>
+
+<p>単純な情報取得は
+<code>get</code>
+して
+JSON
+なら
+<code>parsed</code>
+を呼び出すだけです。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">access_token</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/v1/me.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parsed</span>
+</span><span class='line'>  <span class="n">access_token</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/v1/posts.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parsed</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>今回は連携して書き込みたいというのが目的だったため、
+<code>post</code>
+も使いました。</p>
+
+<p>モデルの例としては
+<code>rails g scaffold post title body:text</code>
+で API の提供側では以下の実装とします。</p>
+
+<figure class='code'><figcaption><span>app/controllers/api/v1/posts_controller.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">module</span> <span class="nn">Api::V1</span>
+</span><span class='line'>  <span class="k">class</span> <span class="nc">PostsController</span> <span class="o">&lt;</span> <span class="no">ApiController</span>
+</span><span class='line'>    <span class="n">doorkeeper_for</span> <span class="ss">:index</span>
+</span><span class='line'>    <span class="n">doorkeeper_for</span> <span class="ss">:create</span>
+</span><span class='line'>    <span class="n">respond_to</span>     <span class="ss">:json</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">index</span>
+</span><span class='line'>      <span class="n">respond_with</span> <span class="no">Post</span><span class="o">.</span><span class="n">all</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">create</span>
+</span><span class='line'>      <span class="n">post</span> <span class="o">=</span> <span class="no">Post</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:post</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">post</span><span class="o">.</span><span class="n">user</span> <span class="o">=</span> <span class="n">current_resource_owner</span>
+</span><span class='line'>      <span class="n">post</span><span class="o">.</span><span class="n">save!</span>
+</span><span class='line'>      <span class="n">respond_with</span> <span class="n">post</span>
+</span><span class='line'>    <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>呼び出し側は以下のようになります。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">access_token</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/api/v1/posts&quot;</span><span class="p">,</span> <span class="ss">params</span><span class="p">:</span> <span class="p">{</span> <span class="ss">post</span><span class="p">:</span> <span class="p">{</span> <span class="ss">title</span><span class="p">:</span> <span class="n">title</span><span class="p">,</span> <span class="ss">body</span><span class="p">:</span> <span class="n">body</span> <span class="p">}</span> <span class="p">})</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>params</code>
+による指定は
+<a href="https://github.com/intridea/oauth2/blob/master/lib/oauth2/access_token.rb">OAuth2::AccessToken</a>
+のソースをみて推測しました。</p>
+
+<h2>scope 付き API 提供</h2>
+
+<p>書き込みも許可すると
+<code>scope</code>
+を分けたくなります。</p>
+
+<p>doorkeeper 側では
+<a href="https://github.com/applicake/doorkeeper/wiki/Using-Scopes">Using Scopes</a>
+を参考にして</p>
+
+<ul>
+<li>initializers に scopes 追加</li>
+<li>翻訳追加</li>
+<li>API に scopes 追加</li>
+</ul>
+
+
+<p>をしておきます。</p>
+
+<figure class='code'><figcaption><span>config/initializers/doorkeeper.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">default_scopes</span>  <span class="ss">:public</span>
+</span><span class='line'>  <span class="n">optional_scopes</span> <span class="ss">:admin</span><span class="p">,</span> <span class="ss">:write</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span>app/controllers/api/v1/posts_controller.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">doorkeeper_for</span> <span class="ss">:index</span><span class="p">,</span>  <span class="ss">:show</span><span class="p">,</span>   <span class="ss">scopes</span><span class="p">:</span> <span class="o">[</span><span class="ss">:public</span><span class="o">]</span>
+</span><span class='line'><span class="n">doorkeeper_for</span> <span class="ss">:create</span><span class="p">,</span> <span class="ss">:update</span><span class="p">,</span> <span class="ss">scopes</span><span class="p">:</span> <span class="o">[</span><span class="ss">:admin</span><span class="p">,</span> <span class="ss">:write</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>参考のため、この API の rspec も載せておきます。
+複数の <code>scopes</code> を設定する時に <code>,</code> 区切りだとうまくいかないところがあったので、
+スペース区切りにしています。</p>
+
+<figure class='code'><figcaption><span>spec/controllers/api/v1/posts_controller_spec.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;spec_helper&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">describe</span> <span class="ss">Api</span><span class="p">:</span><span class="ss">:V1</span><span class="o">::</span><span class="no">PostsController</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">describe</span> <span class="s2">&quot;GET &#39;index&#39;&quot;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:application</span><span class="p">)</span> <span class="p">{</span> <span class="ss">Doorkeeper</span><span class="p">:</span><span class="ss">:Application</span><span class="o">.</span><span class="n">create!</span><span class="p">(</span><span class="nb">name</span><span class="p">:</span> <span class="s2">&quot;MyApp&quot;</span><span class="p">,</span> <span class="n">redirect_uri</span><span class="p">:</span> <span class="s2">&quot;http://app.com&quot;</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:user</span><span class="p">)</span> <span class="p">{</span> <span class="no">FactoryGirl</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="ss">:normal_user</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:token</span><span class="p">)</span> <span class="p">{</span> <span class="ss">Doorkeeper</span><span class="p">:</span><span class="ss">:AccessToken</span><span class="o">.</span><span class="n">create!</span> <span class="n">application_id</span><span class="p">:</span> <span class="n">application</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">resource_owner_id</span><span class="p">:</span> <span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="ss">scopes</span><span class="p">:</span> <span class="s2">&quot;public&quot;</span> <span class="p">}</span>
+</span><span class='line'>    <span class="n">subject</span> <span class="p">{</span> <span class="n">response</span> <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">context</span> <span class="s2">&quot;valid token&quot;</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">before</span> <span class="k">do</span>
+</span><span class='line'>        <span class="n">get</span> <span class="s1">&#39;index&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="p">:</span> <span class="ss">:json</span><span class="p">,</span> <span class="n">access_token</span><span class="p">:</span> <span class="n">token</span><span class="o">.</span><span class="n">token</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>      <span class="n">it</span> <span class="p">{</span> <span class="n">should</span> <span class="n">be_success</span> <span class="p">}</span>
+</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:status</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="n">eq</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:body</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="o">==</span> <span class="no">Post</span><span class="o">.</span><span class="n">all</span><span class="o">.</span><span class="n">to_a</span><span class="o">.</span><span class="n">to_json</span> <span class="p">}</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">context</span> <span class="s2">&quot;invalid token&quot;</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">before</span> <span class="k">do</span>
+</span><span class='line'>        <span class="n">get</span> <span class="s1">&#39;index&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="p">:</span> <span class="ss">:json</span><span class="p">,</span> <span class="n">access_token</span><span class="p">:</span> <span class="n">token</span><span class="o">.</span><span class="n">token</span><span class="o">.</span><span class="n">succ</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>      <span class="n">it</span> <span class="p">{</span> <span class="n">should_not</span> <span class="n">be_success</span> <span class="p">}</span>
+</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:status</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="n">eq</span><span class="p">(</span><span class="mi">401</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">describe</span> <span class="s2">&quot;GET &#39;index&#39; without scopes&quot;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:application</span><span class="p">)</span> <span class="p">{</span> <span class="ss">Doorkeeper</span><span class="p">:</span><span class="ss">:Application</span><span class="o">.</span><span class="n">create!</span><span class="p">(</span><span class="nb">name</span><span class="p">:</span> <span class="s2">&quot;MyApp&quot;</span><span class="p">,</span> <span class="n">redirect_uri</span><span class="p">:</span> <span class="s2">&quot;http://app.com&quot;</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:user</span><span class="p">)</span> <span class="p">{</span> <span class="no">FactoryGirl</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="ss">:normal_user</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:token</span><span class="p">)</span> <span class="p">{</span> <span class="ss">Doorkeeper</span><span class="p">:</span><span class="ss">:AccessToken</span><span class="o">.</span><span class="n">create!</span> <span class="n">application_id</span><span class="p">:</span> <span class="n">application</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">resource_owner_id</span><span class="p">:</span> <span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="ss">scopes</span><span class="p">:</span> <span class="s2">&quot;write&quot;</span> <span class="p">}</span>
+</span><span class='line'>    <span class="n">subject</span> <span class="p">{</span> <span class="n">response</span> <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">context</span> <span class="s2">&quot;valid token&quot;</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">before</span> <span class="k">do</span>
+</span><span class='line'>        <span class="n">get</span> <span class="s1">&#39;index&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="p">:</span> <span class="ss">:json</span><span class="p">,</span> <span class="n">access_token</span><span class="p">:</span> <span class="n">token</span><span class="o">.</span><span class="n">token</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>      <span class="n">it</span> <span class="p">{</span> <span class="n">should_not</span> <span class="n">be_success</span> <span class="p">}</span>
+</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:status</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="n">eq</span><span class="p">(</span><span class="mi">401</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:body</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="o">==</span> <span class="s2">&quot; &quot;</span> <span class="p">}</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">describe</span> <span class="s2">&quot;POST &#39;create&#39;&quot;</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:application</span><span class="p">)</span> <span class="p">{</span> <span class="ss">Doorkeeper</span><span class="p">:</span><span class="ss">:Application</span><span class="o">.</span><span class="n">create!</span><span class="p">(</span><span class="nb">name</span><span class="p">:</span> <span class="s2">&quot;MyApp&quot;</span><span class="p">,</span> <span class="n">redirect_uri</span><span class="p">:</span> <span class="s2">&quot;http://app.com&quot;</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:user</span><span class="p">)</span> <span class="p">{</span> <span class="no">FactoryGirl</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="ss">:normal_user</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:token</span><span class="p">)</span> <span class="p">{</span> <span class="ss">Doorkeeper</span><span class="p">:</span><span class="ss">:AccessToken</span><span class="o">.</span><span class="n">create!</span> <span class="n">application_id</span><span class="p">:</span> <span class="n">application</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">resource_owner_id</span><span class="p">:</span> <span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="ss">scopes</span><span class="p">:</span> <span class="s2">&quot;public write&quot;</span> <span class="p">}</span>
+</span><span class='line'>    <span class="n">subject</span> <span class="p">{</span> <span class="n">response</span> <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">context</span> <span class="s2">&quot;valid token&quot;</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">before</span> <span class="k">do</span>
+</span><span class='line'>        <span class="n">post</span> <span class="s1">&#39;create&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="p">:</span> <span class="ss">:json</span><span class="p">,</span> <span class="n">access_token</span><span class="p">:</span> <span class="n">token</span><span class="o">.</span><span class="n">token</span><span class="p">,</span> <span class="ss">post</span><span class="p">:</span> <span class="p">{</span> <span class="ss">title</span><span class="p">:</span> <span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="ss">body</span><span class="p">:</span> <span class="s2">&quot;some content&quot;</span> <span class="p">}</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>      <span class="n">it</span> <span class="p">{</span> <span class="n">should</span> <span class="n">be_success</span> <span class="p">}</span>
+</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:status</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="n">eq</span><span class="p">(</span><span class="mi">201</span><span class="p">)</span> <span class="p">}</span> <span class="c1"># 201 Created</span>
+</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:body</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="o">==</span> <span class="no">Post</span><span class="o">.</span><span class="n">last</span><span class="o">.</span><span class="n">to_json</span> <span class="p">}</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">context</span> <span class="s2">&quot;invalid token&quot;</span> <span class="k">do</span>
+</span><span class='line'>      <span class="n">before</span> <span class="k">do</span>
+</span><span class='line'>        <span class="n">post</span> <span class="s1">&#39;create&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="p">:</span> <span class="ss">:json</span><span class="p">,</span> <span class="n">access_token</span><span class="p">:</span> <span class="n">token</span><span class="o">.</span><span class="n">token</span><span class="o">.</span><span class="n">succ</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>      <span class="n">it</span> <span class="p">{</span> <span class="n">should_not</span> <span class="n">be_success</span> <span class="p">}</span>
+</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:status</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="n">eq</span><span class="p">(</span><span class="mi">401</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>scope 付き呼び出し</h2>
+
+<p><code>devise</code>
+の設定で
+<code>omniauth</code>
+の設定に
+<code>scope</code>
+を追加するだけです。</p>
+
+<figure class='code'><figcaption><span>config/initializers/devise.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">omniauth</span> <span class="ss">:doorkeeper</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_ID&#39;</span><span class="o">]</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_SECRET&#39;</span><span class="o">]</span><span class="p">,</span> <span class="p">{</span> <span class="ss">scope</span><span class="p">:</span> <span class="s1">&#39;public write&#39;</span> <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>rspec のところでもちょっと書きましたが、
+区切りが <code>,</code> だとうまくいかないことがあったので、
+スペース区切りにしています。</p>
+
+<p>原因は
+<a href="https://github.com/applicake/doorkeeper/blob/master/lib/doorkeeper/oauth/scopes.rb">lib/doorkeeper/oauth/scopes.rb</a>
+で
+<code>string.split</code>
+のように無引数の
+<code>String#split</code>
+を使っているからではないかと推測していますが、確認はしていません。</p>
+
+<h2>まとめ</h2>
+
+<p><code>client_id</code> と <code>client_secret</code> と provider の URL はあらかじめ用意しておいて、
+client 側の rails アプリに設定しておきます。</p>
+
+<p><code>token</code>
+は OAuth2 で取得したものを
+<code>session</code>
+やデータベースなどに保存しておいて使います。</p>
+
+<p>必要なら
+<code>scopes</code>
+も設定できます。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[rails で assets を gem に入れる時の配置]]></title>
@@ -2014,15 +2469,6 @@ ruby 自体の互換性は高いと言うことがわかります。</p>
     <content type="html"><![CDATA[<p>探してみて見つけた中で今もちゃんとメンテナンスされてそうだった
 <a href="https://github.com/tokkonopapa/octopress-tagcloud">Tag cloud plugin for Octopress</a>
 を入れてタグクラウドが出るようにしてみました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[先月のイベントでの発表の記事を追加]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-10-add-old-posts.html"/>
-    <updated>2013-09-10T21:39:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/add-old-posts</id>
-    <content type="html"><![CDATA[<p><a href="http://blog.n-z.jp/blog/2013-08-24-llmatsuri.html">LLまつり</a> と <a href="http://blog.n-z.jp/blog/2013-08-31-kansairubykaigi05.html">関西Ruby会議05</a> の記事を追加しました。</p>
 ]]></content>
   </entry>
   

@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: oauth2 | ZnZ Blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/oauth2/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2013-10-08T22:38:00+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[doorkeeper gem の API のクライアント]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-08-doorkeeper-api-client.html"/>
+    <updated>2013-10-08T21:06:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/doorkeeper-api-client</id>
+    <content type="html"><![CDATA[<p><a href="http://rubygems.org/gems/doorkeeper">doorkeeper gem</a>
+で API を作る方は
+<a href="https://github.com/applicake/doorkeeper-provider-app">doorkeeper-provider-app</a>
+というサンプルの
+<code>app/controllers/api/</code>
+以下などをみればすぐにわかったのですが、
+API を呼び出す方は
+<a href="https://github.com/applicake/doorkeeper/wiki/Create-a-OmniAuth-strategy-for-your-provider">OmniAuth の中でユーザーの情報を取り出す</a>
+だけならすぐに出来たのですが、
+コントローラーの中など呼び出す方法は
+<a href="https://github.com/applicake/doorkeeper-devise-client">doorkeeper-devise-client</a>
+を見てもよくわからなかったので、まとめてみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>provider 側
+
+<ul>
+<li>rails 3.2.14</li>
+<li>doorkeeper 0.7.3</li>
+</ul>
+</li>
+<li>client 側
+
+<ul>
+<li>rails 4.0.0</li>
+<li>devise 3.1.1</li>
+<li>omniauth 1.1.4</li>
+<li>omniauth-oauth2 1.1.1</li>
+<li>oauth2 0.8.1</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>準備</h2>
+
+<p>まず
+<a href="https://github.com/applicake/doorkeeper/wiki/Create-a-OmniAuth-strategy-for-your-provider">Create a OmniAuth strategy for your provider</a>
+を参考にして、
+OmniAuth の中で
+<code>access_token.get('/api/v1/me.json').parsed</code>
+は出来るところまでは準備しておきます。</p>
+
+<p>目的としては、
+この
+<code>access_token</code>
+が認証より後で呼ばれる他のコントローラーの中で取得できれば良いということになります。</p>
+
+<p>余談ですが、
+doorkeeper の wiki は
+<a href="https://github.com/applicake/doorkeeper/wiki/Supported-Ruby-&amp;-Rails-versions">Supported Ruby &amp; Rails versions</a>
+のように情報が古いまま放置されているページもあるようなので、
+<a href="https://github.com/applicake/doorkeeper">README</a>
+などのソースコード側のドキュメントも参照した方が良さそうです。</p>
+
+<h2>必要なもの</h2>
+
+<p><code>access_token</code>
+は
+<code>OAuth2::AccessToken</code>
+クラスのオブジェクトです。</p>
+
+<p>生成するには</p>
+
+<ul>
+<li><code>OAuth2::Client</code> のオブジェクト</li>
+<li>認証で取得した <code>token</code></li>
+</ul>
+
+
+<p>が必要になります。</p>
+
+<p><code>OAuth2::Client</code>
+の生成には</p>
+
+<ul>
+<li><code>client_id</code></li>
+<li><code>client_secret</code></li>
+<li>URL</li>
+</ul>
+
+
+<p>が必要になります。</p>
+
+<h2>token の保存</h2>
+
+<p>まず
+<code>OAuth2</code>
+の認証で取得した
+<code>token</code>
+を保存しておく必要があります。</p>
+
+<p><code>Users::OmniauthCallbacksController#doorkeeper</code>
+で
+<code>session[:doorkeeper_token] = request.env["omniauth.auth"]["credentials"]["token"]</code>
+のようにしてセッションなどの後で使える場所に保存しておきます。</p>
+
+<p>後で調べてわかったのですが、
+<a href="https://github.com/applicake/doorkeeper-devise-client/blob/master/app/controllers/users/omniauth_callbacks_controller.rb">doorkeeper-devise-client の Users::OmniauthCallbacksController</a>
+では
+<code>request.env["omniauth.auth"].credentials.token</code>
+を
+<code>user.doorkeeper_access_token</code>
+でデータベースに保存していました。</p>
+
+<h2>OAuth2::Client の作成</h2>
+
+<p><a href="https://github.com/applicake/doorkeeper-devise-client/blob/master/app/controllers/application_controller.rb">doorkeeper-devise-client の ApplicationController</a>
+では必要な情報は定数経由で受け取るようになっていました。</p>
+
+<p>今回は
+<code>devise</code>
+と
+<code>omniauth-oauth2</code>
+を使っているので、
+その情報を使って生成するようにしました。
+要点だけまとめると以下のコードになります。</p>
+
+<p>```ruby</p>
+
+<pre><code>config = Devise.omniauth_configs[:doorkeeper]
+strategy = config.strategy_class.new(*config.args)
+client = strategy.client
+</code></pre>
+
+<p>```</p>
+
+<h2>OAuth2::AccessToken の生成</h2>
+
+<p>ここまで準備ができれば後は
+<code>OAuth2::AccessToken.new</code>
+するだけです。</p>
+
+<p>まとめると以下のコードになります。</p>
+
+<p>```ruby
+  def access_token</p>
+
+<pre><code>return @access_token if defined?(@access_token)
+config = Devise.omniauth_configs[:doorkeeper]
+strategy = config.strategy_class.new(*config.args)
+token = session[:doorkeeper_token]
+@access_token = OAuth2::AccessToken.new(strategy.client, token)
+</code></pre>
+
+<p>  end
+```</p>
+
+<h2>API 呼び出し</h2>
+
+<p><code>access_token</code>
+が出来たら後は呼び出しに使うだけです。</p>
+
+<p>単純な情報取得は
+<code>get</code>
+して
+JSON
+なら
+<code>parsed</code>
+を呼び出すだけです。</p>
+
+<p><code>ruby
+  access_token.get("/api/v1/me.json").parsed
+  access_token.get("/api/v1/posts.json").parsed
+</code></p>
+
+<p>今回は連携して書き込みたいというのが目的だったため、
+<code>post</code>
+も使いました。</p>
+
+<p>モデルの例としては
+<code>rails g scaffold post title body:text</code>
+で API の提供側では以下の実装とします。</p>
+
+<p>```ruby app/controllers/api/v1/posts_controller.rb
+module Api::V1
+  class PostsController &lt; ApiController</p>
+
+<pre><code>doorkeeper_for :index
+doorkeeper_for :create
+respond_to     :json
+
+def index
+  respond_with Post.all
+end
+
+def create
+  post = Post.new(params[:post])
+  post.user = current_resource_owner
+  post.save!
+  respond_with post
+end
+</code></pre>
+
+<p>```</p>
+
+<p>呼び出し側は以下のようになります。</p>
+
+<p><code>ruby
+access_token.post("/api/v1/posts", params: { post: { title: title, body: body } })
+</code></p>
+
+<p><code>params</code>
+による指定は
+<a href="https://github.com/intridea/oauth2/blob/master/lib/oauth2/access_token.rb">OAuth2::AccessToken</a>
+のソースをみて推測しました。</p>
+
+<h2>scope 付き API 提供</h2>
+
+<p>書き込みも許可すると
+<code>scope</code>
+を分けたくなります。</p>
+
+<p>doorkeeper 側では
+<a href="https://github.com/applicake/doorkeeper/wiki/Using-Scopes">Using Scopes</a>
+を参考にして</p>
+
+<ul>
+<li>initializers に scopes 追加</li>
+<li>翻訳追加</li>
+<li>API に scopes 追加</li>
+</ul>
+
+
+<p>をしておきます。</p>
+
+<p><code>ruby config/initializers/doorkeeper.rb
+  default_scopes  :public
+  optional_scopes :admin, :write
+</code></p>
+
+<p>```ruby app/controllers/api/v1/posts_controller.rb</p>
+
+<pre><code>doorkeeper_for :index,  :show,   scopes: [:public]
+doorkeeper_for :create, :update, scopes: [:admin, :write]
+</code></pre>
+
+<p>```</p>
+
+<p>参考のため、この API の rspec も載せておきます。
+複数の <code>scopes</code> を設定する時に <code>,</code> 区切りだとうまくいかないところがあったので、
+スペース区切りにしています。</p>
+
+<p>```ruby spec/controllers/api/v1/posts_controller_spec.rb
+require &lsquo;spec_helper&rsquo;</p>
+
+<p>describe Api::V1::PostsController do
+  describe &ldquo;GET &lsquo;index&rsquo;&rdquo; do</p>
+
+<pre><code>let!(:application) { Doorkeeper::Application.create!(name: "MyApp", redirect_uri: "http://app.com") }
+let!(:user) { FactoryGirl.create(:normal_user) }
+let!(:token) { Doorkeeper::AccessToken.create! application_id: application.id, resource_owner_id: user.id, scopes: "public" }
+subject { response }
+
+context "valid token" do
+  before do
+    get 'index', format: :json, access_token: token.token
+  end
+  it { should be_success }
+  its(:status) { should eq(200) }
+  its(:body) { should == Post.all.to_a.to_json }
+end
+
+context "invalid token" do
+  before do
+    get 'index', format: :json, access_token: token.token.succ
+  end
+  it { should_not be_success }
+  its(:status) { should eq(401) }
+end
+</code></pre>
+
+<p>  end</p>
+
+<p>  describe &ldquo;GET &lsquo;index&rsquo; without scopes&rdquo; do</p>
+
+<pre><code>let!(:application) { Doorkeeper::Application.create!(name: "MyApp", redirect_uri: "http://app.com") }
+let!(:user) { FactoryGirl.create(:normal_user) }
+let!(:token) { Doorkeeper::AccessToken.create! application_id: application.id, resource_owner_id: user.id, scopes: "write" }
+subject { response }
+
+context "valid token" do
+  before do
+    get 'index', format: :json, access_token: token.token
+  end
+  it { should_not be_success }
+  its(:status) { should eq(401) }
+  its(:body) { should == " " }
+end
+</code></pre>
+
+<p>  end</p>
+
+<p>  describe &ldquo;POST &lsquo;create&rsquo;&rdquo; do</p>
+
+<pre><code>let!(:application) { Doorkeeper::Application.create!(name: "MyApp", redirect_uri: "http://app.com") }
+let!(:user) { FactoryGirl.create(:normal_user) }
+let!(:token) { Doorkeeper::AccessToken.create! application_id: application.id, resource_owner_id: user.id, scopes: "public write" }
+subject { response }
+
+context "valid token" do
+  before do
+    post 'create', format: :json, access_token: token.token, post: { title: "title", body: "some content" }
+  end
+  it { should be_success }
+  its(:status) { should eq(201) } # 201 Created
+  its(:body) { should == Post.last.to_json }
+end
+
+context "invalid token" do
+  before do
+    post 'create', format: :json, access_token: token.token.succ
+  end
+  it { should_not be_success }
+  its(:status) { should eq(401) }
+end
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<h2>scope 付き呼び出し</h2>
+
+<p><code>devise</code>
+の設定で
+<code>omniauth</code>
+の設定に
+<code>scope</code>
+を追加するだけです。</p>
+
+<p><code>ruby config/initializers/devise.rb
+  config.omniauth :doorkeeper, ENV['DOORKEEPER_APP_ID'], ENV['DOORKEEPER_APP_SECRET'], { scope: 'public write' }
+</code></p>
+
+<p>rspec のところでもちょっと書きましたが、
+区切りが <code>,</code> だとうまくいかないことがあったので、
+スペース区切りにしています。</p>
+
+<p>原因は
+<a href="https://github.com/applicake/doorkeeper/blob/master/lib/doorkeeper/oauth/scopes.rb">lib/doorkeeper/oauth/scopes.rb</a>
+で
+<code>string.split</code>
+のように無引数の
+<code>String#split</code>
+を使っているからではないかと推測していますが、確認はしていません。</p>
+
+<h2>まとめ</h2>
+
+<p><code>client_id</code> と <code>client_secret</code> と provider の URL はあらかじめ用意しておいて、
+client 側の rails アプリに設定しておきます。</p>
+
+<p><code>token</code>
+は OAuth2 で取得したものを
+<code>session</code>
+やデータベースなどに保存しておいて使います。</p>
+
+<p>必要なら
+<code>scopes</code>
+も設定できます。</p>
+]]></content>
+  </entry>
+  
+</feed>
