@@ -5,18 +5,13 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>rails で assets を gem に入れる時の配置 - @znz Blog</title>
+  <title>octopress をアップデートした (.ruby-version が conflict した) 話 - @znz Blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="昨日の記事で
-jquery_mobile_rails 1.3.2
-で画像ファイルが
-rake assets:precompile
-で処理されないという話を書きましたが、
-jquery-ui-rails
-gem
-などは Gemfile に足すだけで特に require などをしなくても &hellip;">
+  <meta name="description" content="octopress で使う ruby を 1.9.3-p448 から 2.0.0-p247 にあげようと思って、
+そのついでに octopress 自体も master の最新のものに更新したので、
+その手順のメモです。 その時に .ruby-version が conflict したので、 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -25,7 +20,7 @@ gem
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-10-03-rails-assets-in-gem.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-10-09-update-octopress-and-conflict-ruby-version.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz Blog" type="application/atom+xml">
@@ -87,7 +82,7 @@ gem
   
   <header>
     
-      <h1 class="entry-title">rails で assets を gem に入れる時の配置</h1>
+      <h1 class="entry-title">octopress をアップデートした (.ruby-version が conflict した) 話</h1>
     
     
       <p class="meta">
@@ -103,7 +98,7 @@ gem
   
 
 
-<time datetime="2013-10-03T10:30:00+09:00" pubdate data-updated="true">2013-10-03 (Thu)</time>
+<time datetime="2013-10-09T21:21:00+09:00" pubdate data-updated="true">2013-10-09 (Wed)</time>
         
          | <a href="#disqus_thread">Comments</a>
         
@@ -112,47 +107,190 @@ gem
   </header>
 
 
-<div class="entry-content"><p>昨日の記事で
-<a href="https://rubygems.org/gems/jquery_mobile_rails">jquery_mobile_rails</a> 1.3.2
-で画像ファイルが
-<code>rake assets:precompile</code>
-で処理されないという話を書きましたが、
-<a href="http://rubygems.org/gems/jquery-ui-rails">jquery-ui-rails</a>
-gem
-などは Gemfile に足すだけで特に require などをしなくても
-画像が処理されていたので違いを調べてみました。</p>
+<div class="entry-content"><p>octopress で使う ruby を 1.9.3-p448 から 2.0.0-p247 にあげようと思って、
+そのついでに octopress 自体も master の最新のものに更新したので、
+その手順のメモです。</p>
+
+<p>その時に <code>.ruby-version</code> が conflict したので、
+その話がメインです。</p>
 
 <!--more-->
 
 
-<p>結論を先に書くと、
-<code>jquery-ui-rails</code>
+<h2><code>.ruby-version</code> とは?</h2>
+
+<p>rbenv が <code>.rbenv-version</code> から <code>.ruby-version</code> に変わった時には
+知らなかったのですが、
+<a href="https://gist.github.com/fnichol/1912050">A Common .ruby-version File For Ruby Projects</a>
+というものがあって、
+rbenv や rvm のような切り替えツール共通で
+<code>.ruby-version</code>
+というファイルを使おうということのようです。</p>
+
+<h2>octopress の .ruby-version</h2>
+
+<p>その発想は良いのですが、
+rbenv + ruby-build だと 1.9.3-p448 や 2.0.0-p247 のように
+パッチレベルまで <code>.rbenv-version</code> に入るのが普通なのに
+rvm が作る <code>.ruby-version</code> だと <code>1.9.3</code> のように
+パッチレベルが入らないようで、
+octopress の <code>.ruby-version</code> で問題が起きました。</p>
+
+<p>元々使い始めた時の octopress の master には
+<code>.ruby-version</code>
+ファイルが入っていて、
+<code>1.9.3</code>
+という内容でした。</p>
+
+<p>手元での回避策としては、
+<code>ln -snf 1.9.3-p448 ~/.rbenv/versions/1.9.3</code>
+のようにシンボリックリンクで回避するとか、
+<code>configure</code> で <code>--prefix=$HOME/.rbenv/versions/1.9.3</code> で
+別途インストールするとかも考えたのですが、
+他に影響が出るのが嫌だったので、
+結局
+<code>.ruby-version</code>
+を書き換えて使うことにしました。</p>
+
+<p>rbenv を使っていて、
+リリースされているバージョンの ruby のインストールには
+ruby-build を使っていて
+<code>1.9.3-p448</code>
+にする必要があったので、
+<code>rbenv local 1.9.3-p448</code>
+で置き換えました。</p>
+
+<h2>バージョンアップ手順</h2>
+
+<p>まず remote を確認します。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> git remote -v
+</span><span class='line'>octopress       git://github.com/imathis/octopress.git (fetch)
+</span><span class='line'>octopress       git://github.com/imathis/octopress.git (push)
+</span><span class='line'>origin  git@github.com:znz/znz.github.io (fetch)
+</span><span class='line'>origin  git@github.com:znz/znz.github.io (push)</span></code></pre></td></tr></table></div></figure>
+
+
+<p>octopress という名前にしていることが確認出来たので、
+fetch します。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% git fetch octopress
+</span><span class='line'>remote: Counting objects: 85, done.
+</span><span class='line'>remote: Compressing objects: 100% (34/34), done.
+</span><span class='line'>remote: Total 46 (delta 30), reused 26 (delta 10)
+</span><span class='line'>Unpacking objects: 100% (46/46), done.
+</span><span class='line'>From git://github.com/imathis/octopress
+</span><span class='line'>   9699df7..5a6b8e4  2.5        -&gt; octopress/2.5
+</span><span class='line'>   f75547f..ff71657  master     -&gt; octopress/master
+</span><span class='line'>   8d7ef9a..98bd6c9  site-2.1   -&gt; octopress/site-2.1</span></code></pre></td></tr></table></div></figure>
+
+
+<p>merge する前に
+<code>git diff source...octopress/master</code>
+で変更点を確認してから merge します。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% git diff source...octopress/master
+</span><span class='line'>% git merge octopress/master
+</span><span class='line'>Auto-merging Rakefile
+</span><span class='line'>CONFLICT (modify/delete): .ruby-version deleted in octopress/master and modified in HEAD. Version HEAD of .ruby-version left in tree.
+</span><span class='line'>Automatic merge failed; fix conflicts and then commit the result.
+</span><span class='line'>zsh: exit 1     git merge octopress/master</span></code></pre></td></tr></table></div></figure>
+
+
+<p>conflict しました。
+<code>.ruby-version</code>
+は消してしまって
+<code>rbenv global 2.0.0-p247</code>
+で設定している <code>2.0.0-p247</code> を使う予定なので、
+消してしまいます。
+その変更を commit すると merge 完了でした。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% git rm .ruby-version
+</span><span class='line'>.ruby-version: needs merge
+</span><span class='line'>rm '.ruby-version'
+</span><span class='line'>% git commit -av
+</span><span class='line'>[source 136b37f] Merge remote-tracking branch 'octopress/master' into source</span></code></pre></td></tr></table></div></figure>
+
+
+<p>うまくいったので、バックアップをかねて github に push しておきます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% git push
+</span><span class='line'>Counting objects: 55, done.
+</span><span class='line'>Delta compression using up to 4 threads.
+</span><span class='line'>Compressing objects: 100% (39/39), done.
+</span><span class='line'>Writing objects: 100% (41/41), 4.90 KiB | 0 bytes/s, done.
+</span><span class='line'>Total 41 (delta 28), reused 0 (delta 0)
+</span><span class='line'>To git@github.com:znz/znz.github.io
+</span><span class='line'>   5dabdd2..136b37f  source -&gt; source</span></code></pre></td></tr></table></div></figure>
+
+
+<p>rake のバージョンの関係で
+<code>rake preview</code>
+などではなく
+<code>bundle exec rake preview</code>
+のように実行することが必須になってしまいました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% rake preview
+</span><span class='line'>rake aborted!
+</span><span class='line'>You have already activated rake 10.1.0, but your Gemfile requires rake 0.9.2.2. Using bundle exec may solve this.</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p>事前に予測できた範囲の conflict しかなくて、
+簡単に解決できました。</p>
+
+<p><code>.ruby-version</code>
 は
-<code>app/assets/images/</code>
-に画像ファイルを置いていたから処理されていて、
-<code>jquery_mobile_rails</code>
-は
-<code>vendor/assets/images/</code>
-に画像ファイルを置いていたから、
-というのが原因でした。</p>
-
-<p>自作の gem で
-<code>app/assets/images/</code>
-と
-<code>vendor/assets/images/</code>
-に画像を置いて rails 4.0.0 の
-<code>rake assets:precompile</code>
-で違いがあることを確認しています。</p>
-
-<p><code>jquery_mobile_rails</code> の issues を確認すると
-<a href="https://github.com/tscolari/jquery-mobile-rails/issues/16">In production, path to images is wrong</a>
-という同じ問題に困っている話があったので、
-コメントを付けておきました。</p>
-
-<p>ちなみに
-いくつか存在する jQuery Mobile の assets の中から
-<code>jquery_mobile_rails</code>
-を選んだ理由は新しいバージョンへの対応が一番早そうにみえたからです。</p>
+<code>.gitignore</code>
+には入っていないので、
+余計な conflict を避けるために
+<code>.gitignore</code>
+を変更せずに使いたいのなら、
+親ディレクトリに
+<code>.ruby-version</code>
+を用意してバージョンを指定するのが良いと思います。
+<code>.git</code>
+などと同じように
+<code>.ruby-version</code>
+もディレクトリを上がっていって最初に見つかったものが使われるので、
+そういう運用が可能です。</p>
 </div>
 
 
@@ -175,12 +313,12 @@ gem
   
 
 
-<time datetime="2013-10-03T10:30:00+09:00" pubdate data-updated="true">2013-10-03 (Thu)</time>
+<time datetime="2013-10-09T21:21:00+09:00" pubdate data-updated="true">2013-10-09 (Wed)</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/gem/'>gem</a>, <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
+    <a class='category' href='/blog/categories/octopress/'>octopress</a>
   
 </span>
 
@@ -189,12 +327,12 @@ gem
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-10-03-rails-assets-in-gem.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-10-03-rails-assets-in-gem.html" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-10-09-update-octopress-and-conflict-ruby-version.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-10-09-update-octopress-and-conflict-ruby-version.html" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
   
-  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-10-03-rails-assets-in-gem.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-10-09-update-octopress-and-conflict-ruby-version.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
   
     <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
   
@@ -213,10 +351,8 @@ gem
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-10-02-jquery-mobile-rails.html" title="Previous Post: jquery_mobile_rails と production 環境と画像ファイル">&laquo; jquery_mobile_rails と production 環境と画像ファイル</a>
+        <a class="basic-alignment left" href="/blog/2013-10-08-rails4-authorization.html" title="Previous Post: rails 4 対応の認可の gem">&laquo; rails 4 対応の認可の gem</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-10-08-doorkeeper-api-client.html" title="Next Post: doorkeeper gem の API のクライアント">doorkeeper gem の API のクライアント &raquo;</a>
       
     </p>
   </footer>
@@ -328,8 +464,8 @@ gem
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-10-03-rails-assets-in-gem.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-10-03-rails-assets-in-gem.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-10-09-update-octopress-and-conflict-ruby-version.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-10-09-update-octopress-and-conflict-ruby-version.html';
         var disqus_script = 'embed.js';
       
     (function () {

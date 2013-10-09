@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[ZnZ Blog]]></title>
+  <title><![CDATA[@znz Blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-09T00:28:31+09:00</updated>
+  <updated>2013-10-09T21:53:53+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,198 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[octopress をアップデートした (.ruby-version が conflict した) 話]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-09-update-octopress-and-conflict-ruby-version.html"/>
+    <updated>2013-10-09T21:21:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/update-octopress-and-conflict-ruby-version</id>
+    <content type="html"><![CDATA[<p>octopress で使う ruby を 1.9.3-p448 から 2.0.0-p247 にあげようと思って、
+そのついでに octopress 自体も master の最新のものに更新したので、
+その手順のメモです。</p>
+
+<p>その時に <code>.ruby-version</code> が conflict したので、
+その話がメインです。</p>
+
+<!--more-->
+
+
+<h2><code>.ruby-version</code> とは?</h2>
+
+<p>rbenv が <code>.rbenv-version</code> から <code>.ruby-version</code> に変わった時には
+知らなかったのですが、
+<a href="https://gist.github.com/fnichol/1912050">A Common .ruby-version File For Ruby Projects</a>
+というものがあって、
+rbenv や rvm のような切り替えツール共通で
+<code>.ruby-version</code>
+というファイルを使おうということのようです。</p>
+
+<h2>octopress の .ruby-version</h2>
+
+<p>その発想は良いのですが、
+rbenv + ruby-build だと 1.9.3-p448 や 2.0.0-p247 のように
+パッチレベルまで <code>.rbenv-version</code> に入るのが普通なのに
+rvm が作る <code>.ruby-version</code> だと <code>1.9.3</code> のように
+パッチレベルが入らないようで、
+octopress の <code>.ruby-version</code> で問題が起きました。</p>
+
+<p>元々使い始めた時の octopress の master には
+<code>.ruby-version</code>
+ファイルが入っていて、
+<code>1.9.3</code>
+という内容でした。</p>
+
+<p>手元での回避策としては、
+<code>ln -snf 1.9.3-p448 ~/.rbenv/versions/1.9.3</code>
+のようにシンボリックリンクで回避するとか、
+<code>configure</code> で <code>--prefix=$HOME/.rbenv/versions/1.9.3</code> で
+別途インストールするとかも考えたのですが、
+他に影響が出るのが嫌だったので、
+結局
+<code>.ruby-version</code>
+を書き換えて使うことにしました。</p>
+
+<p>rbenv を使っていて、
+リリースされているバージョンの ruby のインストールには
+ruby-build を使っていて
+<code>1.9.3-p448</code>
+にする必要があったので、
+<code>rbenv local 1.9.3-p448</code>
+で置き換えました。</p>
+
+<h2>バージョンアップ手順</h2>
+
+<p>まず remote を確認します。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> git remote -v
+</span><span class='line'>octopress       git://github.com/imathis/octopress.git (fetch)
+</span><span class='line'>octopress       git://github.com/imathis/octopress.git (push)
+</span><span class='line'>origin  git@github.com:znz/znz.github.io (fetch)
+</span><span class='line'>origin  git@github.com:znz/znz.github.io (push)</span></code></pre></td></tr></table></div></figure>
+
+
+<p>octopress という名前にしていることが確認出来たので、
+fetch します。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% git fetch octopress
+</span><span class='line'>remote: Counting objects: 85, done.
+</span><span class='line'>remote: Compressing objects: 100% (34/34), done.
+</span><span class='line'>remote: Total 46 (delta 30), reused 26 (delta 10)
+</span><span class='line'>Unpacking objects: 100% (46/46), done.
+</span><span class='line'>From git://github.com/imathis/octopress
+</span><span class='line'>   9699df7..5a6b8e4  2.5        -&gt; octopress/2.5
+</span><span class='line'>   f75547f..ff71657  master     -&gt; octopress/master
+</span><span class='line'>   8d7ef9a..98bd6c9  site-2.1   -&gt; octopress/site-2.1</span></code></pre></td></tr></table></div></figure>
+
+
+<p>merge する前に
+<code>git diff source...octopress/master</code>
+で変更点を確認してから merge します。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% git diff source...octopress/master
+</span><span class='line'>% git merge octopress/master
+</span><span class='line'>Auto-merging Rakefile
+</span><span class='line'>CONFLICT (modify/delete): .ruby-version deleted in octopress/master and modified in HEAD. Version HEAD of .ruby-version left in tree.
+</span><span class='line'>Automatic merge failed; fix conflicts and then commit the result.
+</span><span class='line'>zsh: exit 1     git merge octopress/master</span></code></pre></td></tr></table></div></figure>
+
+
+<p>conflict しました。
+<code>.ruby-version</code>
+は消してしまって
+<code>rbenv global 2.0.0-p247</code>
+で設定している <code>2.0.0-p247</code> を使う予定なので、
+消してしまいます。
+その変更を commit すると merge 完了でした。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% git rm .ruby-version
+</span><span class='line'>.ruby-version: needs merge
+</span><span class='line'>rm '.ruby-version'
+</span><span class='line'>% git commit -av
+</span><span class='line'>[source 136b37f] Merge remote-tracking branch 'octopress/master' into source</span></code></pre></td></tr></table></div></figure>
+
+
+<p>うまくいったので、バックアップをかねて github に push しておきます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% git push
+</span><span class='line'>Counting objects: 55, done.
+</span><span class='line'>Delta compression using up to 4 threads.
+</span><span class='line'>Compressing objects: 100% (39/39), done.
+</span><span class='line'>Writing objects: 100% (41/41), 4.90 KiB | 0 bytes/s, done.
+</span><span class='line'>Total 41 (delta 28), reused 0 (delta 0)
+</span><span class='line'>To git@github.com:znz/znz.github.io
+</span><span class='line'>   5dabdd2..136b37f  source -&gt; source</span></code></pre></td></tr></table></div></figure>
+
+
+<p>rake のバージョンの関係で
+<code>rake preview</code>
+などではなく
+<code>bundle exec rake preview</code>
+のように実行することが必須になってしまいました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% rake preview
+</span><span class='line'>rake aborted!
+</span><span class='line'>You have already activated rake 10.1.0, but your Gemfile requires rake 0.9.2.2. Using bundle exec may solve this.</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p>事前に予測できた範囲の conflict しかなくて、
+簡単に解決できました。</p>
+
+<p><code>.ruby-version</code>
+は
+<code>.gitignore</code>
+には入っていないので、
+余計な conflict を避けるために
+<code>.gitignore</code>
+を変更せずに使いたいのなら、
+親ディレクトリに
+<code>.ruby-version</code>
+を用意してバージョンを指定するのが良いと思います。
+<code>.git</code>
+などと同じように
+<code>.ruby-version</code>
+もディレクトリを上がっていって最初に見つかったものが使われるので、
+そういう運用が可能です。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[rails 4 対応の認可の gem]]></title>
@@ -2538,97 +2730,6 @@ Ruby CI
 オプションなしの <code>brew reinstall</code> の時に使われるオプションを
 埋め込んでおくという用途に使うのには向いていないということが
 わかりました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[td2planet を rubyforge から github に移行してリリース]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-12-td2planet.html"/>
-    <updated>2013-09-12T22:43:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/td2planet</id>
-    <content type="html"><![CDATA[<p>tDiary の日付ごとのまとまりを意識したフィードアグリゲータの td2planet を rubyforge から github に移行して、 ruby 2.0.0 対応を確認して、 0.3.0 としてリリースしました。</p>
-
-<!--more-->
-
-
-<h2>rubyforge から github への移行</h2>
-
-<p>rubyforge は
-<a href="http://rubyforge.org/scm/?group_id=3122">RubyForge: TD2Planet: SCM Repository</a>
-に書いてあるように http か svn か svn+ssh でアクセス出来ますが、
-今回は svn から取得したものを github に移行しました。</p>
-
-<p>小さいレポジトリだったこともあり、手順としては以下のように単純に移行出来ました。</p>
-
-<ol>
-<li><code>git svn clone -s svn://rubyforge.org/var/svn/td2planet</code></li>
-<li>github 上でレポジトリ作成</li>
-<li><code>git remote add origin git@github.com:znz/td2planet.git</code></li>
-<li><code>git push -u origin master</code></li>
-</ol>
-
-
-<h2>ruby 2.0.0 対応確認</h2>
-
-<p>単純に README に書いてある <code>ruby -I lib bin/td2planet.rb config.yaml</code> で問題なく動きました。</p>
-
-<p><a href="https://gist.github.com/unak/3038095">The History of Ruby</a>
-によると作り始めた 2007 年はまだ 1.9.0 の開発中だったので、
-その頃でも magic comment をちゃんと書いたり、
-内部エンコーディングは UTF-8 に統一したりなどを
-気をつけていれば、
-ruby 自体の互換性は高いと言うことがわかります。</p>
-
-<p>他には以下のような変更をしました。</p>
-
-<ul>
-<li><code>setup.rb</code> と関連する LGPL 削除など</li>
-<li>README と README.ja に拡張子の <code>.rdoc</code> を追加</li>
-<li>gemspec 更新
-
-<ul>
-<li>homepage を rubyforge から github に変更</li>
-<li>README のファイル名変更対応</li>
-<li>license 追加</li>
-</ul>
-</li>
-<li>バージョン変更</li>
-<li><code>-Ku</code> から ruby が 1.9 未満のときだけ <code>$KCODE</code> を設定に変更</li>
-</ul>
-
-
-<p><code>setup.rb</code> は ruby 1.9 以降に対応しているのかわからなかったのと、
-ライセンスを MIT に統一するために削除しました。</p>
-
-<h2>リリース</h2>
-
-<p>別のリリース作業をした時に <code>~/.gem/credentials</code> は作成済みだったので、
-リリースは以下の手順だけで出来ました。
-<code>~/.gem/credentials</code> がまだないときは <code>gem push</code> の時に <code>rubygems.org</code> のアカウントか <code>rubyforge.org</code> のアカウントが必要になります。</p>
-
-<ul>
-<li><code>gem build *.gemspec</code></li>
-<li><code>gem push *.gem</code></li>
-</ul>
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% gem build *.gemspec
-</span><span class='line'>  Successfully built RubyGem
-</span><span class='line'>  Name: td2planet
-</span><span class='line'>  Version: 0.3.0
-</span><span class='line'>  File: td2planet-0.3.0.gem
-</span><span class='line'>% gem push td2planet-0.3.0.gem
-</span><span class='line'>Pushing gem to https://rubygems.org...
-</span><span class='line'>Successfully registered gem: td2planet (0.3.0)</span></code></pre></td></tr></table></div></figure>
-
 ]]></content>
   </entry>
   

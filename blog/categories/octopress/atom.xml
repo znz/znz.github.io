@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: octopress | ZnZ Blog]]></title>
+  <title><![CDATA[Category: octopress | @znz Blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/octopress/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-09T00:28:31+09:00</updated>
+  <updated>2013-10-09T21:53:53+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,168 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[octopress をアップデートした (.ruby-version が conflict した) 話]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-09-update-octopress-and-conflict-ruby-version.html"/>
+    <updated>2013-10-09T21:21:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/update-octopress-and-conflict-ruby-version</id>
+    <content type="html"><![CDATA[<p>octopress で使う ruby を 1.9.3-p448 から 2.0.0-p247 にあげようと思って、
+そのついでに octopress 自体も master の最新のものに更新したので、
+その手順のメモです。</p>
+
+<p>その時に <code>.ruby-version</code> が conflict したので、
+その話がメインです。</p>
+
+<!--more-->
+
+
+<h2><code>.ruby-version</code> とは?</h2>
+
+<p>rbenv が <code>.rbenv-version</code> から <code>.ruby-version</code> に変わった時には
+知らなかったのですが、
+<a href="https://gist.github.com/fnichol/1912050">A Common .ruby-version File For Ruby Projects</a>
+というものがあって、
+rbenv や rvm のような切り替えツール共通で
+<code>.ruby-version</code>
+というファイルを使おうということのようです。</p>
+
+<h2>octopress の .ruby-version</h2>
+
+<p>その発想は良いのですが、
+rbenv + ruby-build だと 1.9.3-p448 や 2.0.0-p247 のように
+パッチレベルまで <code>.rbenv-version</code> に入るのが普通なのに
+rvm が作る <code>.ruby-version</code> だと <code>1.9.3</code> のように
+パッチレベルが入らないようで、
+octopress の <code>.ruby-version</code> で問題が起きました。</p>
+
+<p>元々使い始めた時の octopress の master には
+<code>.ruby-version</code>
+ファイルが入っていて、
+<code>1.9.3</code>
+という内容でした。</p>
+
+<p>手元での回避策としては、
+<code>ln -snf 1.9.3-p448 ~/.rbenv/versions/1.9.3</code>
+のようにシンボリックリンクで回避するとか、
+<code>configure</code> で <code>--prefix=$HOME/.rbenv/versions/1.9.3</code> で
+別途インストールするとかも考えたのですが、
+他に影響が出るのが嫌だったので、
+結局
+<code>.ruby-version</code>
+を書き換えて使うことにしました。</p>
+
+<p>rbenv を使っていて、
+リリースされているバージョンの ruby のインストールには
+ruby-build を使っていて
+<code>1.9.3-p448</code>
+にする必要があったので、
+<code>rbenv local 1.9.3-p448</code>
+で置き換えました。</p>
+
+<h2>バージョンアップ手順</h2>
+
+<p>まず remote を確認します。</p>
+
+<p><code>
+ git remote -v
+octopress       git://github.com/imathis/octopress.git (fetch)
+octopress       git://github.com/imathis/octopress.git (push)
+origin  git@github.com:znz/znz.github.io (fetch)
+origin  git@github.com:znz/znz.github.io (push)
+</code></p>
+
+<p>octopress という名前にしていることが確認出来たので、
+fetch します。</p>
+
+<p><code>
+% git fetch octopress
+remote: Counting objects: 85, done.
+remote: Compressing objects: 100% (34/34), done.
+remote: Total 46 (delta 30), reused 26 (delta 10)
+Unpacking objects: 100% (46/46), done.
+From git://github.com/imathis/octopress
+   9699df7..5a6b8e4  2.5        -&gt; octopress/2.5
+   f75547f..ff71657  master     -&gt; octopress/master
+   8d7ef9a..98bd6c9  site-2.1   -&gt; octopress/site-2.1
+</code></p>
+
+<p>merge する前に
+<code>git diff source...octopress/master</code>
+で変更点を確認してから merge します。</p>
+
+<p><code>
+% git diff source...octopress/master
+% git merge octopress/master
+Auto-merging Rakefile
+CONFLICT (modify/delete): .ruby-version deleted in octopress/master and modified in HEAD. Version HEAD of .ruby-version left in tree.
+Automatic merge failed; fix conflicts and then commit the result.
+zsh: exit 1     git merge octopress/master
+</code></p>
+
+<p>conflict しました。
+<code>.ruby-version</code>
+は消してしまって
+<code>rbenv global 2.0.0-p247</code>
+で設定している <code>2.0.0-p247</code> を使う予定なので、
+消してしまいます。
+その変更を commit すると merge 完了でした。</p>
+
+<p><code>
+% git rm .ruby-version
+.ruby-version: needs merge
+rm '.ruby-version'
+% git commit -av
+[source 136b37f] Merge remote-tracking branch 'octopress/master' into source
+</code></p>
+
+<p>うまくいったので、バックアップをかねて github に push しておきます。</p>
+
+<p><code>
+% git push
+Counting objects: 55, done.
+Delta compression using up to 4 threads.
+Compressing objects: 100% (39/39), done.
+Writing objects: 100% (41/41), 4.90 KiB | 0 bytes/s, done.
+Total 41 (delta 28), reused 0 (delta 0)
+To git@github.com:znz/znz.github.io
+   5dabdd2..136b37f  source -&gt; source
+</code></p>
+
+<p>rake のバージョンの関係で
+<code>rake preview</code>
+などではなく
+<code>bundle exec rake preview</code>
+のように実行することが必須になってしまいました。</p>
+
+<p><code>
+% rake preview
+rake aborted!
+You have already activated rake 10.1.0, but your Gemfile requires rake 0.9.2.2. Using bundle exec may solve this.
+</code></p>
+
+<h2>まとめ</h2>
+
+<p>事前に予測できた範囲の conflict しかなくて、
+簡単に解決できました。</p>
+
+<p><code>.ruby-version</code>
+は
+<code>.gitignore</code>
+には入っていないので、
+余計な conflict を避けるために
+<code>.gitignore</code>
+を変更せずに使いたいのなら、
+親ディレクトリに
+<code>.ruby-version</code>
+を用意してバージョンを指定するのが良いと思います。
+<code>.git</code>
+などと同じように
+<code>.ruby-version</code>
+もディレクトリを上がっていって最初に見つかったものが使われるので、
+そういう運用が可能です。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[タグクラウドプラグインを入れた]]></title>
