@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: rails | @znz Blog]]></title>
+  <title><![CDATA[Category: rails | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rails/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-09T21:53:53+09:00</updated>
+  <updated>2013-10-10T21:49:19+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,198 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[spring rails console で PAGER=lv だと /dev/tty: Device not configured]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-10-spring-and-lv.html"/>
+    <updated>2013-10-10T21:28:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/spring-and-lv</id>
+    <content type="html"><![CDATA[<p><code>spring rails console</code>
+で
+<code>pry</code>
+を使っていて
+pager
+を起動するような出力をしたときに
+<code>/dev/tty: Device not configured</code>
+になることがあったので原因を調べてみました。
+結論としてはタイトルに書いてありますが、
+<code>spring</code>
+と
+<code>lv</code>
+の組み合わせが原因でした。</p>
+
+<!--more-->
+
+
+<h2>確認バージョン</h2>
+
+<p>関係する gem のバージョンは以下の通りです。</p>
+
+<ul>
+<li>rails 3.2.14, 4.0.0</li>
+<li>spring 0.0.10, 0.0.11</li>
+</ul>
+
+
+<p>関係するプログラムのバージョンは以下の通りです。</p>
+
+<ul>
+<li>ruby 2.0.0-p247</li>
+<li>lv 4.51</li>
+</ul>
+
+
+<p>確認した環境は Mac OS X です。</p>
+
+<h2>原因の切り分け</h2>
+
+<p>まず
+<code>rails console</code>
+だと問題は発生しないので、
+<code>spring</code>
+が原因のひとつなのは確実だったので、
+当面の回避策として、
+<code>spring rails console</code>
+の代わりに
+<code>rails console</code>
+を使っていました。</p>
+
+<p>次にふと他の pager を使ってみるとどうだろうと思って、
+<code>spring rails console</code>
+の中で
+<code>ENV['PAGER']="less"</code>
+として <code>lv</code> から <code>less</code> に変えて試してみたところ、
+問題なく使えました。
+これがきっかけで <code>lv</code> も原因のひとつだということに気づきました。</p>
+
+<h2>原因調査</h2>
+
+<p>ここまでわかれば原因は調べやすくなったので、
+まずエラーメッセージを出しているところを探しました。
+これはすぐに見つかって、
+<code>lv</code> の <code>src/stream.c</code> の <code>perror( "/dev/tty" )</code> でした。</p>
+
+<p>```c lv451/src/stream.c
+  close( 0 );
+  if( IsAtty( 1 ) &amp;&amp; 0 != open( &ldquo;/dev/tty&rdquo;, O_RDONLY ) )</p>
+
+<pre><code>perror( "/dev/tty" ), exit( -1 );
+</code></pre>
+
+<p>```</p>
+
+<p>STDIN を開き直している処理があって、
+ここで <code>"/dev/tty"</code> を開けないのが原因でした。</p>
+
+<p>元々の STDIN は
+<code>spring</code>
+の中で
+<code>UNIXSocket#send_io</code>
+と
+<code>UNIXSocket#recv_io</code>
+で受け渡していました。
+この STDIN をそのまま使ってくれれば問題は起きないのに、
+わざわざ <code>close( 0 )</code> で閉じてしまって、
+開き直そうとしているのが問題だとわかりました。</p>
+
+<p><code>spring rails console</code>
+の中で直接
+<code>open("/dev/tty","r")</code>
+を試しても同様に
+<code>Errno::ENXIO: Device not configured - /dev/tty</code>
+になってしまうので、
+<code>lv</code> の方を変えない限りどうしようもなさそうです。</p>
+
+<p>というわけで、
+これはもう <code>lv</code> の処理が <code>spring</code> と相性が悪いということで、
+<code>spring</code> の中では <code>lv</code> を避けるしかなさそうです。</p>
+
+<h2>結論</h2>
+
+<p><code>~/.spring.rb</code>
+で
+<code>ENV["PAGER"]</code>
+を書き換えることにしました。</p>
+
+<p><code>ruby ~/.spring.rb
+ENV["PAGER"] = "less" if ENV["PAGER"] == "lv"
+</code></p>
+
+<h2>余談</h2>
+
+<p>原因を調べているときに
+<code>spring</code>
+の標準入出力の処理周りをみていたのですが、
+<code>UNIXSocket#send_io</code>
+と
+<code>UNIXSocket#recv_io</code>
+で受け渡していました。</p>
+
+<p><code>recv_io</code> で mode を指定していないので、
+<code>spring rails console</code> では
+<code>STDIN.write</code> が使えたり <code>STDOUT.gets</code> が使えたりしてしまうようです。</p>
+
+<p>これは <code>recv_io(IO, "r")</code> などに直せば良さそうに見えますが、
+特に実害もなさそうなので、このままでもあまり問題はなさそうです。</p>
+
+<p>パッチとしては以下のように直せば良さそうです。</p>
+
+<p>```diff
+diff &mdash;git a/lib/spring/application.rb b/lib/spring/application.rb
+index b7df9bb..4e34f6c 100644
+&mdash;&ndash; a/lib/spring/application.rb
++++ b/lib/spring/application.rb
+@@ -93,7 +93,7 @@ module Spring</p>
+
+<pre><code>   log "got client"
+   manager.puts
+</code></pre>
+
+<ul>
+<li>   streams = 3.times.map { client.recv_io }</li>
+<li><p>   streams = %w[w w r].map { |mode| client.recv_io(IO, mode) }
+   [STDOUT, STDERR].zip(streams).each { |a, b| a.reopen(b) }</p>
+
+<p>   preload unless preloaded?
+```</p></li>
+</ul>
+
+
+<p>テストも以下のように書いてみたのですが、
+Mac OS X の環境だとそもそも既存のテストも通らないものがあったり、
+Linux だと上の変更をしなくてもテストが通ってしまったりしたので
+pull request を出すのは諦めました。
+これらのパッチの著作権は主張しないので、
+代わりに pull request を出してもらうのは歓迎します。</p>
+
+<p>```diff
+diff &mdash;git a/test/acceptance/app_test.rb b/test/acceptance/app_test.rb
+index a21b556..ee04e5a 100644
+&mdash;&ndash; a/test/acceptance/app_test.rb
++++ b/test/acceptance/app_test.rb
+@@ -440,4 +440,16 @@ class AppTest &lt; ActiveSupport::TestCase</p>
+
+<pre><code>   assert_success "bundle check"
+ end
+</code></pre>
+
+<p>   end
++
++  test &ldquo;STDIN mode&rdquo; do
++    assert_success &ldquo;#{spring} rails runner &lsquo;STDIN.write(%(test)) rescue $!.display&rsquo;&rdquo;, stdout: &ldquo;not opened for writing&rdquo;
++  end
++
++  test &ldquo;STDOUT mode&rdquo; do
++    assert_success &ldquo;#{spring} rails runner &lsquo;STDOUT.gets rescue $!.display&rsquo;&rdquo;, stdout: &ldquo;not opened for reading&rdquo;
++  end
++
++  test &ldquo;STDERR mode&rdquo; do
++    assert_success &ldquo;#{spring} rails runner &lsquo;STDERR.gets rescue $!.display&rsquo;&rdquo;, stdout: &ldquo;not opened for reading&rdquo;
++  end
+ end
+```</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[rails 4 対応の認可の gem]]></title>
@@ -677,268 +869,6 @@ icons-36-white-178cc38be265514b341e111ed7d38712.png
 を使ったりしていないと
 production
 環境だけ問題がおきることがあるようです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[jQuery Mobile 1.3.2 の日本語化]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-01-jquery-mobile-l10n.html"/>
-    <updated>2013-10-01T15:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/jquery-mobile-l10n</id>
-    <content type="html"><![CDATA[<p>jQuery Mobile の l10n についてちゃんと調べたのでまとめておきます。
-今回は日本語化だけですが、
-翻訳対象は網羅できていると思います。</p>
-
-<p>ちゃんと他の言語にも対応させるためには
-<code>mobileinit</code>
-の中で設定する文字列を別途 i18n 用の仕組みを用意して
-翻訳し分けることになると思います。</p>
-
-<!--more-->
-
-
-<h2>mobileinit</h2>
-
-<p>まず最初に注意すべき点として
-<a href="http://api.jquerymobile.com/global-config/">Configuring Defaults | jQuery Mobile API Documentation</a>
-にも書いてありますが、
- <code>mobileinit</code>
-のイベントハンドラは
-<code>jquery.mobile.js</code>
-の読み込み前に設定しておく必要があります。
-(<code>$</code> や <code>on</code> を使うので <code>jquery.js</code> よりは後にします。)</p>
-
-<p>これを知らないと設定が反映されなくて悩むことになります。</p>
-
-<p>rails 3.1 以降との組み合わせなら、例えば
-<code>app/assets/javascripts/mobile.js</code>
-に以下のように書いておいて、
-<code>app/assets/javascripts/mobile/jqm_ja.js</code>
-などにローカライズ用の
-<code>mobileinit</code>
-を書くということになります。</p>
-
-<p><code>
-//= require jquery
-//= require jquery_ujs
-//= require_tree ./mobile
-//= require jquery.mobile
-</code></p>
-
-<p>例えば以下のような感じになります。</p>
-
-<p>```coffeescript app/assets/javascripts/mobile/jqm_ja.js.coffee
-$(document).on &ldquo;mobileinit&rdquo;, &ndash;>
-  #$.mobile.loadingMessageTextVisible = true
-  #$.mobile.loadingMessage = &ldquo;読み込み中&hellip;&rdquo;
-  $.mobile.loader.prototype.options.text = &ldquo;読み込み中です&hellip;&rdquo;
-  $.mobile.loader.prototype.options.textVisible = false
-  $.mobile.pageLoadErrorMessage = &ldquo;読み込みに失敗しました。&rdquo;
-  $.mobile.page.prototype.options.backBtnText = &ldquo;戻る&rdquo;
-  $.mobile.listview.prototype.options.filterPlaceholder = &ldquo;検索&hellip;&rdquo;
-  $.mobile.table.prototype.options.columnBtnText = &ldquo;列の増減&hellip;&rdquo;
-  $.mobile.dialog.prototype.options.closeBtnText =</p>
-
-<pre><code>$.mobile.selectmenu.prototype.options.closeText = "閉じる"
-</code></pre>
-
-<p>  $.mobile.collapsible.prototype.options.expandCueText = &ldquo;クリックで開く&rdquo;
-  $.mobile.collapsible.prototype.options.collapseCueText = &ldquo;クリックで閉じる&rdquo;
-```</p>
-
-<h2>Error Loading Page</h2>
-
-<p>読み込みエラーの時のメッセージは
-<code>$.mobile.pageLoadErrorMessage</code>
-で設定できます。</p>
-
-<p>いろいろな理由で表示されることが多いので、
-真っ先に変更したくなるメッセージだと思います。</p>
-
-<p>見た目は
-<code>$.mobile.pageLoadErrorMessageTheme</code>
-で変更できます。</p>
-
-<h2>loading</h2>
-
-<p>1.3.2 でしか確認していませんが、
-jQuery Mobile 1.2 からは
-<a href="http://api.jquerymobile.com/loader/">Loader Widget</a>
-に変わっていて、
-<code>$.mobile.loader.prototype.options.text</code>
-で設定するようになっています。
-ドキュメントによると、
-メッセージの変更やテーマの変更以外にも
-独自の HTML を表示するなど
-いろいろとカスタマイズ出来るようです。</p>
-
-<p><code>$.mobile.loader.prototype.options.textVisible</code>
-で有効にした時だけ表示されるようなので、
-不要なら無視しても良いかもしれません。</p>
-
-<p>deprecated になっていますが、互換性のため、
-<code>$.mobile.loadingMessage</code>
-や
-<code>$.mobile.loadingMessageTextVisible</code>
-もまだ使えるようです。
-(
-<code>$.mobile.loader.prototype.options.text</code>
-や
-<code>$.mobile.loader.prototype.options.textVisible</code>
-より優先されるようです。)</p>
-
-<h2>pageloadfailed</h2>
-
-<p>ローカライズとはちょっと離れて、
-読み込みエラーのときに別処理をする方法を書いておきます。</p>
-
-<p>devise の timeoutable を使っていると
-普通の画面遷移をしようとしたときに
-401 Unauthorized になることがあります。
-そのときに読み込みエラーメッセージだけ出されても困るので、
-<a href="http://api.jquerymobile.com/pageloadfailed/">pageloadfailed</a>
-で認証画面に飛ぶためのリダイレクト処理を入れてみました。</p>
-
-<p><code>event.preventDefault()</code>
-を呼んでいないので、
-<code>data.deferred</code>
-の
-<code>resolve()</code>
-か
-<code>reject()</code>
-も呼ばず、
-リダイレクト前のページの処理はデフォルトのままにしています。</p>
-
-<p>```coffeescript app/assets/javascripts/mobile/pageloadfailed.js.coffee
-$(document).on &ldquo;pageloadfailed&rdquo;, (event, data) &ndash;>
-  if data.xhr.status == 401</p>
-
-<pre><code>window.location.href = data.absUrl
-</code></pre>
-
-<p>```</p>
-
-<h2>Back</h2>
-
-<p><code>data-role="page"</code>
-の要素に
-<code>data-add-back-btn="true"</code>
-を追加したときに
-<a href="http://api.jquerymobile.com/header/">Header Widget</a>
-に出てくる戻るボタンのテキストです。</p>
-
-<p><code>$.mobile.page.prototype.options.backBtnText</code>
-で設定できます。</p>
-
-<h2>Filter items&hellip;</h2>
-
-<p>ここからはページ全体ではなく
-Widget ごとの翻訳の話になります。</p>
-
-<p>まず
-<a href="http://api.jquerymobile.com/listview/">Listview Widget</a>
-で
-<code>data-filter="true"</code>
-の時に出てくる検索入力欄の placeholder のテキストです。</p>
-
-<p>まとめてデフォルトを変更するには
-今までのものと同様に
-<code>mobileinit</code>
-で
-<code>$.mobile.listview.prototype.options.filterPlaceholder</code>
-に設定します。</p>
-
-<p>個別に変更するには
-listview
-に
-<code>data-filter-placeholder</code>
-属性を設定します。</p>
-
-<p>この後のものも同様に全体のデフォルト設定を
-<code>mobileinit</code>
-で設定したり、
-属性で個別に設定したりできます。</p>
-
-<h2>Columns&hellip;</h2>
-
-<p><a href="http://api.jquerymobile.com/table-columntoggle/">Column-Toggle Table Widget</a>
-の列を増減させるポップアップを表示させるボタンのテキストです。</p>
-
-<p><code>mobileinit</code>
-で
-<code>$.mobile.table.prototype.options.columnBtnText</code>
-を設定するか、
-<code>data-column-btn-text</code>
-属性で設定します。</p>
-
-<h2>Close</h2>
-
-<p><a href="http://api.jquerymobile.com/dialog/">Dialog Widget</a>
-の閉じるボタンのテキストは
-<code>mobileinit</code>
-で
-<code>$.mobile.dialog.prototype.options.closeBtnText</code>
-を設定するか、
-<code>data-close-btn-text</code>
-属性で設定します。</p>
-
-<p>ダイアログの閉じるボタンはデフォルトではアイコンのみでテキストは表示されないのですが、
-スクリーンリーダーで読み上げられるので、
-アクセシビリティ的には重要と jQuery Mobile のドキュメントには書いてありました。</p>
-
-<p>ドキュメントには書いてありませんが、
-jQuery Mobile 1.3.2 のソースをみると
-<a href="http://api.jquerymobile.com/selectmenu/">Selectmenu Widget</a>
-の
-Multiple selects
-の閉じるボタンのテキストとして
-<code>$.mobile.selectmenu.prototype.options.closeText</code>
-も設定しておくと良さそうです。</p>
-
-<h2>clear text</h2>
-
-<p>検索入力はデフォルトで、
-その他のテキスト入力では
-<code>data-clear-btn=true</code>
-の時に、
-何かテキストを入力すると右に出てくるクリアボタンのオプションとして、
-<code>data-clear-btn-text</code> があります。</p>
-
-<p>これもデフォルトでは表示されず、スクリーンリーダーなどのアクセシビリティ用です。</p>
-
-<p><code>$.mobile.textinput.prototype.options.clearBtnText</code>
-でまとめて設定すれば良いと思います。</p>
-
-<p><code>$.mobile.textinput.prototype.options.clearSearchButtonText</code>
-という設定も残っていますが、
-<code>deprecating for 1.3...</code>
-とコメントに書いてあるので、
-1.3 以降なら
-<code>clearBtnText</code>
-だけ設定しておけば良いと思います。</p>
-
-<h2>click to expand contents, click to collapse contents</h2>
-
-<p>最後に
-<a href="http://api.jquerymobile.com/collapsible/">Collapsible Widget</a>
-の翻訳です。</p>
-
-<p>これもデフォルトでは表示されず、スクリーンリーダーなどのアクセシビリティ用です。</p>
-
-<p>デフォルトが
-<code>" click to expand contents"</code>
-の方が
-<code>$.mobile.collapsible.prototype.options.expandCueText</code>
-や
-<code>data-expand-cue-text</code>
-で変更できて、
-デフォルトが
-<code>" click to collapse contents"</code>
-の方が
-<code>$.mobile.collapsible.prototype.options.collapseCueText</code>
-や
-<code>data-collapse-cue-text</code>
-で変更できます。</p>
 ]]></content>
   </entry>
   

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[@znz Blog]]></title>
+  <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-09T21:53:53+09:00</updated>
+  <updated>2013-10-10T21:49:19+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,225 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[spring rails console で PAGER=lv だと /dev/tty: Device not configured]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-10-spring-and-lv.html"/>
+    <updated>2013-10-10T21:28:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/spring-and-lv</id>
+    <content type="html"><![CDATA[<p><code>spring rails console</code>
+で
+<code>pry</code>
+を使っていて
+pager
+を起動するような出力をしたときに
+<code>/dev/tty: Device not configured</code>
+になることがあったので原因を調べてみました。
+結論としてはタイトルに書いてありますが、
+<code>spring</code>
+と
+<code>lv</code>
+の組み合わせが原因でした。</p>
+
+<!--more-->
+
+
+<h2>確認バージョン</h2>
+
+<p>関係する gem のバージョンは以下の通りです。</p>
+
+<ul>
+<li>rails 3.2.14, 4.0.0</li>
+<li>spring 0.0.10, 0.0.11</li>
+</ul>
+
+
+<p>関係するプログラムのバージョンは以下の通りです。</p>
+
+<ul>
+<li>ruby 2.0.0-p247</li>
+<li>lv 4.51</li>
+</ul>
+
+
+<p>確認した環境は Mac OS X です。</p>
+
+<h2>原因の切り分け</h2>
+
+<p>まず
+<code>rails console</code>
+だと問題は発生しないので、
+<code>spring</code>
+が原因のひとつなのは確実だったので、
+当面の回避策として、
+<code>spring rails console</code>
+の代わりに
+<code>rails console</code>
+を使っていました。</p>
+
+<p>次にふと他の pager を使ってみるとどうだろうと思って、
+<code>spring rails console</code>
+の中で
+<code>ENV['PAGER']="less"</code>
+として <code>lv</code> から <code>less</code> に変えて試してみたところ、
+問題なく使えました。
+これがきっかけで <code>lv</code> も原因のひとつだということに気づきました。</p>
+
+<h2>原因調査</h2>
+
+<p>ここまでわかれば原因は調べやすくなったので、
+まずエラーメッセージを出しているところを探しました。
+これはすぐに見つかって、
+<code>lv</code> の <code>src/stream.c</code> の <code>perror( "/dev/tty" )</code> でした。</p>
+
+<figure class='code'><figcaption><span>lv451/src/stream.c</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'>  <span class="n">close</span><span class="p">(</span> <span class="mi">0</span> <span class="p">);</span>
+</span><span class='line'>  <span class="k">if</span><span class="p">(</span> <span class="n">IsAtty</span><span class="p">(</span> <span class="mi">1</span> <span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="mi">0</span> <span class="o">!=</span> <span class="n">open</span><span class="p">(</span> <span class="s">&quot;/dev/tty&quot;</span><span class="p">,</span> <span class="n">O_RDONLY</span> <span class="p">)</span> <span class="p">)</span>
+</span><span class='line'>    <span class="n">perror</span><span class="p">(</span> <span class="s">&quot;/dev/tty&quot;</span> <span class="p">),</span> <span class="n">exit</span><span class="p">(</span> <span class="o">-</span><span class="mi">1</span> <span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>STDIN を開き直している処理があって、
+ここで <code>"/dev/tty"</code> を開けないのが原因でした。</p>
+
+<p>元々の STDIN は
+<code>spring</code>
+の中で
+<code>UNIXSocket#send_io</code>
+と
+<code>UNIXSocket#recv_io</code>
+で受け渡していました。
+この STDIN をそのまま使ってくれれば問題は起きないのに、
+わざわざ <code>close( 0 )</code> で閉じてしまって、
+開き直そうとしているのが問題だとわかりました。</p>
+
+<p><code>spring rails console</code>
+の中で直接
+<code>open("/dev/tty","r")</code>
+を試しても同様に
+<code>Errno::ENXIO: Device not configured - /dev/tty</code>
+になってしまうので、
+<code>lv</code> の方を変えない限りどうしようもなさそうです。</p>
+
+<p>というわけで、
+これはもう <code>lv</code> の処理が <code>spring</code> と相性が悪いということで、
+<code>spring</code> の中では <code>lv</code> を避けるしかなさそうです。</p>
+
+<h2>結論</h2>
+
+<p><code>~/.spring.rb</code>
+で
+<code>ENV["PAGER"]</code>
+を書き換えることにしました。</p>
+
+<figure class='code'><figcaption><span>~/.spring.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">ENV</span><span class="o">[</span><span class="s2">&quot;PAGER&quot;</span><span class="o">]</span> <span class="o">=</span> <span class="s2">&quot;less&quot;</span> <span class="k">if</span> <span class="no">ENV</span><span class="o">[</span><span class="s2">&quot;PAGER&quot;</span><span class="o">]</span> <span class="o">==</span> <span class="s2">&quot;lv&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>余談</h2>
+
+<p>原因を調べているときに
+<code>spring</code>
+の標準入出力の処理周りをみていたのですが、
+<code>UNIXSocket#send_io</code>
+と
+<code>UNIXSocket#recv_io</code>
+で受け渡していました。</p>
+
+<p><code>recv_io</code> で mode を指定していないので、
+<code>spring rails console</code> では
+<code>STDIN.write</code> が使えたり <code>STDOUT.gets</code> が使えたりしてしまうようです。</p>
+
+<p>これは <code>recv_io(IO, "r")</code> などに直せば良さそうに見えますが、
+特に実害もなさそうなので、このままでもあまり問題はなさそうです。</p>
+
+<p>パッチとしては以下のように直せば良さそうです。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gh">diff --git a/lib/spring/application.rb b/lib/spring/application.rb</span>
+</span><span class='line'><span class="gh">index b7df9bb..4e34f6c 100644</span>
+</span><span class='line'><span class="gd">--- a/lib/spring/application.rb</span>
+</span><span class='line'><span class="gi">+++ b/lib/spring/application.rb</span>
+</span><span class='line'><span class="gu">@@ -93,7 +93,7 @@ module Spring</span>
+</span><span class='line'>       log &quot;got client&quot;
+</span><span class='line'>       manager.puts
+</span><span class='line'>
+</span><span class='line'><span class="gd">-      streams = 3.times.map { client.recv_io }</span>
+</span><span class='line'><span class="gi">+      streams = %w[w w r].map { |mode| client.recv_io(IO, mode) }</span>
+</span><span class='line'>       [STDOUT, STDERR].zip(streams).each { |a, b| a.reopen(b) }
+</span><span class='line'>
+</span><span class='line'>       preload unless preloaded?
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>テストも以下のように書いてみたのですが、
+Mac OS X の環境だとそもそも既存のテストも通らないものがあったり、
+Linux だと上の変更をしなくてもテストが通ってしまったりしたので
+pull request を出すのは諦めました。
+これらのパッチの著作権は主張しないので、
+代わりに pull request を出してもらうのは歓迎します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gh">diff --git a/test/acceptance/app_test.rb b/test/acceptance/app_test.rb</span>
+</span><span class='line'><span class="gh">index a21b556..ee04e5a 100644</span>
+</span><span class='line'><span class="gd">--- a/test/acceptance/app_test.rb</span>
+</span><span class='line'><span class="gi">+++ b/test/acceptance/app_test.rb</span>
+</span><span class='line'><span class="gu">@@ -440,4 +440,16 @@ class AppTest &lt; ActiveSupport::TestCase</span>
+</span><span class='line'>       assert_success &quot;bundle check&quot;
+</span><span class='line'>     end
+</span><span class='line'>   end
+</span><span class='line'><span class="gi">+</span>
+</span><span class='line'><span class="gi">+  test &quot;STDIN mode&quot; do</span>
+</span><span class='line'><span class="gi">+    assert_success &quot;#{spring} rails runner &#39;STDIN.write(%(test)) rescue $!.display&#39;&quot;, stdout: &quot;not opened for writing&quot;</span>
+</span><span class='line'><span class="gi">+  end</span>
+</span><span class='line'><span class="gi">+</span>
+</span><span class='line'><span class="gi">+  test &quot;STDOUT mode&quot; do</span>
+</span><span class='line'><span class="gi">+    assert_success &quot;#{spring} rails runner &#39;STDOUT.gets rescue $!.display&#39;&quot;, stdout: &quot;not opened for reading&quot;</span>
+</span><span class='line'><span class="gi">+  end</span>
+</span><span class='line'><span class="gi">+</span>
+</span><span class='line'><span class="gi">+  test &quot;STDERR mode&quot; do</span>
+</span><span class='line'><span class="gi">+    assert_success &quot;#{spring} rails runner &#39;STDERR.gets rescue $!.display&#39;&quot;, stdout: &quot;not opened for reading&quot;</span>
+</span><span class='line'><span class="gi">+  end</span>
+</span><span class='line'> end
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[octopress をアップデートした (.ruby-version が conflict した) 話]]></title>
@@ -2704,32 +2923,6 @@ Ruby CI
 が途中で止まってしまったりして
 問題が起きそうなので、
 おすすめしません。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[homebrew の reinstall で使われるオプションの保存場所]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-13-homebrew-used-options.html"/>
-    <updated>2013-09-13T21:58:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/homebrew-used-options</id>
-    <content type="html"><![CDATA[<p><a href="http://blog.n-z.jp/blog/2013-09-08-rabbiter-on-mac.html">rabbiter の記事</a>
-で、
-「一度 <code>--with-curl-ca-bundle</code> 付きでインストールした後だと、以下のようにオプションなしの reinstall でもオプションが付くようです。」
-と書きましたが、そのオプションがどこに保存されているのかを調べました。</p>
-
-<!--more-->
-
-
-<p>実際に調べるのはソースをたどったりして結構大変だったのですが、
-最終的に
-<code>/usr/local/Cellar/glib-networking/2.36.2/INSTALL_RECEIPT.json</code>
-に <code>used_options</code> というキーで保存されているということがわかりました。</p>
-
-<p><code>Cellar</code> はインストールしたファイルの実体が入るところなので、
-あらかじめダミーの <code>INSTALL_RECEIPT.json</code> を用意しておいて
-オプションなしの <code>brew reinstall</code> の時に使われるオプションを
-埋め込んでおくという用途に使うのには向いていないということが
-わかりました。</p>
 ]]></content>
   </entry>
   

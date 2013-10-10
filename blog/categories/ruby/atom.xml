@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: ruby | @znz Blog]]></title>
+  <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-09T21:53:53+09:00</updated>
+  <updated>2013-10-10T21:49:19+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,198 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[spring rails console で PAGER=lv だと /dev/tty: Device not configured]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-10-spring-and-lv.html"/>
+    <updated>2013-10-10T21:28:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/spring-and-lv</id>
+    <content type="html"><![CDATA[<p><code>spring rails console</code>
+で
+<code>pry</code>
+を使っていて
+pager
+を起動するような出力をしたときに
+<code>/dev/tty: Device not configured</code>
+になることがあったので原因を調べてみました。
+結論としてはタイトルに書いてありますが、
+<code>spring</code>
+と
+<code>lv</code>
+の組み合わせが原因でした。</p>
+
+<!--more-->
+
+
+<h2>確認バージョン</h2>
+
+<p>関係する gem のバージョンは以下の通りです。</p>
+
+<ul>
+<li>rails 3.2.14, 4.0.0</li>
+<li>spring 0.0.10, 0.0.11</li>
+</ul>
+
+
+<p>関係するプログラムのバージョンは以下の通りです。</p>
+
+<ul>
+<li>ruby 2.0.0-p247</li>
+<li>lv 4.51</li>
+</ul>
+
+
+<p>確認した環境は Mac OS X です。</p>
+
+<h2>原因の切り分け</h2>
+
+<p>まず
+<code>rails console</code>
+だと問題は発生しないので、
+<code>spring</code>
+が原因のひとつなのは確実だったので、
+当面の回避策として、
+<code>spring rails console</code>
+の代わりに
+<code>rails console</code>
+を使っていました。</p>
+
+<p>次にふと他の pager を使ってみるとどうだろうと思って、
+<code>spring rails console</code>
+の中で
+<code>ENV['PAGER']="less"</code>
+として <code>lv</code> から <code>less</code> に変えて試してみたところ、
+問題なく使えました。
+これがきっかけで <code>lv</code> も原因のひとつだということに気づきました。</p>
+
+<h2>原因調査</h2>
+
+<p>ここまでわかれば原因は調べやすくなったので、
+まずエラーメッセージを出しているところを探しました。
+これはすぐに見つかって、
+<code>lv</code> の <code>src/stream.c</code> の <code>perror( "/dev/tty" )</code> でした。</p>
+
+<p>```c lv451/src/stream.c
+  close( 0 );
+  if( IsAtty( 1 ) &amp;&amp; 0 != open( &ldquo;/dev/tty&rdquo;, O_RDONLY ) )</p>
+
+<pre><code>perror( "/dev/tty" ), exit( -1 );
+</code></pre>
+
+<p>```</p>
+
+<p>STDIN を開き直している処理があって、
+ここで <code>"/dev/tty"</code> を開けないのが原因でした。</p>
+
+<p>元々の STDIN は
+<code>spring</code>
+の中で
+<code>UNIXSocket#send_io</code>
+と
+<code>UNIXSocket#recv_io</code>
+で受け渡していました。
+この STDIN をそのまま使ってくれれば問題は起きないのに、
+わざわざ <code>close( 0 )</code> で閉じてしまって、
+開き直そうとしているのが問題だとわかりました。</p>
+
+<p><code>spring rails console</code>
+の中で直接
+<code>open("/dev/tty","r")</code>
+を試しても同様に
+<code>Errno::ENXIO: Device not configured - /dev/tty</code>
+になってしまうので、
+<code>lv</code> の方を変えない限りどうしようもなさそうです。</p>
+
+<p>というわけで、
+これはもう <code>lv</code> の処理が <code>spring</code> と相性が悪いということで、
+<code>spring</code> の中では <code>lv</code> を避けるしかなさそうです。</p>
+
+<h2>結論</h2>
+
+<p><code>~/.spring.rb</code>
+で
+<code>ENV["PAGER"]</code>
+を書き換えることにしました。</p>
+
+<p><code>ruby ~/.spring.rb
+ENV["PAGER"] = "less" if ENV["PAGER"] == "lv"
+</code></p>
+
+<h2>余談</h2>
+
+<p>原因を調べているときに
+<code>spring</code>
+の標準入出力の処理周りをみていたのですが、
+<code>UNIXSocket#send_io</code>
+と
+<code>UNIXSocket#recv_io</code>
+で受け渡していました。</p>
+
+<p><code>recv_io</code> で mode を指定していないので、
+<code>spring rails console</code> では
+<code>STDIN.write</code> が使えたり <code>STDOUT.gets</code> が使えたりしてしまうようです。</p>
+
+<p>これは <code>recv_io(IO, "r")</code> などに直せば良さそうに見えますが、
+特に実害もなさそうなので、このままでもあまり問題はなさそうです。</p>
+
+<p>パッチとしては以下のように直せば良さそうです。</p>
+
+<p>```diff
+diff &mdash;git a/lib/spring/application.rb b/lib/spring/application.rb
+index b7df9bb..4e34f6c 100644
+&mdash;&ndash; a/lib/spring/application.rb
++++ b/lib/spring/application.rb
+@@ -93,7 +93,7 @@ module Spring</p>
+
+<pre><code>   log "got client"
+   manager.puts
+</code></pre>
+
+<ul>
+<li>   streams = 3.times.map { client.recv_io }</li>
+<li><p>   streams = %w[w w r].map { |mode| client.recv_io(IO, mode) }
+   [STDOUT, STDERR].zip(streams).each { |a, b| a.reopen(b) }</p>
+
+<p>   preload unless preloaded?
+```</p></li>
+</ul>
+
+
+<p>テストも以下のように書いてみたのですが、
+Mac OS X の環境だとそもそも既存のテストも通らないものがあったり、
+Linux だと上の変更をしなくてもテストが通ってしまったりしたので
+pull request を出すのは諦めました。
+これらのパッチの著作権は主張しないので、
+代わりに pull request を出してもらうのは歓迎します。</p>
+
+<p>```diff
+diff &mdash;git a/test/acceptance/app_test.rb b/test/acceptance/app_test.rb
+index a21b556..ee04e5a 100644
+&mdash;&ndash; a/test/acceptance/app_test.rb
++++ b/test/acceptance/app_test.rb
+@@ -440,4 +440,16 @@ class AppTest &lt; ActiveSupport::TestCase</p>
+
+<pre><code>   assert_success "bundle check"
+ end
+</code></pre>
+
+<p>   end
++
++  test &ldquo;STDIN mode&rdquo; do
++    assert_success &ldquo;#{spring} rails runner &lsquo;STDIN.write(%(test)) rescue $!.display&rsquo;&rdquo;, stdout: &ldquo;not opened for writing&rdquo;
++  end
++
++  test &ldquo;STDOUT mode&rdquo; do
++    assert_success &ldquo;#{spring} rails runner &lsquo;STDOUT.gets rescue $!.display&rsquo;&rdquo;, stdout: &ldquo;not opened for reading&rdquo;
++  end
++
++  test &ldquo;STDERR mode&rdquo; do
++    assert_success &ldquo;#{spring} rails runner &lsquo;STDERR.gets rescue $!.display&rsquo;&rdquo;, stdout: &ldquo;not opened for reading&rdquo;
++  end
+ end
+```</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[rails 4 対応の認可の gem]]></title>
@@ -681,103 +873,6 @@ gem
 で master ブランチに戻るなり、
 消してしまって、
 また作業する時に clone し直すなりします。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[aasm gem の初期状態設定]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-30-aasm.html"/>
-    <updated>2013-09-30T15:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/aasm</id>
-    <content type="html"><![CDATA[<p><code>aasm</code> gem の使い方が悪くて、初期状態の値としてデータベースに nil が保存されてしまっていたという話です。</p>
-
-<!--more-->
-
-
-<p>確認したバージョンは ruby 2.0.0 + rails 3.2.14 + aasm 3.0.22 です。</p>
-
-<p>例として以下のような感じの使い方をしてしまっていて、
-<code>status</code> メソッドで <code>nil</code> を返さないようにしていたら
-データベースには <code>nil</code> が保存されるようになってしまって、
-<code>aasm</code> 以外 (<code>ransack</code> とか) からデータベースにアクセスした時に
-問題になりました。</p>
-
-<p>```ruby
-  def status</p>
-
-<pre><code># このメソッドがダメ
-read_attribute(:status) || :starting
-</code></pre>
-
-<p>  end</p>
-
-<p>  include AASM
-  aasm column: &ldquo;status&rdquo; do</p>
-
-<pre><code>state :starting, initial: true
-state :running
-state :stopped
-state :finished
-
-event :run do
-  transitions from: [:starting, :stopped], to: :running
-end
-
-event :stop do
-  transitions from: [:starting, :running], to: :stopped
-end
-
-event :finish do
-  transitions from: [:running], to: :finished
-end
-</code></pre>
-
-<p>  end
-```</p>
-
-<p><code>aasm</code> としては
-<a href="https://github.com/aasm/aasm/blob/master/lib/aasm/persistence/active_record_persistence.rb">AASM::Persistence::ActiveRecordPersistence</a>
-で
-<code>before_validation :aasm_ensure_initial_state, :on =&gt; :create</code>
-相当のフックを追加していて、
-<code>model.valid?</code>
-を実行すれば
-<code>model.status</code>
-が設定されるようになっていました。</p>
-
-<p>たぶん使い始めた時に
-<code>rails console</code>
-で
-<code>model = Model.new</code>
-した直後の
-<code>model.status</code>
-が
-<code>nil</code>
-だったので、
-どうにかしようと思って
-getter メソッドを定義してしまったのだと思います。</p>
-
-<p>このせいで以下のような
-<code>ransack</code>
-を使った検索フォームで初期状態のチェックを入れても
-うまく検索出来ないという問題が起きていました。</p>
-
-<p>```haml
-= search_form_for @q, html: { class: &ldquo;form-search&rdquo; } do |f|
-  %table</p>
-
-<pre><code>-# ...
-%tr
-  %td= f.label :status_in
-  %td
-    - Model.aasm.states.each do |status|
-      %label
-        = check_box_tag "q[status_in][]", status.to_s, params.try(:[], :q).try(:[], :status_in).try(:include?, status.to_s), id: "q_status_in_#{status.to_s}"
-        = status.localized_name
--# ...
-</code></pre>
-
-<p>```</p>
 ]]></content>
   </entry>
   
