@@ -25,8 +25,6 @@ pager
 
 関係する gem のバージョンは以下の通りです。
 
-* pry 0.9.12.2
-* pry-rails 0.3.2
 * rails 3.2.14, 4.0.0
 * spring 0.0.10, 0.0.11
 
@@ -35,7 +33,7 @@ pager
 * ruby 2.0.0-p247
 * lv 4.51
 
-環境は Mac OS X 10.7.5 です。
+確認した環境は Mac OS X です。
 
 ## 原因の切り分け
 
@@ -43,7 +41,7 @@ pager
 `rails console`
 だと問題は発生しないので、
 `spring`
-が原因のひとつなのは確実になって、
+が原因のひとつなのは確実だったので、
 当面の回避策として、
 `spring rails console`
 の代わりに
@@ -60,7 +58,7 @@ pager
 
 ## 原因調査
 
-ここまでわかれば原因は調べやすいので、
+ここまでわかれば原因は調べやすくなったので、
 まずエラーメッセージを出しているところを探しました。
 これはすぐに見つかって、
 `lv` の `src/stream.c` の `perror( "/dev/tty" )` でした。
@@ -73,6 +71,17 @@ pager
 
 STDIN を開き直している処理があって、
 ここで `"/dev/tty"` を開けないのが原因でした。
+
+元々の STDIN は
+`spring`
+の中で
+`UNIXSocket#send_io`
+と
+`UNIXSocket#recv_io`
+で受け渡していました。
+この STDIN をそのまま使ってくれれば問題は起きないのに、
+わざわざ `close( 0 )` で閉じてしまって、
+開き直そうとしているのが問題だとわかりました。
 
 `spring rails console`
 の中で直接
@@ -113,3 +122,52 @@ ENV["PAGER"] = "less" if ENV["PAGER"] == "lv"
 
 これは `recv_io(IO, "r")` などに直せば良さそうに見えますが、
 特に実害もなさそうなので、このままでもあまり問題はなさそうです。
+
+パッチとしては以下のように直せば良さそうです。
+
+```diff
+diff --git a/lib/spring/application.rb b/lib/spring/application.rb
+index b7df9bb..4e34f6c 100644
+--- a/lib/spring/application.rb
++++ b/lib/spring/application.rb
+@@ -93,7 +93,7 @@ module Spring
+       log "got client"
+       manager.puts
+ 
+-      streams = 3.times.map { client.recv_io }
++      streams = %w[w w r].map { |mode| client.recv_io(IO, mode) }
+       [STDOUT, STDERR].zip(streams).each { |a, b| a.reopen(b) }
+ 
+       preload unless preloaded?
+```
+
+テストも以下のように書いてみたのですが、
+Mac OS X の環境だとそもそも既存のテストも通らないものがあったり、
+Linux だと上の変更をしなくてもテストが通ってしまったりしたので
+pull request を出すのは諦めました。
+これらのパッチの著作権は主張しないので、
+代わりに pull request を出してもらうのは歓迎します。
+
+```diff
+diff --git a/test/acceptance/app_test.rb b/test/acceptance/app_test.rb
+index a21b556..ee04e5a 100644
+--- a/test/acceptance/app_test.rb
++++ b/test/acceptance/app_test.rb
+@@ -440,4 +440,16 @@ class AppTest < ActiveSupport::TestCase
+       assert_success "bundle check"
+     end
+   end
++
++  test "STDIN mode" do
++    assert_success "#{spring} rails runner 'STDIN.write(%(test)) rescue $!.display'", stdout: "not opened for writing"
++  end
++
++  test "STDOUT mode" do
++    assert_success "#{spring} rails runner 'STDOUT.gets rescue $!.display'", stdout: "not opened for reading"
++  end
++
++  test "STDERR mode" do
++    assert_success "#{spring} rails runner 'STDERR.gets rescue $!.display'", stdout: "not opened for reading"
++  end
+ end
+```
