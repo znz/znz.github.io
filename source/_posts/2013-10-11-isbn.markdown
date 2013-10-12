@@ -1,0 +1,99 @@
+---
+layout: post
+title: "Ruby で ISBN をチェックしたりハイフンを入れたり"
+date: 2013-10-12 14:38
+comments: true
+categories: ruby rails isbn
+---
+本には
+[ISBN](http://ja.wikipedia.org/wiki/ISBN)
+というものが付いていて、
+末尾のチェックディジットは仕様を参照すれば
+簡単に計算出来そうです。
+
+10 桁のものと新しい 13 桁のものがあったり、
+出版者の部分の桁数が違ったりして
+ちゃんとハイフンを入れるのは面倒そうです。
+
+チェックディジットの方も自分で実装すると
+バグっていたときに面倒なので、
+良さそうな gem がないか探してみました。
+
+最終的にはいくつかの理由から
+[lisbn](http://rubygems.org/gems/lisbn)
+という gem を使いました。
+
+<!--more-->
+
+## gem の選択
+
+まず
+[rubygems.org の右上で isbn と検索](http://rubygems.org/search?utf8=%E2%9C%93&query=isbn)
+するところから始めました。
+
+インストール数の多い順に見ていくと、
+
+* [isbn10](http://rubygems.org/gems/isbn10)
+  * インストール数は一番多い
+  * 10桁のみ
+  * 古い
+* [isbn-tools](https://github.com/ragalie/isbn-tools)
+  * 古い
+  * Not Maintained
+  * lisbn が後継
+* [isbn](https://github.com/entangledstate/isbn)
+  * 画像対応とかいろいろ高機能っぽいけど今回は不要
+   * `with_dashes` というメソッドは桁数決めうちで不適切
+* [isbn_validation](https://github.com/zapnap/isbn_validation)
+  * ActiveRecord の validates
+  * ISBN ではない [ASIN](http://www.amazon.co.jp/gp/help/customer/display.html?nodeId=747416) も扱いたかったので今回は不適当
+* [lisbn](https://github.com/ragalie/lisbn)
+  * 比較的新しい
+  * 10桁と13桁の両対応
+  * ハイフンを入れるために必要な分解処理がある (後は `join('-')` すれば良いだけ)
+  * data/RangeMessage.xml というファイルを持っていて適切にわけてくれる
+
+という感じでした。
+
+## lisbn の使用例
+
+データベースに保存するのに統一されていると
+`validates :isbn, uniqueness: true`
+が使えるので、
+以下のように ISBN13 に統一する処理を入れました。
+
+それ以外の場合は ASIN と見なしてそのまま返しています。
+
+```ruby
+  def isbn_unify(isbn)
+    # Convert JISX0208 alphabet to ASCII.
+    isbn = NKF.nkf('-Ww -Z0', isbn).delete("^A-Za-z0-9")
+
+    # Convert to isbn13
+    lisbn = Lisbn.new(isbn)
+    if lisbn.valid?
+      lisbn.isbn13
+    else
+      isbn
+    end
+  end
+```
+
+出力する側では
+`parts`
+は常に ISBN13 のものだけのようなので、
+ISBN10
+に出来るときは
+頭の '978' を外して
+チェックディジットを付け直すようにしました。
+
+```haml
+- lisbn = Lisbn.new(isbn_or_asin)
+- if lisbn.valid?
+  - parts = lisbn.parts
+  - if parts[0] == '978'
+    %p.isbn10 ISBN10: #{parts[1..-2].join('-')}-#{lisbn.isbn10[-1]}
+  %p.isbn13 ISBN13: #{lisbn.parts.join('-')}
+- else
+  %p.asin ASIN: #{isbn_or_asin}
+```
