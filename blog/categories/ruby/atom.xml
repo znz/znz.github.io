@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-10T21:49:19+09:00</updated>
+  <updated>2013-10-12T15:12:42+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,136 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Ruby で ISBN をチェックしたりハイフンを入れたり]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-12-isbn.html"/>
+    <updated>2013-10-12T14:38:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/isbn</id>
+    <content type="html"><![CDATA[<p>本には
+<a href="http://ja.wikipedia.org/wiki/ISBN">ISBN</a>
+というものが付いていて、
+末尾のチェックディジットは仕様を参照すれば
+簡単に計算出来そうです。</p>
+
+<p>10 桁のものと新しい 13 桁のものがあったり、
+出版者の部分の桁数が違ったりして
+ちゃんとハイフンを入れるのは面倒そうです。</p>
+
+<p>チェックディジットの方も自分で実装すると
+バグっていたときに面倒なので、
+良さそうな gem がないか探してみました。</p>
+
+<p>最終的にはいくつかの理由から
+<a href="http://rubygems.org/gems/lisbn">lisbn</a>
+という gem を使いました。</p>
+
+<!--more-->
+
+
+<h2>gem の選択</h2>
+
+<p>まず
+<a href="http://rubygems.org/search?utf8=%E2%9C%93&amp;query=isbn">rubygems.org の右上で isbn と検索</a>
+するところから始めました。</p>
+
+<p>インストール数の多い順に見ていくと、</p>
+
+<ul>
+<li><a href="http://rubygems.org/gems/isbn10">isbn10</a>
+
+<ul>
+<li>インストール数は一番多い</li>
+<li>10桁のみ</li>
+<li>古い</li>
+</ul>
+</li>
+<li><a href="https://github.com/ragalie/isbn-tools">isbn-tools</a>
+
+<ul>
+<li>古い</li>
+<li>Not Maintained</li>
+<li>lisbn が後継</li>
+</ul>
+</li>
+<li><a href="https://github.com/entangledstate/isbn">isbn</a>
+
+<ul>
+<li>画像対応とかいろいろ高機能っぽいけど今回は不要</li>
+<li><code>with_dashes</code> というメソッドは桁数決めうちで不適切</li>
+</ul>
+</li>
+<li><a href="https://github.com/zapnap/isbn_validation">isbn_validation</a>
+
+<ul>
+<li>ActiveRecord の validates</li>
+<li>ISBN ではない <a href="http://www.amazon.co.jp/gp/help/customer/display.html?nodeId=747416">ASIN</a> も扱いたかったので今回は不適当</li>
+</ul>
+</li>
+<li><a href="https://github.com/ragalie/lisbn">lisbn</a>
+
+<ul>
+<li>比較的新しい</li>
+<li>10桁と13桁の両対応</li>
+<li>ハイフンを入れるために必要な分解処理がある (後は <code>join('-')</code> すれば良いだけ)</li>
+<li>data/RangeMessage.xml というファイルを持っていて適切にわけてくれる</li>
+</ul>
+</li>
+</ul>
+
+
+<p>という感じでした。</p>
+
+<h2>lisbn の使用例</h2>
+
+<p>データベースに保存するのに統一されていると
+<code>validates :isbn, uniqueness: true</code>
+が使えるので、
+以下のように ISBN13 に統一する処理を入れました。</p>
+
+<p>それ以外の場合は ASIN と見なしてそのまま返しています。</p>
+
+<p>```ruby
+  def isbn_unify(isbn)</p>
+
+<pre><code># Convert JISX0208 alphabet to ASCII.
+isbn = NKF.nkf('-Ww -Z0', isbn).delete("^A-Za-z0-9")
+
+# Convert to isbn13
+lisbn = Lisbn.new(isbn)
+if lisbn.valid?
+  lisbn.isbn13
+else
+  isbn
+end
+</code></pre>
+
+<p>  end
+```</p>
+
+<p>出力する側では
+<code>parts</code>
+は常に ISBN13 のものだけのようなので、
+ISBN10
+に出来るときは
+頭の &lsquo;978&rsquo; を外して
+チェックディジットを付け直すようにしました。</p>
+
+<p>```haml
+&ndash; lisbn = Lisbn.new(isbn_or_asin)
+&ndash; if lisbn.valid?
+  &ndash; parts = lisbn.parts
+  &ndash; if parts[0] == &lsquo;978&rsquo;</p>
+
+<pre><code>%p.isbn10 ISBN10: #{parts[1..-2].join('-')}-#{lisbn.isbn10[-1]}
+</code></pre>
+
+<p>  %p.isbn13 ISBN13: #{lisbn.parts.join(&lsquo;&ndash;&rsquo;)}
+&ndash; else
+  %p.asin ASIN: #{isbn_or_asin}
+```</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[spring rails console で PAGER=lv だと /dev/tty: Device not configured]]></title>
@@ -793,86 +923,6 @@ gem
 いくつか存在する jQuery Mobile の assets の中から
 <code>jquery_mobile_rails</code>
 を選んだ理由は新しいバージョンへの対応が一番早そうにみえたからです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[www.ruby-lang.org への pull request の出し方]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-30-how-to-pull-request.html"/>
-    <updated>2013-09-30T22:43:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/how-to-pull-request</id>
-    <content type="html"><![CDATA[<p><a href="https://www.ruby-lang.org/en/news/2013/09/23/ruby-2-1-0-preview1-is-released/">Ruby 2.1.0-preview1 is released</a>
-というアナウンスが一週間経ってもまだ日本語訳が出来ていなかったので、
-ちょっとの暇を見つけて pull request を出してみたので、
-その手順をまとめておきます。</p>
-
-<!--more-->
-
-
-<p>まず github のアカウントは持っているというのは前提として話を進めます。</p>
-
-<p>初回は
-<a href="https://github.com/ruby/www.ruby-lang.org">https://github.com/ruby/www.ruby-lang.org</a>
-の右上から自分のアカウントに Fork します。</p>
-
-<p>すでに Fork していて二回目以降は upstream の変更を merge する必要があります。
-<a href="https://help.github.com/articles/syncing-a-fork">Syncing a fork</a>
-を参考にして merge します。</p>
-
-<p>実行したコマンドだけまとめておきます。
-詳細は github のヘルプを参照してください。</p>
-
-<p><code>console
-% git clone git@github.com:znz/www.ruby-lang.org.git
-% cd www.ruby-lang.org
-% git remote add upstream https://github.com/ruby/www.ruby-lang.org.git
-% git remote -v
-% git fetch upstream
-% git branch -va
-% git checkout master
-% git merge upstream/master
-% git push
-</code></p>
-
-<p>英語版を元にして日本語版を作成します。</p>
-
-<p><code>console
-% cp {en,ja}/news/_posts/2013-09-23-ruby-2-1-0-preview1-is-released.md
-% git add ja/news/_posts/2013-09-23-ruby-2-1-0-preview1-is-released.md
-% vi ja/news/_posts/2013-09-23-ruby-2-1-0-preview1-is-released.md
-</code></p>
-
-<p>プレビュー用に <code>bundle install</code> します。</p>
-
-<p><code>console
-% bundle install
-% rake -T
-% rake preview
-</code></p>
-
-<p><code>rake preview</code>
-でサーバーが起動しているので、
-ブラウザで
-<code>http://localhost:4000/</code>
-を開いて表示を確認します。</p>
-
-<p>github に push して、
-ブラウザから pull request を出します。</p>
-
-<p>ブランチを切り忘れていたので、
-ここで作りました。</p>
-
-<p><code>console
-% git checkout -b ruby210preview1
-% git commit -av
-% git push --set-upstream origin ruby210preview1
-</code></p>
-
-<p>最後に
-<code>git checkout master</code>
-で master ブランチに戻るなり、
-消してしまって、
-また作業する時に clone し直すなりします。</p>
 ]]></content>
   </entry>
   

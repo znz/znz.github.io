@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-10T21:49:19+09:00</updated>
+  <updated>2013-10-12T15:12:42+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,150 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Ruby で ISBN をチェックしたりハイフンを入れたり]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-12-isbn.html"/>
+    <updated>2013-10-12T14:38:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/isbn</id>
+    <content type="html"><![CDATA[<p>本には
+<a href="http://ja.wikipedia.org/wiki/ISBN">ISBN</a>
+というものが付いていて、
+末尾のチェックディジットは仕様を参照すれば
+簡単に計算出来そうです。</p>
+
+<p>10 桁のものと新しい 13 桁のものがあったり、
+出版者の部分の桁数が違ったりして
+ちゃんとハイフンを入れるのは面倒そうです。</p>
+
+<p>チェックディジットの方も自分で実装すると
+バグっていたときに面倒なので、
+良さそうな gem がないか探してみました。</p>
+
+<p>最終的にはいくつかの理由から
+<a href="http://rubygems.org/gems/lisbn">lisbn</a>
+という gem を使いました。</p>
+
+<!--more-->
+
+
+<h2>gem の選択</h2>
+
+<p>まず
+<a href="http://rubygems.org/search?utf8=%E2%9C%93&amp;query=isbn">rubygems.org の右上で isbn と検索</a>
+するところから始めました。</p>
+
+<p>インストール数の多い順に見ていくと、</p>
+
+<ul>
+<li><a href="http://rubygems.org/gems/isbn10">isbn10</a>
+
+<ul>
+<li>インストール数は一番多い</li>
+<li>10桁のみ</li>
+<li>古い</li>
+</ul>
+</li>
+<li><a href="https://github.com/ragalie/isbn-tools">isbn-tools</a>
+
+<ul>
+<li>古い</li>
+<li>Not Maintained</li>
+<li>lisbn が後継</li>
+</ul>
+</li>
+<li><a href="https://github.com/entangledstate/isbn">isbn</a>
+
+<ul>
+<li>画像対応とかいろいろ高機能っぽいけど今回は不要</li>
+<li><code>with_dashes</code> というメソッドは桁数決めうちで不適切</li>
+</ul>
+</li>
+<li><a href="https://github.com/zapnap/isbn_validation">isbn_validation</a>
+
+<ul>
+<li>ActiveRecord の validates</li>
+<li>ISBN ではない <a href="http://www.amazon.co.jp/gp/help/customer/display.html?nodeId=747416">ASIN</a> も扱いたかったので今回は不適当</li>
+</ul>
+</li>
+<li><a href="https://github.com/ragalie/lisbn">lisbn</a>
+
+<ul>
+<li>比較的新しい</li>
+<li>10桁と13桁の両対応</li>
+<li>ハイフンを入れるために必要な分解処理がある (後は <code>join('-')</code> すれば良いだけ)</li>
+<li>data/RangeMessage.xml というファイルを持っていて適切にわけてくれる</li>
+</ul>
+</li>
+</ul>
+
+
+<p>という感じでした。</p>
+
+<h2>lisbn の使用例</h2>
+
+<p>データベースに保存するのに統一されていると
+<code>validates :isbn, uniqueness: true</code>
+が使えるので、
+以下のように ISBN13 に統一する処理を入れました。</p>
+
+<p>それ以外の場合は ASIN と見なしてそのまま返しています。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">isbn_unify</span><span class="p">(</span><span class="n">isbn</span><span class="p">)</span>
+</span><span class='line'>    <span class="c1"># Convert JISX0208 alphabet to ASCII.</span>
+</span><span class='line'>    <span class="n">isbn</span> <span class="o">=</span> <span class="no">NKF</span><span class="o">.</span><span class="n">nkf</span><span class="p">(</span><span class="s1">&#39;-Ww -Z0&#39;</span><span class="p">,</span> <span class="n">isbn</span><span class="p">)</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="s2">&quot;^A-Za-z0-9&quot;</span><span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1"># Convert to isbn13</span>
+</span><span class='line'>    <span class="n">lisbn</span> <span class="o">=</span> <span class="no">Lisbn</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">isbn</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">if</span> <span class="n">lisbn</span><span class="o">.</span><span class="n">valid?</span>
+</span><span class='line'>      <span class="n">lisbn</span><span class="o">.</span><span class="n">isbn13</span>
+</span><span class='line'>    <span class="k">else</span>
+</span><span class='line'>      <span class="n">isbn</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>出力する側では
+<code>parts</code>
+は常に ISBN13 のものだけのようなので、
+ISBN10
+に出来るときは
+頭の &lsquo;978&rsquo; を外して
+チェックディジットを付け直すようにしました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="p">-</span> <span class="n">lisbn</span> <span class="o">=</span> <span class="no">Lisbn</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">isbn_or_asin</span><span class="p">)</span>
+</span><span class='line'><span class="p">-</span> <span class="k">if</span> <span class="n">lisbn</span><span class="o">.</span><span class="n">valid?</span>
+</span><span class='line'>  <span class="p">-</span> <span class="n">parts</span> <span class="o">=</span> <span class="n">lisbn</span><span class="o">.</span><span class="n">parts</span>
+</span><span class='line'>  <span class="p">-</span> <span class="k">if</span> <span class="n">parts</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">==</span> <span class="s1">&#39;978&#39;</span>
+</span><span class='line'>    <span class="nt">%p</span><span class="nc">.isbn10</span> ISBN10: <span class="si">#{</span><span class="n">parts</span><span class="o">[</span><span class="mi">1</span><span class="o">.</span><span class="n">.</span><span class="o">-</span><span class="mi">2</span><span class="o">].</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="si">}</span>-<span class="si">#{</span><span class="n">lisbn</span><span class="o">.</span><span class="n">isbn10</span><span class="o">[-</span><span class="mi">1</span><span class="o">]</span><span class="si">}</span>
+</span><span class='line'>  <span class="nt">%p</span><span class="nc">.isbn13</span> ISBN13: <span class="si">#{</span><span class="n">lisbn</span><span class="o">.</span><span class="n">parts</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="si">}</span>
+</span><span class='line'><span class="p">-</span> <span class="k">else</span>
+</span><span class='line'>  <span class="nt">%p</span><span class="nc">.asin</span> ASIN: <span class="si">#{</span><span class="n">isbn_or_asin</span><span class="si">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[spring rails console で PAGER=lv だと /dev/tty: Device not configured]]></title>
@@ -2855,74 +2999,6 @@ GRUB で止まってしまう環境があったのですが、
 </span><span class='line'>Found memtest86+ image: /memtest86+.bin
 </span><span class='line'>done</span></code></pre></td></tr></table></div></figure>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[独自ビルドした ruby を rbenv で使う]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-14-use-custom-ruby-with-rbenv.html"/>
-    <updated>2013-09-14T23:22:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/use-custom-ruby-with-rbenv</id>
-    <content type="html"><![CDATA[<p><a href="https://github.com/sstephenson/rbenv">rbenv</a>
-を使っているなら、
-<a href="https://github.com/sstephenson/ruby-build">ruby-build</a>
-でインストールしたもの以外にも
-自分でビルドした ruby も rbenv で切り替えたくなることがありますが、
-これは簡単に出来ます。</p>
-
-<!--more-->
-
-
-<p>元々 <code>rbenv</code> に <code>ruby-build</code> が必須というわけではないので、
-<code>configure</code> の <code>--prefix</code> に
-<code>~/.rbenv/versions/some-name</code>
-を指定してインストールすれば良いだけです。</p>
-
-<p>名前にはシェルで特別な意味を持つ文字を避ければ
-何でも良さそうですが、
-<code>rbenv install</code> で上書きされてしまう危険があるのと
-単純に紛らわしいので、
-<code>ruby-build</code> でインストール出来る名前は避けた方が無難だと思います。</p>
-
-<p>例えば以下のように <code>configure</code> してインストールすれば <code>rbenv shell trunk</code> などで <code>ruby-build</code> でインストールしたものと同様に使えます。</p>
-
-<ul>
-<li><code>./configure --prefix=$HOME/.rbenv/versions/trunk --enable-shared --enable-debug-env CPPFLAGS=-DRUBY_DEBUG_ENV</code></li>
-<li><code>./configure --prefix=$HOME/.rbenv/versions/git --enable-shared --enable-debug-env CPPFLAGS='-DRUBY_DEBUG_ENV -DARRAY_DEBUG'</code></li>
-<li><code>./configure --prefix=$HOME/.rbenv/versions/git-debug --enable-shared --enable-debug-env CPPFLAGS='-DRUBY_DEBUG_ENV -DARRAY_DEBUG -DBIGDECIMAL_DEBUG'</code></li>
-</ul>
-
-
-<p><code>$HOME</code> を使っている理由は
-<code>--prefix=~/path/to/somewhere</code>
-だと <code>configure</code> の実行前には展開されず、
-<code>autoconf</code> の <code>configure</code> ではなかったと思いますが、
-<code>./~/path/to/somewhere</code>
-にインストールされてしまうという問題が起きたことがあったので、
-それ以来
-<code>$HOME</code>
-を使って目の前でフルパスに展開されるようにしています。</p>
-
-<p><code>-DRUBY_DEBUG_ENV</code> などを渡すのに <code>CPPFLAGS</code> を使うのは
-<a href="https://github.com/akr/chkbuild">chkbuild</a>
-のやり方を
-<a href="http://rubyci.org/">Ruby CI</a>
-のログをみて参考にしました。</p>
-
-<p>安定したビルドを使いたいのなら、
-Ruby CI
-で使われているのと同じような引数を使うのが良いと思います。</p>
-
-<p>普段私が使っているのは
-<code>CPPFLAGS='-DRUBY_DEBUG_ENV -DARRAY_DEBUG</code>
-です。</p>
-
-<p><code>-DBIGDECIMAL_DEBUG</code>
-まで付けると、デバッグ出力が多すぎたり、
-<code>make test-all</code>
-が途中で止まってしまったりして
-問題が起きそうなので、
-おすすめしません。</p>
 ]]></content>
   </entry>
   
