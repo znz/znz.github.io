@@ -124,3 +124,14 @@ video
 また許可を求める必要があったので、
 毎回閉じるのではなく、
 連続読み込み用に閉じるのは別ボタンの機能にしました。
+
+## ソースコード
+
+ソースコードは実験的に Gumroad で売ってみることにしました。
+先週の三連休で作って、さらに今日追加で細かい調整をして4日もかかっている感じなので、
+缶コーヒーでもおごる感じで買ってもらえると良いかもしれません。
+
+* [WebBarcodeReaderのCoffeeScript部分のソース](https://gum.co/egEG)
+* [WebBarcodeReaderのRailsプロジェクト全体のソース](https://gum.co/OSLo)
+
+<script type="text/javascript" src="https://gumroad.com/js/gumroad.js"></script>
