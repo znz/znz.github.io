@@ -4,7 +4,7 @@
   <title><![CDATA[Category: html5 | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/html5/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-12T15:12:42+09:00</updated>
+  <updated>2013-10-20T20:24:00+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,136 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ブラウザのみで使えるバーコードリーダーを作った]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-20-web-barcode-reader.html"/>
+    <updated>2013-10-20T19:27:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/web-barcode-reader</id>
+    <content type="html"><![CDATA[<p>最近の HTML5 の getUserMedia API でカメラの画像をブラウザ上で処理できるようになったということで、
+専用のバーコードリーダー機器を買ったり、
+モバイル機器で専用のアプリを入れたりしなくても、
+ノートPCの内蔵のカメラでも使えるバーコードリーダーを作ってみました。</p>
+
+<!--more-->
+
+
+<h2>使い方</h2>
+
+<p><a href="http://web-barcode-reader.herokuapp.com/">Web Barcode Reader</a>
+を開いて、
+既にPC上に画像がある場合はその画像を選択してください。
+選択するだけでバーコードの認識が始まります。
+iOS や Android などではファイル選択かカメラで撮影かを選べます。</p>
+
+<p><a href="https://github.com/EddieLa/BarcodeReader">BarcodeReader</a>
+のライブラリを使って
+JavaScript のみで認識していて、
+バーコードの認識は初回はちょっと時間がかかるようなので、
+ゆっくり待ってください。</p>
+
+<p>Google Chrome などではファイル選択の横に
+「ブラウザの中でカメラ画像を取得」
+ボタンが出るので、
+そのボタンを押した後、
+カメラへのアクセスの許可を求められるので、
+「許可」を押して許可してください。</p>
+
+<p>そしてカメラに入るようにバーコードをうつして、
+画像をクリックすると認識が始まります。
+(クリックできる範囲が広い方が良いかと思って画像のクリックにしています。)</p>
+
+<p>向きは逆さまなどでも良いようですが、
+画質が悪いと認識できないことが多いようなので、
+しっかりピントを合わせてカメラいっぱいにうつすと認識しやすいようです。</p>
+
+<p>必要な数だけ繰り返した後、
+不要になったら
+「カメラを閉じる」
+ボタンを押せば
+ブラウザからカメラを使うのを止めます。</p>
+
+<p>最後に下のテキストエリアに認識できたバーコードがたまっているので、
+コピーして自由に使えます。</p>
+
+<h2>仕組み</h2>
+
+<p>画像ファイルから認識する方は
+HTML5 の File API
+を使ってローカルファイルを読み込んでいます。</p>
+
+<p>iOS や Android で撮影が選べる機能は
+<code>&lt;input type="file" accept="image/*;capture=camera"&gt;</code>
+のように
+<code>accept</code>
+属性を付けるだけで使えます。</p>
+
+<p>画像は
+<code>img</code>
+要素に読み込んで、
+読み終わったら
+<code>canvas</code>
+要素にコピーして
+<code>canvas</code>
+要素から画像データを取得しています。</p>
+
+<p>最終的にその画像データは、
+Web Workers
+という HTML5 の機能を使ってバックグラウンドで
+<a href="https://github.com/EddieLa/BarcodeReader">BarcodeReader</a>
+の
+<code>DecoderWorker.js</code>
+を動かして、
+バーコードの認識をしています。</p>
+
+<h3>カメラを扱う仕組み</h3>
+
+<p>まず
+<code>getUserMedia</code>
+でカメラを開いて
+video
+要素に設定します。</p>
+
+<p>よくある使用例では
+<code>video</code>
+要素には
+<code>autoplay</code>
+属性を付けることが多いようですが、
+今回は <code>video</code> 要素の <code>play()</code> を呼ぶようにしました。</p>
+
+<p><code>getUserMedia</code>
+は一度変数に保存して、
+その function を呼ぶという使い方は出来ないようだったので、
+以下のように <code>call</code> で呼ぶようにしました。</p>
+
+<p>```coffeescript
+  getUserMedia =</p>
+
+<pre><code>navigator.getUserMedia ||
+navigator.webkitGetUserMedia ||
+navigator.mozGetUserMedia ||
+navigator.msGetUserMedia
+</code></pre>
+
+<p>  getUserMedia.call(navigator, {audio:false,video:true,toString:&ndash;>&ldquo;video&rdquo;}, onStream, onError)
+```</p>
+
+<p><code>onStream</code>
+の引数にわたってきた
+<code>stream</code>
+は保存しておいて後で使いました。</p>
+
+<p>カメラを閉じるには
+<code>video</code> 要素で再生を止めるのではなく、
+<code>stream</code> の方の <code>stop()</code> を呼ぶ必要がありました。</p>
+
+<p>一度 <code>stream</code> を <code>stop()</code> してしまうと、
+再度再生するには、
+また許可を求める必要があったので、
+毎回閉じるのではなく、
+連続読み込み用に閉じるのは別ボタンの機能にしました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[jQuery UI Autocomplete を自動で開く]]></title>
