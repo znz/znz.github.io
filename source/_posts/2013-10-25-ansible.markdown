@@ -1,0 +1,105 @@
+---
+layout: post
+title: "Mac OS X で ansible を入れてみた"
+date: 2013-10-25 13:45
+comments: true
+categories: ansible mac homebrew pyenv
+---
+Mac OS X 10.8.5 でシステム側の python は使わずに pyenv を使って ansible を入れてみました。
+
+<!--more-->
+
+## 参考サイト
+
+* [Ansible - OSXでpyenvインストールメモ](http://qiita.com/ryurock/items/c4065da9f16c1f6248b7)
+* [ansible pyenvを使った環境に依存しないインストール](http://qiita.com/yamasaki-masahide/items/0546b2b7770150394159)
+* [Installation | AnsibleWorks](http://ansibleworks.com/docs/intro_installation.html)
+
+## 必要なもの
+
+* homebrew
+
+## pyenv
+
+参考サイトと同じように homebrew で pyenv をインストールします。
+
+```
+brew update
+brew install pyenv
+```
+
+[(旧) 猫好きモバイルアプリケーション開発者記録 rbenv init が重い問題に対する対処法](http://mobileapplication.blog.fc2.com/blog-entry-21.html)
+という話をみてから `init` の時には `rehash` しないようにしていたので、
+`--no-rehash` というオプションを付けています。
+
+```bash https://github.com/znz/dot-shell/blob/master/profile.d/50pyenv.sh
+if type pyenv >/dev/null 2>&1; then
+    eval "$(pyenv init - --no-rehash)"
+fi
+```
+
+`exec zsh` でシェルを再起動するなり、設定ファイルをドットコマンドや `source` コマンドで読み直すなり、
+`eval "$(pyenv init -)"`
+を直接実行するなりして設定を反映させます。
+
+## pyenv でインストール
+
+[ansible pyenvを使った環境に依存しないインストール](http://qiita.com/yamasaki-masahide/items/0546b2b7770150394159)
+で 2.7.5 を入れていたので、
+`pyenv install [TAB]`
+で補完候補をみて、
+2.7 系の最新が 2.7.5 のままなのを確認してインストールしました。
+この後で必要になる `pip` は `pyenv` が自動でインストールしてくれていました。
+
+```
+pyenv install 2.7.5
+pyenv rehash
+pyenv global 2.7.5
+```
+
+## pip でライブラリをインストール (不要?)
+
+必要なライブラリをインストールしましたが、
+この手順は不要そうです。
+PyYAML のインストールのところで libyaml が見つからないというエラーがでていましたが、
+`pip install` 自体は成功していたので、問題はなかったようです。
+
+```
+pip install paramiko jinja2 PyYAML pycrypto markupsafe
+```
+
+## git clone して試す
+
+ライブラリをインストールしたので、
+[Running From Source](http://ansibleworks.com/docs/intro_installation.html#running-from-source)
+の方法で試せましたが、
+この方法で入れたものは後で消しました。
+
+```
+git clone git://github.com/ansible/ansible.git
+cd ansible
+source ./hacking/env-setup
+```
+
+## pip で ansible をインストール
+
+ansible の
+[Latest Releases Via Pip](http://ansibleworks.com/docs/intro_installation.html#latest-releases-via-pip)
+で ansible 自体も pip でインストールできるとわかったので、
+`sudo` なしの `pip install ansible` でインストールしました。
+
+そのままだと
+`error: could not create '/usr/share/ansible': Permission denied`
+で失敗したので、
+homebrew で `/usr/local` が admin グループに書き込み可能に設定されるのを参考にして、
+admin グループに書き込み可能で作成してからインストールすると大丈夫でした。
+
+`install` コマンドでのディレクトリの作成やパーミッションの設定は、
+何度実行しても同じ結果になるという点では
+`mkdir -p` や `chmod` や `chown` の組み合わせと同じですが、
+1コマンドで済むのでオススメです。
+
+```
+sudo install -d -g admin -m 775 /usr/share/ansible
+pip install ansible
+```
