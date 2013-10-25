@@ -4,7 +4,7 @@
   <title><![CDATA[Category: mac | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/mac/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-24T01:05:25+09:00</updated>
+  <updated>2013-10-25T14:21:40+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,122 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Mac OS X で ansible を入れてみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-25-ansible.html"/>
+    <updated>2013-10-25T13:45:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ansible</id>
+    <content type="html"><![CDATA[<p>Mac OS X 10.8.5 でシステム側の python は使わずに pyenv を使って ansible を入れてみました。</p>
+
+<!--more-->
+
+
+<h2>参考サイト</h2>
+
+<ul>
+<li><a href="http://qiita.com/ryurock/items/c4065da9f16c1f6248b7">Ansible &ndash; OSXでpyenvインストールメモ</a></li>
+<li><a href="http://qiita.com/yamasaki-masahide/items/0546b2b7770150394159">ansible pyenvを使った環境に依存しないインストール</a></li>
+<li><a href="http://ansibleworks.com/docs/intro_installation.html">Installation | AnsibleWorks</a></li>
+</ul>
+
+
+<h2>必要なもの</h2>
+
+<ul>
+<li>homebrew</li>
+</ul>
+
+
+<h2>pyenv</h2>
+
+<p>参考サイトと同じように homebrew で pyenv をインストールします。</p>
+
+<p><code>
+brew update
+brew install pyenv
+</code></p>
+
+<p><a href="http://mobileapplication.blog.fc2.com/blog-entry-21.html">(旧) 猫好きモバイルアプリケーション開発者記録 rbenv init が重い問題に対する対処法</a>
+という話をみてから <code>init</code> の時には <code>rehash</code> しないようにしていたので、
+<code>--no-rehash</code> というオプションを付けています。</p>
+
+<p>```bash <a href="https://github.com/znz/dot-shell/blob/master/profile.d/50pyenv.sh">https://github.com/znz/dot-shell/blob/master/profile.d/50pyenv.sh</a>
+if type pyenv >/dev/null 2>&1; then</p>
+
+<pre><code>eval "$(pyenv init - --no-rehash)"
+</code></pre>
+
+<p>fi
+```</p>
+
+<p><code>exec zsh</code> でシェルを再起動するなり、設定ファイルをドットコマンドや <code>source</code> コマンドで読み直すなり、
+<code>eval "$(pyenv init -)"</code>
+を直接実行するなりして設定を反映させます。</p>
+
+<h2>pyenv でインストール</h2>
+
+<p><a href="http://qiita.com/yamasaki-masahide/items/0546b2b7770150394159">ansible pyenvを使った環境に依存しないインストール</a>
+で 2.7.5 を入れていたので、
+<code>pyenv install [TAB]</code>
+で補完候補をみて、
+2.7 系の最新が 2.7.5 のままなのを確認してインストールしました。
+この後で必要になる <code>pip</code> は <code>pyenv</code> が自動でインストールしてくれていました。</p>
+
+<p><code>
+pyenv install 2.7.5
+pyenv rehash
+pyenv global 2.7.5
+</code></p>
+
+<h2>pip でライブラリをインストール (不要?)</h2>
+
+<p>必要なライブラリをインストールしましたが、
+この手順は不要そうです。
+PyYAML のインストールのところで libyaml が見つからないというエラーがでていましたが、
+<code>pip install</code> 自体は成功していたので、問題はなかったようです。</p>
+
+<p><code>
+pip install paramiko jinja2 PyYAML pycrypto markupsafe
+</code></p>
+
+<h2>git clone して試す</h2>
+
+<p>ライブラリをインストールしたので、
+<a href="http://ansibleworks.com/docs/intro_installation.html#running-from-source">Running From Source</a>
+の方法で試せましたが、
+この方法で入れたものは後で消しました。</p>
+
+<p><code>
+git clone git://github.com/ansible/ansible.git
+cd ansible
+source ./hacking/env-setup
+</code></p>
+
+<h2>pip で ansible をインストール</h2>
+
+<p>ansible の
+<a href="http://ansibleworks.com/docs/intro_installation.html#latest-releases-via-pip">Latest Releases Via Pip</a>
+で ansible 自体も pip でインストールできるとわかったので、
+<code>sudo</code> なしの <code>pip install ansible</code> でインストールしました。</p>
+
+<p>そのままだと
+<code>error: could not create '/usr/share/ansible': Permission denied</code>
+で失敗したので、
+homebrew で <code>/usr/local</code> が admin グループに書き込み可能に設定されるのを参考にして、
+admin グループに書き込み可能で作成してからインストールすると大丈夫でした。</p>
+
+<p><code>install</code> コマンドでのディレクトリの作成やパーミッションの設定は、
+何度実行しても同じ結果になるという点では
+<code>mkdir -p</code> や <code>chmod</code> や <code>chown</code> の組み合わせと同じですが、
+1コマンドで済むのでオススメです。</p>
+
+<p><code>
+sudo install -d -g admin -m 775 /usr/share/ansible
+pip install ansible
+</code></p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Macでirbなどでの文字化けを直した]]></title>
@@ -480,61 +596,6 @@ brew reinstall poppler --with-glib
 </code></p>
 
 <p>これでも動かなければ gem も uninstall して install し直す予定でした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Mac で rabbiter が動いた]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-08-rabbiter-on-mac.html"/>
-    <updated>2013-09-08T21:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rabbiter-on-mac</id>
-    <content type="html"><![CDATA[<p>homebrew を使った Mac OS X 10.8.4 環境で rabbiter (2.0.1) が動くようになりました。</p>
-
-<!--more-->
-
-
-<p>rabbiter の issues に報告していた
-<a href="https://github.com/rabbit-shocker/rabbiter/issues/1">show_uri の問題</a>
-と
-<a href="https://github.com/rabbit-shocker/rabbiter/issues/2">glib-networking のルート証明書の問題</a>
-が解決したので、 <code>glib-networking</code> を <code>brew reinstall glib-networking --with-curl-ca-bundle</code> でインストールすれば使えるようになりました。
-ちなみに、初回のインストールでも <code>brew install</code> ではなく <code>brew reinstall</code> で大丈夫のようです。</p>
-
-<p>以下のように <code>configure</code> に <code>--with-ca-certificates</code> が付いていれば使えます。</p>
-
-<p><code>
-% brew reinstall glib-networking --with-curl-ca-bundle
-==&gt; Reinstalling glib-networking --with-curl-ca-bundle
-==&gt; Downloading http://ftp.gnome.org/pub/GNOME/sources/glib-networking/2.36/glib-networkin
-Already downloaded: /Library/Caches/Homebrew/glib-networking-2.36.2.tar.xz
-==&gt; ./configure --with-ca-certificates=/usr/local/opt/curl-ca-bundle/share/ca-bundle.crt -
-==&gt; make install
-🍺  /usr/local/Cellar/glib-networking/2.36.2: 68 files, 352K, built in 18 seconds
-</code></p>
-
-<p>以下のように <code>configure</code> に <code>--without-ca-certificates</code> と付いているときは rabbiter が使えません。</p>
-
-<p><code>
-% brew reinstall glib-networking
-==&gt; Reinstalling glib-networking
-==&gt; Downloading http://ftp.gnome.org/pub/GNOME/sources/glib-networking/2.36/glib-networkin
-Already downloaded: /Library/Caches/Homebrew/glib-networking-2.36.2.tar.xz
-==&gt; ./configure --without-ca-certificates --prefix=/usr/local/Cellar/glib-networking/2.36.
-==&gt; make install
-🍺  /usr/local/Cellar/glib-networking/2.36.2: 68 files, 352K, built in 21 seconds
-</code></p>
-
-<p>一度 <code>--with-curl-ca-bundle</code> 付きでインストールした後だと、以下のようにオプションなしの reinstall でもオプションが付くようです。</p>
-
-<p><code>
-% brew reinstall glib-networking
-==&gt; Reinstalling glib-networking --with-curl-ca-bundle
-==&gt; Downloading http://ftp.gnome.org/pub/GNOME/sources/glib-networking/2.36/glib-networkin
-Already downloaded: /Library/Caches/Homebrew/glib-networking-2.36.2.tar.xz
-==&gt; ./configure --with-ca-certificates=/usr/local/opt/curl-ca-bundle/share/ca-bundle.crt -
-==&gt; make install
-🍺  /usr/local/Cellar/glib-networking/2.36.2: 68 files, 352K, built in 18 seconds
-</code></p>
 ]]></content>
   </entry>
   

@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-24T01:05:25+09:00</updated>
+  <updated>2013-10-25T14:21:40+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,132 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Mac OS X で ansible を入れてみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-25-ansible.html"/>
+    <updated>2013-10-25T13:45:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ansible</id>
+    <content type="html"><![CDATA[<p>Mac OS X 10.8.5 でシステム側の python は使わずに pyenv を使って ansible を入れてみました。</p>
+
+<!--more-->
+
+
+<h2>参考サイト</h2>
+
+<ul>
+<li><a href="http://qiita.com/ryurock/items/c4065da9f16c1f6248b7">Ansible &ndash; OSXでpyenvインストールメモ</a></li>
+<li><a href="http://qiita.com/yamasaki-masahide/items/0546b2b7770150394159">ansible pyenvを使った環境に依存しないインストール</a></li>
+<li><a href="http://ansibleworks.com/docs/intro_installation.html">Installation | AnsibleWorks</a></li>
+</ul>
+
+
+<h2>必要なもの</h2>
+
+<ul>
+<li>homebrew</li>
+</ul>
+
+
+<h2>pyenv</h2>
+
+<p>参考サイトと同じように homebrew で pyenv をインストールします。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>brew update
+</span><span class='line'>brew install pyenv</span></code></pre></td></tr></table></div></figure>
+
+
+<p><a href="http://mobileapplication.blog.fc2.com/blog-entry-21.html">(旧) 猫好きモバイルアプリケーション開発者記録 rbenv init が重い問題に対する対処法</a>
+という話をみてから <code>init</code> の時には <code>rehash</code> しないようにしていたので、
+<code>--no-rehash</code> というオプションを付けています。</p>
+
+<figure class='code'><figcaption><span>https://github.com/znz/dot-shell/blob/master/profile.d/50pyenv.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="k">if </span><span class="nb">type </span>pyenv &gt;/dev/null 2&gt;&amp;1; <span class="k">then</span>
+</span><span class='line'><span class="k">    </span><span class="nb">eval</span> <span class="s2">&quot;$(pyenv init - --no-rehash)&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>exec zsh</code> でシェルを再起動するなり、設定ファイルをドットコマンドや <code>source</code> コマンドで読み直すなり、
+<code>eval "$(pyenv init -)"</code>
+を直接実行するなりして設定を反映させます。</p>
+
+<h2>pyenv でインストール</h2>
+
+<p><a href="http://qiita.com/yamasaki-masahide/items/0546b2b7770150394159">ansible pyenvを使った環境に依存しないインストール</a>
+で 2.7.5 を入れていたので、
+<code>pyenv install [TAB]</code>
+で補完候補をみて、
+2.7 系の最新が 2.7.5 のままなのを確認してインストールしました。
+この後で必要になる <code>pip</code> は <code>pyenv</code> が自動でインストールしてくれていました。</p>
+
+<figure class='code'><figcaption><span>https://github.com/znz/dot-shell/blob/master/profile.d/50pyenv.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>pyenv install 2.7.5
+</span><span class='line'>pyenv rehash
+</span><span class='line'>pyenv global 2.7.5
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>pip でライブラリをインストール (不要?)</h2>
+
+<p>必要なライブラリをインストールしましたが、
+この手順は不要そうです。
+PyYAML のインストールのところで libyaml が見つからないというエラーがでていましたが、
+<code>pip install</code> 自体は成功していたので、問題はなかったようです。</p>
+
+<figure class='code'><figcaption><span>https://github.com/znz/dot-shell/blob/master/profile.d/50pyenv.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>pip install paramiko jinja2 PyYAML pycrypto markupsafe
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>git clone して試す</h2>
+
+<p>ライブラリをインストールしたので、
+<a href="http://ansibleworks.com/docs/intro_installation.html#running-from-source">Running From Source</a>
+の方法で試せましたが、
+この方法で入れたものは後で消しました。</p>
+
+<figure class='code'><figcaption><span>https://github.com/znz/dot-shell/blob/master/profile.d/50pyenv.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>git clone git://github.com/ansible/ansible.git
+</span><span class='line'><span class="nb">cd </span>ansible
+</span><span class='line'><span class="nb">source</span> ./hacking/env-setup
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>pip で ansible をインストール</h2>
+
+<p>ansible の
+<a href="http://ansibleworks.com/docs/intro_installation.html#latest-releases-via-pip">Latest Releases Via Pip</a>
+で ansible 自体も pip でインストールできるとわかったので、
+<code>sudo</code> なしの <code>pip install ansible</code> でインストールしました。</p>
+
+<p>そのままだと
+<code>error: could not create '/usr/share/ansible': Permission denied</code>
+で失敗したので、
+homebrew で <code>/usr/local</code> が admin グループに書き込み可能に設定されるのを参考にして、
+admin グループに書き込み可能で作成してからインストールすると大丈夫でした。</p>
+
+<p><code>install</code> コマンドでのディレクトリの作成やパーミッションの設定は、
+何度実行しても同じ結果になるという点では
+<code>mkdir -p</code> や <code>chmod</code> や <code>chown</code> の組み合わせと同じですが、
+1コマンドで済むのでオススメです。</p>
+
+<figure class='code'><figcaption><span>https://github.com/znz/dot-shell/blob/master/profile.d/50pyenv.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>sudo install -d -g admin -m 775 /usr/share/ansible
+</span><span class='line'>pip install ansible
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 4 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -2587,102 +2713,6 @@ ubuntu-jp の ML に流れるのですが、
 読んでみて返信してみたのですが、
 次の週もそのままだったので、
 あれは査読に含まれないのかと思ってがっかりしました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Macでirbなどでの文字化けを直した]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-20-mojibake-irb-on-mac.html"/>
-    <updated>2013-09-20T18:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/mojibake-irb-on-mac</id>
-    <content type="html"><![CDATA[<p>基本的には
-<a href="http://qiita.com/irohiroki/items/c82657b5cb4bdb2aaac4">rails cで日本語が通らないときの直し方</a>
-のやり方そのままで、
-one liner としてまとめただけです。</p>
-
-<p>先に結論を書いておくと
-<code>install_name_tool -change /usr/lib/libedit.3.dylib $(brew list readline | grep libreadline.dylib) $(ruby -r readline -e 'puts $".grep /readline/')</code>
-になりました。</p>
-
-<!--more-->
-
-
-<h2><code>readline.bundle</code> の探し方</h2>
-
-<p>まず <code>readline.bundle</code> の探し方です。</p>
-
-<p>実際に <code>require 'readline'</code> した時の
-<code>$LOADED_FEATURES</code> から
-探すのが確実ということで、
-<code>ruby -r readline -e 'puts $".grep /readline/'</code>
-としました。
-試したところ、
-<code>Array#grep</code>
-で見つかるのが1個だけだったので、
-そのまま <code>puts</code> しています。
-複数見つかるようならもう少し調整が必要だと思います。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% ruby -r readline -e 'puts $".grep /readline/'
-</span><span class='line'>/Users/kazu/.rbenv/versions/2.0.0-p247/lib/ruby/2.0.0/x86_64-darwin12.4.1/readline.bundle
-</span><span class='line'>% otool -L $(ruby -r readline -e 'puts $".grep /readline/')</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>readline のインストール</h2>
-
-<p>homebrew を使っているので、
-<code>brew install readline</code>
-でインストールしました。</p>
-
-<p>インストールされた
-<code>libreadline</code>
-の場所は
-<code>brew list readline | grep libreadline.dylib</code>
-で調べました。</p>
-
-<p><code>libedit</code>
-が
-<code>/usr/lib/libedit.3.dylib</code>
-という名前でリンクされているので、
-<code>libreadline.6.dylib</code>
-という名前を使った方が良いのかもしれませんが、
-homebrew でインストールされているパスに
-バージョンが含まれていて、
-ファイル名にバージョンを含めても意味がないと思って、
-バージョンなしにしました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% brew list readline | grep libreadline.dylib
-</span><span class='line'>/usr/local/Cellar/readline/6.2.4/lib/libreadline.dylib</span></code></pre></td></tr></table></div></figure>
-
-
-<h2><code>install_name_tool</code></h2>
-
-<p>Qiita の記事にあったように
-<code>install_name_tool -change /usr/lib/libedit.3.dylib $(brew list readline | grep libreadline.dylib) $(ruby -r readline -e 'puts $".grep /readline/')</code>
-でリンクを変更しました。
-念のため、実行前に
-<code>ruby -rpp -e 'pp ARGV' --</code>
-で実行内容を確認してから実行しました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% ruby -rpp -e 'pp ARGV' -- install_name_tool -change /usr/lib/libedit.3.dylib $(brew list readline | grep libreadline.dylib) $(ruby -r readline -e 'puts $".grep /readline/')
-</span><span class='line'>["install_name_tool",
-</span><span class='line'> "-change",
-</span><span class='line'> "/usr/lib/libedit.3.dylib",
-</span><span class='line'> "/usr/local/Cellar/readline/6.2.4/lib/libreadline.dylib",
-</span><span class='line'> "/Users/kazu/.rbenv/versions/2.0.0-p247/lib/ruby/2.0.0/x86_64-darwin12.4.1/readline.bundle"]
-</span><span class='line'>% install_name_tool -change /usr/lib/libedit.3.dylib $(brew list readline | grep libreadline.dylib) $(ruby -r readline -e 'puts $".grep /readline/')</span></code></pre></td></tr></table></div></figure>
-
 ]]></content>
   </entry>
   
