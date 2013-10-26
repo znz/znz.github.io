@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-25T14:37:20+09:00</updated>
+  <updated>2013-10-26T23:46:14+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,118 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第8回 関西Emacs勉強会に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-26-kansai-emacs.html"/>
+    <updated>2013-10-26T14:19:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/kansai-emacs</id>
+    <content type="html"><![CDATA[<p><a href="http://atnd.org/events/44155">(kansai-emacs #x08) #関西Emacs : ATND</a>
+というイベントに参加してきました。</p>
+
+<!--more-->
+
+
+<h2>ポジションペーパー</h2>
+
+<p>以前作りかけで一部は
+<a href="http://regional.rubykaigi.org/kansai05">関西Ruby会議05</a>
+の時に使った rabbit での自己紹介のスライドに
+Emacs 関係の情報を追加して作った PDF だったので、
+1ページにできずに複数ページになってしまいました。</p>
+
+<p>会場への移動中に作成したのですが、
+作成前に既にアップロードされているものを確認したら
+複数ページのものがあるので、
+まあいいかと思ったのも理由でした。</p>
+
+<h2>会場到着から開始まで</h2>
+
+<p>到着時点では知っている人がいなくて、
+どうすればいいのかよくわからなかったので、
+入り口近くで座って twitter とか見ながら待っていました。
+13時を少しすぎたところで準備ができたらしく案内があったので、
+席に移動しました。</p>
+
+<h2>発表</h2>
+
+<p><code>package-install</code> だと
+環境を作り直した時に magit とかがバージョンアップで挙動が変わって
+困ることがあるのでどうするのが良いのかという相談とか、
+<code>ac-mozc</code> の紹介とか、ちゃんとメモをとっていなかったのですが、
+いろいろありました。</p>
+
+<p><code>ac-mozc</code> の質疑応答では</p>
+
+<ul>
+<li>英単語に続けて日本語を入力する時はスペースを入れて入力して、確定するとスペースが消える、スペースが必要な時はその直後に undo すればいい</li>
+<li>英単語を入力していてローマ字ともみなせて不要なのに ac-mozc の候補が出てきたときは ac のキャンセルと同じように C-g で消せばいい</li>
+<li>コメントの中とか文字列の中とかで一部だけ変換したい時とかは変換用のコマンドを直接呼び出せばいい</li>
+</ul>
+
+
+<p>のような話があったと記憶しています。</p>
+
+<h2>やっていたこと</h2>
+
+<h3>package.el</h3>
+
+<p><a href="http://emacs-jp.github.io/packages/package-management/package-el.html">package.el &ndash; Emacs JP</a>
+を参考にして <code>package.el</code> を使う設定をしました。</p>
+
+<h3>shell-pop</h3>
+
+<p>上のメモには書いていませんが、発表にあった <code>shell-pop</code> を
+<code>package.el</code> を使って入れてみました。
+昔ちょっと試したことがあって、その設定が悪さをしていて、
+最初は
+<code>(void-function shell-pop-set-internal-mode)</code>
+というエラーになってしまっていましたが、
+古い設定を削除すれば直りました。</p>
+
+<p><a href="http://www.emacswiki.org/emacs/ShellPop">EmacsWiki の Shell Pop</a>
+には上の方に小さく書いてあるだけですが、
+github の方が新しくて互換性がなくなっているのが理由でした。</p>
+
+<h3>ansi-term</h3>
+
+<p><code>shell-pop</code> の設定例にある <code>ansi-term</code> を使ってみると
+最下行で文字を入力すると一瞬上にスクロールして戻るという現象が出て、
+<code>ansi-term</code> 単体でもおきたので、
+<code>ansi-term</code> の問題かと思ってクリーンな環境でも試してみると発生しませんでした。</p>
+
+<p>scroll 関係の設定があやしいと思って、
+<code>scroll-margin</code> を <code>2</code> にしていたのを <code>0</code> にしたらなおったのですが、
+クリーンな環境で <code>scroll-margin</code> だけ変更しても現象が出なかったので、
+結局何が再現条件なのかはわかりませんでした。
+<code>scroll-step</code> を <code>1</code> にしているのも関係しているかと思ったのですが、
+関係ありませんでした。</p>
+
+<h3>elscreen</h3>
+
+<p><code>auto-install</code> でインストールしていた <code>elscreen.el</code> を
+<code>package.el</code> でインストールしたものに変更しました。</p>
+
+<p><code>(elscreen-start)</code> が必要になっているというのを知らなかったので、
+うまく動かなくてかなり悩んでいましたが、教えてもらって解決しました。</p>
+
+<h3>anything.el から helm への変更</h3>
+
+<p><code>anything.el</code> は一時期はいろいろ設定を頑張っていたのですが、
+結局デフォルトの <code>anything</code> 以外はほとんど使っていなかったので、
+<code>helm-mini</code> に置き換えるだけで問題なさそうな感じでした。</p>
+
+<p><code>anything.el</code> だとメニューに登録されていたり
+<code>(anything-execute-anything-command)</code> とか
+<code>(anything-call-source)</code> のようなメタ機能があったりして、
+存在を知らない機能でも探しやすいのですが、
+<code>helm</code> にはそういうものがあるのかどうかわかりませんでした。</p>
+
+<p>ちなみに <code>M-x</code> で <code>helm-</code> で始まる <code>interactive</code> な関数を探すのは
+<code>helm</code> 関係のバッファでのキーバインドようの関数が混ざっているので
+この用途には使えません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Mac OS X で ansible を入れてみた]]></title>
@@ -2604,117 +2716,6 @@ Ruby Association Certified Ruby Programmer Gold認定要件
 Ruby 1.8.7
 の試験が終わってしまう前に受けてみておこうと言うことで受けてきましたが、
 今後対象バージョンがどう変わっていくのか気になるところです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Ubuntuでの対応が悪いと感じた話]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-20-ubuntu-bugs-related-me.html"/>
-    <updated>2013-09-20T19:43:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ubuntu-bugs-related-me</id>
-    <content type="html"><![CDATA[<p>このエントリは愚痴が含まれます。
-そういうのが嫌な人は読まない方が良いですよ。
-警告しましたからね。</p>
-
-<!--more-->
-
-
-<p>結論としては、こういういろいろなことが積み重なって、
-最近は ubuntu にはあまり積極的には貢献をしないようになった
-という話です。</p>
-
-<p>コミュニティ運営のアンチパターンの例として使えるのかもしれません。</p>
-
-<p>最初の4項目は Ubuntu の Launchpad での話で、
-後の2項目は ubuntu-jp での話です。</p>
-
-<p>もちろん、対応が悪かったものだけ集めているので、
-他の多数のバグの対応は良かったことが多いです。
-全体的に Ubuntu のバグ対応は
-Debian に比べると遅いという気はしますが。</p>
-
-<h2>最近の例 (bind9)</h2>
-
-<p>最初は Ubuntu 12.04 LTS の <code>bind9</code> の
-<code>/etc/bind/db.root</code> が更新されない話です。</p>
-
-<p>どういう話かというと
-D-ROOT-SERVERS.NET に IPv6 アドレスが追加されて、
-その後 IPv4 アドレスの変更があったのに <code>db.root</code> が
-更新されないという話です。</p>
-
-<p>ちょっと探して見つかっただけでも4個見つかります。
-4個目のは3個目の重複という印がついてます。</p>
-
-<ul>
-<li><a href="https://launchpad.net/ubuntu/+source/bind9/+bug/1023600">db.root file outdated</a></li>
-<li><a href="https://bugs.launchpad.net/ubuntu/+source/bind9/+bug/1160464">Bind db.root outdated, backport only the db.root file, for LTS important to keep db.root updated</a></li>
-<li><a href="https://bugs.launchpad.net/ubuntu/+source/bind9/+bug/1090593">D.ROOT-SERVERS.NET changing January 3rd 2013</a></li>
-<li><a href="https://bugs.launchpad.net/ubuntu/+source/bind9/+bug/1097050">d-root ipv4 has changed. Update db.root to show this</a></li>
-</ul>
-
-
-<p>IPv6 アドレスが追加された時点では重要ではないということで、
-次の更新があれば一緒に更新するという反応だったようですが、
-2013年1月3日に IPv4 アドレスが変更されて、
-その後、移行期間として6ヶ月あったのですが、
-それが終わった後も更新されないままです。</p>
-
-<p>事前に見つけていた上2個のbugは移行期間中につつてみたりしたのですが、
-全く反応がありませんでした。</p>
-
-<p>そして未だに更新されていません。
-これはひどいと思います。</p>
-
-<h2>quick-fix?</h2>
-
-<p><a href="https://bugs.launchpad.net/ubuntu-website-content/+bug/619920">Version mismatch of link in Code of Conduct</a>
-で CoC の説明のバージョンが間違っていると指摘した時の話です。</p>
-
-<p>一度 Confirmed になったのに Invalid になったというのが
-嫌な印象を受けました。</p>
-
-<h2>dbskkd-cdb を rebuild するだけの簡単なお仕事</h2>
-
-<p><a href="https://bugs.launchpad.net/ubuntu/+source/dbskkd-cdb/+bug/58355">wrong reply via netkit-inetd</a>
-で dbskkd-cdb を rebuild するだけで直るという報告をしたつもりだったのですが、
-今見直してみると、こちらの反応がなかったのが悪かったようにも見えました。
-追加情報を求められた時にはもう使ってなかったとはいえ、ちょっと反省。</p>
-
-<h2>気付くのが遅すぎた</h2>
-
-<p><a href="https://bugs.launchpad.net/ubuntu/+source/inspircd/+bug/978206">FreezeException request&mdash; Sync with Debian unstable</a>
-で inspircd が古すぎて upstream の
-セキュリティアップデートも出ないようなバージョンなので、
-まずいんじゃないかと伝えてみたつもりだったんですが、
-結局古いまま入ってしまいました。</p>
-
-<p>古いまま入るぐらいなら消せば良かったのに、と思いましたが、
-英語で書けなかった
-(そもそも最初の説明も書けなかったのでリンクですませた)
-ので、
-自分で使うのは inspircd を止めて ngircd に乗り換えました。</p>
-
-<h2>何もやってない (ように見える) 話</h2>
-
-<p>「#ubuntu-jp IRCミーティングの議事録」というのが
-ubuntu-jp の ML に流れるのですが、
-アクションアイテムの冒頭が毎回同じで、
-そこだけみると
-(というかいつも最初の数行しかみてないのですが)
-いつも何もしていないように見えるので、
-順番を変えた方が良いんじゃないか、
-というようなことを IRC とかで言ってみたことが
-あるのですが、何も変わりませんでした。</p>
-
-<h2>査読とは?</h2>
-
-<p>アクションアイテムをもうちょっと下まで見た時に
-<code>* [ ] 誰か査読して！</code>
-と書いてあったので、
-読んでみて返信してみたのですが、
-次の週もそのままだったので、
-あれは査読に含まれないのかと思ってがっかりしました。</p>
 ]]></content>
   </entry>
   
