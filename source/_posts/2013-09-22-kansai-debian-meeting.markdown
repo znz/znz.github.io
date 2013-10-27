@@ -3,7 +3,7 @@ layout: post
 title: "第 76 回 関西 Debian 勉強会に参加した"
 date: 2013-09-22 13:40
 comments: true
-categories: event debian kansaidebian
+categories: event debian kansaidebian alsa
 ---
 [第 76 回 関西 Debian 勉強会](https://wiki.debian.org/KansaiDebianMeeting/20130922)
 に参加してきました。
