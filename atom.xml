@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-26T23:46:14+09:00</updated>
+  <updated>2013-10-28T00:00:15+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,209 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 77 回 関西 Debian 勉強会に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-27-kansai-debian-meeting.html"/>
+    <updated>2013-10-27T13:46:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
+    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20131027">第 77 回 関西 Debian 勉強会</a>
+に参加してきました。</p>
+
+<p>前回の「Linuxとサウンドシステム」
+の続きの
+「ALSAのユーザーランド解説」
+と
+「git-buildpackage 入門 again」
+という話でした。</p>
+
+<!--more-->
+
+
+<h2>Intro</h2>
+
+<p><code>jessie</code> に向けての話で、
+デフォルトの <code>init</code> が <code>systemd</code> に変わるかも、
+というのが気になりました。
+他に UTF-8 といえば UTF-8 に対応していない namazu のようなものが
+どうなるのかというのもちょっと気になりました。</p>
+
+<p>事前課題では、
+前回の時に発表者の坂本さんに
+VirtualBox の中の wheezy で音が出ない原因を調べてもらって、
+<code>alsamixer</code> でボリュームが 0 になっていたから、
+というのを直してもらっていたので、
+すんなり音を出すことができました。</p>
+
+<p>佐々木さんは警告のフラグ (<code>-Wall -Wextra</code>) を増やしてビルドしていて、
+その警告メッセージを事前課題のところに書いていました。</p>
+
+<p>警告の一部は <code>if</code> 文の処理内容が <code>;</code> だけで <code>{}</code> でくくった方が良いという警告だったのですが、
+何もしないままよりも、
+後ろにコメントで書いてあるメッセージを <code>puts</code> などで出力するようにした方が良いのではないかと思いました。</p>
+
+<h2>ALSA のユーザーランド解説</h2>
+
+<p>事前課題の添付ファイルの <code>pcm_minimal.c</code> の <code>device</code> のところにある
+PCM ノードの指定は <code>default</code> 以外にも
+<code>aplay -L</code> (または <code>arecord -L</code>) で表示されるものが指定できるという話がありました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cm">/* playback PCM node */</span>
+</span><span class='line'><span class="k">static</span> <span class="kt">char</span> <span class="o">*</span><span class="n">device</span> <span class="o">=</span> <span class="s">&quot;default&quot;</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>dmix</code>, <code>dsnoop</code>, <code>hw</code>, <code>plughw</code> はデフォルトでは隠されていて、
+<code>~/.asoundrc</code> で以下のように設定をオーバーライドすれば <code>aplay -L</code> などで
+出てくるようになるという話がありました。
+(ALSA の上流や Debian では出ないのがデフォルトで、
+Ubuntu ではパッチが当たっていて、
+標準で出てくるようになっているという話もありました。)</p>
+
+<figure class='code'><figcaption><span>~/.asoundrc</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>defaults.namehint.extended on
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>その前に asound の設定ファイルは独自形式で、
+書式の説明は <code>libasound2-doc</code> パッケージの
+<code>/usr/share/doc/libasound2-doc/html/</code>
+以下にあるという話もありました。
+独自形式のため、ライブラリとして設定ファイルを読み込む部分も持っているそうです。</p>
+
+<p>PulseAudio 関係のパッケージを入れた時に
+default が dmix/dsnoop から pulse に変わって、
+PulseAudio のデーモンはログイン時に起動するという話もありました。</p>
+
+<p>Android ではユーザーランドは asound ではなく tinyalsa で
+カーネルランドは ASoC という話もありました。</p>
+
+<h2>git-buildpackage 入門 again</h2>
+
+<p>実際に <code>git-buildpackage</code> を使ってみるという内容でした。
+最初にモバイルルーターなどを使ってみんなネットにつながるようにしてから始まりました。</p>
+
+<p>事前課題で候補にあがったものを実際に <code>git-buildpackage</code> でビルドしてみるという話が続きました。
+最後は時間切れで次回予告などは片付けをしながらになってしまいました。</p>
+
+<p>最新の <code>git-buildpackage</code> だと <code>git</code> と同じように <code>gbp</code> コマンドとそのサブコマンドになっていて、
+<code>wheezy</code> だと <code>gbp-clone</code> などの <code>-</code> 付きのコマンドを実行する必要がありました。</p>
+
+<p><code>git-dch</code> という <code>git</code> のコミットログから <code>debian/changelog</code> を生成するツールではコミットログの1行目だけとってくるのがデフォルトの動作で、
+<code>--full</code> というオプションでコミットログ全体を使えるとか、
+man page の <code>META TAGS</code> にあるような情報を入れられるとか、
+そういう話もしていました。</p>
+
+<p><code>gbp clone</code> と <code>git clone</code> の違いは、
+gbp 用の設定 (<code>debian/gbp.conf</code> とか) を見るとか、
+upstream ブランチとかの設定をしてくれるということでした。</p>
+
+<p><code>pbuilder</code> を使っていても前処理の <code>fakeroot debian/rules clean</code> が <code>pbuilder</code> の外で動いて、
+そこで依存パッケージが必要なことがあるので <code>git-buildpackage</code> の前に
+<code>build-dep</code> でビルドに必要なパッケージを入れる必要があるという話がありました。</p>
+
+<h2>/dev/snd の ACL</h2>
+
+<p>Debian 勉強会ということでホスト OS は Mac OS X なのですが、
+サウンド関連や git-buildpackage は
+VirtualBox の中の wheezy で試していました。</p>
+
+<p>そのときに <code>ls -al /dev/snd</code> でサウンド関連のデバイスファイルに
+<code>+</code> がついていて ACL がついているということに気がついて、
+どこで設定されているのか気になったので帰ってから調べてみました。</p>
+
+<figure class='code'><figcaption><span>~/.asoundrc</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>$ ls -al /dev/snd
+</span><span class='line'>合計 0
+</span><span class='line'>drwxr-xr-x   3 root root      180 10月 27 22:44 .
+</span><span class='line'>drwxr-xr-x  13 root root     3180 10月 27 22:44 ..
+</span><span class='line'>drwxr-xr-x   2 root root       60 10月 27 22:44 by-path
+</span><span class='line'>crw-rw---T+  1 root audio 116,  5 10月 27 22:44 controlC0
+</span><span class='line'>crw-rw---T+  1 root audio 116,  4 10月 27 22:44 pcmC0D0c
+</span><span class='line'>crw-rw---T+  1 root audio 116,  3 10月 27 22:44 pcmC0D0p
+</span><span class='line'>crw-rw---T+  1 root audio 116,  2 10月 27 22:44 pcmC0D1c
+</span><span class='line'>crw-rw---T+  1 root audio 116,  1 10月 27 22:44 seq
+</span><span class='line'>crw-rw---T+  1 root audio 116, 33 10月 27 22:44 timer
+</span><span class='line'>$ getfacl /dev/snd/seq
+</span><span class='line'>getfacl: Removing leading &#39;/&#39; from absolute path names
+</span><span class='line'># file: dev/snd/seq
+</span><span class='line'># owner: root
+</span><span class='line'># group: audio
+</span><span class='line'># flags: --t
+</span><span class='line'>user::rw-
+</span><span class='line'>user:admin0:rw-
+</span><span class='line'>group::rw-
+</span><span class='line'>mask::rw-
+</span><span class='line'>other::---
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>まず、 <code>grep -r snd /lib/udev/rules.d</code> でデバイスを作成している場所を
+探してみましたが、 <code>audio</code> グループに設定している箇所しか見つかりませんでした。</p>
+
+<figure class='code'><figcaption><span>/lib/udev/rules.d/91-permissions.rules</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'># sound devices
+</span><span class='line'>SUBSYSTEM==&quot;sound&quot;,                             GROUP=&quot;audio&quot;,
+</span><span class='line'>        OPTIONS+=&quot;static_node=snd/seq&quot;, OPTIONS+=&quot;static_node=snd/timer&quot;
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>次に、ログインしているユーザーの ACL が追加されているということで、
+PAM が関係しているだろうという見当をつけて、
+<code>/etc/pam.d</code> を確認してみたところ、
+<code>common-session</code> の <code>pam_ck_connector</code> が関係してそうだと気付きました。</p>
+
+<figure class='code'><figcaption><span>/etc/pam.d/common-session</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>session  optional            pam_ck_connector.so nox11
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>そこで <code>dpkg -L consolekit</code> などで <code>ConsoleKit</code> 関連のファイルをみていくと
+<code>/usr/lib/ConsoleKit/run-seat.d/udev-acl.ck -&gt; /lib/udev/udev-acl</code>
+が関係してそうだと気がついたので、
+もう一度 udev のルールを確認してみると <code>70-udev-acl.rules</code> で
+<code>udev-acl</code> というタグを設定していました。</p>
+
+<figure class='code'><figcaption><span>/lib/udev/rules.d/70-udev-acl.rules</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'># sound devices
+</span><span class='line'>SUBSYSTEM==&quot;sound&quot;, TAG+=&quot;udev-acl&quot;
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>70-udev-acl.rules</code> をみたり <code>udev-acl</code> のソースをみると <code>ACL</code> を設定しているのは
+<code>udev-acl</code> で間違いなさそうでした。
+ただし、 <code>70-udev-acl.rules</code> で
+<code># systemd replaces udev-acl entirely, skip if active</code>
+と書いてあったので、 <code>systemd</code> を使っている環境だと
+<code>udev-acl</code> は何もしないようです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第8回 関西Emacs勉強会に参加しました]]></title>
@@ -2667,55 +2870,6 @@ p.130 以降のプログラムでは <code>remove-if-not</code> を使いまく�
 <li>9章を読み終わっていない人は宿題 (次回までに読んでくる)</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Ruby Association Certified Ruby Programmer Gold を受けた]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-21-certified-ruby.html"/>
-    <updated>2013-09-21T22:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/certified-ruby</id>
-    <content type="html"><![CDATA[<p>少し前に
-Ruby技術者認定試験制度
-の
-Ruby Association Certified Ruby Programmer Gold
-を受けてきました。</p>
-
-<!--more-->
-
-
-<p>コンピュータ試験 (CBT) で
-結果はその場でわかるようになっていて、
-ちゃんと合格出来ました。
-Silver
-は最初の CBT になっていなかった頃に受けて合格しているので、
-これで
-Ruby Association Certified Ruby Programmer Gold認定要件
-をみたしたことになります。</p>
-
-<p>スレッドを開始するメソッドが複数選択で選ぶようになってる問題とか、
-クラス変数とか <code>private</code> とかと継承の関係とか、
-普段そんな機能は使わないようなものについての仕様が再確認出来たのは
-良かったです。</p>
-
-<p>標準添付ライブラリの問題は、
-あまり使わないライブラリについての問題があると困りそうだったのですが、
-問題数も少なくて、
-知っている範囲だったので大丈夫でした。</p>
-
-<p>選択肢の <code>Marshal</code> の引数の説明に「ファイル」としか書いてなくて、
-ファイルパスなのか、ファイルオブジェクト (IO オブジェクト) なのか
-わからないとか、問題が悪くて Ruby の知識だけだと解けなくて、
-この問題での言葉遣いもわからないと無理そうなのがあったのは
-困りました。</p>
-
-<p><a href="https://www.ruby-lang.org/ja/news/2013/06/30/we-retire-1-8-7/">ruby 1.8.7 は終わった</a>
-ので、
-対象バージョン
-が
-Ruby 1.8.7
-の試験が終わってしまう前に受けてみておこうと言うことで受けてきましたが、
-今後対象バージョンがどう変わっていくのか気になるところです。</p>
 ]]></content>
   </entry>
   

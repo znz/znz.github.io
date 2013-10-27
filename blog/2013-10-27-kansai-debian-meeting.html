@@ -5,22 +5,18 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>spring rails console で PAGER=lv だと /dev/tty: Device not configured - @znz blog</title>
+  <title>第 77 回 関西 Debian 勉強会に参加した - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="spring rails console
-で
-pry
-を使っていて
-pager
-を起動するような出力をしたときに
-/dev/tty: Device not configured
-になることがあったので原因を調べてみました。
-結論としてはタイトルに書いてありますが、
-spring
+  <meta name="description" content="第 77 回 関西 Debian 勉強会
+に参加してきました。 前回の「Linuxとサウンドシステム」
+の続きの
+「ALSAのユーザーランド解説」
 と
-lv &hellip;">
+「git-buildpackage 入門 again」
+という話でした。 Intro jessie に向けての話で、
+デフォルトの init が &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -29,7 +25,7 @@ lv &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-10-10-spring-and-lv.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-10-27-kansai-debian-meeting.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -91,7 +87,7 @@ lv &hellip;">
   
   <header>
     
-      <h1 class="entry-title">spring rails console で PAGER=lv だと /dev/tty: Device not configured</h1>
+      <h1 class="entry-title">第 77 回 関西 Debian 勉強会に参加した</h1>
     
     
       <p class="meta">
@@ -107,7 +103,7 @@ lv &hellip;">
   
 
 
-<time datetime="2013-10-10T21:28:00+09:00" pubdate data-updated="true">2013-10-10 (Thu)</time>
+<time datetime="2013-10-27T13:46:00+09:00" pubdate data-updated="true">2013-10-27 (Sun)</time>
         
          | <a href="#disqus_thread">Comments</a>
         
@@ -116,174 +112,114 @@ lv &hellip;">
   </header>
 
 
-<div class="entry-content"><p><code>spring rails console</code>
-で
-<code>pry</code>
-を使っていて
-pager
-を起動するような出力をしたときに
-<code>/dev/tty: Device not configured</code>
-になることがあったので原因を調べてみました。
-結論としてはタイトルに書いてありますが、
-<code>spring</code>
+<div class="entry-content"><p><a href="https://wiki.debian.org/KansaiDebianMeeting/20131027">第 77 回 関西 Debian 勉強会</a>
+に参加してきました。</p>
+
+<p>前回の「Linuxとサウンドシステム」
+の続きの
+「ALSAのユーザーランド解説」
 と
-<code>lv</code>
-の組み合わせが原因でした。</p>
+「git-buildpackage 入門 again」
+という話でした。</p>
 
 <!--more-->
 
 
-<h2>確認バージョン</h2>
+<h2>Intro</h2>
 
-<p>関係する gem のバージョンは以下の通りです。</p>
+<p><code>jessie</code> に向けての話で、
+デフォルトの <code>init</code> が <code>systemd</code> に変わるかも、
+というのが気になりました。
+他に UTF-8 といえば UTF-8 に対応していない namazu のようなものが
+どうなるのかというのもちょっと気になりました。</p>
 
-<ul>
-<li>rails 3.2.14, 4.0.0</li>
-<li>spring 0.0.10, 0.0.11</li>
-</ul>
+<p>事前課題では、
+前回の時に発表者の坂本さんに
+VirtualBox の中の wheezy で音が出ない原因を調べてもらって、
+<code>alsamixer</code> でボリュームが 0 になっていたから、
+というのを直してもらっていたので、
+すんなり音を出すことができました。</p>
 
+<p>佐々木さんは警告のフラグ (<code>-Wall -Wextra</code>) を増やしてビルドしていて、
+その警告メッセージを事前課題のところに書いていました。</p>
 
-<p>関係するプログラムのバージョンは以下の通りです。</p>
+<p>警告の一部は <code>if</code> 文の処理内容が <code>;</code> だけで <code>{}</code> でくくった方が良いという警告だったのですが、
+何もしないままよりも、
+後ろにコメントで書いてあるメッセージを <code>puts</code> などで出力するようにした方が良いのではないかと思いました。</p>
 
-<ul>
-<li>ruby 2.0.0-p247</li>
-<li>lv 4.51</li>
-</ul>
+<h2>ALSA のユーザーランド解説</h2>
 
-
-<p>確認した環境は Mac OS X です。</p>
-
-<h2>原因の切り分け</h2>
-
-<p>まず
-<code>rails console</code>
-だと問題は発生しないので、
-<code>spring</code>
-が原因のひとつなのは確実だったので、
-当面の回避策として、
-<code>spring rails console</code>
-の代わりに
-<code>rails console</code>
-を使っていました。</p>
-
-<p>次にふと他の pager を使ってみるとどうだろうと思って、
-<code>spring rails console</code>
-の中で
-<code>ENV['PAGER']="less"</code>
-として <code>lv</code> から <code>less</code> に変えて試してみたところ、
-問題なく使えました。
-これがきっかけで <code>lv</code> も原因のひとつだということに気づきました。</p>
-
-<h2>原因調査</h2>
-
-<p>ここまでわかれば原因は調べやすくなったので、
-まずエラーメッセージを出しているところを探しました。
-これはすぐに見つかって、
-<code>lv</code> の <code>src/stream.c</code> の <code>perror( "/dev/tty" )</code> でした。</p>
-
-<figure class='code'><figcaption><span>lv451/src/stream.c</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'>  <span class="n">close</span><span class="p">(</span> <span class="mi">0</span> <span class="p">);</span>
-</span><span class='line'>  <span class="k">if</span><span class="p">(</span> <span class="n">IsAtty</span><span class="p">(</span> <span class="mi">1</span> <span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="mi">0</span> <span class="o">!=</span> <span class="n">open</span><span class="p">(</span> <span class="s">&quot;/dev/tty&quot;</span><span class="p">,</span> <span class="n">O_RDONLY</span> <span class="p">)</span> <span class="p">)</span>
-</span><span class='line'>    <span class="n">perror</span><span class="p">(</span> <span class="s">&quot;/dev/tty&quot;</span> <span class="p">),</span> <span class="n">exit</span><span class="p">(</span> <span class="o">-</span><span class="mi">1</span> <span class="p">);</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>STDIN を開き直している処理があって、
-ここで <code>"/dev/tty"</code> を開けないのが原因でした。</p>
-
-<p>元々の STDIN は
-<code>spring</code>
-の中で
-<code>UNIXSocket#send_io</code>
-と
-<code>UNIXSocket#recv_io</code>
-で受け渡していました。
-この STDIN をそのまま使ってくれれば問題は起きないのに、
-わざわざ <code>close( 0 )</code> で閉じてしまって、
-開き直そうとしているのが問題だとわかりました。</p>
-
-<p><code>spring rails console</code>
-の中で直接
-<code>open("/dev/tty","r")</code>
-を試しても同様に
-<code>Errno::ENXIO: Device not configured - /dev/tty</code>
-になってしまうので、
-<code>lv</code> の方を変えない限りどうしようもなさそうです。</p>
-
-<p>というわけで、
-これはもう <code>lv</code> の処理が <code>spring</code> と相性が悪いということで、
-<code>spring</code> の中では <code>lv</code> を避けるしかなさそうです。</p>
-
-<h2>結論</h2>
-
-<p><code>~/.spring.rb</code>
-で
-<code>ENV["PAGER"]</code>
-を書き換えることにしました。</p>
-
-<figure class='code'><figcaption><span>~/.spring.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">ENV</span><span class="o">[</span><span class="s2">&quot;PAGER&quot;</span><span class="o">]</span> <span class="o">=</span> <span class="s2">&quot;less&quot;</span> <span class="k">if</span> <span class="no">ENV</span><span class="o">[</span><span class="s2">&quot;PAGER&quot;</span><span class="o">]</span> <span class="o">==</span> <span class="s2">&quot;lv&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>余談</h2>
-
-<p>原因を調べているときに
-<code>spring</code>
-の標準入出力の処理周りをみていたのですが、
-<code>UNIXSocket#send_io</code>
-と
-<code>UNIXSocket#recv_io</code>
-で受け渡していました。</p>
-
-<p><code>recv_io</code> で mode を指定していないので、
-<code>spring rails console</code> では
-<code>STDIN.write</code> が使えたり <code>STDOUT.gets</code> が使えたりしてしまうようです。</p>
-
-<p>これは <code>recv_io(IO, "r")</code> などに直せば良さそうに見えますが、
-特に実害もなさそうなので、このままでもあまり問題はなさそうです。</p>
-
-<p>パッチとしては以下のように直せば良さそうです。</p>
+<p>事前課題の添付ファイルの <code>pcm_minimal.c</code> の <code>device</code> のところにある
+PCM ノードの指定は <code>default</code> 以外にも
+<code>aplay -L</code> (または <code>arecord -L</code>) で表示されるものが指定できるという話がありました。</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gh">diff --git a/lib/spring/application.rb b/lib/spring/application.rb</span>
-</span><span class='line'><span class="gh">index b7df9bb..4e34f6c 100644</span>
-</span><span class='line'><span class="gd">--- a/lib/spring/application.rb</span>
-</span><span class='line'><span class="gi">+++ b/lib/spring/application.rb</span>
-</span><span class='line'><span class="gu">@@ -93,7 +93,7 @@ module Spring</span>
-</span><span class='line'>       log &quot;got client&quot;
-</span><span class='line'>       manager.puts
-</span><span class='line'>
-</span><span class='line'><span class="gd">-      streams = 3.times.map { client.recv_io }</span>
-</span><span class='line'><span class="gi">+      streams = %w[w w r].map { |mode| client.recv_io(IO, mode) }</span>
-</span><span class='line'>       [STDOUT, STDERR].zip(streams).each { |a, b| a.reopen(b) }
-</span><span class='line'>
-</span><span class='line'>       preload unless preloaded?
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cm">/* playback PCM node */</span>
+</span><span class='line'><span class="k">static</span> <span class="kt">char</span> <span class="o">*</span><span class="n">device</span> <span class="o">=</span> <span class="s">&quot;default&quot;</span><span class="p">;</span>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>テストも以下のように書いてみたのですが、
-Mac OS X の環境だとそもそも既存のテストも通らないものがあったり、
-Linux だと上の変更をしなくてもテストが通ってしまったりしたので
-pull request を出すのは諦めました。
-これらのパッチの著作権は主張しないので、
-代わりに pull request を出してもらうのは歓迎します。</p>
+<p><code>dmix</code>, <code>dsnoop</code>, <code>hw</code>, <code>plughw</code> はデフォルトでは隠されていて、
+<code>~/.asoundrc</code> で以下のように設定をオーバーライドすれば <code>aplay -L</code> などで
+出てくるようになるという話がありました。
+(ALSA の上流や Debian では出ないのがデフォルトで、
+Ubuntu ではパッチが当たっていて、
+標準で出てくるようになっているという話もありました。)</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>~/.asoundrc</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>defaults.namehint.extended on
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>その前に asound の設定ファイルは独自形式で、
+書式の説明は <code>libasound2-doc</code> パッケージの
+<code>/usr/share/doc/libasound2-doc/html/</code>
+以下にあるという話もありました。
+独自形式のため、ライブラリとして設定ファイルを読み込む部分も持っているそうです。</p>
+
+<p>PulseAudio 関係のパッケージを入れた時に
+default が dmix/dsnoop から pulse に変わって、
+PulseAudio のデーモンはログイン時に起動するという話もありました。</p>
+
+<p>Android ではユーザーランドは asound ではなく tinyalsa で
+カーネルランドは ASoC という話もありました。</p>
+
+<h2>git-buildpackage 入門 again</h2>
+
+<p>実際に <code>git-buildpackage</code> を使ってみるという内容でした。
+最初にモバイルルーターなどを使ってみんなネットにつながるようにしてから始まりました。</p>
+
+<p>事前課題で候補にあがったものを実際に <code>git-buildpackage</code> でビルドしてみるという話が続きました。
+最後は時間切れで次回予告などは片付けをしながらになってしまいました。</p>
+
+<p>最新の <code>git-buildpackage</code> だと <code>git</code> と同じように <code>gbp</code> コマンドとそのサブコマンドになっていて、
+<code>wheezy</code> だと <code>gbp-clone</code> などの <code>-</code> 付きのコマンドを実行する必要がありました。</p>
+
+<p><code>git-dch</code> という <code>git</code> のコミットログから <code>debian/changelog</code> を生成するツールではコミットログの1行目だけとってくるのがデフォルトの動作で、
+<code>--full</code> というオプションでコミットログ全体を使えるとか、
+man page の <code>META TAGS</code> にあるような情報を入れられるとか、
+そういう話もしていました。</p>
+
+<p><code>gbp clone</code> と <code>git clone</code> の違いは、
+gbp 用の設定 (<code>debian/gbp.conf</code> とか) を見るとか、
+upstream ブランチとかの設定をしてくれるということでした。</p>
+
+<p><code>pbuilder</code> を使っていても前処理の <code>fakeroot debian/rules clean</code> が <code>pbuilder</code> の外で動いて、
+そこで依存パッケージが必要なことがあるので <code>git-buildpackage</code> の前に
+<code>build-dep</code> でビルドに必要なパッケージを入れる必要があるという話がありました。</p>
+
+<h2>/dev/snd の ACL</h2>
+
+<p>Debian 勉強会ということでホスト OS は Mac OS X なのですが、
+サウンド関連や git-buildpackage は
+VirtualBox の中の wheezy で試していました。</p>
+
+<p>そのときに <code>ls -al /dev/snd</code> でサウンド関連のデバイスファイルに
+<code>+</code> がついていて ACL がついているということに気がついて、
+どこで設定されているのか気になったので帰ってから調べてみました。</p>
+
+<figure class='code'><figcaption><span>~/.asoundrc</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -304,29 +240,73 @@ pull request を出すのは諦めました。
 <span class='line-number'>19</span>
 <span class='line-number'>20</span>
 <span class='line-number'>21</span>
-</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gh">diff --git a/test/acceptance/app_test.rb b/test/acceptance/app_test.rb</span>
-</span><span class='line'><span class="gh">index a21b556..ee04e5a 100644</span>
-</span><span class='line'><span class="gd">--- a/test/acceptance/app_test.rb</span>
-</span><span class='line'><span class="gi">+++ b/test/acceptance/app_test.rb</span>
-</span><span class='line'><span class="gu">@@ -440,4 +440,16 @@ class AppTest &lt; ActiveSupport::TestCase</span>
-</span><span class='line'>       assert_success &quot;bundle check&quot;
-</span><span class='line'>     end
-</span><span class='line'>   end
-</span><span class='line'><span class="gi">+</span>
-</span><span class='line'><span class="gi">+  test &quot;STDIN mode&quot; do</span>
-</span><span class='line'><span class="gi">+    assert_success &quot;#{spring} rails runner &#39;STDIN.write(%(test)) rescue $!.display&#39;&quot;, stdout: &quot;not opened for writing&quot;</span>
-</span><span class='line'><span class="gi">+  end</span>
-</span><span class='line'><span class="gi">+</span>
-</span><span class='line'><span class="gi">+  test &quot;STDOUT mode&quot; do</span>
-</span><span class='line'><span class="gi">+    assert_success &quot;#{spring} rails runner &#39;STDOUT.gets rescue $!.display&#39;&quot;, stdout: &quot;not opened for reading&quot;</span>
-</span><span class='line'><span class="gi">+  end</span>
-</span><span class='line'><span class="gi">+</span>
-</span><span class='line'><span class="gi">+  test &quot;STDERR mode&quot; do</span>
-</span><span class='line'><span class="gi">+    assert_success &quot;#{spring} rails runner &#39;STDERR.gets rescue $!.display&#39;&quot;, stdout: &quot;not opened for reading&quot;</span>
-</span><span class='line'><span class="gi">+  end</span>
-</span><span class='line'> end
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>$ ls -al /dev/snd
+</span><span class='line'>合計 0
+</span><span class='line'>drwxr-xr-x   3 root root      180 10月 27 22:44 .
+</span><span class='line'>drwxr-xr-x  13 root root     3180 10月 27 22:44 ..
+</span><span class='line'>drwxr-xr-x   2 root root       60 10月 27 22:44 by-path
+</span><span class='line'>crw-rw---T+  1 root audio 116,  5 10月 27 22:44 controlC0
+</span><span class='line'>crw-rw---T+  1 root audio 116,  4 10月 27 22:44 pcmC0D0c
+</span><span class='line'>crw-rw---T+  1 root audio 116,  3 10月 27 22:44 pcmC0D0p
+</span><span class='line'>crw-rw---T+  1 root audio 116,  2 10月 27 22:44 pcmC0D1c
+</span><span class='line'>crw-rw---T+  1 root audio 116,  1 10月 27 22:44 seq
+</span><span class='line'>crw-rw---T+  1 root audio 116, 33 10月 27 22:44 timer
+</span><span class='line'>$ getfacl /dev/snd/seq
+</span><span class='line'>getfacl: Removing leading &#39;/&#39; from absolute path names
+</span><span class='line'># file: dev/snd/seq
+</span><span class='line'># owner: root
+</span><span class='line'># group: audio
+</span><span class='line'># flags: --t
+</span><span class='line'>user::rw-
+</span><span class='line'>user:admin0:rw-
+</span><span class='line'>group::rw-
+</span><span class='line'>mask::rw-
+</span><span class='line'>other::---
 </span></code></pre></td></tr></table></div></figure>
 
+
+<p>まず、 <code>grep -r snd /lib/udev/rules.d</code> でデバイスを作成している場所を
+探してみましたが、 <code>audio</code> グループに設定している箇所しか見つかりませんでした。</p>
+
+<figure class='code'><figcaption><span>/lib/udev/rules.d/91-permissions.rules</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'># sound devices
+</span><span class='line'>SUBSYSTEM==&quot;sound&quot;,                             GROUP=&quot;audio&quot;,
+</span><span class='line'>        OPTIONS+=&quot;static_node=snd/seq&quot;, OPTIONS+=&quot;static_node=snd/timer&quot;
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>次に、ログインしているユーザーの ACL が追加されているということで、
+PAM が関係しているだろうという見当をつけて、
+<code>/etc/pam.d</code> を確認してみたところ、
+<code>common-session</code> の <code>pam_ck_connector</code> が関係してそうだと気付きました。</p>
+
+<figure class='code'><figcaption><span>/etc/pam.d/common-session</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>session  optional            pam_ck_connector.so nox11
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>そこで <code>dpkg -L consolekit</code> などで <code>ConsoleKit</code> 関連のファイルをみていくと
+<code>/usr/lib/ConsoleKit/run-seat.d/udev-acl.ck -&gt; /lib/udev/udev-acl</code>
+が関係してそうだと気がついたので、
+もう一度 udev のルールを確認してみると <code>70-udev-acl.rules</code> で
+<code>udev-acl</code> というタグを設定していました。</p>
+
+<figure class='code'><figcaption><span>/lib/udev/rules.d/70-udev-acl.rules</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'># sound devices
+</span><span class='line'>SUBSYSTEM==&quot;sound&quot;, TAG+=&quot;udev-acl&quot;
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>70-udev-acl.rules</code> をみたり <code>udev-acl</code> のソースをみると <code>ACL</code> を設定しているのは
+<code>udev-acl</code> で間違いなさそうでした。
+ただし、 <code>70-udev-acl.rules</code> で
+<code># systemd replaces udev-acl entirely, skip if active</code>
+と書いてあったので、 <code>systemd</code> を使っている環境だと
+<code>udev-acl</code> は何もしないようです。</p>
 </div>
 
 
@@ -349,12 +329,12 @@ pull request を出すのは諦めました。
   
 
 
-<time datetime="2013-10-10T21:28:00+09:00" pubdate data-updated="true">2013-10-10 (Thu)</time>
+<time datetime="2013-10-27T13:46:00+09:00" pubdate data-updated="true">2013-10-27 (Sun)</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>, <a class='category' href='/blog/categories/tty/'>tty</a>
+    <a class='category' href='/blog/categories/alsa/'>alsa</a>, <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/event/'>event</a>, <a class='category' href='/blog/categories/kansaidebian/'>kansaidebian</a>
   
 </span>
 
@@ -363,12 +343,12 @@ pull request を出すのは諦めました。
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-10-10-spring-and-lv.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-10-10-spring-and-lv.html" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-10-27-kansai-debian-meeting.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-10-27-kansai-debian-meeting.html" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
   
-  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-10-10-spring-and-lv.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-10-27-kansai-debian-meeting.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
   
     <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
   
@@ -387,10 +367,8 @@ pull request を出すのは諦めました。
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-10-09-update-octopress-and-conflict-ruby-version.html" title="Previous Post: octopress をアップデートした (.ruby-version が conflict した) 話">&laquo; octopress をアップデートした (.ruby-version が conflict した) 話</a>
+        <a class="basic-alignment left" href="/blog/2013-10-26-kansai-emacs.html" title="Previous Post: 第8回 関西Emacs勉強会に参加しました">&laquo; 第8回 関西Emacs勉強会に参加しました</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-10-12-isbn.html" title="Next Post: Ruby で ISBN をチェックしたりハイフンを入れたり">Ruby で ISBN をチェックしたりハイフンを入れたり &raquo;</a>
       
     </p>
   </footer>
@@ -502,8 +480,8 @@ pull request を出すのは諦めました。
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-10-10-spring-and-lv.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-10-10-spring-and-lv.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-10-27-kansai-debian-meeting.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-10-27-kansai-debian-meeting.html';
         var disqus_script = 'embed.js';
       
     (function () {
