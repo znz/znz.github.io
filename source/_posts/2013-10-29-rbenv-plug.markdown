@@ -88,3 +88,15 @@ URL が指定された時は上の一般的なインストール方法と同様�
 なら `rbenv alias --auto` を追加で実行したり、
 [rbenv-use](https://github.com/rkh/rbenv-use)
 なら依存している `rbenv-whatis` もインストールしたりしています。
+
+## 余談
+
+`share/rbenv-plug` のファイルを追加している時に
+[rbenv-plugin](https://github.com/taqtiqa/rbenv-plugin)
+というのがあって、
+今の `rbenv-plug` (と `rbenv-unplug`) という名前に変えました。
+最初は `rbenv-plugin-install` (と `rbenv-plugin-uninstall`)
+という名前で作りかけていたので、
+`rbenv-plugin` のサブコマンドと思いっきり名前がかぶっていました。
+`rbenv-plugins-install` という複数形の名前も使われてしまっていたので、
+思い切って短い名前に変更しました。
