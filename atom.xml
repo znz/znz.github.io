@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-11-02T23:37:54+09:00</updated>
+  <updated>2013-11-03T00:08:32+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -318,6 +318,138 @@ revision 114882 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114882 
 <p>というわけで homebrew の方に
 <a href="https://github.com/mxcl/homebrew/pull/23897">fix default-directory on Cocoa and Mavericks</a>
 として pull request を出してみました。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[LC_COLLATEの問題でuniqで丸数字が同一視されてしまう]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-10-31-lc-collate-uniq.html"/>
+    <updated>2013-10-31T23:50:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/lc-collate-uniq</id>
+    <content type="html"><![CDATA[<p><code>uniq -c</code> で重複がないのを確認しようとしたら、
+丸数字のところだけ違う行が同一視されてしまって、
+2以上になることがあって困ったので、
+原因を調べてみました。</p>
+
+<!--more-->
+
+
+<h2>現象</h2>
+
+<p>以下のように丸数字などが同一視されています。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ cat n.txt
+</span><span class='line'>①
+</span><span class='line'>②
+</span><span class='line'>$ uniq n.txt
+</span><span class='line'>①
+</span><span class='line'>$ sort n.txt
+</span><span class='line'>①
+</span><span class='line'>②
+</span><span class='line'>$ tac n.txt | sort
+</span><span class='line'>②
+</span><span class='line'>①
+</span><span class='line'>$</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ cat n.txt
+</span><span class='line'>①
+</span><span class='line'>②
+</span><span class='line'>$ LANG=ja_JP.utf8 uniq -c n.txt
+</span><span class='line'>      2 ①
+</span><span class='line'>$ LANG=C uniq -c n.txt
+</span><span class='line'>      1 ①
+</span><span class='line'>      1 ②
+</span><span class='line'>$ uniq --version
+</span><span class='line'>uniq (GNU coreutils) 8.20
+</span><span class='line'>Copyright (C) 2012 Free Software Foundation, Inc.
+</span><span class='line'>ライセンス GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;.
+</span><span class='line'>This is free software: you are free to change and redistribute it.
+</span><span class='line'>There is NO WARRANTY, to the extent permitted by law.
+</span><span class='line'>
+</span><span class='line'>作者 Richard M. Stallman および David MacKenzie。
+</span><span class='line'>$ lsb_release -a
+</span><span class='line'>No LSB modules are available.
+</span><span class='line'>Distributor ID: Ubuntu
+</span><span class='line'>Description:    Ubuntu 13.04
+</span><span class='line'>Release:        13.04
+</span><span class='line'>Codename:       raring
+</span><span class='line'>$</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>調査</h2>
+
+<p><code>apt-get source locales</code>
+でソースをとってきて調べてみると
+<code>locales/ja_JP</code> の <code>LC_COLLATE</code> から <code>END LC_COLLATE</code>
+の間に書いていないコードポイントは同一視されているように見えました。</p>
+
+<p>これは glibc の問題だと思って、既に報告されているかどうか調べてみると
+<a href="https://sourceware.org/bugzilla/show_bug.cgi?id=13063">Bug 13063 – &lsquo;sort -u&rsquo; will erase some Chinese characters</a>
+に同じような話がありました。</p>
+
+<h2>ML で聞いてみた</h2>
+
+<p><a href="http://listserv.linux.or.jp/pipermail/linux-users/2013-October/000527.html">linux-users: 108951</a>
+で質問してみたところ、
+<a href="http://listserv.linux.or.jp/pipermail/linux-users/2013-October/000528.html">linux-users: 108952</a>
+で返信があり、
+<code>LC_COLLATE</code>
+をちゃんと定義して解決するか、
+単純にバイト順でソートしたいだけなら
+<code>LC_COLLATE=C</code> で良いという話でした。</p>
+
+<h2>結論</h2>
+
+<p>結局今回の目的はソートではなく重複検査だったので、
+<code>LC_COLLATE=C</code> で解決ということになりました。</p>
+
+<p>誰か興味のある人は真面目に
+<code>LC_COLLATE</code>
+の定義に挑戦してみると良いのではないでしょうか。</p>
+
+<p>それとは別に定義されていない文字を同一視せずにバイト順でも何でもいいので、
+適当に別の文字として扱ってくれるようになればいいのに、
+とは思いました。
+誰かそういう方向での対応も挑戦してみると
+他の言語も含めて幸せになれるのではないかと思いました。</p>
 ]]></content>
   </entry>
   
@@ -3011,126 +3143,6 @@ getter メソッドを定義してしまったのだと思います。</p>
 </span><span class='line'>    <span class="cp">-# ...</span>
 </span></code></pre></td></tr></table></div></figure>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 3 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-25-rubymotion-mokumoku-osaka.html"/>
-    <updated>2013-09-25T20:43:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
-    <content type="html"><![CDATA[<p>第 1 回と第 2 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://connpass.com/event/3450/">第 3 回 RubyMotion もくもく会 in Osaka</a>
-に参加してきました。</p>
-
-<!--more-->
-
-
-<p>OS X アプリの勉強をしようと思って、
-とりあえず
-<code>motion create --template=osx Hello</code>
-で生成されたファイルを読んでいたら、
-<code>app/menu.rb</code>
-の
-<code>Italic</code>
-の
-<code>keyEquivalent:</code>
-が
-<code>Bold</code>
-と同じ
-<code>'b'</code>
-になっていたのを見つけて、
-他もテキストエディットと見比べていたら
-違う部分を見つけたので、
-<code>motion support</code>
-で報告してみました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gh">diff --git a/app/menu.rb b/app/menu.rb</span>
-</span><span class='line'><span class="gh">index 58b48f8..0da85e1 100644</span>
-</span><span class='line'><span class="gd">--- a/app/menu.rb</span>
-</span><span class='line'><span class="gi">+++ b/app/menu.rb</span>
-</span><span class='line'><span class="gu">@@ -47,7 +47,7 @@ class AppDelegate</span>
-</span><span class='line'>     fontMenu = createMenu(&#39;Font&#39;) do
-</span><span class='line'>       addItemWithTitle(&#39;Show Fonts&#39;, action: &#39;orderFrontFontPanel:&#39;, keyEquivalent: &#39;t&#39;)
-</span><span class='line'>       addItemWithTitle(&#39;Bold&#39;, action: &#39;addFontTrait:&#39;, keyEquivalent: &#39;b&#39;)
-</span><span class='line'><span class="gd">-      addItemWithTitle(&#39;Italic&#39;, action: &#39;addFontTrait:&#39;, keyEquivalent: &#39;b&#39;)</span>
-</span><span class='line'><span class="gi">+      addItemWithTitle(&#39;Italic&#39;, action: &#39;addFontTrait:&#39;, keyEquivalent: &#39;i&#39;)</span>
-</span><span class='line'>       addItemWithTitle(&#39;Underline&#39;, action: &#39;underline:&#39;, keyEquivalent: &#39;u&#39;)
-</span><span class='line'>       addItem(NSMenuItem.separatorItem)
-</span><span class='line'>       addItemWithTitle(&#39;Bigger&#39;, action: &#39;modifyFont:&#39;, keyEquivalent: &#39;+&#39;)
-</span><span class='line'><span class="gu">@@ -60,9 +60,11 @@ class AppDelegate</span>
-</span><span class='line'>       addItemWithTitle(&#39;Justify&#39;, action: &#39;alignJustified:&#39;, keyEquivalent: &#39;&#39;)
-</span><span class='line'>       addItemWithTitle(&#39;Align Right&#39;, action: &#39;alignRight:&#39;, keyEquivalent: &#39;}&#39;)
-</span><span class='line'>       addItem(NSMenuItem.separatorItem)
-</span><span class='line'><span class="gd">-      addItemWithTitle(&#39;Show Ruler&#39;, action: &#39;toggleRuler:&#39;, keyEquivalent: &#39;&#39;)</span>
-</span><span class='line'><span class="gd">-      addItemWithTitle(&#39;Copy Ruler&#39;, action: &#39;copyRuler:&#39;, keyEquivalent: &#39;c&#39;)</span>
-</span><span class='line'><span class="gd">-      addItemWithTitle(&#39;Paste Ruler&#39;, action: &#39;pasteRuler:&#39;, keyEquivalent: &#39;v&#39;)</span>
-</span><span class='line'><span class="gi">+      addItemWithTitle(&#39;Show Ruler&#39;, action: &#39;toggleRuler:&#39;, keyEquivalent: &#39;r&#39;)</span>
-</span><span class='line'><span class="gi">+      item = addItemWithTitle(&#39;Copy Ruler&#39;, action: &#39;copyRuler:&#39;, keyEquivalent: &#39;c&#39;)</span>
-</span><span class='line'><span class="gi">+      item.keyEquivalentModifierMask = NSCommandKeyMask|NSControlKeyMask</span>
-</span><span class='line'><span class="gi">+      item = addItemWithTitle(&#39;Paste Ruler&#39;, action: &#39;pasteRuler:&#39;, keyEquivalent: &#39;v&#39;)</span>
-</span><span class='line'><span class="gi">+      item.keyEquivalentModifierMask = NSCommandKeyMask|NSControlKeyMask</span>
-</span><span class='line'>     end
-</span><span class='line'>
-</span><span class='line'>     addMenu(&#39;Format&#39;) do
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>他にはサンプルとして
-<a href="https://github.com/satococoa/rubymotion-osx-browser">https://github.com/satococoa/rubymotion-osx-browser</a>
-とか
-<a href="https://github.com/HipByte/RubyMotionSamples">https://github.com/HipByte/RubyMotionSamples</a>
-とかをちょっと動かして見たりしていました。</p>
-
-<p>他の人の話としては、
-<code>UICreateCGImageFromIOSurface</code>
-というシンボルで問題が起きて、
-最初は
-<a href="https://github.com/ZBar/ZBar">ZBar</a>
-というライブラリが疑われていたけど違ったとかいう話とか、
-<a href="http://support.revealapp.com/discussions/suggestions/8-reference-to-uicreatecgimagefromiosurface-should-be-removed-for-release-scheme">Reveal.framework が原因で Release ビルドで外せば良い</a>
-という話とか、
-東京と Google ハングアウトでつないでみてたとか、
-<a href="http://mobiletou.ch/2013/09/002-create-application">(&frac12;) &ndash; 第二回 RubyMotion でアプリケーションを作ろう (1) &ndash; 実践！RubyMotion &ndash; Mobile Touch &ndash; モバイル/タブレット開発者およびデザイナー向け情報ポータル</a>
-で開発中のアプリをみせてもらったりとかがありました。</p>
-
-<p>東京とのハングアウトが終わった後は
-<a href="https://gihyo.jp/dp/ebook/2013/978-4-7741-6024-5">Vagrant入門ガイド</a>
-の話とか、
-<a href="http://jfk2013.jaws-ug.jp/">JAWS FESTA Kansai 2013</a>
-の話とかもしていました。</p>
-
-<p>最後に次回も東京と日程を合わせるということで
-<a href="http://connpass.com/event/3557/">第 4 回 RubyMotion もくもく会 in Osaka</a>
-は 10/23 (水) 19:30 からということになりました。</p>
 ]]></content>
   </entry>
   
