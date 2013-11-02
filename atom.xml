@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-30T00:37:45+09:00</updated>
+  <updated>2013-11-02T23:08:33+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,148 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[MavericksでEmacs.appが起動時にホームディレクトリにならない]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-01-emacs-on-mavericks.html"/>
+    <updated>2013-11-01T18:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/emacs-on-mavericks</id>
+    <content type="html"><![CDATA[<p>Mac OS X を Mavericks にあげたら homebrew で入れた
+Emacs.app を起動した時に <code>default-directory</code>
+がホームディレクトリから <code>/</code> に変わってしまっていたので、
+原因を調べてみました。</p>
+
+<!--more-->
+
+
+<h2>調べたきっかけ</h2>
+
+<p>きっかけは
+<a href="http://qiita.com/ksato9700/items/1ec373895b9693529f82">Mavericksにアップデートして遭遇した不具合　まとめ</a>
+を見て自分の環境だけで起きている現象ではないと知ったからです。</p>
+
+<h2>原因</h2>
+
+<p>Emacs のソースの以下の部分で <code>-psn</code> で始まる引数の有無で
+ホームディレクトリに移動するかどうかを判定しているのに、
+Mavericks だと引数なしで起動されるようになったからのようです。</p>
+
+<figure class='code'><figcaption><span>emacs-24.3/src/emacs.c</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'> <span class="err">#</span><span class="n">ifdef</span> <span class="n">HAVE_NS</span>
+</span><span class='line'>   <span class="n">ns_pool</span> <span class="o">=</span> <span class="n">ns_alloc_autorelease_pool</span> <span class="p">();</span>
+</span><span class='line'>   <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">noninteractive</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">{</span>
+</span><span class='line'> <span class="err">#</span><span class="n">ifdef</span> <span class="n">NS_IMPL_COCOA</span>
+</span><span class='line'>       <span class="k">if</span> <span class="p">(</span><span class="n">skip_args</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">)</span>
+</span><span class='line'>         <span class="p">{</span>
+</span><span class='line'>    <span class="cm">/* FIXME: Do the right thing if getenv returns NULL, or if</span>
+</span><span class='line'><span class="cm">          chdir fails.  */</span>
+</span><span class='line'>           <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strncmp</span> <span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">skip_args</span><span class="p">],</span> <span class="s">&quot;-psn&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+</span><span class='line'>             <span class="p">{</span>
+</span><span class='line'>               <span class="n">skip_args</span> <span class="o">+=</span> <span class="mi">1</span><span class="p">;</span>
+</span><span class='line'>               <span class="n">chdir</span> <span class="p">(</span><span class="n">getenv</span> <span class="p">(</span><span class="s">&quot;HOME&quot;</span><span class="p">));</span>
+</span><span class='line'>             <span class="p">}</span>
+</span><span class='line'>           <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">skip_args</span><span class="o">+</span><span class="mi">1</span> <span class="o">&lt;</span> <span class="n">argc</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">strncmp</span> <span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">skip_args</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="s">&quot;-psn&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+</span><span class='line'>             <span class="p">{</span>
+</span><span class='line'>               <span class="n">skip_args</span> <span class="o">+=</span> <span class="mi">2</span><span class="p">;</span>
+</span><span class='line'>               <span class="n">chdir</span> <span class="p">(</span><span class="n">getenv</span> <span class="p">(</span><span class="s">&quot;HOME&quot;</span><span class="p">));</span>
+</span><span class='line'>             <span class="p">}</span>
+</span><span class='line'>         <span class="p">}</span>
+</span><span class='line'> <span class="err">#</span><span class="n">endif</span>  <span class="cm">/* COCOA */</span>
+</span><span class='line'>     <span class="p">}</span>
+</span><span class='line'> <span class="err">#</span><span class="n">endif</span> <span class="cm">/* HAVE_NS */</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>状況</h2>
+
+<p>ちなみに Mac OS X 10.8.5 では、たとえば
+<code>/usr/local/Cellar/emacs/24.3/Emacs.app/Contents/MacOS/Emacs -psn_0_29637698</code>
+のように起動されていました。</p>
+
+<p>Qiita の記事では Dock から起動した時のことを書いていますが、
+<code>open -a Emacs.app</code> のように起動しても同じでした。</p>
+
+<p>RubyMotion で最小限のカレントディレクトリを表示するだけのアプリを作って試してみたところ、
+起動時にカレントディレクトリが <code>/</code> になっているのは
+Cocoa アプリでは普通の動作のようでした。</p>
+
+<h2>対応状況</h2>
+
+<p><a href="http://osdir.com/ml/general/2013-10/msg61593.html">ML での情報</a>
+によると trunk には対応がチェックインされているということで、
+調べてみると
+revision 114730 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114730 -->
+と
+revision 114882 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114882 -->
+のパッチをあわせて以下のように対応すれば良さそうに見えました。</p>
+
+<figure class='code'><figcaption><span>emacs.c.diff</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gd">--- src/emacs.c.orig    2013-02-06 13:33:36.000000000 +0900</span>
+</span><span class='line'><span class="gi">+++ src/emacs.c  2013-11-02 22:38:45.000000000 +0900</span>
+</span><span class='line'><span class="gu">@@ -1158,10 +1158,13 @@</span>
+</span><span class='line'>   if (!noninteractive)
+</span><span class='line'>     {
+</span><span class='line'> #ifdef NS_IMPL_COCOA
+</span><span class='line'><span class="gi">+      /* Started from GUI? */</span>
+</span><span class='line'><span class="gi">+      /* FIXME: Do the right thing if getenv returns NULL, or if</span>
+</span><span class='line'><span class="gi">+         chdir fails.  */</span>
+</span><span class='line'><span class="gi">+      if (! inhibit_window_system &amp;&amp; ! isatty (0))</span>
+</span><span class='line'><span class="gi">+        chdir (getenv (&quot;HOME&quot;));</span>
+</span><span class='line'>       if (skip_args &lt; argc)
+</span><span class='line'>         {
+</span><span class='line'><span class="gd">-      /* FIXME: Do the right thing if getenv returns NULL, or if</span>
+</span><span class='line'><span class="gd">-         chdir fails.  */</span>
+</span><span class='line'>           if (!strncmp (argv[skip_args], &quot;-psn&quot;, 4))
+</span><span class='line'>             {
+</span><span class='line'>               skip_args += 1;
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>というわけで homebrew の方に
+<a href="https://github.com/mxcl/homebrew/pull/23897">fix default-directory on Cocoa and Mavericks</a>
+として pull request を出してみました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[rbenvのプラグインを簡単に追加出来るようにするrbenv-plugを作った]]></title>
@@ -2868,79 +3010,6 @@ getter メソッドを定義してしまったのだと思います。</p>
 </span><span class='line'>      <span class="nv">ad-do-it</span><span class="p">))</span>
 </span></code></pre></td></tr></table></div></figure>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 76 回 関西 Debian 勉強会に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-22-kansai-debian-meeting.html"/>
-    <updated>2013-09-22T13:40:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
-    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20130922">第 76 回 関西 Debian 勉強会</a>
-に参加してきました。</p>
-
-<p>「Linuxとサウンドシステム」
-という主に ALSA の話と
-「dgit でソースパッケージを触ってみる」
-という話でした。</p>
-
-<!--more-->
-
-
-<h2>事前課題</h2>
-
-<p>「libasound2-data」が wheezy には無いという無理難題だったので、
-<a href="http://mla.n-z.jp/?debian-users:56906">debian-usersで質問してみた</a>
-ところ、
-<a href="http://mla.n-z.jp/?debian-users:56907">wheezyではlibasound2がインストールされていれば大丈夫</a>
-という話でした。</p>
-
-<h2>Linuxとサウンドシステム</h2>
-
-<p>主に ALSA の話で、
-サウンドシステム周りはいろいろ関連するものが多くて大変そうな印象を受けました。</p>
-
-<p>説明以外の実際にコマンドを試す部分では、</p>
-
-<ul>
-<li><code>/dev/snd/</code></li>
-<li><code>/proc/asound/</code></li>
-<li><code>/proc/asound/cards</code>
-(ALSA が認識しているカードの一覧)</li>
-<li><code>/usr/include/sound/asound.h</code>
-(<code>linux-libc-dev</code> パッケージに入っていた)</li>
-<li><code>/proc/asound/card0/pcm0p/sub0/status</code>
-(再生出来ないときのトラブルシューティングに有用、入力側は pcm0c)</li>
-<li><code>/sys/class/sound/</code></li>
-<li><code>/usr/share/alsa/</code>
-(<code>libasound2</code> の設定ファイルとか)</li>
-</ul>
-
-
-<p>あたりの話がありました。</p>
-
-<p>最終的には時間が足りなくて、続きは次回ということになりました。</p>
-
-<p>VirtualBox に Wheezy を入れた環境を用意していたのですが、
-なぜか音が鳴らなくて、
-最終的に懇親会の時に調べてもらったら、
-結局ボリュームがミュートになっていたというのが
-原因でした。</p>
-
-<h2>dgit でソースパッケージを触ってみる</h2>
-
-<p>いきなり現状は DD (Debian Developer) じゃないと使えないツールという話でした。
-そのうち一般ユーザーでも使えるようになるかも、ということで、
-主に調べた内容の発表でした。</p>
-
-<p><code>dgit</code> を使っているパッケージは
-<a href="http://anonscm.debian.org/gitweb/">http://anonscm.debian.org/gitweb/</a>
-の <code>dgit-repos/</code> でわかるようです。</p>
-
-<p>最後は
-Debian Developer
-の矢吹さんに実際に使えるところを
-デモしてもらえて終わりました。</p>
 ]]></content>
   </entry>
   

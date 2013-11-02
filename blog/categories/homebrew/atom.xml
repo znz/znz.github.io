@@ -4,7 +4,7 @@
   <title><![CDATA[Category: homebrew | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/homebrew/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-30T00:37:45+09:00</updated>
+  <updated>2013-11-02T23:08:33+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,127 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[MavericksでEmacs.appが起動時にホームディレクトリにならない]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-01-emacs-on-mavericks.html"/>
+    <updated>2013-11-01T18:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/emacs-on-mavericks</id>
+    <content type="html"><![CDATA[<p>Mac OS X を Mavericks にあげたら homebrew で入れた
+Emacs.app を起動した時に <code>default-directory</code>
+がホームディレクトリから <code>/</code> に変わってしまっていたので、
+原因を調べてみました。</p>
+
+<!--more-->
+
+
+<h2>調べたきっかけ</h2>
+
+<p>きっかけは
+<a href="http://qiita.com/ksato9700/items/1ec373895b9693529f82">Mavericksにアップデートして遭遇した不具合　まとめ</a>
+を見て自分の環境だけで起きている現象ではないと知ったからです。</p>
+
+<h2>原因</h2>
+
+<p>Emacs のソースの以下の部分で <code>-psn</code> で始まる引数の有無で
+ホームディレクトリに移動するかどうかを判定しているのに、
+Mavericks だと引数なしで起動されるようになったからのようです。</p>
+
+<p>```c emacs-24.3/src/emacs.c
+ #ifdef HAVE_NS
+   ns_pool = ns_alloc_autorelease_pool ();
+   if (!noninteractive)</p>
+
+<pre><code> {
+</code></pre>
+
+<p> #ifdef NS_IMPL_COCOA</p>
+
+<pre><code>   if (skip_args &lt; argc)
+     {
+  /* FIXME: Do the right thing if getenv returns NULL, or if
+     chdir fails.  */
+       if (!strncmp (argv[skip_args], "-psn", 4))
+         {
+           skip_args += 1;
+           chdir (getenv ("HOME"));
+         }
+       else if (skip_args+1 &lt; argc &amp;&amp; !strncmp (argv[skip_args+1], "-psn", 4))
+         {
+           skip_args += 2;
+           chdir (getenv ("HOME"));
+         }
+     }
+</code></pre>
+
+<p> #endif  /<em> COCOA </em>/</p>
+
+<pre><code> }
+</code></pre>
+
+<p> #endif /<em> HAVE_NS </em>/
+```</p>
+
+<h2>状況</h2>
+
+<p>ちなみに Mac OS X 10.8.5 では、たとえば
+<code>/usr/local/Cellar/emacs/24.3/Emacs.app/Contents/MacOS/Emacs -psn_0_29637698</code>
+のように起動されていました。</p>
+
+<p>Qiita の記事では Dock から起動した時のことを書いていますが、
+<code>open -a Emacs.app</code> のように起動しても同じでした。</p>
+
+<p>RubyMotion で最小限のカレントディレクトリを表示するだけのアプリを作って試してみたところ、
+起動時にカレントディレクトリが <code>/</code> になっているのは
+Cocoa アプリでは普通の動作のようでした。</p>
+
+<h2>対応状況</h2>
+
+<p><a href="http://osdir.com/ml/general/2013-10/msg61593.html">ML での情報</a>
+によると trunk には対応がチェックインされているということで、
+調べてみると
+revision 114730 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114730 -->
+と
+revision 114882 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114882 -->
+のパッチをあわせて以下のように対応すれば良さそうに見えました。</p>
+
+<p>```diff emacs.c.diff
+&mdash;&ndash; src/emacs.c.orig    2013-02-06 13:33:36.000000000 +0900
++++ src/emacs.c 2013-11-02 22:38:45.000000000 +0900
+@@ -1158,10 +1158,13 @@
+   if (!noninteractive)</p>
+
+<pre><code> {
+</code></pre>
+
+<p> #ifdef NS_IMPL_COCOA
++      /<em> Started from GUI? </em>/
++      /<em> FIXME: Do the right thing if getenv returns NULL, or if
++         chdir fails.  </em>/
++      if (! inhibit_window_system &amp;&amp; ! isatty (0))
++        chdir (getenv (&ldquo;HOME&rdquo;));</p>
+
+<pre><code>   if (skip_args &lt; argc)
+     {
+</code></pre>
+
+<ul>
+<li>  /* FIXME: Do the right thing if getenv returns NULL, or if</li>
+<li><pre><code> chdir fails.  */
+   if (!strncmp (argv[skip_args], "-psn", 4))
+     {
+       skip_args += 1;
+</code></pre>
+
+<p>```</p></li>
+</ul>
+
+
+<p>というわけで homebrew の方に
+<a href="https://github.com/mxcl/homebrew/pull/23897">fix default-directory on Cocoa and Mavericks</a>
+として pull request を出してみました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Mac OS X で ansible を入れてみた]]></title>

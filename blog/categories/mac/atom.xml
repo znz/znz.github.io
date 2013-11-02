@@ -4,7 +4,7 @@
   <title><![CDATA[Category: mac | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/mac/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-10-30T00:37:45+09:00</updated>
+  <updated>2013-11-02T23:08:33+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,127 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[MavericksでEmacs.appが起動時にホームディレクトリにならない]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-01-emacs-on-mavericks.html"/>
+    <updated>2013-11-01T18:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/emacs-on-mavericks</id>
+    <content type="html"><![CDATA[<p>Mac OS X を Mavericks にあげたら homebrew で入れた
+Emacs.app を起動した時に <code>default-directory</code>
+がホームディレクトリから <code>/</code> に変わってしまっていたので、
+原因を調べてみました。</p>
+
+<!--more-->
+
+
+<h2>調べたきっかけ</h2>
+
+<p>きっかけは
+<a href="http://qiita.com/ksato9700/items/1ec373895b9693529f82">Mavericksにアップデートして遭遇した不具合　まとめ</a>
+を見て自分の環境だけで起きている現象ではないと知ったからです。</p>
+
+<h2>原因</h2>
+
+<p>Emacs のソースの以下の部分で <code>-psn</code> で始まる引数の有無で
+ホームディレクトリに移動するかどうかを判定しているのに、
+Mavericks だと引数なしで起動されるようになったからのようです。</p>
+
+<p>```c emacs-24.3/src/emacs.c
+ #ifdef HAVE_NS
+   ns_pool = ns_alloc_autorelease_pool ();
+   if (!noninteractive)</p>
+
+<pre><code> {
+</code></pre>
+
+<p> #ifdef NS_IMPL_COCOA</p>
+
+<pre><code>   if (skip_args &lt; argc)
+     {
+  /* FIXME: Do the right thing if getenv returns NULL, or if
+     chdir fails.  */
+       if (!strncmp (argv[skip_args], "-psn", 4))
+         {
+           skip_args += 1;
+           chdir (getenv ("HOME"));
+         }
+       else if (skip_args+1 &lt; argc &amp;&amp; !strncmp (argv[skip_args+1], "-psn", 4))
+         {
+           skip_args += 2;
+           chdir (getenv ("HOME"));
+         }
+     }
+</code></pre>
+
+<p> #endif  /<em> COCOA </em>/</p>
+
+<pre><code> }
+</code></pre>
+
+<p> #endif /<em> HAVE_NS </em>/
+```</p>
+
+<h2>状況</h2>
+
+<p>ちなみに Mac OS X 10.8.5 では、たとえば
+<code>/usr/local/Cellar/emacs/24.3/Emacs.app/Contents/MacOS/Emacs -psn_0_29637698</code>
+のように起動されていました。</p>
+
+<p>Qiita の記事では Dock から起動した時のことを書いていますが、
+<code>open -a Emacs.app</code> のように起動しても同じでした。</p>
+
+<p>RubyMotion で最小限のカレントディレクトリを表示するだけのアプリを作って試してみたところ、
+起動時にカレントディレクトリが <code>/</code> になっているのは
+Cocoa アプリでは普通の動作のようでした。</p>
+
+<h2>対応状況</h2>
+
+<p><a href="http://osdir.com/ml/general/2013-10/msg61593.html">ML での情報</a>
+によると trunk には対応がチェックインされているということで、
+調べてみると
+revision 114730 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114730 -->
+と
+revision 114882 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114882 -->
+のパッチをあわせて以下のように対応すれば良さそうに見えました。</p>
+
+<p>```diff emacs.c.diff
+&mdash;&ndash; src/emacs.c.orig    2013-02-06 13:33:36.000000000 +0900
++++ src/emacs.c 2013-11-02 22:38:45.000000000 +0900
+@@ -1158,10 +1158,13 @@
+   if (!noninteractive)</p>
+
+<pre><code> {
+</code></pre>
+
+<p> #ifdef NS_IMPL_COCOA
++      /<em> Started from GUI? </em>/
++      /<em> FIXME: Do the right thing if getenv returns NULL, or if
++         chdir fails.  </em>/
++      if (! inhibit_window_system &amp;&amp; ! isatty (0))
++        chdir (getenv (&ldquo;HOME&rdquo;));</p>
+
+<pre><code>   if (skip_args &lt; argc)
+     {
+</code></pre>
+
+<ul>
+<li>  /* FIXME: Do the right thing if getenv returns NULL, or if</li>
+<li><pre><code> chdir fails.  */
+   if (!strncmp (argv[skip_args], "-psn", 4))
+     {
+       skip_args += 1;
+</code></pre>
+
+<p>```</p></li>
+</ul>
+
+
+<p>というわけで homebrew の方に
+<a href="https://github.com/mxcl/homebrew/pull/23897">fix default-directory on Cocoa and Mavericks</a>
+として pull request を出してみました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Mac OS X で ansible を入れてみた]]></title>
@@ -567,37 +688,6 @@ done
 オプションなしの <code>brew reinstall</code> の時に使われるオプションを
 埋め込んでおくという用途に使うのには向いていないということが
 わかりました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Mac で rabbit が動かなくなったので brew reinstall したら直った]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-09-rabbit-on-mac.html"/>
-    <updated>2013-09-09T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rabbit-on-mac</id>
-    <content type="html"><![CDATA[<p>いつの間にか動かなくなっていた rabbit (2.1.1) が <code>brew reinstall</code> で動くようになったという話です。</p>
-
-<!--more-->
-
-
-<p>現象としては rabbit のウィンドウが出てくるのに無反応で、スライドの内容も表示されないし、クリックにも反応せず、 <code>Ctrl+C</code> での停止もきかないので <code>kill -KILL</code> で強制終了するしかないという状態でした。</p>
-
-<p>現象から考えて、リンクしているライブラリとの不整合が原因だろうと予想してインストール手順をやり直すことにしました。</p>
-
-<p><a href="http://rabbit-shocker.org/ja/install/homebrew.html">Mac OS XでHomebrewを使ったインストール方法</a> の「brew install と brew link の実行」の手順を以下のようにちょっと変更してやり直したら動くようになりました。</p>
-
-<p><code>
-brew reinstall cairo
-brew unlink cairo
-brew link cairo
-brew unlink pixman
-brew link --overwrite pixman
-brew reinstall pango
-brew reinstall gtk+
-brew reinstall poppler --with-glib
-</code></p>
-
-<p>これでも動かなければ gem も uninstall して install し直す予定でした。</p>
 ]]></content>
   </entry>
   
