@@ -38,6 +38,17 @@ audio グループに属しているか、コンソールから直接ログイ�
 によると udev の管理用のフラグとして使われているようでした。
 今回の件とは関係なさそうだったので、これ以上深追いはしていません。
 
+## AppArmor
+
+`/etc/apparmor.d/abstractions/audio` に
+`/dev/snd/*      rw,` とあるので、
+念のため
+`sudo service apparmor stop`
+で `AppArmor` を止めて試してみましたが、
+変化が無かったので、
+`sudo service apparmor start`
+で戻しました。
+
 ## カーネルのソースコード探索
 
 `strace` などで確認しても、
