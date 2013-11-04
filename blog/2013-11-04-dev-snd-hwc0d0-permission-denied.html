@@ -5,11 +5,18 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: oauth2 - @znz blog</title>
+  <title>/dev/snd/hwC0D0でPermission deniedになる問題を調べた - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Category: oauth2">
+  <meta name="description" content="/dev/snd/hwC0D0 を O_RDWR で open(2) するところで
+Permission denied になるという話
+(
+ツイート、
+Ubuntu日本語フォーラム
+)
+が気になったので、調べてみました。 結論 最終的にどうすれば良いか知りたい人向けの情報としては、
+setcap &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +25,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jpblog/categories/oauth2/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-11-04-dev-snd-hwc0d0-permission-denied.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,36 +83,210 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: oauth2</h1>
+    
+      <h1 class="entry-title">/dev/snd/hwC0D0でPermission deniedになる問題を調べた</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-11-04T14:22:00+09:00" pubdate data-updated="true">2013-11-04 (Mon)</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
+<div class="entry-content"><p><code>/dev/snd/hwC0D0</code> を <code>O_RDWR</code> で <code>open(2)</code> するところで
+<code>Permission denied</code> になるという話
+(
+<a href="https://twitter.com/takaswie/status/397014733494026240">ツイート</a>、
+<a href="https://forums.ubuntulinux.jp/viewtopic.php?pid=100488#p100488">Ubuntu日本語フォーラム</a>
+)
+が気になったので、調べてみました。</p>
 
-  
-  <h2>2013</h2>
-
-<article>
-  
-<h1><a href="/blog/2013-10-08-doorkeeper-api-client.html">doorkeeper gem の API のクライアント</a></h1>
-<time datetime="2013-10-08T21:06:00+09:00" pubdate><span class='month'>Oct</span> <span class='day'>08</span> <span class='year'>2013</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/devise/'>devise</a>, <a class='category' href='/blog/categories/doorkeeper/'>doorkeeper</a>, <a class='category' href='/blog/categories/oauth2/'>oauth2</a>, <a class='category' href='/blog/categories/omniauth/'>omniauth</a>, <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a></span>
-</footer>
+<!--more-->
 
 
-</article>
+<h2>結論</h2>
+
+<p>最終的にどうすれば良いか知りたい人向けの情報としては、
+<code>setcap cap_sys_rawio=ep filename</code>
+でケーパビリティ (capability) を設定する、ということになります。</p>
+
+<p>以下は、その結論にたどり着くまでに調べたことのメモです。</p>
+
+<h2>パーミッションと ACL</h2>
+
+<p><a href="http://blog.n-z.jp/blog/2013-10-27-kansai-debian-meeting.html">第 77 回 関西 Debian 勉強会に参加した</a>
+で書いたように、
+audio グループに属しているか、コンソールから直接ログインしていれば
+パーミッションの問題はないはずです。</p>
+
+<h2>余談: デバイスの sticky bit</h2>
+
+<p><code>crw-rw---T</code> になっていて、
+もしかして末尾の sticky bit が影響しているのかと思って調べてみたところ、
+<a href="http://lists.debian.org/debian-user/2012/02/msg01273.html">Re: Sticky bit on device files?</a>
+によると udev の管理用のフラグとして使われているようでした。
+今回の件とは関係なさそうだったので、これ以上深追いはしていません。</p>
+
+<h2>カーネルのソースコード探索</h2>
+
+<p><code>strace</code> などで確認しても、
+ユーザーランドでは <code>EACCES</code> が返ってくるとしかわからないので、
+こうなったらカーネルのソースコードから <code>EACCES</code> を返しているところを
+探すしかないということで、
+<code>apt-get source linux-image-$(uname -r)</code>
+でソースコードをダウンロードして探してみました。</p>
+
+<p><code>grep -r EACCES sound</code> で探してみると
+<code>sound/pci/hda/hda_hwdep.c</code> で以下のように
+<code>CAP_SYS_RAWIO</code> をみていることがわかりました。</p>
+
+<figure class='code'><figcaption><span>sound/pci/hda/hda_hwdep.c</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'> <span class="k">static</span> <span class="kt">int</span> <span class="nf">hda_hwdep_open</span><span class="p">(</span><span class="k">struct</span> <span class="n">snd_hwdep</span> <span class="o">*</span><span class="n">hw</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">)</span>
+</span><span class='line'> <span class="p">{</span>
+</span><span class='line'> <span class="err">#</span><span class="n">ifndef</span> <span class="n">CONFIG_SND_DEBUG_VERBOSE</span>
+</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">capable</span><span class="p">(</span><span class="n">CAP_SYS_RAWIO</span><span class="p">))</span>
+</span><span class='line'>      <span class="k">return</span> <span class="o">-</span><span class="n">EACCES</span><span class="p">;</span>
+</span><span class='line'> <span class="err">#</span><span class="n">endif</span>
+</span><span class='line'>  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'> <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Linux のケーパビリティ (capability)</h2>
+
+<p><a href="http://linuxjm.sourceforge.jp/html/LDP_man-pages/man7/capabilities.7.html">Man page of CAPABILITIES</a>
+が関係しているということがわかったところで、
+設定方法も調べてみると、
+<code>setcap</code> で設定できるとわかったので、
+以下のような簡単なテストプログラムを用意して、
+<code>sudo setcap cap_sys_rawio=ep ./a.out</code>
+でケーパビリティを設定すると
+<code>open(2)</code>
+に成功するのを確認できました。
+<code>cap_sys_rawio=ep</code> は危険そうなので、
+テストプログラムとはいえ、
+任意のパスを受け取れるようにするのは止めた方が良さそうに思いました。</p>
+
+<figure class='code'><figcaption><span>open-hwC0D0.c</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'> <span class="err">#</span><span class="n">include</span> <span class="o">&lt;</span><span class="n">sys</span><span class="o">/</span><span class="n">types</span><span class="p">.</span><span class="n">h</span><span class="o">&gt;</span>
+</span><span class='line'> <span class="err">#</span><span class="n">include</span> <span class="o">&lt;</span><span class="n">sys</span><span class="o">/</span><span class="n">stat</span><span class="p">.</span><span class="n">h</span><span class="o">&gt;</span>
+</span><span class='line'> <span class="err">#</span><span class="n">include</span> <span class="o">&lt;</span><span class="n">fcntl</span><span class="p">.</span><span class="n">h</span><span class="o">&gt;</span>
+</span><span class='line'> <span class="err">#</span><span class="n">include</span> <span class="o">&lt;</span><span class="n">stdio</span><span class="p">.</span><span class="n">h</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'> <span class="kt">int</span> <span class="n">main</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>  <span class="n">open</span><span class="p">(</span><span class="s">&quot;/dev/snd/hwC0D0&quot;</span><span class="p">,</span> <span class="n">O_RDWR</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">perror</span><span class="p">(</span><span class="s">&quot;open&quot;</span><span class="p">);</span>
+</span><span class='line'>  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'> <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-11-04T14:22:00+09:00" pubdate data-updated="true">2013-11-04 (Mon)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/linux/'>linux</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-11-04-dev-snd-hwc0d0-permission-denied.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-11-04-dev-snd-hwc0d0-permission-denied.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-11-04-dev-snd-hwc0d0-permission-denied.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013-11-02-reading-land-of-lisp-3.html" title="Previous Post: Land of Lisp 読書会 第3回(兵庫県)に参加してきた">&laquo; Land of Lisp 読書会 第3回(兵庫県)に参加してきた</a>
+      
+      
+    </p>
+  </footer>
 </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -206,7 +387,10 @@
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-11-04-dev-snd-hwc0d0-permission-denied.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-11-04-dev-snd-hwc0d0-permission-denied.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

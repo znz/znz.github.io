@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-11-03T00:08:32+09:00</updated>
+  <updated>2013-11-04T14:44:14+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,117 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[/dev/snd/hwC0D0でPermission deniedになる問題を調べた]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-04-dev-snd-hwc0d0-permission-denied.html"/>
+    <updated>2013-11-04T14:22:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/dev-snd-hwc0d0-permission-denied</id>
+    <content type="html"><![CDATA[<p><code>/dev/snd/hwC0D0</code> を <code>O_RDWR</code> で <code>open(2)</code> するところで
+<code>Permission denied</code> になるという話
+(
+<a href="https://twitter.com/takaswie/status/397014733494026240">ツイート</a>、
+<a href="https://forums.ubuntulinux.jp/viewtopic.php?pid=100488#p100488">Ubuntu日本語フォーラム</a>
+)
+が気になったので、調べてみました。</p>
+
+<!--more-->
+
+
+<h2>結論</h2>
+
+<p>最終的にどうすれば良いか知りたい人向けの情報としては、
+<code>setcap cap_sys_rawio=ep filename</code>
+でケーパビリティ (capability) を設定する、ということになります。</p>
+
+<p>以下は、その結論にたどり着くまでに調べたことのメモです。</p>
+
+<h2>パーミッションと ACL</h2>
+
+<p><a href="http://blog.n-z.jp/blog/2013-10-27-kansai-debian-meeting.html">第 77 回 関西 Debian 勉強会に参加した</a>
+で書いたように、
+audio グループに属しているか、コンソールから直接ログインしていれば
+パーミッションの問題はないはずです。</p>
+
+<h2>余談: デバイスの sticky bit</h2>
+
+<p><code>crw-rw---T</code> になっていて、
+もしかして末尾の sticky bit が影響しているのかと思って調べてみたところ、
+<a href="http://lists.debian.org/debian-user/2012/02/msg01273.html">Re: Sticky bit on device files?</a>
+によると udev の管理用のフラグとして使われているようでした。
+今回の件とは関係なさそうだったので、これ以上深追いはしていません。</p>
+
+<h2>カーネルのソースコード探索</h2>
+
+<p><code>strace</code> などで確認しても、
+ユーザーランドでは <code>EACCES</code> が返ってくるとしかわからないので、
+こうなったらカーネルのソースコードから <code>EACCES</code> を返しているところを
+探すしかないということで、
+<code>apt-get source linux-image-$(uname -r)</code>
+でソースコードをダウンロードして探してみました。</p>
+
+<p><code>grep -r EACCES sound</code> で探してみると
+<code>sound/pci/hda/hda_hwdep.c</code> で以下のように
+<code>CAP_SYS_RAWIO</code> をみていることがわかりました。</p>
+
+<figure class='code'><figcaption><span>sound/pci/hda/hda_hwdep.c</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'> <span class="k">static</span> <span class="kt">int</span> <span class="nf">hda_hwdep_open</span><span class="p">(</span><span class="k">struct</span> <span class="n">snd_hwdep</span> <span class="o">*</span><span class="n">hw</span><span class="p">,</span> <span class="k">struct</span> <span class="n">file</span> <span class="o">*</span><span class="n">file</span><span class="p">)</span>
+</span><span class='line'> <span class="p">{</span>
+</span><span class='line'> <span class="err">#</span><span class="n">ifndef</span> <span class="n">CONFIG_SND_DEBUG_VERBOSE</span>
+</span><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">capable</span><span class="p">(</span><span class="n">CAP_SYS_RAWIO</span><span class="p">))</span>
+</span><span class='line'>      <span class="k">return</span> <span class="o">-</span><span class="n">EACCES</span><span class="p">;</span>
+</span><span class='line'> <span class="err">#</span><span class="n">endif</span>
+</span><span class='line'>  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'> <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Linux のケーパビリティ (capability)</h2>
+
+<p><a href="http://linuxjm.sourceforge.jp/html/LDP_man-pages/man7/capabilities.7.html">Man page of CAPABILITIES</a>
+が関係しているということがわかったところで、
+設定方法も調べてみると、
+<code>setcap</code> で設定できるとわかったので、
+以下のような簡単なテストプログラムを用意して、
+<code>sudo setcap cap_sys_rawio=ep ./a.out</code>
+でケーパビリティを設定すると
+<code>open(2)</code>
+に成功するのを確認できました。
+<code>cap_sys_rawio=ep</code> は危険そうなので、
+テストプログラムとはいえ、
+任意のパスを受け取れるようにするのは止めた方が良さそうに思いました。</p>
+
+<figure class='code'><figcaption><span>open-hwC0D0.c</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'> <span class="err">#</span><span class="n">include</span> <span class="o">&lt;</span><span class="n">sys</span><span class="o">/</span><span class="n">types</span><span class="p">.</span><span class="n">h</span><span class="o">&gt;</span>
+</span><span class='line'> <span class="err">#</span><span class="n">include</span> <span class="o">&lt;</span><span class="n">sys</span><span class="o">/</span><span class="n">stat</span><span class="p">.</span><span class="n">h</span><span class="o">&gt;</span>
+</span><span class='line'> <span class="err">#</span><span class="n">include</span> <span class="o">&lt;</span><span class="n">fcntl</span><span class="p">.</span><span class="n">h</span><span class="o">&gt;</span>
+</span><span class='line'> <span class="err">#</span><span class="n">include</span> <span class="o">&lt;</span><span class="n">stdio</span><span class="p">.</span><span class="n">h</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'> <span class="kt">int</span> <span class="n">main</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>  <span class="n">open</span><span class="p">(</span><span class="s">&quot;/dev/snd/hwC0D0&quot;</span><span class="p">,</span> <span class="n">O_RDWR</span><span class="p">);</span>
+</span><span class='line'>  <span class="n">perror</span><span class="p">(</span><span class="s">&quot;open&quot;</span><span class="p">);</span>
+</span><span class='line'>  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'> <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Land of Lisp 読書会 第3回(兵庫県)に参加してきた]]></title>
@@ -3020,129 +3131,6 @@ Multiple selects
 で master ブランチに戻るなり、
 消してしまって、
 また作業する時に clone し直すなりします。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[aasm gem の初期状態設定]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-30-aasm.html"/>
-    <updated>2013-09-30T15:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/aasm</id>
-    <content type="html"><![CDATA[<p><code>aasm</code> gem の使い方が悪くて、初期状態の値としてデータベースに nil が保存されてしまっていたという話です。</p>
-
-<!--more-->
-
-
-<p>確認したバージョンは ruby 2.0.0 + rails 3.2.14 + aasm 3.0.22 です。</p>
-
-<p>例として以下のような感じの使い方をしてしまっていて、
-<code>status</code> メソッドで <code>nil</code> を返さないようにしていたら
-データベースには <code>nil</code> が保存されるようになってしまって、
-<code>aasm</code> 以外 (<code>ransack</code> とか) からデータベースにアクセスした時に
-問題になりました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">status</span>
-</span><span class='line'>    <span class="c1"># このメソッドがダメ</span>
-</span><span class='line'>    <span class="n">read_attribute</span><span class="p">(</span><span class="ss">:status</span><span class="p">)</span> <span class="o">||</span> <span class="ss">:starting</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="kp">include</span> <span class="no">AASM</span>
-</span><span class='line'>  <span class="n">aasm</span> <span class="ss">column</span><span class="p">:</span> <span class="s2">&quot;status&quot;</span> <span class="k">do</span>
-</span><span class='line'>    <span class="n">state</span> <span class="ss">:starting</span><span class="p">,</span> <span class="ss">initial</span><span class="p">:</span> <span class="kp">true</span>
-</span><span class='line'>    <span class="n">state</span> <span class="ss">:running</span>
-</span><span class='line'>    <span class="n">state</span> <span class="ss">:stopped</span>
-</span><span class='line'>    <span class="n">state</span> <span class="ss">:finished</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="n">event</span> <span class="ss">:run</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">transitions</span> <span class="ss">from</span><span class="p">:</span> <span class="o">[</span><span class="ss">:starting</span><span class="p">,</span> <span class="ss">:stopped</span><span class="o">]</span><span class="p">,</span> <span class="ss">to</span><span class="p">:</span> <span class="ss">:running</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="n">event</span> <span class="ss">:stop</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">transitions</span> <span class="ss">from</span><span class="p">:</span> <span class="o">[</span><span class="ss">:starting</span><span class="p">,</span> <span class="ss">:running</span><span class="o">]</span><span class="p">,</span> <span class="ss">to</span><span class="p">:</span> <span class="ss">:stopped</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="n">event</span> <span class="ss">:finish</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">transitions</span> <span class="ss">from</span><span class="p">:</span> <span class="o">[</span><span class="ss">:running</span><span class="o">]</span><span class="p">,</span> <span class="ss">to</span><span class="p">:</span> <span class="ss">:finished</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>aasm</code> としては
-<a href="https://github.com/aasm/aasm/blob/master/lib/aasm/persistence/active_record_persistence.rb">AASM::Persistence::ActiveRecordPersistence</a>
-で
-<code>before_validation :aasm_ensure_initial_state, :on =&gt; :create</code>
-相当のフックを追加していて、
-<code>model.valid?</code>
-を実行すれば
-<code>model.status</code>
-が設定されるようになっていました。</p>
-
-<p>たぶん使い始めた時に
-<code>rails console</code>
-で
-<code>model = Model.new</code>
-した直後の
-<code>model.status</code>
-が
-<code>nil</code>
-だったので、
-どうにかしようと思って
-getter メソッドを定義してしまったのだと思います。</p>
-
-<p>このせいで以下のような
-<code>ransack</code>
-を使った検索フォームで初期状態のチェックを入れても
-うまく検索出来ないという問題が起きていました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="p">=</span> <span class="n">search_form_for</span> <span class="vi">@q</span><span class="p">,</span> <span class="ss">html</span><span class="p">:</span> <span class="p">{</span> <span class="ss">class</span><span class="p">:</span> <span class="s2">&quot;form-search&quot;</span> <span class="p">}</span> <span class="k">do</span> <span class="o">|</span><span class="n">f</span><span class="o">|</span>
-</span><span class='line'>  <span class="nt">%table</span>
-</span><span class='line'>    <span class="cp">-# ...</span>
-</span><span class='line'>    <span class="nt">%tr</span>
-</span><span class='line'>      <span class="nt">%td</span><span class="p">=</span> <span class="n">f</span><span class="o">.</span><span class="n">label</span> <span class="ss">:status_in</span>
-</span><span class='line'>      <span class="nt">%td</span>
-</span><span class='line'>        <span class="p">-</span> <span class="no">Model</span><span class="o">.</span><span class="n">aasm</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">status</span><span class="o">|</span>
-</span><span class='line'>          <span class="nt">%label</span>
-</span><span class='line'>            <span class="p">=</span> <span class="n">check_box_tag</span> <span class="s2">&quot;q[status_in][]&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">.</span><span class="n">to_s</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">try</span><span class="p">(</span><span class="ss">:[]</span><span class="p">,</span> <span class="ss">:q</span><span class="p">)</span><span class="o">.</span><span class="n">try</span><span class="p">(</span><span class="ss">:[]</span><span class="p">,</span> <span class="ss">:status_in</span><span class="p">)</span><span class="o">.</span><span class="n">try</span><span class="p">(</span><span class="ss">:include?</span><span class="p">,</span> <span class="n">status</span><span class="o">.</span><span class="n">to_s</span><span class="p">),</span> <span class="nb">id</span><span class="p">:</span> <span class="s2">&quot;q_status_in_</span><span class="si">#{</span><span class="n">status</span><span class="o">.</span><span class="n">to_s</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span class='line'>            <span class="p">=</span> <span class="n">status</span><span class="o">.</span><span class="n">localized_name</span>
-</span><span class='line'>    <span class="cp">-# ...</span>
-</span></code></pre></td></tr></table></div></figure>
-
 ]]></content>
   </entry>
   

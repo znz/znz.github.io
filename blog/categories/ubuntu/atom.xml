@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-11-03T00:08:50+09:00</updated>
+  <updated>2013-11-04T14:44:14+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,108 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[/dev/snd/hwC0D0でPermission deniedになる問題を調べた]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-04-dev-snd-hwc0d0-permission-denied.html"/>
+    <updated>2013-11-04T14:22:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/dev-snd-hwc0d0-permission-denied</id>
+    <content type="html"><![CDATA[<p><code>/dev/snd/hwC0D0</code> を <code>O_RDWR</code> で <code>open(2)</code> するところで
+<code>Permission denied</code> になるという話
+(
+<a href="https://twitter.com/takaswie/status/397014733494026240">ツイート</a>、
+<a href="https://forums.ubuntulinux.jp/viewtopic.php?pid=100488#p100488">Ubuntu日本語フォーラム</a>
+)
+が気になったので、調べてみました。</p>
+
+<!--more-->
+
+
+<h2>結論</h2>
+
+<p>最終的にどうすれば良いか知りたい人向けの情報としては、
+<code>setcap cap_sys_rawio=ep filename</code>
+でケーパビリティ (capability) を設定する、ということになります。</p>
+
+<p>以下は、その結論にたどり着くまでに調べたことのメモです。</p>
+
+<h2>パーミッションと ACL</h2>
+
+<p><a href="http://blog.n-z.jp/blog/2013-10-27-kansai-debian-meeting.html">第 77 回 関西 Debian 勉強会に参加した</a>
+で書いたように、
+audio グループに属しているか、コンソールから直接ログインしていれば
+パーミッションの問題はないはずです。</p>
+
+<h2>余談: デバイスの sticky bit</h2>
+
+<p><code>crw-rw---T</code> になっていて、
+もしかして末尾の sticky bit が影響しているのかと思って調べてみたところ、
+<a href="http://lists.debian.org/debian-user/2012/02/msg01273.html">Re: Sticky bit on device files?</a>
+によると udev の管理用のフラグとして使われているようでした。
+今回の件とは関係なさそうだったので、これ以上深追いはしていません。</p>
+
+<h2>カーネルのソースコード探索</h2>
+
+<p><code>strace</code> などで確認しても、
+ユーザーランドでは <code>EACCES</code> が返ってくるとしかわからないので、
+こうなったらカーネルのソースコードから <code>EACCES</code> を返しているところを
+探すしかないということで、
+<code>apt-get source linux-image-$(uname -r)</code>
+でソースコードをダウンロードして探してみました。</p>
+
+<p><code>grep -r EACCES sound</code> で探してみると
+<code>sound/pci/hda/hda_hwdep.c</code> で以下のように
+<code>CAP_SYS_RAWIO</code> をみていることがわかりました。</p>
+
+<p>```c sound/pci/hda/hda_hwdep.c
+ static int hda_hwdep_open(struct snd_hwdep <em>hw, struct file </em>file)
+ {
+ #ifndef CONFIG_SND_DEBUG_VERBOSE</p>
+
+<pre><code>if (!capable(CAP_SYS_RAWIO))
+    return -EACCES;
+</code></pre>
+
+<p> #endif</p>
+
+<pre><code>return 0;
+</code></pre>
+
+<p> }
+```</p>
+
+<h2>Linux のケーパビリティ (capability)</h2>
+
+<p><a href="http://linuxjm.sourceforge.jp/html/LDP_man-pages/man7/capabilities.7.html">Man page of CAPABILITIES</a>
+が関係しているということがわかったところで、
+設定方法も調べてみると、
+<code>setcap</code> で設定できるとわかったので、
+以下のような簡単なテストプログラムを用意して、
+<code>sudo setcap cap_sys_rawio=ep ./a.out</code>
+でケーパビリティを設定すると
+<code>open(2)</code>
+に成功するのを確認できました。
+<code>cap_sys_rawio=ep</code> は危険そうなので、
+テストプログラムとはいえ、
+任意のパスを受け取れるようにするのは止めた方が良さそうに思いました。</p>
+
+<p>```c open-hwC0D0.c
+ #include &lt;sys/types.h>
+ #include &lt;sys/stat.h>
+ #include &lt;fcntl.h>
+ #include &lt;stdio.h></p>
+
+<p> int main() {</p>
+
+<pre><code>open("/dev/snd/hwC0D0", O_RDWR);
+perror("open");
+return 0;
+</code></pre>
+
+<p> }
+```</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[LC_COLLATEの問題でuniqで丸数字が同一視されてしまう]]></title>
