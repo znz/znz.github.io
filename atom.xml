@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-11-13T18:37:54+09:00</updated>
+  <updated>2013-11-14T00:12:27+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -108,6 +108,207 @@ OS 自体を再起動したりしていました。</p>
 <p>で反映します。</p>
 
 <p><code>StartInterval</code> は秒単位なので <code>600</code> だと10分間隔です。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[zshでcdの履歴管理に標準添付のcdrを使う]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-12-zsh-cdr.html"/>
+    <updated>2013-11-12T01:16:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/zsh-cdr</id>
+    <content type="html"><![CDATA[<p>zsh は <code>cd -[TAB]</code> で補完できる directory stack が
+<code>setopt autopushd</code> と組み合わせていると非常に便利なので、
+<a href="https://github.com/znz/dot-shell/blob/c197f9e3232e8dca910be4ea4ae555cc60468692/profile.d/50dirstack.zsh">directory stack を自前で保存する仕組みを作った</a>り、
+GNU screen の他の WINDOW のディレクトリに移動するための
+<a href="https://github.com/znz/dot-shell/blob/523e3adaf9b776f05185acfb24bc19ef5f22c418/profile.d/70cds.zsh">cdsというコマンド</a>
+を作ったりして、
+現状でもあまり困っていませんでした。</p>
+
+<p>しかし、 <code>zshcontrib(1)</code> に入っているものも試してみるのが
+良さそうと思って試してみました。</p>
+
+<!--more-->
+
+
+<h2>ドキュメント</h2>
+
+<p>ドキュメントは
+<code>man zshcontrib</code> か、
+<code>pager $^fpath/cdr(N)</code> で読めます。</p>
+
+<h2>cdr コマンドの使い方</h2>
+
+<p><code>cdr [TAB]</code> で補完して使ったり、
+<code>cdr -l</code> で一覧を出したり、
+<code>cdr -e</code> で一覧を編集したりできます。</p>
+
+<p><code>cdr -e</code> の編集は <code>zle</code> なので、
+<code>bindkey -e</code> なら、
+普通のカーソル移動などの他に
+ただの <code>Enter</code> だと編集終了になってしまうので、
+<code>^[^M</code> (<code>ESC</code> に続けて <code>Enter</code>) で改行を入力して行を増やしたり分割したり
+出来ることを知っておけば充分だと思います。</p>
+
+<h2>設定全体</h2>
+
+<p>全体としては以下のように設定してみました。</p>
+
+<p>以降は設定内容を個別に解説していきます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="k">if</span> <span class="o">[[</span> -n <span class="k">$(</span><span class="nb">echo</span> <span class="k">${</span><span class="p">^fpath</span><span class="k">}</span>/chpwd_recent_dirs<span class="o">(</span>N<span class="k">)</span><span class="o">)</span> <span class="o">&amp;&amp;</span> -n <span class="k">$(</span><span class="nb">echo</span> <span class="k">${</span><span class="p">^fpath</span><span class="k">}</span>/cdr<span class="o">(</span>N<span class="k">)</span><span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+</span><span class='line'>autoload -Uz chpwd_recent_dirs cdr add-zsh-hook
+</span><span class='line'>  add-zsh-hook chpwd chpwd_recent_dirs
+</span><span class='line'>  zstyle <span class="s1">&#39;:completion:*:*:cdr:*:*&#39;</span> menu selection
+</span><span class='line'>  zstyle <span class="s1">&#39;:completion:*&#39;</span> recent-dirs-insert both
+</span><span class='line'>  zstyle <span class="s1">&#39;:chpwd:*&#39;</span> recent-dirs-max 500
+</span><span class='line'>  zstyle <span class="s1">&#39;:chpwd:*&#39;</span> recent-dirs-default <span class="nb">true</span>
+</span><span class='line'><span class="nb">  </span>zstyle <span class="s1">&#39;:chpwd:*&#39;</span> recent-dirs-file <span class="s2">&quot;${XDG_CACHE_HOME:-$HOME/.cache}/shell/chpwd-recent-dirs&quot;</span>
+</span><span class='line'>  zstyle <span class="s1">&#39;:chpwd:*&#39;</span> recent-dirs-pushd <span class="nb">true</span>
+</span><span class='line'><span class="k">fi</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>使えるかどうかのガード条件</h2>
+
+<p>昔、
+zsh の設定を環境ごとに分岐させようとした時、
+<code>is-at-least</code> は古い zsh で使えなかったのと、
+バックポートで使える可能性があったり、
+自前の <code>fpath</code> にファイルを追加した場合などを考慮して、
+機能自体の存在をチェックするようにしています。</p>
+
+<p>ruby で推奨されているやり方として、
+<code>RUBY_VERSION</code> をチェックするのではなく、
+機能の存在をチェックするべき、
+という話があったことも影響しています。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>  <span class="k">if</span> <span class="o">[[</span> -n <span class="k">$(</span><span class="nb">echo</span> <span class="k">${</span><span class="p">^fpath</span><span class="k">}</span>/chpwd_recent_dirs<span class="o">(</span>N<span class="k">)</span><span class="o">)</span> <span class="o">&amp;&amp;</span> -n <span class="k">$(</span><span class="nb">echo</span> <span class="k">${</span><span class="p">^fpath</span><span class="k">}</span>/cdr<span class="o">(</span>N<span class="k">)</span><span class="o">)</span> <span class="o">]]</span>; <span class="k">then</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Glob Qualifiers の <code>(N)</code> (<code>NULL_GLOB</code>) を使っている関係で、
+一度 <code>echo</code> してから <code>-n</code> でチェックしています。
+もっと簡潔に書ける方法があれば教えてください。</p>
+
+<h2>autoload</h2>
+
+<p><code>autoload -U</code>
+と書いてある設定例もありますが、
+ドキュメントにあったように
+<code>autoload -Uz</code>
+を使っています。</p>
+
+<p><code>-z</code>
+を付けないと
+<code>KSH_AUTOLOAD</code>
+の設定の影響を受けるそうなので、
+基本的には <code>-z</code> を明示的に付けるのがおすすめのようです。</p>
+
+<h2>add-zsh-hook</h2>
+
+<p><code>chpwd_functions</code> への追加は</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nb">typeset</span> -ga chpwd_functions
+</span><span class='line'>chpwd_functions+<span class="o">=</span>chpwd_recent_dirs
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>としても良かったのですが、
+念のため <code>typeset</code> するのが最近の zsh しか使わないのなら無駄に感じたのと、
+<code>cdr</code> のドキュメントに書いてあったこともあり、
+<code>add-zsh-hook</code>
+を使ってみました。</p>
+
+<h2>menu selection</h2>
+
+<p>Web で設定例を見ると
+<code>zstyle ':completion:*' menu select</code>
+になっていることが多いのですが、
+基本的に menu select は使っていなかったので、
+<code>zshcontrib(1)</code> や
+<code>${^fpath}/cdr(N)</code> に書いてあった通りに
+<code>':completion:*'</code>
+ではなく
+<code>':completion:*:*:cdr:*:*'</code>
+で、
+値も
+<code>select</code>
+ではなく
+<code>selection</code>
+で設定しています。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>  zstyle <span class="s1">&#39;:completion:*:*:cdr:*:*&#39;</span> menu selection
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>recent-dirs-insert</h2>
+
+<p>これは
+<code>cdr [TAB]</code>
+の挙動の設定で、
+好みが分かれると思うので、
+<code>always</code>, <code>fallback</code>, <code>both</code>
+を一通り試してみるのをおすすめします。</p>
+
+<p><code>both</code> だと通常の <code>cd</code> の補完にメニューから選ぶ補完候補に履歴が入っているという感じに見えました。
+あまりうまく使えていないので、そのうち他の設定に変えて試してみようと思っています。</p>
+
+<h2>recent-dirs-max</h2>
+
+<p>設定を保存する最大数です。
+デフォルト値は 20 です。</p>
+
+<h2>recent-dirs-file</h2>
+
+<p><a href="http://standards.freedesktop.org/basedir-spec/latest/index.html">XDG Base Directory Specification</a>
+に合わせて <code>~/.cache</code> を使うようにしています。</p>
+
+<p>他の部分で既に <code>mkdir -p</code> しているので、ここでは省略しています。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>  <span class="c">#mkdir -p &quot;${XDG_CACHE_HOME:-$HOME/.cache}/shell&quot;</span>
+</span><span class='line'>  zstyle <span class="s1">&#39;:chpwd:*&#39;</span> recent-dirs-file <span class="s2">&quot;${XDG_CACHE_HOME:-$HOME/.cache}/shell/chpwd-recent-dirs&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ドキュメントにあるように、
+以下のような設定にして TTY ごとのファイルと
+グローバルのファイルにわけるのも良いかもしれません。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>  zstyle recent-dirs-file <span class="s1">&#39;:chpwd:*&#39;</span> ~/.chpwd-recent-dirs-<span class="k">${</span><span class="nv">TTY</span><span class="p">##*/</span><span class="k">}</span> +
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>recent-dirs-pushd</h2>
+
+<p>他の設定が影響していたのか、
+何が原因だったのかは追求していないのですが、
+<code>recent-dirs-pushd</code> を <code>true</code> にしないと
+最初はうまく動かなかったのですが、
+履歴がたまったからなのか、
+なぜか今はこの設定に関係なくちゃんと動いているようです。</p>
+
+<h2>recent-dirs-prune</h2>
+
+<p>recent の一覧に追加しないディレクトリのパターンなどを設定できるようですが、
+必要性を感じていないので、
+まだ何も設定していません。</p>
 ]]></content>
   </entry>
   
@@ -2804,89 +3005,6 @@ gem
 いくつか存在する jQuery Mobile の assets の中から
 <code>jquery_mobile_rails</code>
 を選んだ理由は新しいバージョンへの対応が一番早そうにみえたからです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[jquery_mobile_rails と production 環境と画像ファイル]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-02-jquery-mobile-rails.html"/>
-    <updated>2013-10-02T15:58:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/jquery-mobile-rails</id>
-    <content type="html"><![CDATA[<p>rails 4.0.0
-と
-<a href="https://rubygems.org/gems/jquery_mobile_rails">jquery_mobile_rails</a> 1.3.2
-で production 環境だと画像が表示されないという現象が起きていました。</p>
-
-<p>2013-10-03 追記:
-<code>jquery_mobile_rails</code> gem のファイル配置の問題もあるのかもしれません。
-詳細は次の記事を参照してください。</p>
-
-<!--more-->
-
-
-<p><code>RAILS_ENV=production rake assets:precompile</code>
-で調べてみると <code>public/assets/</code> 以下には
-<code>jquery_mobile_rails</code> の画像は入っていませんでした。</p>
-
-<p>いろいろ調べた結果、
-<code>config.assets.precompile</code>
-に
-<code>*.gif</code>
-と
-<code>*.png</code>
-を足せば良いとわかったので、
-<code>jquery_mobile_rails</code>
-用に
-<code>application.css</code>
-や
-<code>application.js</code>
-とは別に作成した
-<code>mobile.css</code>
-や
-<code>mobile.js</code>
-と合わせて、以下のように追加して解決しました。
-<code>jquery_mobile_rails</code> 1.3.2
-には
-<code>*.jpg</code>
-は入っていないのですが、
-念のため追加しておきました。</p>
-
-<figure class='code'><figcaption><span>config/environments/production.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>   <span class="n">config</span><span class="o">.</span><span class="n">assets</span><span class="o">.</span><span class="n">precompile</span> <span class="o">+=</span> <span class="sx">%w( mobile.js mobile.css *.gif *.png *.jpg )</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>この状態で再度
-<code>RAILS_ENV=production rake assets:precompile</code>
-で調べてみると <code>public/assets/</code>
-は以下のようになっていました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> ls public/assets/jquery-mobile
-</span><span class='line'><span class="go">ajax-loader-5c6592c3263e7de88985668db733b08f.gif</span>
-</span><span class='line'><span class="go">icons-18-black-dbc49700bc8bd5a9d3e0120cb111ea62.png</span>
-</span><span class='line'><span class="go">icons-18-white-f8f5999f3ea0d9ebea6a4ec193442c1f.png</span>
-</span><span class='line'><span class="go">icons-36-black-76b4944fda10128b365344f06377dad5.png</span>
-</span><span class='line'><span class="go">icons-36-white-178cc38be265514b341e111ed7d38712.png</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>rails 4 になって、ハッシュなしの
-<code>ajax-loader.gif</code>
-のようなファイルは作成されなくなっているので、
-ちゃんと view の中では
-<code>image_path</code>
-を使ったり、
-スタイルシートの中では
-<code>image-url</code>
-を使ったりしていないと
-production
-環境だけ問題がおきることがあるようです。</p>
 ]]></content>
   </entry>
   
