@@ -1,0 +1,181 @@
+---
+layout: post
+title: "zshでcdの履歴管理に標準添付のcdrを使う"
+date: 2013-11-12 01:16
+comments: true
+categories: zsh
+---
+zsh は `cd -[TAB]` で補完できる directory stack が
+`setopt autopushd` と組み合わせていると非常に便利なので、
+[directory stack を自前で保存する仕組みを作った](https://github.com/znz/dot-shell/blob/c197f9e3232e8dca910be4ea4ae555cc60468692/profile.d/50dirstack.zsh)り、
+GNU screen の他の WINDOW のディレクトリに移動するための
+[cdsというコマンド](https://github.com/znz/dot-shell/blob/523e3adaf9b776f05185acfb24bc19ef5f22c418/profile.d/70cds.zsh)
+を作ったりして、
+現状でもあまり困っていませんでした。
+
+しかし、 `zshcontrib(1)` に入っているものも試してみるのが
+良さそうと思って試してみました。
+
+<!--more-->
+
+## ドキュメント
+
+ドキュメントは
+`man zshcontrib` か、
+`pager $^fpath/cdr(N)` で読めます。
+
+## cdr コマンドの使い方
+
+`cdr [TAB]` で補完して使ったり、
+`cdr -l` で一覧を出したり、
+`cdr -e` で一覧を編集したりできます。
+
+`cdr -e` の編集は `zle` なので、
+`bindkey -e` なら、
+普通のカーソル移動などの他に
+ただの `Enter` だと編集終了になってしまうので、
+`^[^M` (`ESC` に続けて `Enter`) で改行を入力して行を増やしたり分割したり
+出来ることを知っておけば充分だと思います。
+
+## 設定全体
+
+全体としては以下のように設定してみました。
+
+以降は設定内容を個別に解説していきます。
+
+```sh
+if [[ -n $(echo ${^fpath}/chpwd_recent_dirs(N)) && -n $(echo ${^fpath}/cdr(N)) ]]; then
+autoload -Uz chpwd_recent_dirs cdr add-zsh-hook
+  add-zsh-hook chpwd chpwd_recent_dirs
+  zstyle ':completion:*:*:cdr:*:*' menu selection
+  zstyle ':completion:*' recent-dirs-insert both
+  zstyle ':chpwd:*' recent-dirs-max 500
+  zstyle ':chpwd:*' recent-dirs-default true
+  zstyle ':chpwd:*' recent-dirs-file "${XDG_CACHE_HOME:-$HOME/.cache}/shell/chpwd-recent-dirs"
+  zstyle ':chpwd:*' recent-dirs-pushd true
+fi
+```
+
+## 使えるかどうかのガード条件
+
+昔、
+zsh の設定を環境ごとに分岐させようとした時、
+`is-at-least` は古い zsh で使えなかったのと、
+バックポートで使える可能性があったり、
+自前の `fpath` にファイルを追加した場合などを考慮して、
+機能自体の存在をチェックするようにしています。
+
+ruby で推奨されているやり方として、
+`RUBY_VERSION` をチェックするのではなく、
+機能の存在をチェックするべき、
+という話があったことも影響しています。
+
+```sh
+  if [[ -n $(echo ${^fpath}/chpwd_recent_dirs(N)) && -n $(echo ${^fpath}/cdr(N)) ]]; then
+```
+Glob Qualifiers の `(N)` (`NULL_GLOB`) を使っている関係で、
+一度 `echo` してから `-n` でチェックしています。
+もっと簡潔に書ける方法があれば教えてください。
+
+## autoload
+
+`autoload -U`
+と書いてある設定例もありますが、
+ドキュメントにあったように
+`autoload -Uz`
+を使っています。
+
+`-z`
+を付けないと
+`KSH_AUTOLOAD`
+の設定の影響を受けるそうなので、
+基本的には `-z` を明示的に付けるのがおすすめのようです。
+
+## add-zsh-hook
+
+`chpwd_functions` への追加は
+
+```sh
+typeset -ga chpwd_functions
+chpwd_functions+=chpwd_recent_dirs
+```
+
+としても良かったのですが、
+念のため `typeset` するのが最近の zsh しか使わないのなら無駄に感じたのと、
+`cdr` のドキュメントに書いてあったこともあり、
+`add-zsh-hook`
+を使ってみました。
+
+## menu selection
+
+Web で設定例を見ると
+`zstyle ':completion:*' menu select`
+になっていることが多いのですが、
+基本的に menu select は使っていなかったので、
+`zshcontrib(1)` や
+`${^fpath}/cdr(N)` に書いてあった通りに
+`':completion:*'`
+ではなく
+`':completion:*:*:cdr:*:*'`
+で、
+値も
+`select`
+ではなく
+`selection`
+で設定しています。
+
+```sh
+  zstyle ':completion:*:*:cdr:*:*' menu selection
+```
+
+## recent-dirs-insert
+
+これは
+`cdr [TAB]`
+の挙動の設定で、
+好みが分かれると思うので、
+`always`, `fallback`, `both`
+を一通り試してみるのをおすすめします。
+
+`both` だと通常の `cd` の補完にメニューから選ぶ補完候補に履歴が入っているという感じに見えました。
+あまりうまく使えていないので、そのうち他の設定に変えて試してみようと思っています。
+
+## recent-dirs-max
+
+設定を保存する最大数です。
+デフォルト値は 20 です。
+
+## recent-dirs-file
+
+[XDG Base Directory Specification](http://standards.freedesktop.org/basedir-spec/latest/index.html)
+に合わせて `~/.cache` を使うようにしています。
+
+他の部分で既に `mkdir -p` しているので、ここでは省略しています。
+
+```sh
+  #mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/shell"
+  zstyle ':chpwd:*' recent-dirs-file "${XDG_CACHE_HOME:-$HOME/.cache}/shell/chpwd-recent-dirs"
+```
+
+ドキュメントにあるように、
+以下のような設定にして TTY ごとのファイルと
+グローバルのファイルにわけるのも良いかもしれません。
+
+```sh
+  zstyle recent-dirs-file ':chpwd:*' ~/.chpwd-recent-dirs-${TTY##*/} +
+```
+
+## recent-dirs-pushd
+
+他の設定が影響していたのか、
+何が原因だったのかは追求していないのですが、
+`recent-dirs-pushd` を `true` にしないと
+最初はうまく動かなかったのですが、
+履歴がたまったからなのか、
+なぜか今はこの設定に関係なくちゃんと動いているようです。
+
+## recent-dirs-prune
+
+recent の一覧に追加しないディレクトリのパターンなどを設定できるようですが、
+必要性を感じていないので、
+まだ何も設定していません。
