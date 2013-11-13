@@ -4,7 +4,7 @@
   <title><![CDATA[Category: mac | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/mac/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-11-09T21:15:42+09:00</updated>
+  <updated>2013-11-13T18:37:54+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,90 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[launchdでdistnotedを定期的に終了させる]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-13-killall-distnoted-periodically.html"/>
+    <updated>2013-11-13T18:23:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/killall-distnoted-periodically</id>
+    <content type="html"><![CDATA[<p>Mac OS X 10.9 Mavericks で気がつくと
+<code>distnoted</code> というプロセスのメモリ消費が増えて
+大変なことになっていることがあって、
+気がついた時は手動で <code>killall distnoted</code> で対処したり、
+OS 自体を再起動したりしていました。</p>
+
+<p>たまに気がつかないうちに大量にメモリを消費して、
+確認のためのアクティビティモニタを開くのも大変なことがあったので、
+さすがにまずいと思って <code>launchd</code> で定期的に実行するようにしました。</p>
+
+<!--more-->
+
+
+<h2>distnoted とは?</h2>
+
+<p>man によると <code>distributed notification server</code> というものらしいのですが、
+詳細はよくわかりませんでした。</p>
+
+<p>man には自動で起動するものなので、
+手動で起動するものではないとは書いてありました。</p>
+
+<p>必要に応じて自動で起動してくるので、
+<code>killall</code> などで止めてしまっても問題が無いという情報は
+どこかでみかけました。</p>
+
+<p><code>ps</code> でプロセスを確認すると <code>root</code> 権限で
+<code>/usr/sbin/distnoted daemon</code> が動いていて、
+他にいくつかの
+<code>/usr/sbin/distnoted agent</code>
+がユーザー権限で動いていました。
+そのうちの1個がログインしたユーザーの権限で動いていて、
+それがメモリを大量に消費していて、
+<code>killall distnoted</code>
+ではそのプロセスだけを終了させています。</p>
+
+<h2>launchd による定期実行</h2>
+
+<p><code>launchd</code> で定期的に実行するには</p>
+
+<p>```xml ~/Library/LaunchAgents/local.killall.distnoted.plist
+&lt;?xml version=&ldquo;1.0&rdquo; encoding=&ldquo;UTF-8&rdquo;?>
+&lt;!DOCTYPE plist PUBLIC &ldquo;&ndash;//Apple//DTD PLIST 1.0//EN&rdquo; &ldquo;<a href="http://www.apple.com/DTDs/PropertyList-1.0.dtd">http://www.apple.com/DTDs/PropertyList-1.0.dtd</a>&rdquo;>
+<plist version="1.0">
+<dict></p>
+
+<pre><code>&lt;key&gt;Label&lt;/key&gt;
+&lt;string&gt;local.killall.distnoted&lt;/string&gt;
+&lt;key&gt;ProgramArguments&lt;/key&gt;
+&lt;array&gt;
+    &lt;string&gt;/usr/bin/killall&lt;/string&gt;
+    &lt;string&gt;distnoted&lt;/string&gt;
+&lt;/array&gt;
+&lt;key&gt;StartInterval&lt;/key&gt;
+&lt;integer&gt;600&lt;/integer&gt;
+</code></pre>
+
+<p></dict>
+</plist>
+```</p>
+
+<p>という内容のファイルを
+<code>~/Library/LaunchAgents/local.killall.distnoted.plist</code>
+に作成して
+<code>launchctl load ~/Library/LaunchAgents/local.killall.distnoted.plist</code>
+で反映します。</p>
+
+<p>設定を変更したときは</p>
+
+<p><code>
+launchctl unload ~/Library/LaunchAgents/local.killall.distnoted.plist
+launchctl load ~/Library/LaunchAgents/local.killall.distnoted.plist
+</code></p>
+
+<p>で反映します。</p>
+
+<p><code>StartInterval</code> は秒単位なので <code>600</code> だと10分間隔です。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[MavericksでEmacs.appが起動時にホームディレクトリにならない]]></title>
@@ -666,32 +750,6 @@ Found initrd image: /boot/initrd.img-3.8.0-29-generic
 Found memtest86+ image: /memtest86+.bin
 done
 </code></p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[homebrew の reinstall で使われるオプションの保存場所]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-13-homebrew-used-options.html"/>
-    <updated>2013-09-13T21:58:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/homebrew-used-options</id>
-    <content type="html"><![CDATA[<p><a href="/blog/2013-09-08-rabbiter-on-mac.html">rabbiter の記事</a>
-で、
-「一度 <code>--with-curl-ca-bundle</code> 付きでインストールした後だと、以下のようにオプションなしの reinstall でもオプションが付くようです。」
-と書きましたが、そのオプションがどこに保存されているのかを調べました。</p>
-
-<!--more-->
-
-
-<p>実際に調べるのはソースをたどったりして結構大変だったのですが、
-最終的に
-<code>/usr/local/Cellar/glib-networking/2.36.2/INSTALL_RECEIPT.json</code>
-に <code>used_options</code> というキーで保存されているということがわかりました。</p>
-
-<p><code>Cellar</code> はインストールしたファイルの実体が入るところなので、
-あらかじめダミーの <code>INSTALL_RECEIPT.json</code> を用意しておいて
-オプションなしの <code>brew reinstall</code> の時に使われるオプションを
-埋め込んでおくという用途に使うのには向いていないということが
-わかりました。</p>
 ]]></content>
   </entry>
   
