@@ -5,11 +5,14 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: l10n - @znz blog</title>
+  <title>iTerm2でのIME制御がきかない - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Category: l10n">
+  <meta name="description" content="iTerm2 Build 1.0.0.20131109 で確認しました。 TeraTerm Pro の対応制御シーケンス
+や
+RLogin の対応している制御コード一覧
+には IME の状態制御があります。 iTerm2 はオプションでその制御シーケンスを受け付けるようには出来るのですが、 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +21,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jpblog/categories/l10n/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-11-13-tty-ime.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,36 +79,163 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: l10n</h1>
+    
+      <h1 class="entry-title">iTerm2でのIME制御がきかない</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-11-13T00:30:00+09:00" pubdate data-updated="true">2013-11-13 (Wed)</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
+<div class="entry-content"><p>iTerm2 Build 1.0.0.20131109 で確認しました。</p>
 
-  
-  <h2>2013</h2>
+<p><a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html">TeraTerm Pro の対応制御シーケンス</a>
+や
+<a href="http://nanno.dip.jp/softlib/man/rlogin/ctrlcode.html">RLogin の対応している制御コード一覧</a>
+には IME の状態制御があります。</p>
 
-<article>
-  
-<h1><a href="/blog/2013-10-01-jquery-mobile-l10n.html">jQuery Mobile 1.3.2 の日本語化</a></h1>
-<time datetime="2013-10-01T15:00:00+09:00" pubdate><span class='month'>Oct</span> <span class='day'>01</span> <span class='year'>2013</span></time>
+<p>iTerm2 はオプションでその制御シーケンスを受け付けるようには出来るのですが、
+現状は無視するだけのようです。</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/javascript/'>javascript</a>, <a class='category' href='/blog/categories/jquery-mobile/'>jquery-mobile</a>, <a class='category' href='/blog/categories/l10n/'>l10n</a>, <a class='category' href='/blog/categories/rails/'>rails</a></span>
-</footer>
+<!--more-->
 
 
-</article>
+<h2>制御シーケンス</h2>
 
+<p>TeraTerm Pro 由来で RLogin も対応したものらしいです。
+具体的なシーケンスとしては
+<a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html">TeraTerm Pro の対応制御シーケンス</a>
+から引用すると、
+次の3種類になります。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
+</span><span class='line'>  CSI &lt; s    TTIMESVIME の開閉状態を保存する。
+</span><span class='line'>  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。
+</span><span class='line'>               Ps = 0      IME を閉じる。
+</span><span class='line'>                  = 1      IME を開く。</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>iTerm2 の対応</h2>
+
+<p><a href="https://github.com/gnachman/iTerm2">https://github.com/gnachman/iTerm2</a>
+の
+<a href="https://github.com/gnachman/iTerm2/blob/f47b1f815c54bb7d61adb3917a9a742c0e5cb703/VT100Terminal.m#L575">VT100Terminal.m</a>
+を見るとわかるのですが、
+制御シーケンスの存在は認識しているようです。
+その処理で呼ばれているところを追いかけてみると、
+現状はただ無視しているだけでした。</p>
+
+<p>このあたりのコードは設定で
+<code>Profiles</code> の <code>Terminal</code> タブの中にある
+<code>Use modern parser (experimental)</code>
+にチェックを入れないと使われないようで、
+チェックなしの状態で
+<code>ruby -e 'puts "\e[&lt;1t"</code>
+とか実行しても
+<code>&lt;1t</code>
+と出るだけで何も起きませんでした。
+チェックを入れると <code>puts</code> で自動的に入る改行だけになりましたが、
+IME の状態に変化はありませんでした。</p>
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-11-13T00:30:00+09:00" pubdate data-updated="true">2013-11-13 (Wed)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ime/'>ime</a>, <a class='category' href='/blog/categories/mac/'>mac</a>, <a class='category' href='/blog/categories/tty/'>tty</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-11-13-tty-ime.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-11-13-tty-ime.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-11-13-tty-ime.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013-11-12-cocoa-emacs-ime.html" title="Previous Post: HomebrewのEmacsにIMEインラインパッチが取り込まれたので設定した">&laquo; HomebrewのEmacsにIMEインラインパッチが取り込まれたので設定した</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013-11-13-killall-distnoted-periodically.html" title="Next Post: launchdでdistnotedを定期的に終了させる">launchdでdistnotedを定期的に終了させる &raquo;</a>
+      
+    </p>
+  </footer>
 </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -206,7 +336,10 @@
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-11-13-tty-ime.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-11-13-tty-ime.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

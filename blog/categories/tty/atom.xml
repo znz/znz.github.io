@@ -4,7 +4,7 @@
   <title><![CDATA[Category: tty | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/tty/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-11-14T00:13:10+09:00</updated>
+  <updated>2013-11-14T12:44:38+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,128 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Mac OS XでのIME制御についての考察]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-14-macosx-ime.html"/>
+    <updated>2013-11-14T02:24:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/macosx-ime</id>
+    <content type="html"><![CDATA[<p><a href="/blog/2013-11-12-cocoa-emacs-ime.html">Cocoa Emacs のインラインパッチ関連の設定</a>
+の時や
+<a href="/blog/2013-11-13-tty-ime.html">iTerm2 で IME 制御シーケンスがきかないのを調べた</a>
+時にも気になったのですが、
+Mac の IME に open/close という概念はあるのかという話です。</p>
+
+<!--more-->
+
+
+<h2>IME の開閉状態?</h2>
+
+<p>iBus 1.5 関連の記事の
+<a href="http://www.kaoriya.net/blog/2013/10/18/">iBusがクソになった理由 — KaoriYa</a>
+で知ったのですが、
+Mac OS X は IME のオン・オフのような状態の切り替えではなく、
+「ことえりのひらがな」とか
+「ことえりのカタカナ」とか
+「ことえりの英字」とか
+のようなIMEの種類を切り替えて入力するようになっています。</p>
+
+<p>この考え方と開閉状態しか考慮していない二値的な制御シーケンスは相性が悪いのではないかと思いました。</p>
+
+<h2>Cocoa Emacs のインラインパッチでは?</h2>
+
+<p>Cocoa Emacs のインラインパッチをよく見ると
+<code>mac-toggle-input-source</code>
+という関数があって、
+<code>(mac-toggle-input-source nil)</code>
+で IME オフ相当に、
+<code>(mac-toggle-input-source t)</code>
+で IME オン相当にできるようなので、
+対応は不可能ではないのかもしれません。</p>
+
+<h2>端末の制御シーケンスでは?</h2>
+
+<p><a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html">TeraTerm Pro の対応制御シーケンス</a>
+には以下の3種類の IME 関連の制御シーケンスがあります。</p>
+
+<p>```
+  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
+  CSI &lt; s    TTIMESVIME の開閉状態を保存する。
+  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。</p>
+
+<pre><code>           Ps = 0      IME を閉じる。
+              = 1      IME を開く。
+</code></pre>
+
+<p>```</p>
+
+<p>この中の <code>TTIMESTIME</code> の <code>Ps</code> を拡張して、
+2 以上も受け付けるようにして、
+(別の状態が不可能なら 1 と同じ挙動で)
+可能ならカタカナ入力などの別の IME の状態を設定できるようにするという案を思いつきました。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[iTerm2でのIME制御がきかない]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-13-tty-ime.html"/>
+    <updated>2013-11-13T00:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/tty-ime</id>
+    <content type="html"><![CDATA[<p>iTerm2 Build 1.0.0.20131109 で確認しました。</p>
+
+<p><a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html">TeraTerm Pro の対応制御シーケンス</a>
+や
+<a href="http://nanno.dip.jp/softlib/man/rlogin/ctrlcode.html">RLogin の対応している制御コード一覧</a>
+には IME の状態制御があります。</p>
+
+<p>iTerm2 はオプションでその制御シーケンスを受け付けるようには出来るのですが、
+現状は無視するだけのようです。</p>
+
+<!--more-->
+
+
+<h2>制御シーケンス</h2>
+
+<p>TeraTerm Pro 由来で RLogin も対応したものらしいです。
+具体的なシーケンスとしては
+<a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html">TeraTerm Pro の対応制御シーケンス</a>
+から引用すると、
+次の3種類になります。</p>
+
+<p>```
+  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
+  CSI &lt; s    TTIMESVIME の開閉状態を保存する。
+  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。</p>
+
+<pre><code>           Ps = 0      IME を閉じる。
+              = 1      IME を開く。
+</code></pre>
+
+<p>```</p>
+
+<h2>iTerm2 の対応</h2>
+
+<p><a href="https://github.com/gnachman/iTerm2">https://github.com/gnachman/iTerm2</a>
+の
+<a href="https://github.com/gnachman/iTerm2/blob/f47b1f815c54bb7d61adb3917a9a742c0e5cb703/VT100Terminal.m#L575">VT100Terminal.m</a>
+を見るとわかるのですが、
+制御シーケンスの存在は認識しているようです。
+その処理で呼ばれているところを追いかけてみると、
+現状はただ無視しているだけでした。</p>
+
+<p>このあたりのコードは設定で
+<code>Profiles</code> の <code>Terminal</code> タブの中にある
+<code>Use modern parser (experimental)</code>
+にチェックを入れないと使われないようで、
+チェックなしの状態で
+<code>ruby -e 'puts "\e[&lt;1t"</code>
+とか実行しても
+<code>&lt;1t</code>
+と出るだけで何も起きませんでした。
+チェックを入れると <code>puts</code> で自動的に入る改行だけになりましたが、
+IME の状態に変化はありませんでした。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[spring rails console で PAGER=lv だと /dev/tty: Device not configured]]></title>

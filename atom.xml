@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-11-14T00:12:27+09:00</updated>
+  <updated>2013-11-14T12:44:38+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,68 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Mac OS XでのIME制御についての考察]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-14-macosx-ime.html"/>
+    <updated>2013-11-14T02:24:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/macosx-ime</id>
+    <content type="html"><![CDATA[<p><a href="http://blog.n-z.jp/blog/2013-11-12-cocoa-emacs-ime.html">Cocoa Emacs のインラインパッチ関連の設定</a>
+の時や
+<a href="http://blog.n-z.jp/blog/2013-11-13-tty-ime.html">iTerm2 で IME 制御シーケンスがきかないのを調べた</a>
+時にも気になったのですが、
+Mac の IME に open/close という概念はあるのかという話です。</p>
+
+<!--more-->
+
+
+<h2>IME の開閉状態?</h2>
+
+<p>iBus 1.5 関連の記事の
+<a href="http://www.kaoriya.net/blog/2013/10/18/">iBusがクソになった理由 — KaoriYa</a>
+で知ったのですが、
+Mac OS X は IME のオン・オフのような状態の切り替えではなく、
+「ことえりのひらがな」とか
+「ことえりのカタカナ」とか
+「ことえりの英字」とか
+のようなIMEの種類を切り替えて入力するようになっています。</p>
+
+<p>この考え方と開閉状態しか考慮していない二値的な制御シーケンスは相性が悪いのではないかと思いました。</p>
+
+<h2>Cocoa Emacs のインラインパッチでは?</h2>
+
+<p>Cocoa Emacs のインラインパッチをよく見ると
+<code>mac-toggle-input-source</code>
+という関数があって、
+<code>(mac-toggle-input-source nil)</code>
+で IME オフ相当に、
+<code>(mac-toggle-input-source t)</code>
+で IME オン相当にできるようなので、
+対応は不可能ではないのかもしれません。</p>
+
+<h2>端末の制御シーケンスでは?</h2>
+
+<p><a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html">TeraTerm Pro の対応制御シーケンス</a>
+には以下の3種類の IME 関連の制御シーケンスがあります。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
+</span><span class='line'>  CSI &lt; s    TTIMESVIME の開閉状態を保存する。
+</span><span class='line'>  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。
+</span><span class='line'>               Ps = 0      IME を閉じる。
+</span><span class='line'>                  = 1      IME を開く。</span></code></pre></td></tr></table></div></figure>
+
+
+<p>この中の <code>TTIMESTIME</code> の <code>Ps</code> を拡張して、
+2 以上も受け付けるようにして、
+(別の状態が不可能なら 1 と同じ挙動で)
+可能ならカタカナ入力などの別の IME の状態を設定できるようにするという案を思いつきました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[launchdでdistnotedを定期的に終了させる]]></title>
@@ -108,6 +170,456 @@ OS 自体を再起動したりしていました。</p>
 <p>で反映します。</p>
 
 <p><code>StartInterval</code> は秒単位なので <code>600</code> だと10分間隔です。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[iTerm2でのIME制御がきかない]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-13-tty-ime.html"/>
+    <updated>2013-11-13T00:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/tty-ime</id>
+    <content type="html"><![CDATA[<p>iTerm2 Build 1.0.0.20131109 で確認しました。</p>
+
+<p><a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html">TeraTerm Pro の対応制御シーケンス</a>
+や
+<a href="http://nanno.dip.jp/softlib/man/rlogin/ctrlcode.html">RLogin の対応している制御コード一覧</a>
+には IME の状態制御があります。</p>
+
+<p>iTerm2 はオプションでその制御シーケンスを受け付けるようには出来るのですが、
+現状は無視するだけのようです。</p>
+
+<!--more-->
+
+
+<h2>制御シーケンス</h2>
+
+<p>TeraTerm Pro 由来で RLogin も対応したものらしいです。
+具体的なシーケンスとしては
+<a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html">TeraTerm Pro の対応制御シーケンス</a>
+から引用すると、
+次の3種類になります。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
+</span><span class='line'>  CSI &lt; s    TTIMESVIME の開閉状態を保存する。
+</span><span class='line'>  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。
+</span><span class='line'>               Ps = 0      IME を閉じる。
+</span><span class='line'>                  = 1      IME を開く。</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>iTerm2 の対応</h2>
+
+<p><a href="https://github.com/gnachman/iTerm2">https://github.com/gnachman/iTerm2</a>
+の
+<a href="https://github.com/gnachman/iTerm2/blob/f47b1f815c54bb7d61adb3917a9a742c0e5cb703/VT100Terminal.m#L575">VT100Terminal.m</a>
+を見るとわかるのですが、
+制御シーケンスの存在は認識しているようです。
+その処理で呼ばれているところを追いかけてみると、
+現状はただ無視しているだけでした。</p>
+
+<p>このあたりのコードは設定で
+<code>Profiles</code> の <code>Terminal</code> タブの中にある
+<code>Use modern parser (experimental)</code>
+にチェックを入れないと使われないようで、
+チェックなしの状態で
+<code>ruby -e 'puts "\e[&lt;1t"</code>
+とか実行しても
+<code>&lt;1t</code>
+と出るだけで何も起きませんでした。
+チェックを入れると <code>puts</code> で自動的に入る改行だけになりましたが、
+IME の状態に変化はありませんでした。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[HomebrewのEmacsにIMEインラインパッチが取り込まれたので設定した]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-12-cocoa-emacs-ime.html"/>
+    <updated>2013-11-12T18:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/cocoa-emacs-ime</id>
+    <content type="html"><![CDATA[<p><a href="http://qiita.com/h12o@github/items/07f773909da5ebdb7b7c">h12o さんのインラインパッチの pull request が取り込まれた</a>
+(コメント参照)
+ということで、
+<code>brew uninstall emacs</code> で一度アンインストールしてから
+<code>brew install --cocoa --srgb --with-gnutls --japanese emacs -v</code>
+でインストールして、
+IME 関連の設定をしてみました。</p>
+
+<!--more-->
+
+
+<h2>IME 関連設定全体</h2>
+
+<p>以下のように設定してみました。</p>
+
+<p>以降は設定内容を個別に解説していきます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+</pre></td><td class='code'><pre><code class='scheme'><span class='line'><span class="p">(</span><span class="nf">global-set-key</span> <span class="p">(</span><span class="nf">kbd</span> <span class="s">&quot;M-¥&quot;</span><span class="p">)</span> <span class="p">(</span><span class="k">lambda </span><span class="p">()</span> <span class="p">(</span><span class="nf">interactive</span><span class="p">)</span> <span class="p">(</span><span class="nf">insert</span> <span class="s">&quot;\\&quot;</span><span class="p">)))</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">(</span><span class="nf">static-when</span> <span class="p">(</span><span class="nf">eq</span> <span class="nv">window-system</span> <span class="ss">&#39;ns</span><span class="p">)</span>
+</span><span class='line'>  <span class="p">(</span><span class="nf">static-when</span> <span class="p">(</span><span class="nb">assoc </span><span class="s">&quot;MacOSX&quot;</span> <span class="nv">input-method-alist</span><span class="p">)</span>
+</span><span class='line'>    <span class="c1">;; ime inline patch</span>
+</span><span class='line'>    <span class="p">(</span><span class="nf">setq</span> <span class="nv">default-input-method</span> <span class="s">&quot;MacOSX&quot;</span><span class="p">)</span>
+</span><span class='line'>    <span class="p">(</span><span class="nf">static-when</span> <span class="nv">t</span>
+</span><span class='line'>      <span class="p">(</span><span class="nf">mac-translate-from-yen-to-backslash</span><span class="p">)</span>
+</span><span class='line'>      <span class="p">(</span><span class="nf">global-set-key</span> <span class="p">(</span><span class="nf">kbd</span> <span class="s">&quot;M-¥&quot;</span><span class="p">)</span> <span class="p">(</span><span class="k">lambda </span><span class="p">()</span> <span class="p">(</span><span class="nf">interactive</span><span class="p">)</span> <span class="p">(</span><span class="nf">insert</span> <span class="s">&quot;¥&quot;</span><span class="p">)))</span>
+</span><span class='line'>      <span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="p">(</span><span class="nf">mapc</span>
+</span><span class='line'>     <span class="p">(</span><span class="k">lambda </span><span class="p">(</span><span class="nf">param</span><span class="p">)</span>
+</span><span class='line'>       <span class="p">(</span><span class="k">let </span><span class="p">((</span><span class="nf">name</span> <span class="p">(</span><span class="nb">car </span><span class="nv">param</span><span class="p">)))</span>
+</span><span class='line'>         <span class="p">(</span><span class="nf">cond</span>
+</span><span class='line'>          <span class="p">((</span><span class="nf">string-match</span> <span class="s">&quot;Japanese\\(\\.base\\)?\\&#39;&quot;</span> <span class="nv">name</span><span class="p">)</span> <span class="c1">;; ひらがなの日本語入力</span>
+</span><span class='line'>           <span class="p">(</span><span class="nf">mac-set-input-method-parameter</span> <span class="nv">name</span> <span class="ss">&#39;cursor-color</span> <span class="s">&quot;blue&quot;</span><span class="p">))</span>
+</span><span class='line'>          <span class="p">((</span><span class="nf">string-match</span> <span class="s">&quot;Japanese&quot;</span> <span class="nv">name</span><span class="p">)</span> <span class="c1">;; カナなどの日本語入力</span>
+</span><span class='line'>           <span class="p">(</span><span class="nf">mac-set-input-method-parameter</span> <span class="nv">name</span> <span class="ss">&#39;cursor-color</span> <span class="s">&quot;red&quot;</span><span class="p">))</span>
+</span><span class='line'>          <span class="p">((</span><span class="nf">string-match</span> <span class="s">&quot;Roman&quot;</span> <span class="nv">name</span><span class="p">)</span> <span class="c1">;; 英字</span>
+</span><span class='line'>           <span class="p">(</span><span class="nf">mac-set-input-method-parameter</span> <span class="nv">name</span> <span class="ss">&#39;cursor-color</span> <span class="s">&quot;black&quot;</span><span class="p">))</span>
+</span><span class='line'>          <span class="p">(</span><span class="nf">t</span> <span class="c1">;; その他</span>
+</span><span class='line'>           <span class="p">(</span><span class="nf">mac-set-input-method-parameter</span> <span class="nv">name</span> <span class="ss">&#39;cursor-color</span> <span class="s">&quot;yellow&quot;</span><span class="p">))</span>
+</span><span class='line'>          <span class="p">)</span>
+</span><span class='line'>         <span class="p">))</span>
+</span><span class='line'>     <span class="nv">mac-input-method-parameters</span><span class="p">)</span>
+</span><span class='line'>    <span class="p">(</span><span class="nf">mac-set-input-method-parameter</span> <span class="s">&quot;com.apple.keylayout.US&quot;</span> <span class="ss">&#39;cursor-color</span> <span class="s">&quot;black&quot;</span><span class="p">)</span>
+</span><span class='line'>    <span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>環境のチェック</h2>
+
+<p><code>(eq window-system 'ns)</code>
+で Cocoa Emacs かどうかチェックしています。</p>
+
+<h2>パッチのチェック</h2>
+
+<p><code>(boundp 'mac-input-method-parameters)</code>
+でチェックしている例が多かったのですが、
+<code>(assoc "MacOSX" input-method-alist)</code>
+で真面目に <code>default-input-method</code> に設定できる値かどうか調べています。</p>
+
+<p><code>(boundp 'mac-input-method-parameters)</code>
+の方が一般的なようなので、
+今後使えなくなる可能性も低そうなので、
+<code>alist</code> をたどる必要があって遅そうな <code>assoc</code> のチェックは
+あまりおすすめできないです。</p>
+
+<h2>Option+backslash</h2>
+
+<p>普段はデフォルトのままの「ことえり」を使っていて、
+Linux での OADG109A と同じように <code>¥</code> キーはちゃんと yen sign の入力になるようにしています。</p>
+
+<p>そして、
+<code>Option+¥</code>
+で backslash が入力できます。
+外側の
+<code>(global-set-key (kbd "M-¥") (lambda () (interactive) (insert "\\")))</code>
+で Emacs でも同じ挙動になるようにしています。
+インラインパッチがない環境だとこの挙動になります。
+とりあえず入力できれば良いと思って作った設定なので、
+prefix argument などには対応していません。
+(<code>C-u M-¥</code> でも4文字ではなく1文字しか入らない)</p>
+
+<p>ところが、これだと
+<code>C-¥</code>
+で
+<code>toggle-input-method</code>
+がきかなかったので、不本意ですが
+<code>(mac-translate-from-yen-to-backslash)</code>
+を使いました。
+そして、逆に
+<code>Option+¥</code>
+で yen sign が入力できるようにするために
+<code>(global-set-key (kbd "M-¥") (lambda () (interactive) (insert "¥")))</code>
+と設定しています。</p>
+
+<h2>カーソルの色の設定</h2>
+
+<p>IME 対応で一番期待していた部分がこれでした。</p>
+
+<p>ddskk で入力状態によってカーソルの色を変えられるのが便利だったので、
+TeraTerm Pro のように IME の状態によってカーソルの表示を変更できるものは
+積極的に利用していたこともあって、ちょっと頑張って設定してみました。</p>
+
+<p><code>mac-input-method-parameters</code> の初期値の一部を抜粋すると以下のように設定されていて、
+ほとんどの IME は「ことえり」と同じように
+<code>.Japanese</code>
+で終わっているものが一般的な日本語入力状態に見えたので、
+青色にすることにしました。
+「Google 日本語入力」はよくわかりませんが、
+たぶん <code>.Japanese.base</code> で終わっているものが、
+そうだろうと思って設定しました。</p>
+
+<p>そしてカタカナなどの他の入力状態の時は赤色にしました。</p>
+
+<p>それから、
+<code>.Roman</code>
+で終わっているものが、英字入力状態のようだったので、
+黒色に戻すようにしました。</p>
+
+<p>ちゃんと戻す設定も入れないと変わりっぱなしになってしまうので、
+戻す設定も重要です。</p>
+
+<p>最後にその他の日本語以外の IME のときは黄色にしました。</p>
+
+<p>ネットで見つかる設定例では
+<code>"com.apple.keylayout.US"</code>
+にも
+<code>mac-set-input-method-parameter</code>
+をしているのですが、
+<code>mac-input-method-parameters</code>
+にはなかったので、
+後で設定しています。
+(先に設定すると、その他の黄色で上書きしてしまう。)</p>
+
+<figure class='code'><figcaption><span>ns-win.el.gz</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+<span class='line-number'>70</span>
+<span class='line-number'>71</span>
+<span class='line-number'>72</span>
+<span class='line-number'>73</span>
+<span class='line-number'>74</span>
+<span class='line-number'>75</span>
+<span class='line-number'>76</span>
+<span class='line-number'>77</span>
+<span class='line-number'>78</span>
+<span class='line-number'>79</span>
+<span class='line-number'>80</span>
+<span class='line-number'>81</span>
+<span class='line-number'>82</span>
+<span class='line-number'>83</span>
+<span class='line-number'>84</span>
+<span class='line-number'>85</span>
+<span class='line-number'>86</span>
+<span class='line-number'>87</span>
+<span class='line-number'>88</span>
+<span class='line-number'>89</span>
+<span class='line-number'>90</span>
+<span class='line-number'>91</span>
+<span class='line-number'>92</span>
+<span class='line-number'>93</span>
+<span class='line-number'>94</span>
+<span class='line-number'>95</span>
+<span class='line-number'>96</span>
+<span class='line-number'>97</span>
+<span class='line-number'>98</span>
+<span class='line-number'>99</span>
+<span class='line-number'>100</span>
+<span class='line-number'>101</span>
+<span class='line-number'>102</span>
+<span class='line-number'>103</span>
+<span class='line-number'>104</span>
+<span class='line-number'>105</span>
+<span class='line-number'>106</span>
+<span class='line-number'>107</span>
+<span class='line-number'>108</span>
+</pre></td><td class='code'><pre><code class='scheme'><span class='line'><span class="p">(</span><span class="nf">defvar</span> <span class="nv">mac-input-method-parameters</span>
+</span><span class='line'>  <span class="o">&#39;</span><span class="p">(</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.apple.inputmethod.Kotoeri.Roman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;A&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.apple.inputmethod.Kotoeri.Japanese&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;あ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.apple.inputmethod.Kotoeri.Japanese.Katakana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;ア&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.apple.inputmethod.Kotoeri.Japanese.FullWidthRoman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;Ａ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.apple.inputmethod.Kotoeri.Japanese.HalfWidthKana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;ｱ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.apple.inputmethod.kotoeri.Ainu&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;アイヌ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>  <span class="o">...</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.google.inputmethod.Japanese.Roman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;G&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.google.inputmethod.Japanese.base&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;ぐ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.google.inputmethod.Japanese.Katakana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;グ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.google.inputmethod.Japanese.FullWidthRoman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;Ｇ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.google.inputmethod.Japanese.HalfWidthKana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;ｸﾞ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;jp.monokakido.inputmethod.Kawasemi.Roman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;K&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;jp.monokakido.inputmethod.Kawasemi.Japanese&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;か&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;jp.monokakido.inputmethod.Kawasemi.Japanese.Katakana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;カ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;jp.monokakido.inputmethod.Kawasemi.Japanese.FullWidthRoman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;Ｋ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;jp.monokakido.inputmethod.Kawasemi.Japanese.HalfWidthKana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;ｶ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;jp.monokakido.inputmethod.Kawasemi.Japanese.HalfWidthRoman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;_K&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;jp.monokakido.inputmethod.Kawasemi.Japanese.Code&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;C&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok21.Roman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;A&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok21.Japanese&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;あ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok21.Japanese.Katakana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;ア&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok21.Japanese.FullWidthRoman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;英&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok21.Japanese.HalfWidthEiji&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;半英&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok22.Roman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;A&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok22.Japanese&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;あ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok22.Japanese.Katakana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;ア&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="o">...</span>
+</span></code></pre></td></tr></table></div></figure>
+
 ]]></content>
   </entry>
   
@@ -2330,681 +2842,6 @@ fetch します。</p>
 <code>.ruby-version</code>
 もディレクトリを上がっていって最初に見つかったものが使われるので、
 そういう運用が可能です。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[rails 4 対応の認可の gem]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-08-rails4-authorization.html"/>
-    <updated>2013-10-08T23:04:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rails4-authorization</id>
-    <content type="html"><![CDATA[<p>rails 4 に対応している認可のライブラリとして
-<code>cancan</code>
-からの移行先候補を選ぶために
-<code>the_role</code>
-と
-<code>pundit</code>
-という gem を試してみました。</p>
-
-<!--more-->
-
-
-<h2>cancan からの移行</h2>
-
-<p>認証は rails 4 でも
-<code>devise</code>
-を使い続ければ良さそうな感じなのですが、
-認可の方は
-<code>cancan</code>
-の rails 4 対応がいまいちで
-<a href="http://ready4rails4.net/gems/cancan">Ready for Rails 4?</a>
-でも <em>not ready</em> のままで
-<a href="https://github.com/ryanb/cancan/issues">issues</a>
-も溜まっていることもあり、
-rails 4 では他の gem への移行を検討していました。</p>
-
-<h2>移行先候補</h2>
-
-<p>移行先候補として、まず最初に試したのは
-<a href="https://github.com/the-teacher/the_role">the_role</a>
-という gem でした。
-後述しますが、これは最初から組み込むなら良さそうなのですが、
-今回はちょっと目的にあわなかったので諦めました。</p>
-
-<p>次に試したのは
-<a href="https://github.com/elabs/pundit">pundit</a>
-という gem で、
-これは
-<a href="http://www.elabs.se/blog/52-simple-authorization-in-ruby-on-rails-apps">Simple authorization in Ruby on Rails apps — Elabs</a>
-という blog の説明で実装のほぼすべてが理解できるぐらいシンプルな gem でした。
-rails 自体の変化にも強そうだと思って、
-今回はこれを採用しました。</p>
-
-<p>その後、
-検索用キーワードとして使えそうな名前が増えたことで
-<a href="http://www.plugingeek.com/categories/user-authorization-ruby">User Authorization (Ruby) on pluginGeek</a>
-という一覧を見つけました。</p>
-
-<p>後で知ったので今回は試していないのですが、
-<a href="https://github.com/nathanl/authority">Authority</a>
-は高機能そうなので、高機能なものがほしい場合や
-<code>cancan</code>
-で複雑なことをしていた場合の移行先としては良さそうです。</p>
-
-<h2><code>the_role</code></h2>
-
-<p>最初に試した
-<a href="https://github.com/the-teacher/the_role">the_role</a> 2.1.1
-は
-「TheRole &ndash; Authorization Gem for Ruby on Rails with administrative interface」
-と書いてある通り、設定画面も付いているのが特徴です。</p>
-
-<p>認可の設定画面は
-<code>localhost:3000/admin/roles</code>
-で出てくるのですが、
-layout に</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="p">=</span> <span class="k">yield</span> <span class="ss">:role_sidebar</span>
-</span><span class='line'><span class="p">=</span> <span class="k">yield</span> <span class="ss">:role_main</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>を入れていないと真っ白なページで何も内容が出てこないので注意が必要です。
-<code>assets</code>
-もちゃんと設定していないと
-<code>Enable</code>, <code>Disable</code> のところが動かないなど、
-使い始めにはまりどころがいくつかありました。</p>
-
-<p>他にも</p>
-
-<ul>
-<li>管理画面が <code>admin/roles</code> 決めうち (gem の中の <code>config/routes.rb</code>)</li>
-<li><code>User</code> というモデル名も決めうち (<code>Admin::User</code> などは使えない)</li>
-<li>1 ユーザーは 1 ロールのみ (例えば、あるユーザーにカレンダーの管理者とお知らせの管理者のロールをつけるということは出来ないので複合権限のロールを別途作る必要がある)</li>
-</ul>
-
-
-<p>という点など柔軟性はなさそうな感じでした。
-このうち、管理画面のパスが決めうちという点が
-<code>rails_admin</code>
-との組み合わせで問題になったので、
-今回は採用を見送りました。
-<code>rails_admin</code>
-の方を <code>admin</code> 以外のパスに変更して良いのなら
-一緒に使えると思います。</p>
-
-<p>使うのに必要な設定は
-<code>rake rails:template LOCATION=/path/to/file.rb</code>
-のように使うことを想定して作っているアプリケーションテンプレートの
-<a href="https://github.com/znz/rails-app-template/blob/master/the_role.rb">https://github.com/znz/rails-app-template/blob/master/the_role.rb</a>
-も参考になると思います。</p>
-
-<h2>pundit</h2>
-
-<p>こちらも初期設定などの一部は
-<a href="https://github.com/znz/rails-app-template/blob/master/pundit.rb">https://github.com/znz/rails-app-template/blob/master/pundit.rb</a>
-で出来るようにアプリケーションテンプレートを作成中です。</p>
-
-<p>認可の仕組みとしては簡単に言うと
-<code>Post</code> の <code>update</code> の認可なら
-<code>PostPolicy.new(current_user, @post).update?</code>
-で判断出来るような <code>Policy</code> クラスを用意しましょう、というだけです。</p>
-
-<p><code>index</code> などのようなアクション用として
-<code>@posts = PostPolicy::Scope.new(current_user, Post.scoped).resolve</code>
-のような <code>Scope</code> も用意する、ということになっています。</p>
-
-<p>そういうものを用意した上で便利に使えるようにいくつかのヘルパーメソッドなどを
-用意したものが <code>pundit</code> gem になっています。</p>
-
-<p>つまり仕組み自体は <code>pundit</code> gem なしでも使えるので、
-細かく制御したい部分では <code>pundit</code> gem に関係なく
-<code>Policy</code> や <code>Scope</code> を直接扱うこともできます。</p>
-
-<h2>pundit と rails_admin</h2>
-
-<p>というわけで直接扱ったり、
-モデルとは関連ない <code>Policy</code> を用意したりして、
-<code>rails_admin</code>
-との連携を作成している途中のものを
-<a href="https://github.com/znz/rails-app-template/blob/master/pundit-with-rails_admin.rb">https://github.com/znz/rails-app-template/blob/master/pundit-with-rails_admin.rb</a>
-に公開しています。</p>
-
-<h2>pundit と scaffold</h2>
-
-<p><code>cancan</code>
-の
-<code>load_and_authorize_resource</code>
-のようなものは
-<code>pundit</code>
-自体には用意されていないので、
-scaffold
-で生成したコントローラーに埋め込む処理を
-<a href="https://github.com/znz/rails-app-template/blob/master/pundit-with-scaffold.rb">https://github.com/znz/rails-app-template/blob/master/pundit-with-scaffold.rb</a>
-で公開しています。</p>
-
-<h2>まとめ</h2>
-
-<p>今回は初期設定をアプリケーションテンプレートにまとめつつ、
-認可用の gem を試しました。</p>
-
-<p>アプリケーションテンプレートはどれもひな形としての利用を想定しているので、
-この後さらに変更していくことになると思います。</p>
-
-<p>アプリケーションテンプレート自体も使っていった上で必要に応じて変更していく予定なので、
-リンク先はこの記事を書いた時点の内容とは合わなくなっている可能性もあります。</p>
-
-<p>認可用のライブラリとしては権限管理画面付きのものを簡単に組み込みたければ
-<code>the_role</code>、
-シンプルな部品を組み合わせるのが良ければ <code>pundit</code>、
-高機能なものが欲しければ <code>authority</code> を試すのが
-良さそうだと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[doorkeeper gem の API のクライアント]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-08-doorkeeper-api-client.html"/>
-    <updated>2013-10-08T21:06:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/doorkeeper-api-client</id>
-    <content type="html"><![CDATA[<p><a href="http://rubygems.org/gems/doorkeeper">doorkeeper gem</a>
-で API を作る方は
-<a href="https://github.com/applicake/doorkeeper-provider-app">doorkeeper-provider-app</a>
-というサンプルの
-<code>app/controllers/api/</code>
-以下などをみればすぐにわかったのですが、
-API を呼び出す方は
-<a href="https://github.com/applicake/doorkeeper/wiki/Create-a-OmniAuth-strategy-for-your-provider">OmniAuth の中でユーザーの情報を取り出す</a>
-だけならすぐに出来たのですが、
-コントローラーの中など呼び出す方法は
-<a href="https://github.com/applicake/doorkeeper-devise-client">doorkeeper-devise-client</a>
-を見てもよくわからなかったので、まとめてみました。</p>
-
-<!--more-->
-
-
-<h2>動作確認バージョン</h2>
-
-<ul>
-<li>provider 側
-
-<ul>
-<li>rails 3.2.14</li>
-<li>doorkeeper 0.7.3</li>
-</ul>
-</li>
-<li>client 側
-
-<ul>
-<li>rails 4.0.0</li>
-<li>devise 3.1.1</li>
-<li>omniauth 1.1.4</li>
-<li>omniauth-oauth2 1.1.1</li>
-<li>oauth2 0.8.1</li>
-</ul>
-</li>
-</ul>
-
-
-<h2>準備</h2>
-
-<p>まず
-<a href="https://github.com/applicake/doorkeeper/wiki/Create-a-OmniAuth-strategy-for-your-provider">Create a OmniAuth strategy for your provider</a>
-を参考にして、
-OmniAuth の中で
-<code>access_token.get('/api/v1/me.json').parsed</code>
-は出来るところまでは準備しておきます。</p>
-
-<p>目的としては、
-この
-<code>access_token</code>
-が認証より後で呼ばれる他のコントローラーの中で取得できれば良いということになります。</p>
-
-<p>余談ですが、
-doorkeeper の wiki は
-<a href="https://github.com/applicake/doorkeeper/wiki/Supported-Ruby-&amp;-Rails-versions">Supported Ruby &amp; Rails versions</a>
-のように情報が古いまま放置されているページもあるようなので、
-<a href="https://github.com/applicake/doorkeeper">README</a>
-などのソースコード側のドキュメントも参照した方が良さそうです。</p>
-
-<h2>必要なもの</h2>
-
-<p><code>access_token</code>
-は
-<code>OAuth2::AccessToken</code>
-クラスのオブジェクトです。</p>
-
-<p>生成するには</p>
-
-<ul>
-<li><code>OAuth2::Client</code> のオブジェクト</li>
-<li>認証で取得した <code>token</code></li>
-</ul>
-
-
-<p>が必要になります。</p>
-
-<p><code>OAuth2::Client</code>
-の生成には</p>
-
-<ul>
-<li><code>client_id</code></li>
-<li><code>client_secret</code></li>
-<li>URL</li>
-</ul>
-
-
-<p>が必要になります。</p>
-
-<h2>token の保存</h2>
-
-<p>まず
-<code>OAuth2</code>
-の認証で取得した
-<code>token</code>
-を保存しておく必要があります。</p>
-
-<p><code>Users::OmniauthCallbacksController#doorkeeper</code>
-で
-<code>session[:doorkeeper_token] = request.env["omniauth.auth"]["credentials"]["token"]</code>
-のようにしてセッションなどの後で使える場所に保存しておきます。</p>
-
-<p>後で調べてわかったのですが、
-<a href="https://github.com/applicake/doorkeeper-devise-client/blob/master/app/controllers/users/omniauth_callbacks_controller.rb">doorkeeper-devise-client の Users::OmniauthCallbacksController</a>
-では
-<code>request.env["omniauth.auth"].credentials.token</code>
-を
-<code>user.doorkeeper_access_token</code>
-でデータベースに保存していました。</p>
-
-<h2>OAuth2::Client の作成</h2>
-
-<p><a href="https://github.com/applicake/doorkeeper-devise-client/blob/master/app/controllers/application_controller.rb">doorkeeper-devise-client の ApplicationController</a>
-では必要な情報は定数経由で受け取るようになっていました。</p>
-
-<p>今回は
-<code>devise</code>
-と
-<code>omniauth-oauth2</code>
-を使っているので、
-その情報を使って生成するようにしました。
-要点だけまとめると以下のコードになります。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">config</span> <span class="o">=</span> <span class="no">Devise</span><span class="o">.</span><span class="n">omniauth_configs</span><span class="o">[</span><span class="ss">:doorkeeper</span><span class="o">]</span>
-</span><span class='line'><span class="n">strategy</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">strategy_class</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="o">*</span><span class="n">config</span><span class="o">.</span><span class="n">args</span><span class="p">)</span>
-</span><span class='line'><span class="n">client</span> <span class="o">=</span> <span class="n">strategy</span><span class="o">.</span><span class="n">client</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>OAuth2::AccessToken の生成</h2>
-
-<p>ここまで準備ができれば後は
-<code>OAuth2::AccessToken.new</code>
-するだけです。</p>
-
-<p>まとめると以下のコードになります。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">access_token</span>
-</span><span class='line'>    <span class="k">return</span> <span class="vi">@access_token</span> <span class="k">if</span> <span class="n">defined?</span><span class="p">(</span><span class="vi">@access_token</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">config</span> <span class="o">=</span> <span class="no">Devise</span><span class="o">.</span><span class="n">omniauth_configs</span><span class="o">[</span><span class="ss">:doorkeeper</span><span class="o">]</span>
-</span><span class='line'>    <span class="n">strategy</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">strategy_class</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="o">*</span><span class="n">config</span><span class="o">.</span><span class="n">args</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">token</span> <span class="o">=</span> <span class="n">session</span><span class="o">[</span><span class="ss">:doorkeeper_token</span><span class="o">]</span>
-</span><span class='line'>    <span class="vi">@access_token</span> <span class="o">=</span> <span class="ss">OAuth2</span><span class="p">:</span><span class="ss">:AccessToken</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">strategy</span><span class="o">.</span><span class="n">client</span><span class="p">,</span> <span class="n">token</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>API 呼び出し</h2>
-
-<p><code>access_token</code>
-が出来たら後は呼び出しに使うだけです。</p>
-
-<p>単純な情報取得は
-<code>get</code>
-して
-JSON
-なら
-<code>parsed</code>
-を呼び出すだけです。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">access_token</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/v1/me.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parsed</span>
-</span><span class='line'>  <span class="n">access_token</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/v1/posts.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parsed</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>今回は連携して書き込みたいというのが目的だったため、
-<code>post</code>
-も使いました。</p>
-
-<p>モデルの例としては
-<code>rails g scaffold post title body:text</code>
-で API の提供側では以下の実装とします。</p>
-
-<figure class='code'><figcaption><span>app/controllers/api/v1/posts_controller.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">module</span> <span class="nn">Api::V1</span>
-</span><span class='line'>  <span class="k">class</span> <span class="nc">PostsController</span> <span class="o">&lt;</span> <span class="no">ApiController</span>
-</span><span class='line'>    <span class="n">doorkeeper_for</span> <span class="ss">:index</span>
-</span><span class='line'>    <span class="n">doorkeeper_for</span> <span class="ss">:create</span>
-</span><span class='line'>    <span class="n">respond_to</span>     <span class="ss">:json</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="k">def</span> <span class="nf">index</span>
-</span><span class='line'>      <span class="n">respond_with</span> <span class="no">Post</span><span class="o">.</span><span class="n">all</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="k">def</span> <span class="nf">create</span>
-</span><span class='line'>      <span class="n">post</span> <span class="o">=</span> <span class="no">Post</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:post</span><span class="o">]</span><span class="p">)</span>
-</span><span class='line'>      <span class="n">post</span><span class="o">.</span><span class="n">user</span> <span class="o">=</span> <span class="n">current_resource_owner</span>
-</span><span class='line'>      <span class="n">post</span><span class="o">.</span><span class="n">save!</span>
-</span><span class='line'>      <span class="n">respond_with</span> <span class="n">post</span>
-</span><span class='line'>    <span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>呼び出し側は以下のようになります。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">access_token</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/api/v1/posts&quot;</span><span class="p">,</span> <span class="ss">params</span><span class="p">:</span> <span class="p">{</span> <span class="ss">post</span><span class="p">:</span> <span class="p">{</span> <span class="ss">title</span><span class="p">:</span> <span class="n">title</span><span class="p">,</span> <span class="ss">body</span><span class="p">:</span> <span class="n">body</span> <span class="p">}</span> <span class="p">})</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>params</code>
-による指定は
-<a href="https://github.com/intridea/oauth2/blob/master/lib/oauth2/access_token.rb">OAuth2::AccessToken</a>
-のソースをみて推測しました。</p>
-
-<h2>scope 付き API 提供</h2>
-
-<p>書き込みも許可すると
-<code>scope</code>
-を分けたくなります。</p>
-
-<p>doorkeeper 側では
-<a href="https://github.com/applicake/doorkeeper/wiki/Using-Scopes">Using Scopes</a>
-を参考にして</p>
-
-<ul>
-<li>initializers に scopes 追加</li>
-<li>翻訳追加</li>
-<li>API に scopes 追加</li>
-</ul>
-
-
-<p>をしておきます。</p>
-
-<figure class='code'><figcaption><span>config/initializers/doorkeeper.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">default_scopes</span>  <span class="ss">:public</span>
-</span><span class='line'>  <span class="n">optional_scopes</span> <span class="ss">:admin</span><span class="p">,</span> <span class="ss">:write</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><figcaption><span>app/controllers/api/v1/posts_controller.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">doorkeeper_for</span> <span class="ss">:index</span><span class="p">,</span>  <span class="ss">:show</span><span class="p">,</span>   <span class="ss">scopes</span><span class="p">:</span> <span class="o">[</span><span class="ss">:public</span><span class="o">]</span>
-</span><span class='line'><span class="n">doorkeeper_for</span> <span class="ss">:create</span><span class="p">,</span> <span class="ss">:update</span><span class="p">,</span> <span class="ss">scopes</span><span class="p">:</span> <span class="o">[</span><span class="ss">:admin</span><span class="p">,</span> <span class="ss">:write</span><span class="o">]</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>参考のため、この API の rspec も載せておきます。
-複数の <code>scopes</code> を設定する時に <code>,</code> 区切りだとうまくいかないところがあったので、
-スペース区切りにしています。</p>
-
-<figure class='code'><figcaption><span>spec/controllers/api/v1/posts_controller_spec.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-<span class='line-number'>51</span>
-<span class='line-number'>52</span>
-<span class='line-number'>53</span>
-<span class='line-number'>54</span>
-<span class='line-number'>55</span>
-<span class='line-number'>56</span>
-<span class='line-number'>57</span>
-<span class='line-number'>58</span>
-<span class='line-number'>59</span>
-<span class='line-number'>60</span>
-<span class='line-number'>61</span>
-<span class='line-number'>62</span>
-<span class='line-number'>63</span>
-<span class='line-number'>64</span>
-<span class='line-number'>65</span>
-<span class='line-number'>66</span>
-<span class='line-number'>67</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;spec_helper&#39;</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">describe</span> <span class="ss">Api</span><span class="p">:</span><span class="ss">:V1</span><span class="o">::</span><span class="no">PostsController</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">describe</span> <span class="s2">&quot;GET &#39;index&#39;&quot;</span> <span class="k">do</span>
-</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:application</span><span class="p">)</span> <span class="p">{</span> <span class="ss">Doorkeeper</span><span class="p">:</span><span class="ss">:Application</span><span class="o">.</span><span class="n">create!</span><span class="p">(</span><span class="nb">name</span><span class="p">:</span> <span class="s2">&quot;MyApp&quot;</span><span class="p">,</span> <span class="n">redirect_uri</span><span class="p">:</span> <span class="s2">&quot;http://app.com&quot;</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:user</span><span class="p">)</span> <span class="p">{</span> <span class="no">FactoryGirl</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="ss">:normal_user</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:token</span><span class="p">)</span> <span class="p">{</span> <span class="ss">Doorkeeper</span><span class="p">:</span><span class="ss">:AccessToken</span><span class="o">.</span><span class="n">create!</span> <span class="n">application_id</span><span class="p">:</span> <span class="n">application</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">resource_owner_id</span><span class="p">:</span> <span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="ss">scopes</span><span class="p">:</span> <span class="s2">&quot;public&quot;</span> <span class="p">}</span>
-</span><span class='line'>    <span class="n">subject</span> <span class="p">{</span> <span class="n">response</span> <span class="p">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="n">context</span> <span class="s2">&quot;valid token&quot;</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">before</span> <span class="k">do</span>
-</span><span class='line'>        <span class="n">get</span> <span class="s1">&#39;index&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="p">:</span> <span class="ss">:json</span><span class="p">,</span> <span class="n">access_token</span><span class="p">:</span> <span class="n">token</span><span class="o">.</span><span class="n">token</span>
-</span><span class='line'>      <span class="k">end</span>
-</span><span class='line'>      <span class="n">it</span> <span class="p">{</span> <span class="n">should</span> <span class="n">be_success</span> <span class="p">}</span>
-</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:status</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="n">eq</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:body</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="o">==</span> <span class="no">Post</span><span class="o">.</span><span class="n">all</span><span class="o">.</span><span class="n">to_a</span><span class="o">.</span><span class="n">to_json</span> <span class="p">}</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="n">context</span> <span class="s2">&quot;invalid token&quot;</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">before</span> <span class="k">do</span>
-</span><span class='line'>        <span class="n">get</span> <span class="s1">&#39;index&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="p">:</span> <span class="ss">:json</span><span class="p">,</span> <span class="n">access_token</span><span class="p">:</span> <span class="n">token</span><span class="o">.</span><span class="n">token</span><span class="o">.</span><span class="n">succ</span>
-</span><span class='line'>      <span class="k">end</span>
-</span><span class='line'>      <span class="n">it</span> <span class="p">{</span> <span class="n">should_not</span> <span class="n">be_success</span> <span class="p">}</span>
-</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:status</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="n">eq</span><span class="p">(</span><span class="mi">401</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="n">describe</span> <span class="s2">&quot;GET &#39;index&#39; without scopes&quot;</span> <span class="k">do</span>
-</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:application</span><span class="p">)</span> <span class="p">{</span> <span class="ss">Doorkeeper</span><span class="p">:</span><span class="ss">:Application</span><span class="o">.</span><span class="n">create!</span><span class="p">(</span><span class="nb">name</span><span class="p">:</span> <span class="s2">&quot;MyApp&quot;</span><span class="p">,</span> <span class="n">redirect_uri</span><span class="p">:</span> <span class="s2">&quot;http://app.com&quot;</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:user</span><span class="p">)</span> <span class="p">{</span> <span class="no">FactoryGirl</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="ss">:normal_user</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:token</span><span class="p">)</span> <span class="p">{</span> <span class="ss">Doorkeeper</span><span class="p">:</span><span class="ss">:AccessToken</span><span class="o">.</span><span class="n">create!</span> <span class="n">application_id</span><span class="p">:</span> <span class="n">application</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">resource_owner_id</span><span class="p">:</span> <span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="ss">scopes</span><span class="p">:</span> <span class="s2">&quot;write&quot;</span> <span class="p">}</span>
-</span><span class='line'>    <span class="n">subject</span> <span class="p">{</span> <span class="n">response</span> <span class="p">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="n">context</span> <span class="s2">&quot;valid token&quot;</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">before</span> <span class="k">do</span>
-</span><span class='line'>        <span class="n">get</span> <span class="s1">&#39;index&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="p">:</span> <span class="ss">:json</span><span class="p">,</span> <span class="n">access_token</span><span class="p">:</span> <span class="n">token</span><span class="o">.</span><span class="n">token</span>
-</span><span class='line'>      <span class="k">end</span>
-</span><span class='line'>      <span class="n">it</span> <span class="p">{</span> <span class="n">should_not</span> <span class="n">be_success</span> <span class="p">}</span>
-</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:status</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="n">eq</span><span class="p">(</span><span class="mi">401</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:body</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="o">==</span> <span class="s2">&quot; &quot;</span> <span class="p">}</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="n">describe</span> <span class="s2">&quot;POST &#39;create&#39;&quot;</span> <span class="k">do</span>
-</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:application</span><span class="p">)</span> <span class="p">{</span> <span class="ss">Doorkeeper</span><span class="p">:</span><span class="ss">:Application</span><span class="o">.</span><span class="n">create!</span><span class="p">(</span><span class="nb">name</span><span class="p">:</span> <span class="s2">&quot;MyApp&quot;</span><span class="p">,</span> <span class="n">redirect_uri</span><span class="p">:</span> <span class="s2">&quot;http://app.com&quot;</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:user</span><span class="p">)</span> <span class="p">{</span> <span class="no">FactoryGirl</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="ss">:normal_user</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>    <span class="n">let!</span><span class="p">(</span><span class="ss">:token</span><span class="p">)</span> <span class="p">{</span> <span class="ss">Doorkeeper</span><span class="p">:</span><span class="ss">:AccessToken</span><span class="o">.</span><span class="n">create!</span> <span class="n">application_id</span><span class="p">:</span> <span class="n">application</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">resource_owner_id</span><span class="p">:</span> <span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="ss">scopes</span><span class="p">:</span> <span class="s2">&quot;public write&quot;</span> <span class="p">}</span>
-</span><span class='line'>    <span class="n">subject</span> <span class="p">{</span> <span class="n">response</span> <span class="p">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="n">context</span> <span class="s2">&quot;valid token&quot;</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">before</span> <span class="k">do</span>
-</span><span class='line'>        <span class="n">post</span> <span class="s1">&#39;create&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="p">:</span> <span class="ss">:json</span><span class="p">,</span> <span class="n">access_token</span><span class="p">:</span> <span class="n">token</span><span class="o">.</span><span class="n">token</span><span class="p">,</span> <span class="ss">post</span><span class="p">:</span> <span class="p">{</span> <span class="ss">title</span><span class="p">:</span> <span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="ss">body</span><span class="p">:</span> <span class="s2">&quot;some content&quot;</span> <span class="p">}</span>
-</span><span class='line'>      <span class="k">end</span>
-</span><span class='line'>      <span class="n">it</span> <span class="p">{</span> <span class="n">should</span> <span class="n">be_success</span> <span class="p">}</span>
-</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:status</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="n">eq</span><span class="p">(</span><span class="mi">201</span><span class="p">)</span> <span class="p">}</span> <span class="c1"># 201 Created</span>
-</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:body</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="o">==</span> <span class="no">Post</span><span class="o">.</span><span class="n">last</span><span class="o">.</span><span class="n">to_json</span> <span class="p">}</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="n">context</span> <span class="s2">&quot;invalid token&quot;</span> <span class="k">do</span>
-</span><span class='line'>      <span class="n">before</span> <span class="k">do</span>
-</span><span class='line'>        <span class="n">post</span> <span class="s1">&#39;create&#39;</span><span class="p">,</span> <span class="nb">format</span><span class="p">:</span> <span class="ss">:json</span><span class="p">,</span> <span class="n">access_token</span><span class="p">:</span> <span class="n">token</span><span class="o">.</span><span class="n">token</span><span class="o">.</span><span class="n">succ</span>
-</span><span class='line'>      <span class="k">end</span>
-</span><span class='line'>      <span class="n">it</span> <span class="p">{</span> <span class="n">should_not</span> <span class="n">be_success</span> <span class="p">}</span>
-</span><span class='line'>      <span class="n">its</span><span class="p">(</span><span class="ss">:status</span><span class="p">)</span> <span class="p">{</span> <span class="n">should</span> <span class="n">eq</span><span class="p">(</span><span class="mi">401</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>scope 付き呼び出し</h2>
-
-<p><code>devise</code>
-の設定で
-<code>omniauth</code>
-の設定に
-<code>scope</code>
-を追加するだけです。</p>
-
-<figure class='code'><figcaption><span>config/initializers/devise.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">omniauth</span> <span class="ss">:doorkeeper</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_ID&#39;</span><span class="o">]</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_SECRET&#39;</span><span class="o">]</span><span class="p">,</span> <span class="p">{</span> <span class="ss">scope</span><span class="p">:</span> <span class="s1">&#39;public write&#39;</span> <span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>rspec のところでもちょっと書きましたが、
-区切りが <code>,</code> だとうまくいかないことがあったので、
-スペース区切りにしています。</p>
-
-<p>原因は
-<a href="https://github.com/applicake/doorkeeper/blob/master/lib/doorkeeper/oauth/scopes.rb">lib/doorkeeper/oauth/scopes.rb</a>
-で
-<code>string.split</code>
-のように無引数の
-<code>String#split</code>
-を使っているからではないかと推測していますが、確認はしていません。</p>
-
-<h2>まとめ</h2>
-
-<p><code>client_id</code> と <code>client_secret</code> と provider の URL はあらかじめ用意しておいて、
-client 側の rails アプリに設定しておきます。</p>
-
-<p><code>token</code>
-は OAuth2 で取得したものを
-<code>session</code>
-やデータベースなどに保存しておいて使います。</p>
-
-<p>必要なら
-<code>scopes</code>
-も設定できます。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[rails で assets を gem に入れる時の配置]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-03-rails-assets-in-gem.html"/>
-    <updated>2013-10-03T10:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rails-assets-in-gem</id>
-    <content type="html"><![CDATA[<p>昨日の記事で
-<a href="https://rubygems.org/gems/jquery_mobile_rails">jquery_mobile_rails</a> 1.3.2
-で画像ファイルが
-<code>rake assets:precompile</code>
-で処理されないという話を書きましたが、
-<a href="http://rubygems.org/gems/jquery-ui-rails">jquery-ui-rails</a>
-gem
-などは Gemfile に足すだけで特に require などをしなくても
-画像が処理されていたので違いを調べてみました。</p>
-
-<!--more-->
-
-
-<p>結論を先に書くと、
-<code>jquery-ui-rails</code>
-は
-<code>app/assets/images/</code>
-に画像ファイルを置いていたから処理されていて、
-<code>jquery_mobile_rails</code>
-は
-<code>vendor/assets/images/</code>
-に画像ファイルを置いていたから、
-というのが原因でした。</p>
-
-<p>自作の gem で
-<code>app/assets/images/</code>
-と
-<code>vendor/assets/images/</code>
-に画像を置いて rails 4.0.0 の
-<code>rake assets:precompile</code>
-で違いがあることを確認しています。</p>
-
-<p><code>jquery_mobile_rails</code> の issues を確認すると
-<a href="https://github.com/tscolari/jquery-mobile-rails/issues/16">In production, path to images is wrong</a>
-という同じ問題に困っている話があったので、
-コメントを付けておきました。</p>
-
-<p>ちなみに
-いくつか存在する jQuery Mobile の assets の中から
-<code>jquery_mobile_rails</code>
-を選んだ理由は新しいバージョンへの対応が一番早そうにみえたからです。</p>
 ]]></content>
   </entry>
   

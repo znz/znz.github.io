@@ -1,0 +1,717 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>HomebrewのEmacsにIMEインラインパッチが取り込まれたので設定した - @znz blog</title>
+  <meta name="author" content="Kazuhiro NISHIYAMA">
+
+  
+  <meta name="description" content="h12o さんのインラインパッチの pull request が取り込まれた
+(コメント参照)
+ということで、
+brew uninstall emacs で一度アンインストールしてから
+brew install --cocoa --srgb --with-gnutls --japanese &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-11-12-cocoa-emacs-ime.html">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-43859023-1', 'n-z.jp');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">@znz blog</a></h1>
+  
+    <h2>ZnZ の memo のようなもの</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://www.google.co.jp/cse" id="cse-search-box">
+  <div>
+    <input type="hidden" name="cx" value="partner-pub-4711975605457723:5173725094" />
+    <input type="hidden" name="ie" value="UTF-8" />
+    <input type="text" name="q" size="40" />
+    <input type="submit" name="sa" value="検索" />
+  </div>
+</form>
+
+<script type="text/javascript" src="http://www.google.co.jp/coop/cse/brand?form=cse-search-box&amp;lang=ja"></script>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">HomebrewのEmacsにIMEインラインパッチが取り込まれたので設定した</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-11-12T18:30:00+09:00" pubdate data-updated="true">2013-11-12 (Tue)</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p><a href="http://qiita.com/h12o@github/items/07f773909da5ebdb7b7c">h12o さんのインラインパッチの pull request が取り込まれた</a>
+(コメント参照)
+ということで、
+<code>brew uninstall emacs</code> で一度アンインストールしてから
+<code>brew install --cocoa --srgb --with-gnutls --japanese emacs -v</code>
+でインストールして、
+IME 関連の設定をしてみました。</p>
+
+<!--more-->
+
+
+<h2>IME 関連設定全体</h2>
+
+<p>以下のように設定してみました。</p>
+
+<p>以降は設定内容を個別に解説していきます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+</pre></td><td class='code'><pre><code class='scheme'><span class='line'><span class="p">(</span><span class="nf">global-set-key</span> <span class="p">(</span><span class="nf">kbd</span> <span class="s">&quot;M-¥&quot;</span><span class="p">)</span> <span class="p">(</span><span class="k">lambda </span><span class="p">()</span> <span class="p">(</span><span class="nf">interactive</span><span class="p">)</span> <span class="p">(</span><span class="nf">insert</span> <span class="s">&quot;\\&quot;</span><span class="p">)))</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">(</span><span class="nf">static-when</span> <span class="p">(</span><span class="nf">eq</span> <span class="nv">window-system</span> <span class="ss">&#39;ns</span><span class="p">)</span>
+</span><span class='line'>  <span class="p">(</span><span class="nf">static-when</span> <span class="p">(</span><span class="nb">assoc </span><span class="s">&quot;MacOSX&quot;</span> <span class="nv">input-method-alist</span><span class="p">)</span>
+</span><span class='line'>    <span class="c1">;; ime inline patch</span>
+</span><span class='line'>    <span class="p">(</span><span class="nf">setq</span> <span class="nv">default-input-method</span> <span class="s">&quot;MacOSX&quot;</span><span class="p">)</span>
+</span><span class='line'>    <span class="p">(</span><span class="nf">static-when</span> <span class="nv">t</span>
+</span><span class='line'>      <span class="p">(</span><span class="nf">mac-translate-from-yen-to-backslash</span><span class="p">)</span>
+</span><span class='line'>      <span class="p">(</span><span class="nf">global-set-key</span> <span class="p">(</span><span class="nf">kbd</span> <span class="s">&quot;M-¥&quot;</span><span class="p">)</span> <span class="p">(</span><span class="k">lambda </span><span class="p">()</span> <span class="p">(</span><span class="nf">interactive</span><span class="p">)</span> <span class="p">(</span><span class="nf">insert</span> <span class="s">&quot;¥&quot;</span><span class="p">)))</span>
+</span><span class='line'>      <span class="p">)</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="p">(</span><span class="nf">mapc</span>
+</span><span class='line'>     <span class="p">(</span><span class="k">lambda </span><span class="p">(</span><span class="nf">param</span><span class="p">)</span>
+</span><span class='line'>       <span class="p">(</span><span class="k">let </span><span class="p">((</span><span class="nf">name</span> <span class="p">(</span><span class="nb">car </span><span class="nv">param</span><span class="p">)))</span>
+</span><span class='line'>         <span class="p">(</span><span class="nf">cond</span>
+</span><span class='line'>          <span class="p">((</span><span class="nf">string-match</span> <span class="s">&quot;Japanese\\(\\.base\\)?\\&#39;&quot;</span> <span class="nv">name</span><span class="p">)</span> <span class="c1">;; ひらがなの日本語入力</span>
+</span><span class='line'>           <span class="p">(</span><span class="nf">mac-set-input-method-parameter</span> <span class="nv">name</span> <span class="ss">&#39;cursor-color</span> <span class="s">&quot;blue&quot;</span><span class="p">))</span>
+</span><span class='line'>          <span class="p">((</span><span class="nf">string-match</span> <span class="s">&quot;Japanese&quot;</span> <span class="nv">name</span><span class="p">)</span> <span class="c1">;; カナなどの日本語入力</span>
+</span><span class='line'>           <span class="p">(</span><span class="nf">mac-set-input-method-parameter</span> <span class="nv">name</span> <span class="ss">&#39;cursor-color</span> <span class="s">&quot;red&quot;</span><span class="p">))</span>
+</span><span class='line'>          <span class="p">((</span><span class="nf">string-match</span> <span class="s">&quot;Roman&quot;</span> <span class="nv">name</span><span class="p">)</span> <span class="c1">;; 英字</span>
+</span><span class='line'>           <span class="p">(</span><span class="nf">mac-set-input-method-parameter</span> <span class="nv">name</span> <span class="ss">&#39;cursor-color</span> <span class="s">&quot;black&quot;</span><span class="p">))</span>
+</span><span class='line'>          <span class="p">(</span><span class="nf">t</span> <span class="c1">;; その他</span>
+</span><span class='line'>           <span class="p">(</span><span class="nf">mac-set-input-method-parameter</span> <span class="nv">name</span> <span class="ss">&#39;cursor-color</span> <span class="s">&quot;yellow&quot;</span><span class="p">))</span>
+</span><span class='line'>          <span class="p">)</span>
+</span><span class='line'>         <span class="p">))</span>
+</span><span class='line'>     <span class="nv">mac-input-method-parameters</span><span class="p">)</span>
+</span><span class='line'>    <span class="p">(</span><span class="nf">mac-set-input-method-parameter</span> <span class="s">&quot;com.apple.keylayout.US&quot;</span> <span class="ss">&#39;cursor-color</span> <span class="s">&quot;black&quot;</span><span class="p">)</span>
+</span><span class='line'>    <span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>環境のチェック</h2>
+
+<p><code>(eq window-system 'ns)</code>
+で Cocoa Emacs かどうかチェックしています。</p>
+
+<h2>パッチのチェック</h2>
+
+<p><code>(boundp 'mac-input-method-parameters)</code>
+でチェックしている例が多かったのですが、
+<code>(assoc "MacOSX" input-method-alist)</code>
+で真面目に <code>default-input-method</code> に設定できる値かどうか調べています。</p>
+
+<p><code>(boundp 'mac-input-method-parameters)</code>
+の方が一般的なようなので、
+今後使えなくなる可能性も低そうなので、
+<code>alist</code> をたどる必要があって遅そうな <code>assoc</code> のチェックは
+あまりおすすめできないです。</p>
+
+<h2>Option+backslash</h2>
+
+<p>普段はデフォルトのままの「ことえり」を使っていて、
+Linux での OADG109A と同じように <code>¥</code> キーはちゃんと yen sign の入力になるようにしています。</p>
+
+<p>そして、
+<code>Option+¥</code>
+で backslash が入力できます。
+外側の
+<code>(global-set-key (kbd "M-¥") (lambda () (interactive) (insert "\\")))</code>
+で Emacs でも同じ挙動になるようにしています。
+インラインパッチがない環境だとこの挙動になります。
+とりあえず入力できれば良いと思って作った設定なので、
+prefix argument などには対応していません。
+(<code>C-u M-¥</code> でも4文字ではなく1文字しか入らない)</p>
+
+<p>ところが、これだと
+<code>C-¥</code>
+で
+<code>toggle-input-method</code>
+がきかなかったので、不本意ですが
+<code>(mac-translate-from-yen-to-backslash)</code>
+を使いました。
+そして、逆に
+<code>Option+¥</code>
+で yen sign が入力できるようにするために
+<code>(global-set-key (kbd "M-¥") (lambda () (interactive) (insert "¥")))</code>
+と設定しています。</p>
+
+<h2>カーソルの色の設定</h2>
+
+<p>IME 対応で一番期待していた部分がこれでした。</p>
+
+<p>ddskk で入力状態によってカーソルの色を変えられるのが便利だったので、
+TeraTerm Pro のように IME の状態によってカーソルの表示を変更できるものは
+積極的に利用していたこともあって、ちょっと頑張って設定してみました。</p>
+
+<p><code>mac-input-method-parameters</code> の初期値の一部を抜粋すると以下のように設定されていて、
+ほとんどの IME は「ことえり」と同じように
+<code>.Japanese</code>
+で終わっているものが一般的な日本語入力状態に見えたので、
+青色にすることにしました。
+「Google 日本語入力」はよくわかりませんが、
+たぶん <code>.Japanese.base</code> で終わっているものが、
+そうだろうと思って設定しました。</p>
+
+<p>そしてカタカナなどの他の入力状態の時は赤色にしました。</p>
+
+<p>それから、
+<code>.Roman</code>
+で終わっているものが、英字入力状態のようだったので、
+黒色に戻すようにしました。</p>
+
+<p>ちゃんと戻す設定も入れないと変わりっぱなしになってしまうので、
+戻す設定も重要です。</p>
+
+<p>最後にその他の日本語以外の IME のときは黄色にしました。</p>
+
+<p>ネットで見つかる設定例では
+<code>"com.apple.keylayout.US"</code>
+にも
+<code>mac-set-input-method-parameter</code>
+をしているのですが、
+<code>mac-input-method-parameters</code>
+にはなかったので、
+後で設定しています。
+(先に設定すると、その他の黄色で上書きしてしまう。)</p>
+
+<figure class='code'><figcaption><span>ns-win.el.gz</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+<span class='line-number'>70</span>
+<span class='line-number'>71</span>
+<span class='line-number'>72</span>
+<span class='line-number'>73</span>
+<span class='line-number'>74</span>
+<span class='line-number'>75</span>
+<span class='line-number'>76</span>
+<span class='line-number'>77</span>
+<span class='line-number'>78</span>
+<span class='line-number'>79</span>
+<span class='line-number'>80</span>
+<span class='line-number'>81</span>
+<span class='line-number'>82</span>
+<span class='line-number'>83</span>
+<span class='line-number'>84</span>
+<span class='line-number'>85</span>
+<span class='line-number'>86</span>
+<span class='line-number'>87</span>
+<span class='line-number'>88</span>
+<span class='line-number'>89</span>
+<span class='line-number'>90</span>
+<span class='line-number'>91</span>
+<span class='line-number'>92</span>
+<span class='line-number'>93</span>
+<span class='line-number'>94</span>
+<span class='line-number'>95</span>
+<span class='line-number'>96</span>
+<span class='line-number'>97</span>
+<span class='line-number'>98</span>
+<span class='line-number'>99</span>
+<span class='line-number'>100</span>
+<span class='line-number'>101</span>
+<span class='line-number'>102</span>
+<span class='line-number'>103</span>
+<span class='line-number'>104</span>
+<span class='line-number'>105</span>
+<span class='line-number'>106</span>
+<span class='line-number'>107</span>
+<span class='line-number'>108</span>
+</pre></td><td class='code'><pre><code class='scheme'><span class='line'><span class="p">(</span><span class="nf">defvar</span> <span class="nv">mac-input-method-parameters</span>
+</span><span class='line'>  <span class="o">&#39;</span><span class="p">(</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.apple.inputmethod.Kotoeri.Roman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;A&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.apple.inputmethod.Kotoeri.Japanese&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;あ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.apple.inputmethod.Kotoeri.Japanese.Katakana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;ア&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.apple.inputmethod.Kotoeri.Japanese.FullWidthRoman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;Ａ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.apple.inputmethod.Kotoeri.Japanese.HalfWidthKana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;ｱ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.apple.inputmethod.kotoeri.Ainu&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;アイヌ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>  <span class="o">...</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.google.inputmethod.Japanese.Roman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;G&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.google.inputmethod.Japanese.base&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;ぐ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.google.inputmethod.Japanese.Katakana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;グ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.google.inputmethod.Japanese.FullWidthRoman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;Ｇ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.google.inputmethod.Japanese.HalfWidthKana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;ｸﾞ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;jp.monokakido.inputmethod.Kawasemi.Roman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;K&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;jp.monokakido.inputmethod.Kawasemi.Japanese&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;か&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;jp.monokakido.inputmethod.Kawasemi.Japanese.Katakana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;カ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;jp.monokakido.inputmethod.Kawasemi.Japanese.FullWidthRoman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;Ｋ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;jp.monokakido.inputmethod.Kawasemi.Japanese.HalfWidthKana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;ｶ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;jp.monokakido.inputmethod.Kawasemi.Japanese.HalfWidthRoman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;_K&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;jp.monokakido.inputmethod.Kawasemi.Japanese.Code&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;C&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok21.Roman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;A&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok21.Japanese&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;あ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok21.Japanese.Katakana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;ア&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok21.Japanese.FullWidthRoman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;英&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok21.Japanese.HalfWidthEiji&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;半英&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok22.Roman&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;A&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok22.Japanese&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;あ&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="p">(</span><span class="s">&quot;com.justsystems.inputmethod.atok22.Japanese.Katakana&quot;</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">title</span> <span class="o">.</span> <span class="s">&quot;ア&quot;</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-color</span><span class="p">)</span>
+</span><span class='line'>     <span class="p">(</span><span class="nf">cursor-type</span><span class="p">))</span>
+</span><span class='line'>    <span class="o">...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-11-12T18:30:00+09:00" pubdate data-updated="true">2013-11-12 (Tue)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/emacs/'>emacs</a>, <a class='category' href='/blog/categories/ime/'>ime</a>, <a class='category' href='/blog/categories/mac/'>mac</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-11-12-cocoa-emacs-ime.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-11-12-cocoa-emacs-ime.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-11-12-cocoa-emacs-ime.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013-11-12-zsh-cdr.html" title="Previous Post: zshでcdの履歴管理に標準添付のcdrを使う">&laquo; zshでcdの履歴管理に標準添付のcdrを使う</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013-11-13-tty-ime.html" title="Next Post: iTerm2でのIME制御がきかない">iTerm2でのIME制御がきかない &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- sidebar -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:160px;height:600px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4210402292"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+<section>
+  <h1>About Me</h1>
+  <p><a href="http://rubycommitters.org/">Ruby のコミッター</a>とかやってます。</p>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013-11-14-macosx-ime.html">Mac OS XでのIME制御についての考察</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-11-13-killall-distnoted-periodically.html">launchdでdistnotedを定期的に終了させる</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-11-13-tty-ime.html">iTerm2でのIME制御がきかない</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-11-12-cocoa-emacs-ime.html">HomebrewのEmacsにIMEインラインパッチが取り込まれたので設定した</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-11-12-zsh-cdr.html">zshでcdの履歴管理に標準添付のcdrを使う</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>Tag Cloud</h1>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 108.0%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 108.0%'>amagasakirb(2)</a> <a href='/blog/categories/ansible' style='font-size: 104.0%'>ansible(1)</a> <a href='/blog/categories/authorization' style='font-size: 104.0%'>authorization(1)</a> <a href='/blog/categories/bts' style='font-size: 104.0%'>bts(1)</a> <a href='/blog/categories/certification' style='font-size: 104.0%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 104.0%'>coffeescript(1)</a> <a href='/blog/categories/community' style='font-size: 108.0%'>community(2)</a> <a href='/blog/categories/debian' style='font-size: 116.0%'>debian(4)</a> <a href='/blog/categories/devise' style='font-size: 108.0%'>devise(2)</a> <a href='/blog/categories/doorkeeper' style='font-size: 104.0%'>doorkeeper(1)</a> <a href='/blog/categories/elscreen' style='font-size: 104.0%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 120.0%'>emacs(5)</a> <a href='/blog/categories/event' style='font-size: 148.0%'>event(12)</a> <a href='/blog/categories/gem' style='font-size: 104.0%'>gem(1)</a> <a href='/blog/categories/github' style='font-size: 108.0%'>github(2)</a> <a href='/blog/categories/homebrew' style='font-size: 120.0%'>homebrew(5)</a> <a href='/blog/categories/html5' style='font-size: 108.0%'>html5(2)</a> <a href='/blog/categories/ime' style='font-size: 112.0%'>ime(3)</a> <a href='/blog/categories/irb' style='font-size: 104.0%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 104.0%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 112.0%'>javascript(3)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 108.0%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 104.0%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 104.0%'>jus(1)</a> <a href='/blog/categories/k-of' style='font-size: 104.0%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 108.0%'>kansaidebian(2)</a> <a href='/blog/categories/kernelvm' style='font-size: 104.0%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 104.0%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 108.0%'>land-of-lisp(2)</a> <a href='/blog/categories/linux' style='font-size: 108.0%'>linux(2)</a> <a href='/blog/categories/mac' style='font-size: 144.0%'>mac(11)</a> <a href='/blog/categories/mavericks' style='font-size: 108.0%'>mavericks(2)</a> <a href='/blog/categories/mojibake' style='font-size: 104.0%'>mojibake(1)</a> <a href='/blog/categories/oauth2' style='font-size: 104.0%'>oauth2(1)</a> <a href='/blog/categories/octopress' style='font-size: 112.0%'>octopress(3)</a> <a href='/blog/categories/omniauth' style='font-size: 104.0%'>omniauth(1)</a> <a href='/blog/categories/pundit' style='font-size: 104.0%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 104.0%'>pyenv(1)</a> <a href='/blog/categories/rabbit' style='font-size: 108.0%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 144.0%'>rails(11)</a> <a href='/blog/categories/rbenv' style='font-size: 108.0%'>rbenv(2)</a> <a href='/blog/categories/rubima' style='font-size: 104.0%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(15)</a> <a href='/blog/categories/rubykaigi' style='font-size: 104.0%'>rubykaigi(1)</a> <a href='/blog/categories/rubymotion' style='font-size: 108.0%'>rubymotion(2)</a> <a href='/blog/categories/shell' style='font-size: 104.0%'>shell(1)</a> <a href='/blog/categories/td2planet' style='font-size: 104.0%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 112.0%'>tty(3)</a> <a href='/blog/categories/ubuntu' style='font-size: 116.0%'>ubuntu(4)</a> <a href='/blog/categories/zsh' style='font-size: 104.0%'>zsh(1)</a> </span>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/znz">@znz</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'znz',
+            count: 3,
+            skip_forks: false,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - Kazuhiro NISHIYAMA -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'znzblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-11-12-cocoa-emacs-ime.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-11-12-cocoa-emacs-ime.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+<script type="text/javascript" src="http://b.st-hatena.com/js/bookmark_button.js" charset="utf-8" async="async"></script>
+
+
+</body>
+</html>
