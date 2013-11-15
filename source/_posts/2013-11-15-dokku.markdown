@@ -1,0 +1,244 @@
+---
+layout: post
+title: "VirtualBoxでdokkuを試した"
+date: 2013-11-15 15:35
+comments: true
+categories: linux ubuntu lxc docker dokku
+---
+VirtualBox の中に Ubuntu 13.04 を入れて
+[dokku](https://github.com/progrium/dokku)
+を試してみました。
+
+[dokku + VirtualBoxで自分のHerokuを作る](http://blog.coiney.com/2013/08/10/create-my-own-heroku/)
+を参考にしたのですが、
+情報が古いのか、
+README
+に書いてあるのとコマンドが違うところ
+(`gitreceive` が `sshcommand` になっているなど)
+があるので、
+README
+の手順を基準にするのが良さそうです。
+
+<!--more-->
+
+## 対象バージョン
+
+dokku の README に Ubuntu 13.10 と docker の組み合わせは
+まだ問題があり、
+13.04 が推奨と書いてあったので、
+13.04 を使いました。
+
+- ホストOS : OS X 10.9
+- VirtualBox 4.3.2
+- ゲストOS : Ubuntu 13.04 (amd64)
+- lxc-docker : 0.6.6
+- dokku : 今の master ブランチ (59ef6510bc)
+
+## Ubuntu 13.04 (amd64) のインストール
+
+OS のインストールは自分がこうしたというだけの話なので、
+興味が無ければ dokku のインストールまで飛ばしてください。
+
+いつものように
+[Ubuntu Releases の jaist ミラー](http://ftp.jaist.ac.jp/pub/Linux/ubuntu-releases/)
+から
+`ubuntu-13.04-server-amd64.iso`
+をダウンロードしてインストールしました。
+
+最初のユーザーは `adminuser` で、
+`ssh` は後で入れるので、
+パッケージのチェックは入れずにインストールしました。
+ディスクは多めに 20GB に設定した以外はほぼデフォルトでインストールしました。
+
+### etckeeper の設定
+
+- `sudo aptitude install etckeeper git` で `git` と一緒にインストールして `bzr` をインストールしないようにします。
+  `bzr` がないので自動での `etckeeper init` は失敗するので、手動で実行します。
+- `EDITOR=vi sudoedit /etc/etckeeper/etckeeper.conf` で `VCS="git"` と `GIT_COMMIT_OPTIONS="-v"` に変更します。
+- `sudo etckeeper init` で初期化します。
+- `sudo etckeeper commit "Initial commit"` で今の状態をコミットしておきます。
+- `(cd /etc/ && sudo git gc)` で `git gc` しておきます。
+
+### ufw の設定
+
+- `/etc/default/ufw` の `DEFAULT_FORWARD_POLICY` を `DROP` から `ACCEPT` に変更しておきます。
+  `DROP` のままだと後で `docker` の中から DNS の解決ができないのが原因で `! [remote rejected] master -> master (pre-receive hook declined)` になります。
+- `sudo ufw enable` で有効にします。
+- `sudo ufw allow 22/tcp` で `ssh` を許可します。
+- `sudo ufw allow 80/tcp` で `http` を許可します。
+- `sudo etckeeper commit "enable ufw"` などで変更を保存します。
+
+### ssh の設定
+
+- `sudo aptitude install ssh` でインストールします。
+- `/etc/hosts.deny` に `ALL: ALL` を追加してデフォルト拒否にします。
+- `/etc/hosts.allow` に `sshd: 127.0.0.1 [::1]`
+  を追加してローカルホストからの接続を許可します。
+- `/etc/hosts.allow` に `sshd: 10.0.0.0/8` も追加して
+  VirtualBox のポートフォワーディング経由の接続を許可します。
+- `/etc/ssh/sshd_config` (`ssh_config` ではない) に
+  `AllowUsers adminuser` と `AllowUsers dokku` を追加して、
+  特定のユーザーにだけ `ssh` で接続できるようにします。
+
+ホストOS側では Vagrant も使っていたので、
+ssh 用の鍵としては
+[Vagrant の Insecure Keypair](https://github.com/mitchellh/vagrant/tree/master/keys)
+を使いました。
+
+そして
+ホストOS側の
+`~/.ssh/config`
+の設定としては、
+グローバルの設定も含めると以下のようにしました。
+
+```
+ExitOnForwardFailure yes
+Ciphers aes256-ctr,aes192-ctr,aes128-ctr
+HashKnownHosts no
+NoHostAuthenticationForLocalhost yes
+ServerAliveInterval 30
+Host raring64
+  Ciphers arcfour256,arcfour128
+  HostName 127.0.0.1
+  User adminuser
+  Port 21304
+  UserKnownHostsFile /dev/null
+  StrictHostKeyChecking no
+  PasswordAuthentication no
+  IdentityFile ~/.vagrant.d/insecure_private_key
+  IdentitiesOnly yes
+```
+
+`Ciphers` はデフォルトはセキュアなものを使い、
+VM 用には速いものを使うようにしています。
+
+## VirtualBox のポートフォワーディング設定
+
+設定のネットワークのポートフォワーディングのところで、
+
+- 名前:SSH, プロトコル:TCP, ホストIP:127.0.0.1, ホストポート:21304, ゲストIP:空欄, ゲストポート:22
+- 名前:Web, プロトコル:TCP, ホストIP:127.0.0.1, ホストポート:1384, ゲストIP:空欄, ゲストポート:80
+
+のような感じで設定しました。
+
+13.10 にしたら
+
+- 名前:SSH, プロトコル:TCP, ホストIP:127.0.0.1, ホストポート:21310, ゲストIP:空欄, ゲストポート:22
+- 名前:Web, プロトコル:TCP, ホストIP:127.0.0.1, ホストポート:1380, ゲストIP:空欄, ゲストポート:80
+
+とすれば良いかなと思っています。
+
+## dokku のインストール
+
+[README](https://github.com/progrium/dokku/blob/1d3ae29ba6bed8e1c98991c15db45724508fae30/README.md)
+に書いてあるように
+`wget -qO- https://raw.github.com/progrium/dokku/master/bootstrap.sh | sudo bash`
+などでインストールできます。
+
+実際には、
+内容を確認したかったので、
+`wget` でダウンロードした後、
+`sudo bash < bootstrap.sh`
+で実行しました。
+
+時間は5分程度かかると書いてありますが、
+実際には
+`docker`
+用のイメージのダウンロードに時間がかかるので、
+ネットワークの速度の影響が大きいようです。
+
+## dokku の設定
+
+### VHOST の設定
+
+参考にしたサイトと同じように `xip.io` を使いました。
+ポートフォワーディング経由にしているので、
+`127.0.0.1`
+にしています。
+
+```
+echo deploy.127.0.0.1.xip.io | sudo tee /home/dokku/VHOST
+```
+
+### ssh 公開鍵の追加
+
+`ssh`
+の接続は Vagrant と共通の鍵を使うことにしたので、
+`/home/adminuser/.ssh/authorized_keys`
+には `vagrant.pub` と同じ内容が入っています。
+
+この鍵をそのまま `dokku` の方に登録しました。
+
+ここもゲストOS側での作業になります。
+README の手順では `ssh` 経由で `sudo` を実行しています。
+
+```
+cat ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
+```
+
+この手順で追加した公開鍵は
+
+```
+sudo sshcommand acl-remove dokku vagrant
+```
+
+で削除できます。
+
+他の公開鍵を追加する時は `vagrant` の部分を変更しておかないと
+`acl-remove` でまとめて削除されてしまいます。
+
+## アプリケーションの deploy
+
+問題なく設定できていれば以下で deploy できます。
+
+```
+    git clone https://github.com/heroku/node-js-sample
+    cd node-js-sample
+    git remote add raring64 dokku@raring64:node-js-app
+    git push raring64 master
+```
+
+エラーになったときはログをみたり、
+`dmesg`
+を見たりして原因を調べてください。
+
+正常に deploy できていれば
+`http://node-js-app.deploy.127.0.0.1.xip.io:1384`
+で `Hello World!` と表示されます。
+
+## リモートからの dokku コマンド
+
+README には `$ dokku run node-js-app ls -alh` と書いてあり、
+ホストOS側には `dokku` コマンドはないので、
+どうすればいいのか悩んだのですが、
+
+```
+ ssh dokku@raring64 run node-js-app ls -alh
+```
+
+のように `git push` に使う `ssh` 経由で
+`dokku` コマンドが実行されているのを使えました。
+
+入力待ちになってしまうようで、
+`control+D` で `EOF` を入力するなどしないと
+ホストOS側のプロンプトに戻ってこないので、
+想定された使い方ではなさそうな感じです。
+
+他にも
+
+```
+ ssh dokku@raring64 delete node-js-app
+```
+
+でアプリケーションの削除もできました。
+heroku と違って確認なしにいきなり削除されてしまうので注意が必要です。
+
+どんなコマンドが実行できるのかは `dokku help` 相当の
+
+```
+ ssh dokku@raring64 help
+```
+
+で一覧が出てきます。
+
+普段使いそうなのは `config` 関連と `logs` だと思いました。
