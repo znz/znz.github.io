@@ -115,3 +115,13 @@ RubyMotion の中から呼び出そうとしたのですが、
 - Mac OS X 10.8.5
 - Xcode 5.0.2
 - RubyMotion 2.14
+
+### 解決
+
+`CoreServices` が必要と教えてもらったので、
+`app.frameworks << 'CoreServices'`
+も足してみたのですが、
+`NoMethodError`
+のままで動かず、
+結局
+RubyMotion を 2.15 に上げると直っていました。
