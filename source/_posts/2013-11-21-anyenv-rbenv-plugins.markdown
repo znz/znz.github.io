@@ -92,3 +92,16 @@ git 管理ではないものは skip します。
 ライセンスが不明だと参考にするのにも困るので、
 github のレポジトリを作成する時の LICENSE ファイルそのままだけでも良いので、
 どういうライセンスにしたいのか明記されているとありがたいと思いました。
+
+## 追記
+
+`rbenv update` だと `git pull` ではなく、毎回
+
+```
+    git checkout master
+    git fetch origin
+    git pull origin master
+```
+
+を実行していて遅いというのも `rbenv git` などを作った理由のひとつというのを
+書き忘れていたので、追記しておきます。
