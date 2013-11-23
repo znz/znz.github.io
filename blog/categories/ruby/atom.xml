@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-11-21T01:18:19+09:00</updated>
+  <updated>2013-11-23T18:54:09+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,111 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[anyenvやrbenvのpluginsを更新などをしやすくするプラグインを作った]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-21-anyenv-rbenv-plugins.html"/>
+    <updated>2013-11-21T18:25:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/anyenv-rbenv-plugins</id>
+    <content type="html"><![CDATA[<p><a href="https://github.com/sstephenson/rbenv">rbenv</a>
+には
+<a href="https://github.com/rkh/rbenv-update">rbenv-update</a>
+というプラグインがあって、アップデートだけは簡単にできるのに、
+他の <code>git</code> の操作をまとめて実行するのが面倒なので、
+まとめて実行できる
+<a href="https://github.com/znz/rbenv-git">rbenv-git</a>
+というプラグインを作りました。</p>
+
+<p>それから
+<a href="https://github.com/riywo/anyenv">anyenv</a>
+の方でもすべての <code>**env</code> も含めてアップデートできると便利だと思い、
+<a href="https://github.com/znz/anyenv-update">anyenv-update</a>
+と
+<a href="https://github.com/znz/anyenv-git">anyenv-git</a>
+を作成しました。</p>
+
+<!--more-->
+
+
+<h2>インストール</h2>
+
+<p>それぞれ <code>plugins</code> のディレクトリの中に <code>git clone</code> でとってくるだけです。</p>
+
+<ul>
+<li><code>git clone https://github.com/znz/rbenv-git.git $(rbenv root)/plugins/rbenv-git</code></li>
+<li><code>git clone https://github.com/znz/anyenv-update.git $(anyenv root)/plugins/anyenv-update</code></li>
+<li><code>git clone https://github.com/znz/anyenv-git.git $(anyenv root)/plugins/anyenv-git</code></li>
+</ul>
+
+
+<p><code>README</code> の方には <code>mkdir -p $(anyenv root)/plugins</code> も書いていますが、
+git version 1.8.4.3 だと不要で、自動で親ディレクトリも作ってくれるようです。
+git のどのバージョンからなのかわからないので、
+<code>README</code> には <code>mkdir -p</code> を残しています。</p>
+
+<h2>使い方</h2>
+
+<h3>rbenv git</h3>
+
+<p><code>rbenv</code> と <code>rbenv</code> のプラグインの <code>git</code> 操作をまとめて実行できます。</p>
+
+<p><code>rbenv git pull</code> で <code>rbenv update</code> の代用が出来ます。
+<code>rbenv update</code> だと <code>rbenv</code> 自体を homebrew で入れている時にも
+<code>RBENV_ROOT</code> で <code>git</code> コマンドを実行してしまいますが、
+<code>rbenv git</code> なら大丈夫です。</p>
+
+<p><code>rbenv git gc</code> で cleanup も出来ます。</p>
+
+<p><code>rbenv git remote -v</code> でどこからとってきたのか確認したり、
+<code>rbenv git status</code> でローカルで何か変更しているかどうか確認したりも出来ます。</p>
+
+<h3>anyenv update</h3>
+
+<p><code>anyenv update</code> で</p>
+
+<ul>
+<li><code>anyenv</code></li>
+<li><code>anyenv</code> のプラグイン</li>
+<li><code>**env</code></li>
+<li><code>**env</code> のプラグイン</li>
+</ul>
+
+
+<p>がアップデートできます。</p>
+
+<p>git 管理ではないものは skip します。</p>
+
+<h3>anyenv git</h3>
+
+<p><code>rbenv git</code> と同様の操作が
+<code>anyenv update</code> と同様の対象に
+まとめて実行できます。</p>
+
+<ul>
+<li><code>anyenv git pull</code></li>
+<li><code>anyenv git gc</code></li>
+<li><code>anyenv git remote -v</code></li>
+<li><code>anyenv git status</code></li>
+</ul>
+
+
+<p>など、
+<code>git</code> の各種操作ができます。</p>
+
+<h2>裏話</h2>
+
+<p>最初は <code>rbenv update</code> のコードを fork しようとしていたのですが、
+ライセンスが明記されていなかったので止めて、
+他の MIT License と明示されているプラグインを主に参考にして作りました。
+他にも <code>set -eo pipefail</code> というのは
+<a href="https://github.com/progrium/dokku">dokku</a>
+を参考にしました。</p>
+
+<p>ライセンスが不明だと参考にするのにも困るので、
+github のレポジトリを作成する時の LICENSE ファイルそのままだけでも良いので、
+どういうライセンスにしたいのか明記されているとありがたいと思いました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 5 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -154,7 +259,8 @@ LSSetDefaultHandlerForURLScheme("http", bundle_id) #~&gt; NoMethodError
 も足してみたのですが、
 <code>NoMethodError</code>
 のままで動かず、
-結局 RubyMotion を 2.15 に上げると直っていました。</p>
+結局
+RubyMotion を 2.15 に上げると直っていました。</p>
 ]]></content>
   </entry>
   
@@ -514,198 +620,6 @@ ISBN10
 <p>  %p.isbn13 ISBN13: #{lisbn.parts.join(&lsquo;&ndash;&rsquo;)}
 &ndash; else
   %p.asin ASIN: #{isbn_or_asin}
-```</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[spring rails console で PAGER=lv だと /dev/tty: Device not configured]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-10-spring-and-lv.html"/>
-    <updated>2013-10-10T21:28:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/spring-and-lv</id>
-    <content type="html"><![CDATA[<p><code>spring rails console</code>
-で
-<code>pry</code>
-を使っていて
-pager
-を起動するような出力をしたときに
-<code>/dev/tty: Device not configured</code>
-になることがあったので原因を調べてみました。
-結論としてはタイトルに書いてありますが、
-<code>spring</code>
-と
-<code>lv</code>
-の組み合わせが原因でした。</p>
-
-<!--more-->
-
-
-<h2>確認バージョン</h2>
-
-<p>関係する gem のバージョンは以下の通りです。</p>
-
-<ul>
-<li>rails 3.2.14, 4.0.0</li>
-<li>spring 0.0.10, 0.0.11</li>
-</ul>
-
-
-<p>関係するプログラムのバージョンは以下の通りです。</p>
-
-<ul>
-<li>ruby 2.0.0-p247</li>
-<li>lv 4.51</li>
-</ul>
-
-
-<p>確認した環境は Mac OS X です。</p>
-
-<h2>原因の切り分け</h2>
-
-<p>まず
-<code>rails console</code>
-だと問題は発生しないので、
-<code>spring</code>
-が原因のひとつなのは確実だったので、
-当面の回避策として、
-<code>spring rails console</code>
-の代わりに
-<code>rails console</code>
-を使っていました。</p>
-
-<p>次にふと他の pager を使ってみるとどうだろうと思って、
-<code>spring rails console</code>
-の中で
-<code>ENV['PAGER']="less"</code>
-として <code>lv</code> から <code>less</code> に変えて試してみたところ、
-問題なく使えました。
-これがきっかけで <code>lv</code> も原因のひとつだということに気づきました。</p>
-
-<h2>原因調査</h2>
-
-<p>ここまでわかれば原因は調べやすくなったので、
-まずエラーメッセージを出しているところを探しました。
-これはすぐに見つかって、
-<code>lv</code> の <code>src/stream.c</code> の <code>perror( "/dev/tty" )</code> でした。</p>
-
-<p>```c lv451/src/stream.c
-  close( 0 );
-  if( IsAtty( 1 ) &amp;&amp; 0 != open( &ldquo;/dev/tty&rdquo;, O_RDONLY ) )</p>
-
-<pre><code>perror( "/dev/tty" ), exit( -1 );
-</code></pre>
-
-<p>```</p>
-
-<p>STDIN を開き直している処理があって、
-ここで <code>"/dev/tty"</code> を開けないのが原因でした。</p>
-
-<p>元々の STDIN は
-<code>spring</code>
-の中で
-<code>UNIXSocket#send_io</code>
-と
-<code>UNIXSocket#recv_io</code>
-で受け渡していました。
-この STDIN をそのまま使ってくれれば問題は起きないのに、
-わざわざ <code>close( 0 )</code> で閉じてしまって、
-開き直そうとしているのが問題だとわかりました。</p>
-
-<p><code>spring rails console</code>
-の中で直接
-<code>open("/dev/tty","r")</code>
-を試しても同様に
-<code>Errno::ENXIO: Device not configured - /dev/tty</code>
-になってしまうので、
-<code>lv</code> の方を変えない限りどうしようもなさそうです。</p>
-
-<p>というわけで、
-これはもう <code>lv</code> の処理が <code>spring</code> と相性が悪いということで、
-<code>spring</code> の中では <code>lv</code> を避けるしかなさそうです。</p>
-
-<h2>結論</h2>
-
-<p><code>~/.spring.rb</code>
-で
-<code>ENV["PAGER"]</code>
-を書き換えることにしました。</p>
-
-<p><code>ruby ~/.spring.rb
-ENV["PAGER"] = "less" if ENV["PAGER"] == "lv"
-</code></p>
-
-<h2>余談</h2>
-
-<p>原因を調べているときに
-<code>spring</code>
-の標準入出力の処理周りをみていたのですが、
-<code>UNIXSocket#send_io</code>
-と
-<code>UNIXSocket#recv_io</code>
-で受け渡していました。</p>
-
-<p><code>recv_io</code> で mode を指定していないので、
-<code>spring rails console</code> では
-<code>STDIN.write</code> が使えたり <code>STDOUT.gets</code> が使えたりしてしまうようです。</p>
-
-<p>これは <code>recv_io(IO, "r")</code> などに直せば良さそうに見えますが、
-特に実害もなさそうなので、このままでもあまり問題はなさそうです。</p>
-
-<p>パッチとしては以下のように直せば良さそうです。</p>
-
-<p>```diff
-diff &mdash;git a/lib/spring/application.rb b/lib/spring/application.rb
-index b7df9bb..4e34f6c 100644
-&mdash;&ndash; a/lib/spring/application.rb
-+++ b/lib/spring/application.rb
-@@ -93,7 +93,7 @@ module Spring</p>
-
-<pre><code>   log "got client"
-   manager.puts
-</code></pre>
-
-<ul>
-<li>   streams = 3.times.map { client.recv_io }</li>
-<li><p>   streams = %w[w w r].map { |mode| client.recv_io(IO, mode) }
-   [STDOUT, STDERR].zip(streams).each { |a, b| a.reopen(b) }</p>
-
-<p>   preload unless preloaded?
-```</p></li>
-</ul>
-
-
-<p>テストも以下のように書いてみたのですが、
-Mac OS X の環境だとそもそも既存のテストも通らないものがあったり、
-Linux だと上の変更をしなくてもテストが通ってしまったりしたので
-pull request を出すのは諦めました。
-これらのパッチの著作権は主張しないので、
-代わりに pull request を出してもらうのは歓迎します。</p>
-
-<p>```diff
-diff &mdash;git a/test/acceptance/app_test.rb b/test/acceptance/app_test.rb
-index a21b556..ee04e5a 100644
-&mdash;&ndash; a/test/acceptance/app_test.rb
-+++ b/test/acceptance/app_test.rb
-@@ -440,4 +440,16 @@ class AppTest &lt; ActiveSupport::TestCase</p>
-
-<pre><code>   assert_success "bundle check"
- end
-</code></pre>
-
-<p>   end
-+
-+  test &ldquo;STDIN mode&rdquo; do
-+    assert_success &ldquo;#{spring} rails runner &lsquo;STDIN.write(%(test)) rescue $!.display&rsquo;&rdquo;, stdout: &ldquo;not opened for writing&rdquo;
-+  end
-+
-+  test &ldquo;STDOUT mode&rdquo; do
-+    assert_success &ldquo;#{spring} rails runner &lsquo;STDOUT.gets rescue $!.display&rsquo;&rdquo;, stdout: &ldquo;not opened for reading&rdquo;
-+  end
-+
-+  test &ldquo;STDERR mode&rdquo; do
-+    assert_success &ldquo;#{spring} rails runner &lsquo;STDERR.gets rescue $!.display&rsquo;&rdquo;, stdout: &ldquo;not opened for reading&rdquo;
-+  end
- end
 ```</p>
 ]]></content>
   </entry>
