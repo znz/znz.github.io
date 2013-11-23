@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "anyenvやrbenvのpluginsを更新などをしやすくするプラグインを作った"
+title: "anyenvやrbenvのpluginsの更新などをしやすくするプラグインを作った"
 date: 2013-11-21 18:25
 comments: true
 categories: ruby rbenv github anyenv
