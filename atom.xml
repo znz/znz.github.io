@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-11-23T21:41:02+09:00</updated>
+  <updated>2013-11-25T00:30:46+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,174 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[debianでpostfixと連携するvirtual hostではないmailmanの設定をした]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-24-debian-postfix-mailman.html"/>
+    <updated>2013-11-24T19:50:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/debian-postfix-mailman</id>
+    <content type="html"><![CDATA[<p>Debian で postfix と mailman を組み合わせて使う時に
+<code>lists.example.net</code> のように ML 専用のサブドメインを使う場合は
+<code>/etc/mailman/postfix-to-mailman.py</code> のコメントなどを参考にして
+設定すれば良いのですが、
+ドメインを分けずに他のローカル配送などと同じドメインで
+ML を運用する設定の情報があまりなかったので、
+どう設定したのかをまとめてみました。</p>
+
+<p>要点としては <code>alias_maps</code> に追加するだけでした。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Debian GNU/Linux 7.2 (wheezy)</li>
+<li>postfix 2.9.6-2</li>
+<li>mailman 1:2.1.15-1</li>
+</ul>
+
+
+<h2>mailman のインストール</h2>
+
+<p><a href="http://posokosi.seesaa.net/article/378457038.html">nginx + mailman でメーリングリスト: ぽそこし的日乗</a>
+に書いてあるように、
+なぜかインストール時の debconf の質問で設定した内容が反映されないので、
+<code>dpkg-reconfigure mailman</code> で再設定する必要がありました。</p>
+
+<p><code>Default language for Mailman</code> の設定だけなら
+<code>/etc/mailman/mm_cfg.py</code> を直接変更でも良いのですが、
+<code>Languages to support</code> で <code>ja (Japanese)</code> にチェックしたときに
+生成されるファイルもあるので、
+<code>dpkg-reconfigure mailman</code> で再設定するのが無難です。</p>
+
+<h2>文字コードについて</h2>
+
+<p>mailman の日本語の文字コードは未だに euc-jp なので、
+文字コードを設定できる端末を使うか、
+<a href="https://github.com/vmi/cocot">cocot</a>
+で
+<code>cocot -t utf-8 -p euc-jp ssh mlserver</code>
+のように変換をするようにしておかないと文字化けして非常につらいです。</p>
+
+<p><code>LANG=C</code> で mailman 関係のコマンドを実行しても
+英語メッセージにはならないので、
+注意が必要です。</p>
+
+<h2>postfix の設定</h2>
+
+<p>すでに <code>myhostname</code> とか <code>mydestination</code> に設定しているドメインに同居させるには
+<code>alias_maps</code> に <code>hash:/var/lib/mailman/data/aliases</code> を追加するだけです。</p>
+
+<p>具体的には
+<code>alias_maps = hash:/etc/aliases</code>
+という設定だったのなら、</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>alias_maps = hash:/etc/aliases
+</span><span class='line'> hash:/var/lib/mailman/data/aliases</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のように追加するだけです。
+差分をとりやすいように別の行にするのが好みですが、
+同じ行の末尾に追加でもかまいません。</p>
+
+<h2>mm_cfg.py の設定</h2>
+
+<h3>MTA</h3>
+
+<p><code>newlist</code> で ML を作成する前に
+<code>sudoedit /etc/mailman/mm_cfg.py</code> で
+<code>MTA='Postfix'</code> を有効にしておきます。</p>
+
+<p><code>newlist</code> の最後に
+<code>/var/lib/mailman/bin/genaliases</code>
+相当の処理が実行されるようなのですが、
+<code>MTA='Postfix'</code> の設定をしておくと
+<code>/var/lib/mailman/data/aliases*</code>
+が自動で作成されるようになります。</p>
+
+<p><code>MTA</code> の設定が無いと <code>aliases</code> に設定すべき内容を含むメッセージが表示されるだけでした。</p>
+
+<h3>ML のデフォルト値</h3>
+
+<p>以下のような感じで ML の設定のデフォルト値を設定しておくと
+後から Web で設定変更する手間を省けます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>DEFAULT_SUBJECT_PREFIX = "[%(real_name)s:%%d] "
+</span><span class='line'>DEFAULT_MSG_FOOTER = ""
+</span><span class='line'>DEFAULT_REPLY_GOES_TO_LIST = 1
+</span><span class='line'>DEFAULT_MAX_MESSAGE_SIZE = 0
+</span><span class='line'>DEFAULT_LIST_ADVERTISED = No
+</span><span class='line'>DEFAULT_PRIVATE_ROSTER = 2</span></code></pre></td></tr></table></div></figure>
+
+
+<p>どんな設定項目があるのかは
+<code>/usr/lib/mailman/Mailman/Defaults.py</code>
+を参考にすれば良さそうです。</p>
+
+<p><code>sudo -u list /var/lib/mailman/bin/config_list -o - mailman | iconv -f euc-jp -t utf-8 | pager</code>
+のように既存の ML の設定を (Web で変更しつつ) 参考にするのも良さそうです。</p>
+
+<h2>パーミッション修正</h2>
+
+<p><code>sudo /var/lib/mailman/bin/check_perms -f</code>
+でパーミッションの修正をします。
+<code>/var/lib/mailman/messages/</code> の中身のパーミッションの修正があるので、
+ほぼ必須だと思います。</p>
+
+<p>最終的には 10 個残りましたが、
+シンボリックリンクでリンク先のグループは問題ないようなので、
+無視することにしました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ sudo /var/lib/mailman/bin/check_perms -f
+</span><span class='line'>/var/lib/mailman/bin bad group (has: root, expected list) (fixing)
+</span><span class='line'>/var/lib/mailman/logs bad group (has: root, expected list) (fixing)
+</span><span class='line'>/var/lib/mailman/cron bad group (has: root, expected list) (fixing)
+</span><span class='line'>/var/lib/mailman/icons bad group (has: root, expected list) (fixing)
+</span><span class='line'>/var/lib/mailman/Mailman bad group (has: root, expected list) (fixing)
+</span><span class='line'>/var/lib/mailman/templates bad group (has: root, expected list) (fixing)
+</span><span class='line'>/var/lib/mailman/mail bad group (has: root, expected list) (fixing)
+</span><span class='line'>/var/lib/mailman/scripts bad group (has: root, expected list) (fixing)
+</span><span class='line'>/var/lib/mailman/cgi-bin bad group (has: root, expected list) (fixing)
+</span><span class='line'>/var/lib/mailman/locks bad group (has: root, expected list) (fixing)
+</span><span class='line'>Problems found: 10
+</span><span class='line'>Re-run as list (or root) with -f flag to fix</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>ML 作成</h2>
+
+<p>mailman の依存で自動インストールされる <code>pwgen</code> を使って、
+<code>pwgen -sB 20 1</code>
+などでパスワードを生成して、
+<code>sudo -u list $mlname mladmin@example.net $listpass</code>
+のような感じで作成できます。</p>
+
+<h2>その他の設定</h2>
+
+<p>後は fml からのメールの移行とか Web 経由での設定をしていきました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[postfixとmilter-managerの設定をした]]></title>
@@ -2720,156 +2888,6 @@ iOS アプリでアイコンとか作るのに使っているという話</li>
 
 <p>これは <code>NSApplication.sharedApplication.presentError error_ptr</code> にすれば良いのかも、
 と思って試してみたけどうまくいかない、というところで時間が来て終了になりました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[ブラウザのみで使えるバーコードリーダーを作った]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-20-web-barcode-reader.html"/>
-    <updated>2013-10-20T19:27:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/web-barcode-reader</id>
-    <content type="html"><![CDATA[<p>最近の HTML5 の getUserMedia API でカメラの画像をブラウザ上で処理できるようになったということで、
-専用のバーコードリーダー機器を買ったり、
-モバイル機器で専用のアプリを入れたりしなくても、
-ノートPCの内蔵のカメラでも使えるバーコードリーダーを作ってみました。</p>
-
-<!--more-->
-
-
-<h2>使い方</h2>
-
-<p><a href="http://web-barcode-reader.herokuapp.com/">Web Barcode Reader</a>
-を開いて、
-既にPC上に画像がある場合はその画像を選択してください。
-選択するだけでバーコードの認識が始まります。
-iOS や Android などではファイル選択かカメラで撮影かを選べます。</p>
-
-<p><a href="https://github.com/EddieLa/BarcodeReader">BarcodeReader</a>
-のライブラリを使って
-JavaScript のみで認識していて、
-バーコードの認識は初回はちょっと時間がかかるようなので、
-ゆっくり待ってください。</p>
-
-<p>Google Chrome などではファイル選択の横に
-「ブラウザの中でカメラ画像を取得」
-ボタンが出るので、
-そのボタンを押した後、
-カメラへのアクセスの許可を求められるので、
-「許可」を押して許可してください。</p>
-
-<p>そしてカメラに入るようにバーコードをうつして、
-画像をクリックすると認識が始まります。
-(クリックできる範囲が広い方が良いかと思って画像のクリックにしています。)</p>
-
-<p>向きは逆さまなどでも良いようですが、
-画質が悪いと認識できないことが多いようなので、
-しっかりピントを合わせてカメラいっぱいにうつすと認識しやすいようです。</p>
-
-<p>必要な数だけ繰り返した後、
-不要になったら
-「カメラを閉じる」
-ボタンを押せば
-ブラウザからカメラを使うのを止めます。</p>
-
-<p>最後に下のテキストエリアに認識できたバーコードがたまっているので、
-コピーして自由に使えます。</p>
-
-<h2>仕組み</h2>
-
-<p>画像ファイルから認識する方は
-HTML5 の File API
-を使ってローカルファイルを読み込んでいます。</p>
-
-<p>iOS や Android で撮影が選べる機能は
-<code>&lt;input type="file" accept="image/*;capture=camera"&gt;</code>
-のように
-<code>accept</code>
-属性を付けるだけで使えます。</p>
-
-<p>画像は
-<code>img</code>
-要素に読み込んで、
-読み終わったら
-<code>canvas</code>
-要素にコピーして
-<code>canvas</code>
-要素から画像データを取得しています。</p>
-
-<p>最終的にその画像データは、
-Web Workers
-という HTML5 の機能を使ってバックグラウンドで
-<a href="https://github.com/EddieLa/BarcodeReader">BarcodeReader</a>
-の
-<code>DecoderWorker.js</code>
-を動かして、
-バーコードの認識をしています。</p>
-
-<h3>カメラを扱う仕組み</h3>
-
-<p>まず
-<code>getUserMedia</code>
-でカメラを開いて
-video
-要素に設定します。</p>
-
-<p>よくある使用例では
-<code>video</code>
-要素には
-<code>autoplay</code>
-属性を付けることが多いようですが、
-今回は <code>video</code> 要素の <code>play()</code> を呼ぶようにしました。</p>
-
-<p><code>getUserMedia</code>
-は一度変数に保存して、
-その function を呼ぶという使い方は出来ないようだったので、
-以下のように <code>call</code> で呼ぶようにしました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='coffeescript'><span class='line'>  <span class="nv">getUserMedia =</span>
-</span><span class='line'>    <span class="nx">navigator</span><span class="p">.</span><span class="nx">getUserMedia</span> <span class="o">||</span>
-</span><span class='line'>    <span class="nx">navigator</span><span class="p">.</span><span class="nx">webkitGetUserMedia</span> <span class="o">||</span>
-</span><span class='line'>    <span class="nx">navigator</span><span class="p">.</span><span class="nx">mozGetUserMedia</span> <span class="o">||</span>
-</span><span class='line'>    <span class="nx">navigator</span><span class="p">.</span><span class="nx">msGetUserMedia</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="nx">getUserMedia</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">navigator</span><span class="p">,</span> <span class="p">{</span><span class="nx">audio</span><span class="o">:</span><span class="kc">false</span><span class="p">,</span><span class="nx">video</span><span class="o">:</span><span class="kc">true</span><span class="p">,</span><span class="nx">toString</span><span class="o">:</span><span class="nf">-&gt;</span><span class="s">&quot;video&quot;</span><span class="p">},</span> <span class="nx">onStream</span><span class="p">,</span> <span class="nx">onError</span><span class="p">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>onStream</code>
-の引数にわたってきた
-<code>stream</code>
-は保存しておいて後で使いました。</p>
-
-<p>カメラを閉じるには
-<code>video</code> 要素で再生を止めるのではなく、
-<code>stream</code> の方の <code>stop()</code> を呼ぶ必要がありました。</p>
-
-<p>一度 <code>stream</code> を <code>stop()</code> してしまうと、
-再度再生するには、
-また許可を求める必要があったので、
-毎回閉じるのではなく、
-連続読み込み用に閉じるのは別ボタンの機能にしました。</p>
-
-<h2>ソースコード</h2>
-
-<p>ソースコードは実験的に Gumroad で売ってみることにしました。
-先週の三連休で作って、さらに今日追加で細かい調整をして4日もかかっている感じなので、
-缶コーヒーでもおごる感じで買ってもらえると良いかもしれません。</p>
-
-<ul>
-<li><a href="https://gum.co/egEG">WebBarcodeReaderのCoffeeScript部分のソース</a></li>
-<li><a href="https://gum.co/OSLo">WebBarcodeReaderのRailsプロジェクト全体のソース</a></li>
-</ul>
-
-
-<script type="text/javascript" src="https://gumroad.com/js/gumroad.js"></script>
-
 ]]></content>
   </entry>
   
