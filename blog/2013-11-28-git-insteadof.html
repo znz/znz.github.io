@@ -5,11 +5,14 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: rubima - @znz blog</title>
+  <title>githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法 - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Category: rubima">
+  <meta name="description" content="要約すると url.&lt;base&gt;.inteadOf や url.&lt;base&gt;.pushInsteadOf
+を使えば良いという話です。
+github 以外でも使えます。 設定例 自分では今のところ、以下の設定にしています。 最初の
+[url "git@github.com &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +21,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jpblog/categories/rubima/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,36 +79,245 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: rubima</h1>
+    
+      <h1 class="entry-title">githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-11-28T22:22:00+09:00" pubdate data-updated="true">2013-11-28 (Thu)</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
+<div class="entry-content"><p>要約すると <code>url.&lt;base&gt;.inteadOf</code> や <code>url.&lt;base&gt;.pushInsteadOf</code>
+を使えば良いという話です。
+github 以外でも使えます。</p>
 
-  
-  <h2>2013</h2>
-
-<article>
-  
-<h1><a href="/blog/2013-08-31-kansairubykaigi05.html">関西Ruby会議05で migrate to magazine.rubyist.net という発表をしました</a></h1>
-<time datetime="2013-08-31T00:00:00+09:00" pubdate><span class='month'>Aug</span> <span class='day'>31</span> <span class='year'>2013</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/event/'>event</a>, <a class='category' href='/blog/categories/rubima/'>rubima</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>, <a class='category' href='/blog/categories/rubykaigi/'>rubykaigi</a></span>
-</footer>
+<!--more-->
 
 
-</article>
+<h2>設定例</h2>
 
+<p>自分では今のところ、以下の設定にしています。</p>
+
+<p>最初の
+<code>[url "git@github.com:"]</code>
+のセクションは URL の指定として
+<code>https:</code> や <code>git:</code> を使っていても
+<code>git push</code> のときには <code>ssh</code> 経由にする、
+という意味になります。</p>
+
+<p>次の
+<code>[url "git://github.com/"]</code>
+は、その他の <code>git fetch</code> や <code>git pull</code> の時は
+<code>https:</code> の代わりに <code>git:</code> を使うという意味になります。</p>
+
+<figure class='code'><figcaption><span>~/.gitconfig</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ini'><span class='line'><span class="k">[url &quot;git@github.com:&quot;]</span>
+</span><span class='line'>  <span class="na">pushInsteadOf</span> <span class="o">=</span> <span class="s">git://github.com/</span>
+</span><span class='line'><span class="s">  pushInsteadOf = https://github.com/</span>
+</span><span class='line'><span class="k">[url &quot;git://github.com/&quot;]</span>
+</span><span class='line'>  <span class="na">insteadOf</span> <span class="o">=</span> <span class="s">https://github.com/</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>pushInsteadOf なしの場合</h2>
+
+<p><code>pushInsteadOf</code> を指定せずに <code>insteadOf</code> だけの場合は
+<code>git push</code> の時も <code>insteadOf</code> の設定が使われます。</p>
+
+<p>例えば設定例とは逆に、
+proxy を通さないといけないとかの理由で
+すべて https に統一したいのなら
+以下のような設定になると思います。</p>
+
+<figure class='code'><figcaption><span>~/.gitconfig</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ini'><span class='line'><span class="k">[url &quot;https://github.com/&quot;]</span>
+</span><span class='line'>  <span class="na">insteadOf</span> <span class="o">=</span> <span class="s">git@github.com:</span>
+</span><span class='line'><span class="s">  insteadOf = git://github.com/</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>コマンドでの設定方法</h2>
+
+<p><code>git config</code> コマンド経由で <code>pushInsteadOf</code> を設定するなら、
+以下のように指定します。</p>
+
+<p><code>~/.gitconfig</code> に <code>github.token</code> などの秘密にすべき情報が入っていて
+共有しにくい時にはコマンドで設定できた方が便利です。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">GITHUB_URL_PREFIX</span><span class="o">=</span><span class="s2">&quot;url.git@github.com:&quot;</span>
+</span><span class='line'>git config --global --remove-section <span class="s2">&quot;$GITHUB_URL_PREFIX&quot;</span> <span class="o">||</span> :
+</span><span class='line'>git config --global       <span class="s2">&quot;$GITHUB_URL_PREFIX&quot;</span>.pushInsteadOf <span class="s2">&quot;git://github.com/&quot;</span>
+</span><span class='line'>git config --global --add <span class="s2">&quot;$GITHUB_URL_PREFIX&quot;</span>.pushInsteadOf <span class="s2">&quot;https://github.com/&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>設定確認方法</h2>
+
+<p>実際にどういう URL が使われるのかは
+<code>git remote -v</code>
+で確認できます。</p>
+
+<p><code>.git/config</code> の <code>remote</code> の <code>url</code> と見比べると
+ちゃんと設定が反映されていることがわかると思います。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> git remote -v
+</span><span class='line'><span class="go">origin   git://github.com/znz/rbenv-plug.git (fetch)</span>
+</span><span class='line'><span class="go">origin   git@github.com:znz/rbenv-plug.git (push)</span>
+</span><span class='line'><span class="gp">$</span> cat .git/config
+</span><span class='line'><span class="go">[core]</span>
+</span><span class='line'><span class="go"> repositoryformatversion = 0</span>
+</span><span class='line'><span class="go"> filemode = true</span>
+</span><span class='line'><span class="go"> bare = false</span>
+</span><span class='line'><span class="go"> logallrefupdates = true</span>
+</span><span class='line'><span class="go"> ignorecase = true</span>
+</span><span class='line'><span class="go"> precomposeunicode = false</span>
+</span><span class='line'><span class="go">[remote &quot;origin&quot;]</span>
+</span><span class='line'><span class="go"> url = https://github.com/znz/rbenv-plug.git</span>
+</span><span class='line'><span class="go"> fetch = +refs/heads/*:refs/remotes/origin/*</span>
+</span><span class='line'><span class="go">[branch &quot;master&quot;]</span>
+</span><span class='line'><span class="go"> remote = origin</span>
+</span><span class='line'><span class="go"> merge = refs/heads/master</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>URL の選ばれ方</h2>
+
+<p>github の URL で説明していますが、
+git の機能なので他の URL でも当然使えます。</p>
+
+<p>URL は最初の部分だけ見て、最長一致するものが使われるようです。
+git 1.8.4.3 の <code>git config --help</code> に
+<code>When more than one insteadOf strings match a given URL, the longest match is used.</code>
+と書いてあります。</p>
+
+<h2>まとめ</h2>
+
+<p><code>~/.gitconfig</code> での記述例の話はよくあるのですが、
+コマンドでの設定方法とか、
+設定の確認方法を見かけたことがなかったので、
+まとめてみました。</p>
+
+<p>そして github 以外でも使えるという話も付け加えておきました。</p>
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-11-28T22:22:00+09:00" pubdate data-updated="true">2013-11-28 (Thu)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/git/'>git</a>, <a class='category' href='/blog/categories/github/'>github</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013-11-26-qreki.html" title="Previous Post: 旧暦を計算するgemを使った">&laquo; 旧暦を計算するgemを使った</a>
+      
+      
+    </p>
+  </footer>
 </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -206,7 +418,10 @@
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

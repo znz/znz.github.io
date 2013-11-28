@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: git | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/git/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2013-11-28T22:55:24+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html"/>
+    <updated>2013-11-28T22:22:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/git-insteadof</id>
+    <content type="html"><![CDATA[<p>要約すると <code>url.&lt;base&gt;.inteadOf</code> や <code>url.&lt;base&gt;.pushInsteadOf</code>
+を使えば良いという話です。
+github 以外でも使えます。</p>
+
+<!--more-->
+
+
+<h2>設定例</h2>
+
+<p>自分では今のところ、以下の設定にしています。</p>
+
+<p>最初の
+<code>[url "git@github.com:"]</code>
+のセクションは URL の指定として
+<code>https:</code> や <code>git:</code> を使っていても
+<code>git push</code> のときには <code>ssh</code> 経由にする、
+という意味になります。</p>
+
+<p>次の
+<code>[url "git://github.com/"]</code>
+は、その他の <code>git fetch</code> や <code>git pull</code> の時は
+<code>https:</code> の代わりに <code>git:</code> を使うという意味になります。</p>
+
+<p>```ini ~/.gitconfig
+[url &ldquo;git@github.com:&rdquo;]</p>
+
+<pre><code>pushInsteadOf = git://github.com/
+pushInsteadOf = https://github.com/
+</code></pre>
+
+<p>[url &ldquo;git://github.com/&rdquo;]</p>
+
+<pre><code>insteadOf = https://github.com/
+</code></pre>
+
+<p>```</p>
+
+<h2>pushInsteadOf なしの場合</h2>
+
+<p><code>pushInsteadOf</code> を指定せずに <code>insteadOf</code> だけの場合は
+<code>git push</code> の時も <code>insteadOf</code> の設定が使われます。</p>
+
+<p>例えば設定例とは逆に、
+proxy を通さないといけないとかの理由で
+すべて https に統一したいのなら
+以下のような設定になると思います。</p>
+
+<p>```ini ~/.gitconfig
+[url &ldquo;<a href="https://github.com/">https://github.com/</a>&rdquo;]</p>
+
+<pre><code>insteadOf = git@github.com:
+insteadOf = git://github.com/
+</code></pre>
+
+<p>```</p>
+
+<h2>コマンドでの設定方法</h2>
+
+<p><code>git config</code> コマンド経由で <code>pushInsteadOf</code> を設定するなら、
+以下のように指定します。</p>
+
+<p><code>~/.gitconfig</code> に <code>github.token</code> などの秘密にすべき情報が入っていて
+共有しにくい時にはコマンドで設定できた方が便利です。</p>
+
+<p><code>bash
+GITHUB_URL_PREFIX="url.git@github.com:"
+git config --global --remove-section "$GITHUB_URL_PREFIX" || :
+git config --global       "$GITHUB_URL_PREFIX".pushInsteadOf "git://github.com/"
+git config --global --add "$GITHUB_URL_PREFIX".pushInsteadOf "https://github.com/"
+</code></p>
+
+<h2>設定確認方法</h2>
+
+<p>実際にどういう URL が使われるのかは
+<code>git remote -v</code>
+で確認できます。</p>
+
+<p><code>.git/config</code> の <code>remote</code> の <code>url</code> と見比べると
+ちゃんと設定が反映されていることがわかると思います。</p>
+
+<p>```console
+$ git remote -v
+origin  git://github.com/znz/rbenv-plug.git (fetch)
+origin  git@github.com:znz/rbenv-plug.git (push)
+$ cat .git/config
+[core]</p>
+
+<pre><code>repositoryformatversion = 0
+filemode = true
+bare = false
+logallrefupdates = true
+ignorecase = true
+precomposeunicode = false
+</code></pre>
+
+<p>[remote &ldquo;origin&rdquo;]</p>
+
+<pre><code>url = https://github.com/znz/rbenv-plug.git
+fetch = +refs/heads/*:refs/remotes/origin/*
+</code></pre>
+
+<p>[branch &ldquo;master&rdquo;]</p>
+
+<pre><code>remote = origin
+merge = refs/heads/master
+</code></pre>
+
+<p>```</p>
+
+<h2>URL の選ばれ方</h2>
+
+<p>github の URL で説明していますが、
+git の機能なので他の URL でも当然使えます。</p>
+
+<p>URL は最初の部分だけ見て、最長一致するものが使われるようです。
+git 1.8.4.3 の <code>git config --help</code> に
+<code>When more than one insteadOf strings match a given URL, the longest match is used.</code>
+と書いてあります。</p>
+
+<h2>まとめ</h2>
+
+<p><code>~/.gitconfig</code> での記述例の話はよくあるのですが、
+コマンドでの設定方法とか、
+設定の確認方法を見かけたことがなかったので、
+まとめてみました。</p>
+
+<p>そして github 以外でも使えるという話も付け加えておきました。</p>
+]]></content>
+  </entry>
+  
+</feed>

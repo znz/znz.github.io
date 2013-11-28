@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-11-26T23:58:18+09:00</updated>
+  <updated>2013-11-28T22:55:24+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,152 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html"/>
+    <updated>2013-11-28T22:22:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/git-insteadof</id>
+    <content type="html"><![CDATA[<p>要約すると <code>url.&lt;base&gt;.inteadOf</code> や <code>url.&lt;base&gt;.pushInsteadOf</code>
+を使えば良いという話です。
+github 以外でも使えます。</p>
+
+<!--more-->
+
+
+<h2>設定例</h2>
+
+<p>自分では今のところ、以下の設定にしています。</p>
+
+<p>最初の
+<code>[url "git@github.com:"]</code>
+のセクションは URL の指定として
+<code>https:</code> や <code>git:</code> を使っていても
+<code>git push</code> のときには <code>ssh</code> 経由にする、
+という意味になります。</p>
+
+<p>次の
+<code>[url "git://github.com/"]</code>
+は、その他の <code>git fetch</code> や <code>git pull</code> の時は
+<code>https:</code> の代わりに <code>git:</code> を使うという意味になります。</p>
+
+<figure class='code'><figcaption><span>~/.gitconfig</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ini'><span class='line'><span class="k">[url &quot;git@github.com:&quot;]</span>
+</span><span class='line'>  <span class="na">pushInsteadOf</span> <span class="o">=</span> <span class="s">git://github.com/</span>
+</span><span class='line'><span class="s">  pushInsteadOf = https://github.com/</span>
+</span><span class='line'><span class="k">[url &quot;git://github.com/&quot;]</span>
+</span><span class='line'>  <span class="na">insteadOf</span> <span class="o">=</span> <span class="s">https://github.com/</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>pushInsteadOf なしの場合</h2>
+
+<p><code>pushInsteadOf</code> を指定せずに <code>insteadOf</code> だけの場合は
+<code>git push</code> の時も <code>insteadOf</code> の設定が使われます。</p>
+
+<p>例えば設定例とは逆に、
+proxy を通さないといけないとかの理由で
+すべて https に統一したいのなら
+以下のような設定になると思います。</p>
+
+<figure class='code'><figcaption><span>~/.gitconfig</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ini'><span class='line'><span class="k">[url &quot;https://github.com/&quot;]</span>
+</span><span class='line'>  <span class="na">insteadOf</span> <span class="o">=</span> <span class="s">git@github.com:</span>
+</span><span class='line'><span class="s">  insteadOf = git://github.com/</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>コマンドでの設定方法</h2>
+
+<p><code>git config</code> コマンド経由で <code>pushInsteadOf</code> を設定するなら、
+以下のように指定します。</p>
+
+<p><code>~/.gitconfig</code> に <code>github.token</code> などの秘密にすべき情報が入っていて
+共有しにくい時にはコマンドで設定できた方が便利です。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">GITHUB_URL_PREFIX</span><span class="o">=</span><span class="s2">&quot;url.git@github.com:&quot;</span>
+</span><span class='line'>git config --global --remove-section <span class="s2">&quot;$GITHUB_URL_PREFIX&quot;</span> <span class="o">||</span> :
+</span><span class='line'>git config --global       <span class="s2">&quot;$GITHUB_URL_PREFIX&quot;</span>.pushInsteadOf <span class="s2">&quot;git://github.com/&quot;</span>
+</span><span class='line'>git config --global --add <span class="s2">&quot;$GITHUB_URL_PREFIX&quot;</span>.pushInsteadOf <span class="s2">&quot;https://github.com/&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>設定確認方法</h2>
+
+<p>実際にどういう URL が使われるのかは
+<code>git remote -v</code>
+で確認できます。</p>
+
+<p><code>.git/config</code> の <code>remote</code> の <code>url</code> と見比べると
+ちゃんと設定が反映されていることがわかると思います。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> git remote -v
+</span><span class='line'><span class="go">origin   git://github.com/znz/rbenv-plug.git (fetch)</span>
+</span><span class='line'><span class="go">origin   git@github.com:znz/rbenv-plug.git (push)</span>
+</span><span class='line'><span class="gp">$</span> cat .git/config
+</span><span class='line'><span class="go">[core]</span>
+</span><span class='line'><span class="go"> repositoryformatversion = 0</span>
+</span><span class='line'><span class="go"> filemode = true</span>
+</span><span class='line'><span class="go"> bare = false</span>
+</span><span class='line'><span class="go"> logallrefupdates = true</span>
+</span><span class='line'><span class="go"> ignorecase = true</span>
+</span><span class='line'><span class="go"> precomposeunicode = false</span>
+</span><span class='line'><span class="go">[remote &quot;origin&quot;]</span>
+</span><span class='line'><span class="go"> url = https://github.com/znz/rbenv-plug.git</span>
+</span><span class='line'><span class="go"> fetch = +refs/heads/*:refs/remotes/origin/*</span>
+</span><span class='line'><span class="go">[branch &quot;master&quot;]</span>
+</span><span class='line'><span class="go"> remote = origin</span>
+</span><span class='line'><span class="go"> merge = refs/heads/master</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>URL の選ばれ方</h2>
+
+<p>github の URL で説明していますが、
+git の機能なので他の URL でも当然使えます。</p>
+
+<p>URL は最初の部分だけ見て、最長一致するものが使われるようです。
+git 1.8.4.3 の <code>git config --help</code> に
+<code>When more than one insteadOf strings match a given URL, the longest match is used.</code>
+と書いてあります。</p>
+
+<h2>まとめ</h2>
+
+<p><code>~/.gitconfig</code> での記述例の話はよくあるのですが、
+コマンドでの設定方法とか、
+設定の確認方法を見かけたことがなかったので、
+まとめてみました。</p>
+
+<p>そして github 以外でも使えるという話も付け加えておきました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[旧暦を計算するgemを使った]]></title>
@@ -2676,136 +2822,6 @@ github の方が新しくて互換性がなくなっているのが理由でし�
 <p>ちなみに <code>M-x</code> で <code>helm-</code> で始まる <code>interactive</code> な関数を探すのは
 <code>helm</code> 関係のバッファでのキーバインドようの関数が混ざっているので
 この用途には使えません。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Mac OS X で ansible を入れてみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-25-ansible.html"/>
-    <updated>2013-10-25T13:45:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ansible</id>
-    <content type="html"><![CDATA[<p>Mac OS X 10.8.5 でシステム側の python は使わずに pyenv を使って ansible を入れてみました。</p>
-
-<p>2013-11 追記: 今は homebrew でインストールできるようになっていて <code>brew install ansible</code> だけでインストールできます。</p>
-
-<!--more-->
-
-
-<h2>参考サイト</h2>
-
-<ul>
-<li><a href="http://qiita.com/ryurock/items/c4065da9f16c1f6248b7">Ansible &ndash; OSXでpyenvインストールメモ</a></li>
-<li><a href="http://qiita.com/yamasaki-masahide/items/0546b2b7770150394159">ansible pyenvを使った環境に依存しないインストール</a></li>
-<li><a href="http://ansibleworks.com/docs/intro_installation.html">Installation | AnsibleWorks</a></li>
-</ul>
-
-
-<h2>必要なもの</h2>
-
-<ul>
-<li>homebrew</li>
-</ul>
-
-
-<h2>pyenv</h2>
-
-<p>参考サイトと同じように homebrew で pyenv をインストールします。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>brew update
-</span><span class='line'>brew install pyenv</span></code></pre></td></tr></table></div></figure>
-
-
-<p><a href="http://mobileapplication.blog.fc2.com/blog-entry-21.html">(旧) 猫好きモバイルアプリケーション開発者記録 rbenv init が重い問題に対する対処法</a>
-という話をみてから <code>init</code> の時には <code>rehash</code> しないようにしていたので、
-<code>--no-rehash</code> というオプションを付けています。</p>
-
-<figure class='code'><figcaption><span>https://github.com/znz/dot-shell/blob/master/profile.d/50pyenv.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="k">if </span><span class="nb">type </span>pyenv &gt;/dev/null 2&gt;&amp;1; <span class="k">then</span>
-</span><span class='line'><span class="k">    </span><span class="nb">eval</span> <span class="s2">&quot;$(pyenv init - --no-rehash)&quot;</span>
-</span><span class='line'><span class="k">fi</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>exec zsh</code> でシェルを再起動するなり、設定ファイルをドットコマンドや <code>source</code> コマンドで読み直すなり、
-<code>eval "$(pyenv init -)"</code>
-を直接実行するなりして設定を反映させます。</p>
-
-<h2>pyenv でインストール</h2>
-
-<p><a href="http://qiita.com/yamasaki-masahide/items/0546b2b7770150394159">ansible pyenvを使った環境に依存しないインストール</a>
-で 2.7.5 を入れていたので、
-<code>pyenv install [TAB]</code>
-で補完候補をみて、
-2.7 系の最新が 2.7.5 のままなのを確認してインストールしました。
-この後で必要になる <code>pip</code> は <code>pyenv</code> が自動でインストールしてくれていました。</p>
-
-<figure class='code'><figcaption><span>https://github.com/znz/dot-shell/blob/master/profile.d/50pyenv.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>pyenv install 2.7.5
-</span><span class='line'>pyenv rehash
-</span><span class='line'>pyenv global 2.7.5
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>pip でライブラリをインストール (不要?)</h2>
-
-<p>必要なライブラリをインストールしましたが、
-この手順は不要そうです。
-PyYAML のインストールのところで libyaml が見つからないというエラーがでていましたが、
-<code>pip install</code> 自体は成功していたので、問題はなかったようです。</p>
-
-<figure class='code'><figcaption><span>https://github.com/znz/dot-shell/blob/master/profile.d/50pyenv.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>pip install paramiko jinja2 PyYAML pycrypto markupsafe
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>git clone して試す</h2>
-
-<p>ライブラリをインストールしたので、
-<a href="http://ansibleworks.com/docs/intro_installation.html#running-from-source">Running From Source</a>
-の方法で試せましたが、
-この方法で入れたものは後で消しました。</p>
-
-<figure class='code'><figcaption><span>https://github.com/znz/dot-shell/blob/master/profile.d/50pyenv.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>git clone git://github.com/ansible/ansible.git
-</span><span class='line'><span class="nb">cd </span>ansible
-</span><span class='line'><span class="nb">source</span> ./hacking/env-setup
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>pip で ansible をインストール</h2>
-
-<p>ansible の
-<a href="http://ansibleworks.com/docs/intro_installation.html#latest-releases-via-pip">Latest Releases Via Pip</a>
-で ansible 自体も pip でインストールできるとわかったので、
-<code>sudo</code> なしの <code>pip install ansible</code> でインストールしました。
-必要なライブラリは依存関係でここで一緒にインストールされるので、
-先に個別にインストールする必要はなさそうでした。</p>
-
-<p>そのままだと
-<code>error: could not create '/usr/share/ansible': Permission denied</code>
-で失敗したので、
-homebrew で <code>/usr/local</code> が admin グループに書き込み可能に設定されるのを参考にして、
-admin グループに書き込み可能で作成してからインストールすると大丈夫でした。</p>
-
-<p><code>install</code> コマンドでのディレクトリの作成やパーミッションの設定は、
-何度実行しても同じ結果になるという点では
-<code>mkdir -p</code> や <code>chmod</code> や <code>chown</code> の組み合わせと同じですが、
-1コマンドで済むのでオススメです。</p>
-
-<figure class='code'><figcaption><span>https://github.com/znz/dot-shell/blob/master/profile.d/50pyenv.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>sudo install -d -g admin -m 775 /usr/share/ansible
-</span><span class='line'>pip install ansible
-</span></code></pre></td></tr></table></div></figure>
-
 ]]></content>
   </entry>
   
