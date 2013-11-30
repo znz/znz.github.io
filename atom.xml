@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-11-28T23:16:47+09:00</updated>
+  <updated>2013-11-30T15:56:19+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,125 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[nadokaさんの0.8.6をリリースした関連の話]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-29-nadoka-086-released.html"/>
+    <updated>2013-11-29T23:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/nadoka-086-released</id>
+    <content type="html"><![CDATA[<p><a href="http://mla.n-z.jp/?ruby-list:49704">nadoka さんの 0.8.6 をリリース</a>
+したので、
+その関連の話を書いてみようと思います。</p>
+
+<!--more-->
+
+
+<h2>なぜ続けているか</h2>
+
+<p>短い答えとしては、自分が使っているからというのが一番大きな理由です。</p>
+
+<p>bot というか plugin もいくつか作って、
+サーバーの管理などにも便利に使っていて、
+わざわざ他の IRC proxy 的なソフトに乗り換えて
+プラグインを書き直すよりは、
+一応動いているものをメンテナンスし続けた方が楽というのが
+理由になっています。</p>
+
+<h2>subversion repository について</h2>
+
+<p>最初は
+<a href="http://www.atdot.net/nadoka/nadoka.ja.html">atdot.net の nadoka さん</a>
+のところに書いてある
+<code>http://www.atdot.net/svn/nadoka/trunk</code>
+にあったものが、
+ささださんのサーバー管理の都合なのか、
+rubyforge に移行して今に至ります。</p>
+
+<p>途中から
+(<a href="https://github.com/nadoka/nadoka/wiki/HowToRelease">HowToRelease</a>
+の記録によると 0.7.7 から)
+は github メインに移行しています。</p>
+
+<p>その後、しばらく放置していたかどうだったのか忘れましたが、
+最近のリリースでは github での変更をリリースのタイミングで
+rubyforge の svn にも git-svn を使ってマージしていました。</p>
+
+<p>このマージも今回で最後になります。</p>
+
+<p>その作業をするときに
+<code>http://rubyforge.org/</code>
+をみてみると
+<code>RubyForge Could Not Connect to Database:</code>
+というエラーになっていて、
+<a href="https://twitter.com/hsbt/status/406423900432506881">hsbt さん</a>
+に
+<a href="https://twitter.com/evanphx/status/399552820380053505">RubyForgeは5月15日で終了予定</a>
+という話を教えてもらいました。</p>
+
+<p>古いサーバーで svn co して、
+そのまま使っている場合でも使い続けられるように続けていましたが、
+rubyforge 自体が終わるということで、
+そういうサーバーでは、
+そのまま最後の svn up をして使い続けるか、
+git に移行する必要がありそうです。</p>
+
+<h2>git repository について</h2>
+
+<p>github が主流になっていたこともあり、
+pull request とかしやすくなることを期待して
+移行しました。</p>
+
+<p>pull request が来た件数も 0 ではないので、
+そのあたりは活発ではないプロジェクトとしては
+うまくいっているのではないでしょうか。</p>
+
+<p>github への移行方法として、
+最初は
+<a href="http://darcs.net/RelatedSoftware/Tailor">tailor</a>
+を検討したのですが、
+既にあまり使われていなくて、
+ちょっと試した感じでもうまくいかなかったので、
+git-svn で移行しました。</p>
+
+<p>今となっては変換専用ソフトはほぼ使えるものはなく、
+変換先のソフト (今回は git) のプラグイン的なものを使って
+変換元のソフト (今回は svn) の repository から取り出す、
+という方法しかないようです。</p>
+
+<h2>CloudCore VPS</h2>
+
+<p><a href="http://www.cloudcore.jp/vps/develop/">開発者支援制度 &ndash; CloudCore VPS</a>
+でサーバーを借りてみて、
+テスト用の IRC サーバーを動かしています。</p>
+
+<p>接続用の設定は
+<a href="https://github.com/nadoka/nadokarc-example">nadokarc-example</a>
+にあるので、適当に試したい時に使えると思います。</p>
+
+<p>途中の経路の問題 (モバイルでモバイルルーターの接続が切れたとか?)
+で、サーバーから応答がなくなったときに
+nadoka さんの再接続がうまくいかないのを調査するのに使いたいと
+思っているのですが、
+切れた状況を再現する部分の作り込みがまだ出来ていないです。</p>
+
+<p>ircd の設定は
+<a href="https://github.com/nadoka/ansible-ircd">ansible-ircd</a>
+のように ansible でやってみました。
+SSL の証明書の問題などがあるので、
+すべての情報を公開できるわけじゃないというのが難しいところです。</p>
+
+<h2>まとめ的なもの</h2>
+
+<p>長い間続いているといろいろあるものです。</p>
+
+<p>小規模なプロジェクトなので、
+いつも場当たり的な対応でなんとかなっていますが、
+そういうのも良いんじゃないでしょうか。</p>
+
+<p>とりあえず自分が使っている限りはリリースも続くと思いますし、
+新しいバージョンの ruby への対応も続けていけると思います。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法]]></title>
@@ -2710,118 +2829,6 @@ PAM が関係しているだろうという見当をつけて、
 <code># systemd replaces udev-acl entirely, skip if active</code>
 と書いてあったので、 <code>systemd</code> を使っている環境だと
 <code>udev-acl</code> は何もしないようです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第8回 関西Emacs勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-26-kansai-emacs.html"/>
-    <updated>2013-10-26T14:19:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansai-emacs</id>
-    <content type="html"><![CDATA[<p><a href="http://atnd.org/events/44155">(kansai-emacs #x08) #関西Emacs : ATND</a>
-というイベントに参加してきました。</p>
-
-<!--more-->
-
-
-<h2>ポジションペーパー</h2>
-
-<p>以前作りかけで一部は
-<a href="http://regional.rubykaigi.org/kansai05">関西Ruby会議05</a>
-の時に使った rabbit での自己紹介のスライドに
-Emacs 関係の情報を追加して作った PDF だったので、
-1ページにできずに複数ページになってしまいました。</p>
-
-<p>会場への移動中に作成したのですが、
-作成前に既にアップロードされているものを確認したら
-複数ページのものがあるので、
-まあいいかと思ったのも理由でした。</p>
-
-<h2>会場到着から開始まで</h2>
-
-<p>到着時点では知っている人がいなくて、
-どうすればいいのかよくわからなかったので、
-入り口近くで座って twitter とか見ながら待っていました。
-13時を少しすぎたところで準備ができたらしく案内があったので、
-席に移動しました。</p>
-
-<h2>発表</h2>
-
-<p><code>package-install</code> だと
-環境を作り直した時に magit とかがバージョンアップで挙動が変わって
-困ることがあるのでどうするのが良いのかという相談とか、
-<code>ac-mozc</code> の紹介とか、ちゃんとメモをとっていなかったのですが、
-いろいろありました。</p>
-
-<p><code>ac-mozc</code> の質疑応答では</p>
-
-<ul>
-<li>英単語に続けて日本語を入力する時はスペースを入れて入力して、確定するとスペースが消える、スペースが必要な時はその直後に undo すればいい</li>
-<li>英単語を入力していてローマ字ともみなせて不要なのに ac-mozc の候補が出てきたときは ac のキャンセルと同じように C-g で消せばいい</li>
-<li>コメントの中とか文字列の中とかで一部だけ変換したい時とかは変換用のコマンドを直接呼び出せばいい</li>
-</ul>
-
-
-<p>のような話があったと記憶しています。</p>
-
-<h2>やっていたこと</h2>
-
-<h3>package.el</h3>
-
-<p><a href="http://emacs-jp.github.io/packages/package-management/package-el.html">package.el &ndash; Emacs JP</a>
-を参考にして <code>package.el</code> を使う設定をしました。</p>
-
-<h3>shell-pop</h3>
-
-<p>上のメモには書いていませんが、発表にあった <code>shell-pop</code> を
-<code>package.el</code> を使って入れてみました。
-昔ちょっと試したことがあって、その設定が悪さをしていて、
-最初は
-<code>(void-function shell-pop-set-internal-mode)</code>
-というエラーになってしまっていましたが、
-古い設定を削除すれば直りました。</p>
-
-<p><a href="http://www.emacswiki.org/emacs/ShellPop">EmacsWiki の Shell Pop</a>
-には上の方に小さく書いてあるだけですが、
-github の方が新しくて互換性がなくなっているのが理由でした。</p>
-
-<h3>ansi-term</h3>
-
-<p><code>shell-pop</code> の設定例にある <code>ansi-term</code> を使ってみると
-最下行で文字を入力すると一瞬上にスクロールして戻るという現象が出て、
-<code>ansi-term</code> 単体でもおきたので、
-<code>ansi-term</code> の問題かと思ってクリーンな環境でも試してみると発生しませんでした。</p>
-
-<p>scroll 関係の設定があやしいと思って、
-<code>scroll-margin</code> を <code>2</code> にしていたのを <code>0</code> にしたらなおったのですが、
-クリーンな環境で <code>scroll-margin</code> だけ変更しても現象が出なかったので、
-結局何が再現条件なのかはわかりませんでした。
-<code>scroll-step</code> を <code>1</code> にしているのも関係しているかと思ったのですが、
-関係ありませんでした。</p>
-
-<h3>elscreen</h3>
-
-<p><code>auto-install</code> でインストールしていた <code>elscreen.el</code> を
-<code>package.el</code> でインストールしたものに変更しました。</p>
-
-<p><code>(elscreen-start)</code> が必要になっているというのを知らなかったので、
-うまく動かなくてかなり悩んでいましたが、教えてもらって解決しました。</p>
-
-<h3>anything.el から helm への変更</h3>
-
-<p><code>anything.el</code> は一時期はいろいろ設定を頑張っていたのですが、
-結局デフォルトの <code>anything</code> 以外はほとんど使っていなかったので、
-<code>helm-mini</code> に置き換えるだけで問題なさそうな感じでした。</p>
-
-<p><code>anything.el</code> だとメニューに登録されていたり
-<code>(anything-execute-anything-command)</code> とか
-<code>(anything-call-source)</code> のようなメタ機能があったりして、
-存在を知らない機能でも探しやすいのですが、
-<code>helm</code> にはそういうものがあるのかどうかわかりませんでした。</p>
-
-<p>ちなみに <code>M-x</code> で <code>helm-</code> で始まる <code>interactive</code> な関数を探すのは
-<code>helm</code> 関係のバッファでのキーバインドようの関数が混ざっているので
-この用途には使えません。</p>
 ]]></content>
   </entry>
   
