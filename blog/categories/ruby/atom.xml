@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-11-30T15:56:19+09:00</updated>
+  <updated>2013-12-02T23:50:49+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,103 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Ruby 2.1.0の新機能のException#cause]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-03-ruby-exception-cause.html"/>
+    <updated>2013-12-03T00:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ruby-exception-cause</id>
+    <content type="html"><![CDATA[<p><a href="https://www.ruby-lang.org/ja/news/2013/11/22/ruby-2-1-0-preview2-is-released/">Ruby 2.1.0-preview2 リリース</a>
+では
+<a href="http://d.hatena.ne.jp/nagachika/20131110/ruby_trunk_changes_43615_43636">2013-11-10 の大きめの変更</a>
+が気になっていて、
+ここでは
+<code>Exception#cause</code>
+というメソッドを紹介します。</p>
+
+<p><code>"literal"f</code> のように書く freeze された文字列リテラル機能が
+2.1.0-preview1 には入っていたのですが、それが削除されて
+<code>"literal".freeze</code> がコンパイル時に特別扱いされるようになった、
+というのも気になっています。</p>
+
+<!--more-->
+
+
+<h2>Exception#cause の例</h2>
+
+<p>Ruby 2.0.0 までは <code>rescue</code> や <code>ensure</code> の中で別の例外が発生すると、
+別途保存しておかない限り、
+以前に発生した例外がわからなくなってしまっていましたが、
+Ruby 2.1.0(-preview2) からは別の例外を <code>raise</code> した時に
+以前の例外が自動で保存されて
+<code>Exception#cause</code> でたどれるようになりました。
+<code>cause</code> は <code>raise</code> のタイミングで設定されるので、
+例外オブジェクト自体は <code>rescue</code> や <code>ensure</code>
+の外で生成していても良いようです。</p>
+
+<p>```ruby</p>
+
+<h1>!/usr/bin/env ruby</h1>
+
+<p>def foo
+  raise &ldquo;foo&rdquo;
+end</p>
+
+<p>def bar
+  e = Exception.new(&ldquo;bar&rdquo;)
+  foo
+rescue
+  raise e
+end</p>
+
+<p>def baz
+  bar
+ensure
+  raise &ldquo;baz&rdquo;
+end</p>
+
+<p>begin
+  baz
+rescue
+  p $!                   #=> #&lt;RuntimeError: baz>
+  p $!.cause             #=> #&lt;Exception: bar>
+  p $!.cause.cause       #=> #&lt;RuntimeError: foo>
+  p $!.cause.cause.cause #=> nil
+end
+```</p>
+
+<h2>終了時のバックトレース</h2>
+
+<p>ちなみに、例外が保存されていても
+<code>rescue</code> せずにプログラムが終了した時のバックトレースは
+今まで通り最後の例外だけ表示されるようです。</p>
+
+<p>```console
+% cat t.rb</p>
+
+<h1>!/usr/bin/env ruby</h1>
+
+<p>def foo
+  raise &ldquo;foo&rdquo;
+end</p>
+
+<p>def bar
+  foo
+rescue
+  raise &ldquo;bar&rdquo;
+end</p>
+
+<p>bar
+% ruby t.rb
+t.rb:9:in `rescue in bar': bar (RuntimeError)</p>
+
+<pre><code>from t.rb:7:in `bar'
+from t.rb:12:in `&lt;main&gt;'
+</code></pre>
+
+<p>```</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[nadokaさんの0.8.6をリリースした関連の話]]></title>
@@ -432,118 +529,6 @@ LSSetDefaultHandlerForURLScheme("http", bundle_id) #~&gt; NoMethodError
 のままで動かず、
 結局
 RubyMotion を 2.15 に上げると直っていました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[rbenvのプラグインを簡単に追加出来るようにするrbenv-plugを作った]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-29-rbenv-plug.html"/>
-    <updated>2013-10-29T23:55:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rbenv-plug</id>
-    <content type="html"><![CDATA[<p><a href="https://github.com/sstephenson/rbenv">rbenv</a> のプラグインをインストールするのに
-<code>git clone https://github.com/sstephenson/ruby-build.git ~/.rbenv/plugins/ruby-build</code>
-のように <code>ruby-build</code> を二回指定しないといけなかったり、
-git の URL をコピペしないといけなかったりして面倒なので、
-簡単にインストールできるようにするプラグイン
-<a href="https://github.com/znz/rbenv-plug">rbenv-plug</a>
-を作りました。</p>
-
-<p><a href="https://github.com/sstephenson/ruby-build">ruby-build</a>
-のように <code>share</code> の下に一覧を持つようにしたので、
-インストールできるプラグインは簡単に増やせます。</p>
-
-<!--more-->
-
-
-<h2>使い方</h2>
-
-<p><a href="https://github.com/znz/rbenv-plug">README</a> に書いた通りです。</p>
-
-<p><a href="https://github.com/sstephenson/rbenv/wiki/Plugins">plugins</a>
-に載っているプラグインなら以下のように簡単にインストールできます。</p>
-
-<pre><code>rbenv plug &lt;plugin-name&gt;
-</code></pre>
-
-<p>例えば
-<a href="https://github.com/sstephenson/ruby-build">ruby-build</a>
-をインストールするなら以下のようになります。</p>
-
-<pre><code>rbenv plug ruby-build
-</code></pre>
-
-<p>例えば
-<a href="https://github.com/rkh/rbenv-update">rbenv-update</a>
-をインストールするなら、</p>
-
-<pre><code>rbenv plug rbenv-update
-</code></pre>
-
-<p>のようにするか、
-<code>rbenv-</code>
-を省略して以下のようにします。</p>
-
-<pre><code>rbenv plug update
-</code></pre>
-
-<p>git の URL を指定して任意のプラグインをインストールすることもできます。</p>
-
-<pre><code>rbenv plug https://github.com/sstephenson/ruby-build.git
-</code></pre>
-
-<p>アンインストールも簡単にできます。
-例えば
-<code>rbenv-update</code>
-をアンインストールするなら、</p>
-
-<pre><code>rbenv unplug rbenv-update
-</code></pre>
-
-<p>のようにするか、
-<code>rbenv-</code>
-を省略して以下のようにします。</p>
-
-<pre><code>rbenv unplug update
-</code></pre>
-
-<h2>インストール方法</h2>
-
-<p>以下のようにプラグインの一般的なインストール方法そのままで、
-<code>$RBENV_ROOT/plugins</code> に <code>git clone</code> するだけです。</p>
-
-<pre><code>mkdir -p ~/.rbenv/plugins
-git clone https://github.com/znz/rbenv-plug.git ~/.rbenv/plugins/rbenv-plug
-</code></pre>
-
-<h2>仕組み</h2>
-
-<p>URL が指定された時は上の一般的なインストール方法と同様のことを実行するだけです。</p>
-
-<p>プラグイン名を指定された時は
-<code>share/rbenv-plug</code>
-の中のスクリプトを実行します。</p>
-
-<p>名前が <code>rbenv-</code> で始まるプラグインがほとんどなので、
-<code>rbenv plug</code> や <code>rbenv unplug</code> の引数では
-<code>rbenv-</code> を省略できるようにしました。</p>
-
-<p><code>share/rbenv-plug</code> のスクリプトで
-<a href="https://github.com/tpope/rbenv-aliases">rbenv-aliases</a>
-なら <code>rbenv alias --auto</code> を追加で実行したり、
-<a href="https://github.com/rkh/rbenv-use">rbenv-use</a>
-なら依存している <code>rbenv-whatis</code> もインストールしたりしています。</p>
-
-<h2>余談</h2>
-
-<p><code>share/rbenv-plug</code> のファイルを追加している時に
-<a href="https://github.com/taqtiqa/rbenv-plugin">rbenv-plugin</a>
-というのがあって、
-今の <code>rbenv-plug</code> (と <code>rbenv-unplug</code>) という名前に変えました。
-最初は <code>rbenv-plugin-install</code> (と <code>rbenv-plugin-uninstall</code>)
-という名前で作りかけていたので、
-<code>rbenv-plugin</code> のサブコマンドと思いっきり名前がかぶっていました。
-<code>rbenv-plugins-install</code> という複数形の名前も使われてしまっていたので、
-思い切って短い名前に変更しました。</p>
 ]]></content>
   </entry>
   
