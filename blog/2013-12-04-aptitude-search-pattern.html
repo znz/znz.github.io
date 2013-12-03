@@ -5,15 +5,16 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>KOF2013：関西オープンフォーラム2013 - @znz blog</title>
+  <title>aptitude検索パターンの紹介 - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="KOF2013：関西オープンフォーラム2013
-に最後の方にちょっとだけ行ってきました。 時間もあまりなかったので、セミナーの方には行かずに
-ブースにいる知り合いと話をするのがメインでした。 最後のお楽しみ抽選会には参加してみましたが、
-じゃんけんが弱くて何ももらえませんでした。
-">
+  <meta name="description" content="Debian や Ubuntu のパッケージのインストールなどで
+コマンドライン操作では apt-get や aptitude
+を使いますが、
+ここでは
+apt-get では出来ない aptitude
+の便利な使い方を紹介します。 残ってしまった設定ファイルの削除 deb &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -22,7 +23,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-11-09-k-of-2013.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-12-04-aptitude-search-pattern.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -84,7 +85,7 @@
   
   <header>
     
-      <h1 class="entry-title">KOF2013：関西オープンフォーラム2013</h1>
+      <h1 class="entry-title">aptitude検索パターンの紹介</h1>
     
     
       <p class="meta">
@@ -100,7 +101,7 @@
   
 
 
-<time datetime="2013-11-09T20:22:00+09:00" pubdate data-updated="true">2013-11-09 (Sat)</time>
+<time datetime="2013-12-04T00:00:00+09:00" pubdate data-updated="true">2013-12-04 (Wed)</time>
         
          | <a href="#disqus_thread">Comments</a>
         
@@ -109,14 +110,189 @@
   </header>
 
 
-<div class="entry-content"><p><a href="https://k-of.jp/2013/">KOF2013：関西オープンフォーラム2013</a>
-に最後の方にちょっとだけ行ってきました。</p>
+<div class="entry-content"><p>Debian や Ubuntu のパッケージのインストールなどで
+コマンドライン操作では <code>apt-get</code> や <code>aptitude</code>
+を使いますが、
+ここでは
+<code>apt-get</code> では出来ない <code>aptitude</code>
+の便利な使い方を紹介します。</p>
 
-<p>時間もあまりなかったので、セミナーの方には行かずに
-ブースにいる知り合いと話をするのがメインでした。</p>
+<!--more-->
 
-<p>最後のお楽しみ抽選会には参加してみましたが、
-じゃんけんが弱くて何ももらえませんでした。</p>
+
+<h2>残ってしまった設定ファイルの削除</h2>
+
+<p>deb パッケージのアンインストールは <code>remove</code> と <code>purge</code> の二種類があって、
+<code>purge</code> すれば設定ファイルまで消えるのですが、
+<code>remove</code> だと設定ファイルは残ってしまいます。</p>
+
+<p>普段は
+<code>apt-get purge hoge</code>
+や
+<code>aptitude purge hoge</code>
+で削除していたとしても、
+依存関係で自動インストールされたものが
+自動削除される時は <code>remove</code> になってしまって
+設定ファイルが残ってしまいます。</p>
+
+<p>そういうときに <code>aptitude</code> だと</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>aptitude purge '~c'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>で設定ファイルだけ残ったパッケージを一気に <code>purge</code> できます。</p>
+
+<p>この <code>~c</code> というのが <code>aptitude</code> の search term の一種で、
+削除されていて <code>purge</code> (完全削除) されていない、
+つまり設定ファイルがシステム上に残っているパッケージという意味になります。</p>
+
+<h2>クオートの必要性</h2>
+
+<p><code>''</code> でクオートしているのはシェルの展開を抑制するためで、
+必須ではないのですが、
+環境によって意図しない指定になることを避けるために、
+常に <code>''</code> でくくっておくことをお勧めします。
+ちなみに、この例だと <code>c</code> というユーザーが存在した場合に
+そのホームディレクトリに展開されてしまいます。</p>
+
+<h2>長い形式と短い形式</h2>
+
+<p>ほとんどの search term は短い形式 (short form) と
+長い形式 (long form) があり、
+<code>~c</code> が短い形式で対応する長い形式は <code>?config-files</code>
+になります。
+つまり</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>aptitude purge '?config-files'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>でも同じ意味になります。</p>
+
+<h2>検索パターンの確認</h2>
+
+<p><code>aptitude search</code> でも <code>aptitude purge</code> でも <code>aptitude install</code> でも
+同じように使えるので、
+<code>aptitude search</code> で確認してから <code>aptitude purge</code> するとか、
+<code>aptitude install</code> するという使い方も出来ます。</p>
+
+<h2>Search Term reference</h2>
+
+<p>search term の一覧は <code>aptitude-doc-ja</code> パッケージを入れて参照するか、
+<a href="http://aptitude.alioth.debian.org/doc/ja/ch02s04s05.html">Search term reference</a>
+などを参照してください。</p>
+
+<h2>他によく使っている search term</h2>
+
+<p>他によく使っているものとしては、</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>aptitude search '~U'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>でアップデート対象のパッケージ一覧を見たり、</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>aptitude purge '~i~n 3.2.0-2[1-3]'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のような指定で古いカーネル関連のパッケージを削除したりするのをよく使います。
+<code>~i</code> がインストール済みのものという意味で、
+<code>~n</code> はパッケージ名の検索で引数は正規表現なのですが、
+ここでは他に間違ってマッチしそうなものはないため、
+<code>.</code> のエスケープは省略してしまうことが多いです。
+<code>linux-.*</code> の部分も指定しなくても充分絞り込めるので
+省略してしまっています。</p>
+
+<p><code>~i</code> は引数をとらなくて、デフォルトはパッケージ名の検索なので、
+<code>~i 3.2.0-2[1-3]</code> と省略することも出来ます。</p>
+
+<h2>応用例</h2>
+
+<h3>別 apt-line で入れたパッケージの検索など</h3>
+
+<p>たとえば Ubuntu なら</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>aptitude search '~i!~Oubuntu'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のように Origin が Ubuntu 以外のパッケージという検索で
+Ubuntu の apt-line 以外から入れたパッケージが検索できます。</p>
+
+<p>昔から使い続けている Debian なら</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>aptitude search '~i!~Odebian'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>で他の apt-line からインストールしたものに加えて、
+昔の Debian にパッケージが存在して、
+今の Debian にはもう収録されていないパッケージが残っているものも
+探すことも出来ます。</p>
+
+<h3>exim から postfix への入れ替え</h3>
+
+<p><code>aptitude install</code> や <code>aptitude purge</code> で
+パッケージを指定する時に末尾に <code>_</code> を付けると <code>purge</code> できたり、
+<code>+</code> を付けるとインストールできたりします。</p>
+
+<p>これらを組み合わせると <code>postfix+</code> でインストールしつつ、
+名前に <code>exim</code> を含むパッケージを <code>purge</code> することで
+<code>default-mta</code> や <code>mail-transport-agent</code> に依存しているパッケージの
+依存関係が満たせないと言われずにパッケージの入れ替えができます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo aptitude purge '~i~nexim' postfix+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>バグがあったパッケージのインストールを止めたい</h3>
+
+<p>Debian の unstable や testing を使っていて
+<code>apt-listbugs</code> を入れていると
+インストール前にこのパッケージの
+このバージョンは入れない方が
+良さそうということがありますが、
+同じソースパッケージで複数のパッケージに分かれていると
+指定が面倒なことがあります。</p>
+
+<p>たとえば <code>sysv-rc</code> でバグがあった時に
+<code>apt-get source sysv-rc</code> でソースパッケージ名を調べて、
+対象パッケージを確認した上で
+以下のように
+<code>aptitude forbid-version</code>
+でそのバージョンはインストールしない、
+ということが出来ます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>aptitude search '?installed ?source-package(sysvinit)'
+</span><span class='line'>sudo aptitude forbid-version '?installed ?source-package(sysvinit)'</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>その他いろいろ</h3>
+
+<p>最後にその他のいろいろな例を列挙しておきます。
+詳しい説明は <code>aptitude</code> のリファレンスなどを参照してください。</p>
+
+<ul>
+<li><code>aptitude search '?maintainer(uwabami)</code> : メンテナで探す</li>
+<li><code>aptitude search '~t minimal'</code> : タスクでインストールされるパッケージ</li>
+<li><code>aptitude search '~n^lsb'</code> : 名前が lsb で始まるパッケージ</li>
+<li><code>aptitude search '?section(metapackages)'</code> : メタパッケージ</li>
+<li><code>aptitude search '?priority(important)'</code> : 優先度が重要のパッケージ</li>
+<li><code>aptitude search '?provides(mail-transport-agent)'</code> : <code>mail-transport-agent</code> を提供しているパッケージ</li>
+</ul>
+
+
+<h2>まとめ</h2>
+
+<p>今回は <code>aptitude</code> の検索パターンの便利な使い方を紹介しました。</p>
+
+<p>今まで <code>apt-get</code> や <code>apt-cache</code> しか使っていなかったとか、
+<code>aptitude</code> を使っていても単純にパッケージ名を指定しかしたことがなかったとか
+いう人は <code>aptitude purge '~c'</code> だけでも試してみると良いのではないでしょうか。</p>
 </div>
 
 
@@ -139,12 +315,12 @@
   
 
 
-<time datetime="2013-11-09T20:22:00+09:00" pubdate data-updated="true">2013-11-09 (Sat)</time>
+<time datetime="2013-12-04T00:00:00+09:00" pubdate data-updated="true">2013-12-04 (Wed)</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/event/'>event</a>, <a class='category' href='/blog/categories/k-of/'>k-of</a>
+    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>
   
 </span>
 
@@ -153,12 +329,12 @@
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-11-09-k-of-2013.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-11-09-k-of-2013.html" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-12-04-aptitude-search-pattern.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-12-04-aptitude-search-pattern.html" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
   
-  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-11-09-k-of-2013.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-12-04-aptitude-search-pattern.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
   
     <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
   
@@ -177,10 +353,8 @@
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-11-04-dev-snd-hwc0d0-permission-denied.html" title="Previous Post: /dev/snd/hwC0D0でPermission deniedになる問題を調べた">&laquo; /dev/snd/hwC0D0でPermission deniedになる問題を調べた</a>
+        <a class="basic-alignment left" href="/blog/2013-12-03-ruby-exception-cause.html" title="Previous Post: Ruby 2.1.0の新機能のException#cause">&laquo; Ruby 2.1.0の新機能のException#cause</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-11-12-zsh-cdr.html" title="Next Post: zshでcdの履歴管理に標準添付のcdrを使う">zshでcdの履歴管理に標準添付のcdrを使う &raquo;</a>
       
     </p>
   </footer>
@@ -295,8 +469,8 @@
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-11-09-k-of-2013.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-11-09-k-of-2013.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-12-04-aptitude-search-pattern.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-12-04-aptitude-search-pattern.html';
         var disqus_script = 'embed.js';
       
     (function () {

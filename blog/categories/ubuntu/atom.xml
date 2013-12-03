@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-02T23:50:49+09:00</updated>
+  <updated>2013-12-03T21:52:27+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,196 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[aptitude検索パターンの紹介]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-04-aptitude-search-pattern.html"/>
+    <updated>2013-12-04T00:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/aptitude-search-pattern</id>
+    <content type="html"><![CDATA[<p>Debian や Ubuntu のパッケージのインストールなどで
+コマンドライン操作では <code>apt-get</code> や <code>aptitude</code>
+を使いますが、
+ここでは
+<code>apt-get</code> では出来ない <code>aptitude</code>
+の便利な使い方を紹介します。</p>
+
+<!--more-->
+
+
+<h2>残ってしまった設定ファイルの削除</h2>
+
+<p>deb パッケージのアンインストールは <code>remove</code> と <code>purge</code> の二種類があって、
+<code>purge</code> すれば設定ファイルまで消えるのですが、
+<code>remove</code> だと設定ファイルは残ってしまいます。</p>
+
+<p>普段は
+<code>apt-get purge hoge</code>
+や
+<code>aptitude purge hoge</code>
+で削除していたとしても、
+依存関係で自動インストールされたものが
+自動削除される時は <code>remove</code> になってしまって
+設定ファイルが残ってしまいます。</p>
+
+<p>そういうときに <code>aptitude</code> だと</p>
+
+<p><code>
+aptitude purge '~c'
+</code></p>
+
+<p>で設定ファイルだけ残ったパッケージを一気に <code>purge</code> できます。</p>
+
+<p>この <code>~c</code> というのが <code>aptitude</code> の search term の一種で、
+削除されていて <code>purge</code> (完全削除) されていない、
+つまり設定ファイルがシステム上に残っているパッケージという意味になります。</p>
+
+<h2>クオートの必要性</h2>
+
+<p><code>''</code> でクオートしているのはシェルの展開を抑制するためで、
+必須ではないのですが、
+環境によって意図しない指定になることを避けるために、
+常に <code>''</code> でくくっておくことをお勧めします。
+ちなみに、この例だと <code>c</code> というユーザーが存在した場合に
+そのホームディレクトリに展開されてしまいます。</p>
+
+<h2>長い形式と短い形式</h2>
+
+<p>ほとんどの search term は短い形式 (short form) と
+長い形式 (long form) があり、
+<code>~c</code> が短い形式で対応する長い形式は <code>?config-files</code>
+になります。
+つまり</p>
+
+<p><code>
+aptitude purge '?config-files'
+</code></p>
+
+<p>でも同じ意味になります。</p>
+
+<h2>検索パターンの確認</h2>
+
+<p><code>aptitude search</code> でも <code>aptitude purge</code> でも <code>aptitude install</code> でも
+同じように使えるので、
+<code>aptitude search</code> で確認してから <code>aptitude purge</code> するとか、
+<code>aptitude install</code> するという使い方も出来ます。</p>
+
+<h2>Search Term reference</h2>
+
+<p>search term の一覧は <code>aptitude-doc-ja</code> パッケージを入れて参照するか、
+<a href="http://aptitude.alioth.debian.org/doc/ja/ch02s04s05.html">Search term reference</a>
+などを参照してください。</p>
+
+<h2>他によく使っている search term</h2>
+
+<p>他によく使っているものとしては、</p>
+
+<p><code>
+aptitude search '~U'
+</code></p>
+
+<p>でアップデート対象のパッケージ一覧を見たり、</p>
+
+<p><code>
+aptitude purge '~i~n 3.2.0-2[1-3]'
+</code></p>
+
+<p>のような指定で古いカーネル関連のパッケージを削除したりするのをよく使います。
+<code>~i</code> がインストール済みのものという意味で、
+<code>~n</code> はパッケージ名の検索で引数は正規表現なのですが、
+ここでは他に間違ってマッチしそうなものはないため、
+<code>.</code> のエスケープは省略してしまうことが多いです。
+<code>linux-.*</code> の部分も指定しなくても充分絞り込めるので
+省略してしまっています。</p>
+
+<p><code>~i</code> は引数をとらなくて、デフォルトはパッケージ名の検索なので、
+<code>~i 3.2.0-2[1-3]</code> と省略することも出来ます。</p>
+
+<h2>応用例</h2>
+
+<h3>別 apt-line で入れたパッケージの検索など</h3>
+
+<p>たとえば Ubuntu なら</p>
+
+<p><code>
+aptitude search '~i!~Oubuntu'
+</code></p>
+
+<p>のように Origin が Ubuntu 以外のパッケージという検索で
+Ubuntu の apt-line 以外から入れたパッケージが検索できます。</p>
+
+<p>昔から使い続けている Debian なら</p>
+
+<p><code>
+aptitude search '~i!~Odebian'
+</code></p>
+
+<p>で他の apt-line からインストールしたものに加えて、
+昔の Debian にパッケージが存在して、
+今の Debian にはもう収録されていないパッケージが残っているものも
+探すことも出来ます。</p>
+
+<h3>exim から postfix への入れ替え</h3>
+
+<p><code>aptitude install</code> や <code>aptitude purge</code> で
+パッケージを指定する時に末尾に <code>_</code> を付けると <code>purge</code> できたり、
+<code>+</code> を付けるとインストールできたりします。</p>
+
+<p>これらを組み合わせると <code>postfix+</code> でインストールしつつ、
+名前に <code>exim</code> を含むパッケージを <code>purge</code> することで
+<code>default-mta</code> や <code>mail-transport-agent</code> に依存しているパッケージの
+依存関係が満たせないと言われずにパッケージの入れ替えができます。</p>
+
+<p><code>
+sudo aptitude purge '~i~nexim' postfix+
+</code></p>
+
+<h3>バグがあったパッケージのインストールを止めたい</h3>
+
+<p>Debian の unstable や testing を使っていて
+<code>apt-listbugs</code> を入れていると
+インストール前にこのパッケージの
+このバージョンは入れない方が
+良さそうということがありますが、
+同じソースパッケージで複数のパッケージに分かれていると
+指定が面倒なことがあります。</p>
+
+<p>たとえば <code>sysv-rc</code> でバグがあった時に
+<code>apt-get source sysv-rc</code> でソースパッケージ名を調べて、
+対象パッケージを確認した上で
+以下のように
+<code>aptitude forbid-version</code>
+でそのバージョンはインストールしない、
+ということが出来ます。</p>
+
+<p><code>
+aptitude search '?installed ?source-package(sysvinit)'
+sudo aptitude forbid-version '?installed ?source-package(sysvinit)'
+</code></p>
+
+<h3>その他いろいろ</h3>
+
+<p>最後にその他のいろいろな例を列挙しておきます。
+詳しい説明は <code>aptitude</code> のリファレンスなどを参照してください。</p>
+
+<ul>
+<li><code>aptitude search '?maintainer(uwabami)</code> : メンテナで探す</li>
+<li><code>aptitude search '~t minimal'</code> : タスクでインストールされるパッケージ</li>
+<li><code>aptitude search '~n^lsb'</code> : 名前が lsb で始まるパッケージ</li>
+<li><code>aptitude search '?section(metapackages)'</code> : メタパッケージ</li>
+<li><code>aptitude search '?priority(important)'</code> : 優先度が重要のパッケージ</li>
+<li><code>aptitude search '?provides(mail-transport-agent)'</code> : <code>mail-transport-agent</code> を提供しているパッケージ</li>
+</ul>
+
+
+<h2>まとめ</h2>
+
+<p>今回は <code>aptitude</code> の検索パターンの便利な使い方を紹介しました。</p>
+
+<p>今まで <code>apt-get</code> や <code>apt-cache</code> しか使っていなかったとか、
+<code>aptitude</code> を使っていても単純にパッケージ名を指定しかしたことがなかったとか
+いう人は <code>aptitude purge '~c'</code> だけでも試してみると良いのではないでしょうか。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[VirtualBoxでdokkuを試した]]></title>
@@ -604,332 +794,6 @@ ubuntu-jp の ML に流れるのですが、
 読んでみて返信してみたのですが、
 次の週もそのままだったので、
 あれは査読に含まれないのかと思ってがっかりしました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Ubuntu Server 12.04.3 LTS をインストールした]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-15-ubuntu-server-installed.html"/>
-    <updated>2013-09-15T20:02:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ubuntu-server-installed</id>
-    <content type="html"><![CDATA[<p>自宅サーバーのシステムディスク (sda) が壊れたので、 HDD を入れ替えて、せっかくなのでシステムをきれいな状態にするために <code>ubuntu-12.04.3-server-amd64.iso</code> からインストールし直しました。
-その初期設定の話です。</p>
-
-<!--more-->
-
-
-<h2>インストール準備</h2>
-
-<h3>ISO イメージダウンロード</h3>
-
-<p>まずインストール用の ISO ファイルをダウンロードしました。
-<a href="http://www.ubuntu.com/download">Get Ubuntu</a>
-からだと海外ミラーでダウンロードが遅かったので、
-国内のミラーを探してみたところ、
-<code>ftp://ftp.riken.go.jp/Linux/ubuntu-iso/CDs/precise/</code>
-だと torrent ファイルや metalink のファイルしか見えなくて、
-<code>ftp</code> ではなく <code>http</code> の
-<code>http://ftp.riken.go.jp/Linux/ubuntu-iso/CDs/precise/</code>
-からだとダウンロード出来ました。</p>
-
-<h3>起動用 USB メモリ準備</h3>
-
-<p>ダウンロードした ISO を <code>dd</code> で USB メモリに書き込んで、そこからインストールしました。
-categories につけた Mac を使っている部分はここだけです。</p>
-
-<p>ネットで調べればいろいろ情報がみつかるように
-<code>diskutil list</code>
-でディスクの番号を確認して、
-<code>dd</code> で読み書きします。
-<code>rdisk</code> の方が速いらしいので、
-実際の書き込みには <code>rdisk</code> を使ったのですが、
-パーティションを <code>unmount</code> しておかないと
-<code>Resource busy</code> で書き込ませんでした。
-eject してしまって <code>diskutil list</code> にも
-出てこない状態にしてしまうと読み書き出来ないので、
-Finder から取り出したり <code>diskutil unmountDisk</code> だと
-ダメでした。</p>
-
-<p>読み込みの例として MBR の部分をバックアップしてダンプしてみました。</p>
-
-<p><code>
-% diskutil list
-/dev/disk0
-   #:                       TYPE NAME                    SIZE       IDENTIFIER
-   0:      GUID_partition_scheme                        *251.0 GB   disk0
-   1:                        EFI                         209.7 MB   disk0s1
-   2:          Apple_CoreStorage                         250.1 GB   disk0s2
-   3:                 Apple_Boot Recovery HD             650.0 MB   disk0s3
-/dev/disk1
-   #:                       TYPE NAME                    SIZE       IDENTIFIER
-   0:                  Apple_HFS Macintosh HD           *249.8 GB   disk1
-/dev/disk2
-   #:                       TYPE NAME                    SIZE       IDENTIFIER
-   0:     FDisk_partition_scheme                        *16.1 GB    disk2
-   1:             Windows_FAT_32 NO NAME                 16.1 GB    disk2s1
-% sudo dd if=/dev/disk2 of=MF-AU316GBS.mbr bs=512 count=1
-% hexdump -C MF-AU316GBS.mbr
-00000000  33 c0 8e d0 bc 00 7c fb  50 07 50 1f fc be 1b 7c  |3.....|.P.P....||
-00000010  bf 1b 06 50 57 b9 e5 01  f3 a4 cb bd be 07 b1 04  |...PW...........|
-00000020  38 6e 00 7c 09 75 13 83  c5 10 e2 f4 cd 18 8b f5  |8n.|.u..........|
-00000030  83 c6 10 49 74 19 38 2c  74 f6 a0 b5 07 b4 07 8b  |...It.8,t.......|
-00000040  f0 ac 3c 00 74 fc bb 07  00 b4 0e cd 10 eb f2 88  |..&lt;.t...........|
-00000050  4e 10 e8 46 00 73 2a fe  46 10 80 7e 04 0b 74 0b  |N..F.s*.F..~..t.|
-00000060  80 7e 04 0c 74 05 a0 b6  07 75 d2 80 46 02 06 83  |.~..t....u..F...|
-00000070  46 08 06 83 56 0a 00 e8  21 00 73 05 a0 b6 07 eb  |F...V...!.s.....|
-00000080  bc 81 3e fe 7d 55 aa 74  0b 80 7e 10 00 74 c8 a0  |..&gt;.}U.t..~..t..|
-00000090  b7 07 eb a9 8b fc 1e 57  8b f5 cb bf 05 00 8a 56  |.......W.......V|
-000000a0  00 b4 08 cd 13 72 23 8a  c1 24 3f 98 8a de 8a fc  |.....r#..$?.....|
-000000b0  43 f7 e3 8b d1 86 d6 b1  06 d2 ee 42 f7 e2 39 56  |C..........B..9V|
-000000c0  0a 77 23 72 05 39 46 08  73 1c b8 01 02 bb 00 7c  |.w#r.9F.s......||
-000000d0  8b 4e 02 8b 56 00 cd 13  73 51 4f 74 4e 32 e4 8a  |.N..V...sQOtN2..|
-000000e0  56 00 cd 13 eb e4 8a 56  00 60 bb aa 55 b4 41 cd  |V......V.`..U.A.|
-000000f0  13 72 36 81 fb 55 aa 75  30 f6 c1 01 74 2b 61 60  |.r6..U.u0...t+a`|
-00000100  6a 00 6a 00 ff 76 0a ff  76 08 6a 00 68 00 7c 6a  |j.j..v..v.j.h.|j|
-00000110  01 6a 10 b4 42 8b f4 cd  13 61 61 73 0e 4f 74 0b  |.j..B....aas.Ot.|
-00000120  32 e4 8a 56 00 cd 13 eb  d6 61 f9 c3 49 6e 76 61  |2..V.....a..Inva|
-00000130  6c 69 64 20 70 61 72 74  69 74 69 6f 6e 20 74 61  |lid partition ta|
-00000140  62 6c 65 00 45 72 72 6f  72 20 6c 6f 61 64 69 6e  |ble.Error loadin|
-00000150  67 20 6f 70 65 72 61 74  69 6e 67 20 73 79 73 74  |g operating syst|
-00000160  65 6d 00 4d 69 73 73 69  6e 67 20 6f 70 65 72 61  |em.Missing opera|
-00000170  74 69 6e 67 20 73 79 73  74 65 6d 00 00 00 00 00  |ting system.....|
-00000180  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
-*
-000001b0  00 00 00 00 00 2c 44 63  18 2e 07 c3 00 00 00 00  |.....,Dc........|
-000001c0  31 00 0c fe ff ff 30 00  00 00 50 f6 de 01 00 00  |1.....0...P.....|
-000001d0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
-*
-000001f0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 55 aa  |..............U.|
-00000200
-%  sudo dd if=Downloads/ubuntu-12.04.3-server-amd64.iso of=/dev/rdisk2 bs=1m
-Password:
-dd: /dev/rdisk2: Resource busy
-%  diskutil unmount disk2s1
-Volume NO NAME on disk2s1 unmounted
-%  diskutil list
-/dev/disk0
-   #:                       TYPE NAME                    SIZE       IDENTIFIER
-   0:      GUID_partition_scheme                        *251.0 GB   disk0
-   1:                        EFI                         209.7 MB   disk0s1
-   2:          Apple_CoreStorage                         250.1 GB   disk0s2
-   3:                 Apple_Boot Recovery HD             650.0 MB   disk0s3
-/dev/disk1
-   #:                       TYPE NAME                    SIZE       IDENTIFIER
-   0:                  Apple_HFS Macintosh HD           *249.8 GB   disk1
-/dev/disk2
-   #:                       TYPE NAME                    SIZE       IDENTIFIER
-   0:     FDisk_partition_scheme                        *16.1 GB    disk2
-   1:             Windows_FAT_32 NO NAME                 16.1 GB    disk2s1
-%  sudo dd if=Downloads/ubuntu-12.04.3-server-amd64.iso of=/dev/rdisk2 bs=1m
-665+0 records in
-665+0 records out
-697303040 bytes transferred in 41.551843 secs (16781519 bytes/sec)
-%
-</code></p>
-
-<p>この USB メモリを自作マシンにさして起動してインストールすることになります。</p>
-
-<h2>インストール</h2>
-
-<p>インストール作業は暗号化する以外はあまり特殊なことをせずに最小インストールにしました。</p>
-
-<ul>
-<li>Del キーで EFI BOIS Menu を開いて、起動メニューを開いて USB メモリからを選んで起動しました。</li>
-<li>タスク (tasksel) は何も選択せずにインストールしました。</li>
-<li>1TB の HDD (sda) を暗号化 LVM で初期化しました。</li>
-</ul>
-
-
-<h2>初期設定</h2>
-
-<h3>etckeeper</h3>
-
-<ul>
-<li><code>sudo aptitude install git</code></li>
-<li><code>sudo aptitude install etckeeper</code></li>
-<li><code>sudoedit /etc/etckeeper/etckeeper.conf</code> で <code>VCS="git"</code> と <code>GIT_COMMIT_OPTIONS="-v"</code> を設定</li>
-<li><code>sudo etckeeper init</code></li>
-<li><code>sudo etckeeper commit "Initial commit"</code></li>
-</ul>
-
-
-<h3>ssh</h3>
-
-<p>まず <code>ufw</code> で接続制限をしました。
-多段防御の一つ目としてここではポート番号だけの制限にしています。</p>
-
-<ul>
-<li><code>sudo ufw enable</code></li>
-<li><code>sudo ufw allow 22/tcp</code></li>
-<li><code>sudo ufw limit 22/tcp</code>
-
-<ul>
-<li><code>サポートされていない IPv6 'limit' ルールを飛ばします</code> と出るので、
-IPv6 用に allow と limit の両方を実行しています。</li>
-</ul>
-</li>
-<li><code>sudo ufw allow 3843/tcp</code>
-
-<ul>
-<li>22 以外のポートでも待ち受けるなら、それも許可します。</li>
-<li>ここでは例として 3843 番ポートにしています。
-(実際に使っているポート番号は違います。)</li>
-<li>アタックは少なそうなので、<code>limit</code> は付けていません。</li>
-</ul>
-</li>
-</ul>
-
-
-<p>次に tcp wrapper で接続制限をしました。
-ここでは接続元の制限をしています。
-接続元として使っていて、逆引きが <code>.jp</code> でないところなどは
-別途 <code>sshd: 10.1.2.3</code> のように許可していきます。</p>
-
-<p><code>
-$ egrep '^[^#]' /etc/hosts.deny
-ALL: ALL
-$ egrep '^[^#]' /etc/hosts.allow
-sshd: 127.0.0.1 [::1]
-sshd: 192.168.0.0/16
-sshd: .jp
-</code></p>
-
-<p>最後に <code>/etc/sshd/sshd_config</code> の設定例です。
-<code>ssh_config</code> とは別物なので注意が必要です。</p>
-
-<ul>
-<li><code>Port 3843</code> を追加します。
-
-<ul>
-<li>複数ポートで待ち受けるには <code>Port</code> 設定の行を複数書けば良いです。</li>
-</ul>
-</li>
-<li><code>PermitRootLogin no</code> にします。
-<code>root</code> ログインが必要なら
-<code>PermitRootLogin forced-commands-only</code> か
-<code>PermitRootLogin without-password</code> にすればよく、
-公開サーバーで <code>PermitRootLogin yes</code> にする必要はないはずです。</li>
-<li><code>AllowUsers firstuser</code> で最初のユーザーのログインを許可します。</li>
-<li>ログインするユーザーの <code>.ssh/authorized_keys</code> の設定をしてから
-<code>PasswordAuthentication no</code> の設定をします。
-<code>ChallengeResponseAuthentication no</code> になっていることを
-確認しておかないと
-<code>UsePAM yes</code> との組み合わせで <code>keyboard-interactive</code> 認証が
-発生してパスワードで入れてしまうことがあるので注意が必要です。
-昔はこれが原因で公開鍵認証のみに制限出来ていないという話が多かった気がします。</li>
-</ul>
-
-
-<h3>quota 設定</h3>
-
-<p>ユーザー ID ごとのディスク使用量の把握のために、 <code>quota</code> を設定します。</p>
-
-<p><code>/etc/fstab</code> の
-<code>errors=remount-ro</code> を
-<code>errors=remount-ro,noatime,usrquota,grpquota,user_xattr</code>
-に書き換えます。</p>
-
-<p><code>quota</code> パッケージを入れておけば、次回起動時に自動で
-<code>quotacheck</code> が動いて <code>repquota</code> が使えるようになります。
-ファイルが多いと <code>quotacheck</code> に時間がかかるので、
-出来るだけ最小インストールでファイルが少ないうちに
-有効にした方が時間の節約になります。</p>
-
-<h3>IP アドレス設定</h3>
-
-<p><code>bridge-utils</code> パッケージを入れて、
-<code>sudoedit /etc/network/interfaces</code> で
-<code>br0</code> ありの固定 IP アドレスの設定に変更しました。</p>
-
-<p>```</p>
-
-<h1>The primary network interface</h1>
-
-<p>auto eth0
-iface eth0 inet manual
-auto br0
-iface br0 inet static</p>
-
-<pre><code>address 192.168.xx.yy
-netmask 255.255.255.0
-gateway 192.168.253.1
-dns-nameservers 192.168.xx.yy
-dns-search home.example.jp
-bridge_ports eth0
-bridge_stp off
-bridge_fd 0
-bridge_maxwait 0
-</code></pre>
-
-<p>```</p>
-
-<h3>パスフレーズなし起動設定</h3>
-
-<p>リモートから再起動した時などに止まってしまうことを防ぐ設定をします。</p>
-
-<p>これは鍵を暗号化の外に平文で置いておくということで、
-セキュリティ的には弱くなってしまうので、
-そのトレードオフを許容出来るかどうかを
-考えておく必要があります。</p>
-
-<p><code>
-$ sudo dd if=/dev/random of=/root/sda5_crypt.key bs=512 count=4
-dd: warning: partial read (128 bytes); suggest iflag=fullblock
-0+4 レコード入力
-0+4 レコード出力
-447 バイト (447 B) コピーされました、 0.000294833 秒、 1.5 MB/秒
-$ sudo chmod 400 /root/sda5_crypt.key
-$ sudo cryptsetup luksAddKey /dev/sda5 /root/sda5_crypt.key
-パスフレーズを入力:
-$ sudo mv /root/sda5_crypt.key /boot/sda5_crypt.key
-$ sudoedit /etc/crypttab
-$ sudo update-initramfs -u
-update-initramfs: Generating /boot/initrd.img-3.8.0-30-generic
-</code></p>
-
-<p>Ubuntu 12.04 では、
-<code>crypttab</code> は
-<code>sda5_crypt UUID=(/dev/sda5のUUID) none luks</code>
-を
-<code>sda5_crypt UUID=(/dev/sda5のUUID) /dev/disk/by-uuid/(/bootのUUID):sda5_crypt.key luks,keyscript=/lib/cryptsetup/scripts/passdev</code>
-のように書き換えます。
-<code>/bootのUUID</code> は <code>/etc/fstab</code> を参照するのがわかりやすいと思います。
-<code>by-uuid</code> だけではなく <code>by-label</code> などのパスも使えると思いますが、
-一番誤動作が少なそうな <code>by-uuid</code> を使っています。</p>
-
-<p>その後、
-<code>update-initramfs</code>
-で
-<code>/boot/initrd.img-*</code>
-に変更を反映させておく必要があります。</p>
-
-<h3>GRUB で止まるのを防ぐ</h3>
-
-<p><code>/etc/default/grub</code> に
-<code>GRUB_RECORDFAIL_TIMEOUT=5</code>
-のような設定を追加しておくと
-起動時の GRUB で止まることがなくなります。</p>
-
-<p>なぜか前回起動失敗扱いになってしまって、
-GRUB で止まってしまう環境があったのですが、
-この設定を入れてからは止まらなくなりました。</p>
-
-<p><code>/etc/default/grub</code> の変更は
-<code>update-grub</code> で
-<code>/boot/grub/grub.cfg</code> に
-反映させる必要があります。</p>
-
-<p><code>
-$ sudoedit /etc/default/grub
-$ sudo update-grub
-Generating grub.cfg ...
-Found linux image: /boot/vmlinuz-3.8.0-30-generic
-Found initrd image: /boot/initrd.img-3.8.0-30-generic
-Found linux image: /boot/vmlinuz-3.8.0-29-generic
-Found initrd image: /boot/initrd.img-3.8.0-29-generic
-Found memtest86+ image: /memtest86+.bin
-done
-</code></p>
 ]]></content>
   </entry>
   

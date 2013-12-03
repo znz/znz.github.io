@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-02T23:50:49+09:00</updated>
+  <updated>2013-12-03T21:52:27+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,197 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[aptitude検索パターンの紹介]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-04-aptitude-search-pattern.html"/>
+    <updated>2013-12-04T00:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/aptitude-search-pattern</id>
+    <content type="html"><![CDATA[<p>Debian や Ubuntu のパッケージのインストールなどで
+コマンドライン操作では <code>apt-get</code> や <code>aptitude</code>
+を使いますが、
+ここでは
+<code>apt-get</code> では出来ない <code>aptitude</code>
+の便利な使い方を紹介します。</p>
+
+<!--more-->
+
+
+<h2>残ってしまった設定ファイルの削除</h2>
+
+<p>deb パッケージのアンインストールは <code>remove</code> と <code>purge</code> の二種類があって、
+<code>purge</code> すれば設定ファイルまで消えるのですが、
+<code>remove</code> だと設定ファイルは残ってしまいます。</p>
+
+<p>普段は
+<code>apt-get purge hoge</code>
+や
+<code>aptitude purge hoge</code>
+で削除していたとしても、
+依存関係で自動インストールされたものが
+自動削除される時は <code>remove</code> になってしまって
+設定ファイルが残ってしまいます。</p>
+
+<p>そういうときに <code>aptitude</code> だと</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>aptitude purge '~c'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>で設定ファイルだけ残ったパッケージを一気に <code>purge</code> できます。</p>
+
+<p>この <code>~c</code> というのが <code>aptitude</code> の search term の一種で、
+削除されていて <code>purge</code> (完全削除) されていない、
+つまり設定ファイルがシステム上に残っているパッケージという意味になります。</p>
+
+<h2>クオートの必要性</h2>
+
+<p><code>''</code> でクオートしているのはシェルの展開を抑制するためで、
+必須ではないのですが、
+環境によって意図しない指定になることを避けるために、
+常に <code>''</code> でくくっておくことをお勧めします。
+ちなみに、この例だと <code>c</code> というユーザーが存在した場合に
+そのホームディレクトリに展開されてしまいます。</p>
+
+<h2>長い形式と短い形式</h2>
+
+<p>ほとんどの search term は短い形式 (short form) と
+長い形式 (long form) があり、
+<code>~c</code> が短い形式で対応する長い形式は <code>?config-files</code>
+になります。
+つまり</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>aptitude purge '?config-files'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>でも同じ意味になります。</p>
+
+<h2>検索パターンの確認</h2>
+
+<p><code>aptitude search</code> でも <code>aptitude purge</code> でも <code>aptitude install</code> でも
+同じように使えるので、
+<code>aptitude search</code> で確認してから <code>aptitude purge</code> するとか、
+<code>aptitude install</code> するという使い方も出来ます。</p>
+
+<h2>Search Term reference</h2>
+
+<p>search term の一覧は <code>aptitude-doc-ja</code> パッケージを入れて参照するか、
+<a href="http://aptitude.alioth.debian.org/doc/ja/ch02s04s05.html">Search term reference</a>
+などを参照してください。</p>
+
+<h2>他によく使っている search term</h2>
+
+<p>他によく使っているものとしては、</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>aptitude search '~U'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>でアップデート対象のパッケージ一覧を見たり、</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>aptitude purge '~i~n 3.2.0-2[1-3]'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のような指定で古いカーネル関連のパッケージを削除したりするのをよく使います。
+<code>~i</code> がインストール済みのものという意味で、
+<code>~n</code> はパッケージ名の検索で引数は正規表現なのですが、
+ここでは他に間違ってマッチしそうなものはないため、
+<code>.</code> のエスケープは省略してしまうことが多いです。
+<code>linux-.*</code> の部分も指定しなくても充分絞り込めるので
+省略してしまっています。</p>
+
+<p><code>~i</code> は引数をとらなくて、デフォルトはパッケージ名の検索なので、
+<code>~i 3.2.0-2[1-3]</code> と省略することも出来ます。</p>
+
+<h2>応用例</h2>
+
+<h3>別 apt-line で入れたパッケージの検索など</h3>
+
+<p>たとえば Ubuntu なら</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>aptitude search '~i!~Oubuntu'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のように Origin が Ubuntu 以外のパッケージという検索で
+Ubuntu の apt-line 以外から入れたパッケージが検索できます。</p>
+
+<p>昔から使い続けている Debian なら</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>aptitude search '~i!~Odebian'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>で他の apt-line からインストールしたものに加えて、
+昔の Debian にパッケージが存在して、
+今の Debian にはもう収録されていないパッケージが残っているものも
+探すことも出来ます。</p>
+
+<h3>exim から postfix への入れ替え</h3>
+
+<p><code>aptitude install</code> や <code>aptitude purge</code> で
+パッケージを指定する時に末尾に <code>_</code> を付けると <code>purge</code> できたり、
+<code>+</code> を付けるとインストールできたりします。</p>
+
+<p>これらを組み合わせると <code>postfix+</code> でインストールしつつ、
+名前に <code>exim</code> を含むパッケージを <code>purge</code> することで
+<code>default-mta</code> や <code>mail-transport-agent</code> に依存しているパッケージの
+依存関係が満たせないと言われずにパッケージの入れ替えができます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo aptitude purge '~i~nexim' postfix+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>バグがあったパッケージのインストールを止めたい</h3>
+
+<p>Debian の unstable や testing を使っていて
+<code>apt-listbugs</code> を入れていると
+インストール前にこのパッケージの
+このバージョンは入れない方が
+良さそうということがありますが、
+同じソースパッケージで複数のパッケージに分かれていると
+指定が面倒なことがあります。</p>
+
+<p>たとえば <code>sysv-rc</code> でバグがあった時に
+<code>apt-get source sysv-rc</code> でソースパッケージ名を調べて、
+対象パッケージを確認した上で
+以下のように
+<code>aptitude forbid-version</code>
+でそのバージョンはインストールしない、
+ということが出来ます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>aptitude search '?installed ?source-package(sysvinit)'
+</span><span class='line'>sudo aptitude forbid-version '?installed ?source-package(sysvinit)'</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>その他いろいろ</h3>
+
+<p>最後にその他のいろいろな例を列挙しておきます。
+詳しい説明は <code>aptitude</code> のリファレンスなどを参照してください。</p>
+
+<ul>
+<li><code>aptitude search '?maintainer(uwabami)</code> : メンテナで探す</li>
+<li><code>aptitude search '~t minimal'</code> : タスクでインストールされるパッケージ</li>
+<li><code>aptitude search '~n^lsb'</code> : 名前が lsb で始まるパッケージ</li>
+<li><code>aptitude search '?section(metapackages)'</code> : メタパッケージ</li>
+<li><code>aptitude search '?priority(important)'</code> : 優先度が重要のパッケージ</li>
+<li><code>aptitude search '?provides(mail-transport-agent)'</code> : <code>mail-transport-agent</code> を提供しているパッケージ</li>
+</ul>
+
+
+<h2>まとめ</h2>
+
+<p>今回は <code>aptitude</code> の検索パターンの便利な使い方を紹介しました。</p>
+
+<p>今まで <code>apt-get</code> や <code>apt-cache</code> しか使っていなかったとか、
+<code>aptitude</code> を使っていても単純にパッケージ名を指定しかしたことがなかったとか
+いう人は <code>aptitude purge '~c'</code> だけでも試してみると良いのではないでしょうか。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Ruby 2.1.0の新機能のException#cause]]></title>
@@ -2647,118 +2838,6 @@ revision 114882 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114882 
 とは思いました。
 誰かそういう方向での対応も挑戦してみると
 他の言語も含めて幸せになれるのではないかと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[rbenvのプラグインを簡単に追加出来るようにするrbenv-plugを作った]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-29-rbenv-plug.html"/>
-    <updated>2013-10-29T23:55:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rbenv-plug</id>
-    <content type="html"><![CDATA[<p><a href="https://github.com/sstephenson/rbenv">rbenv</a> のプラグインをインストールするのに
-<code>git clone https://github.com/sstephenson/ruby-build.git ~/.rbenv/plugins/ruby-build</code>
-のように <code>ruby-build</code> を二回指定しないといけなかったり、
-git の URL をコピペしないといけなかったりして面倒なので、
-簡単にインストールできるようにするプラグイン
-<a href="https://github.com/znz/rbenv-plug">rbenv-plug</a>
-を作りました。</p>
-
-<p><a href="https://github.com/sstephenson/ruby-build">ruby-build</a>
-のように <code>share</code> の下に一覧を持つようにしたので、
-インストールできるプラグインは簡単に増やせます。</p>
-
-<!--more-->
-
-
-<h2>使い方</h2>
-
-<p><a href="https://github.com/znz/rbenv-plug">README</a> に書いた通りです。</p>
-
-<p><a href="https://github.com/sstephenson/rbenv/wiki/Plugins">plugins</a>
-に載っているプラグインなら以下のように簡単にインストールできます。</p>
-
-<pre><code>rbenv plug &lt;plugin-name&gt;
-</code></pre>
-
-<p>例えば
-<a href="https://github.com/sstephenson/ruby-build">ruby-build</a>
-をインストールするなら以下のようになります。</p>
-
-<pre><code>rbenv plug ruby-build
-</code></pre>
-
-<p>例えば
-<a href="https://github.com/rkh/rbenv-update">rbenv-update</a>
-をインストールするなら、</p>
-
-<pre><code>rbenv plug rbenv-update
-</code></pre>
-
-<p>のようにするか、
-<code>rbenv-</code>
-を省略して以下のようにします。</p>
-
-<pre><code>rbenv plug update
-</code></pre>
-
-<p>git の URL を指定して任意のプラグインをインストールすることもできます。</p>
-
-<pre><code>rbenv plug https://github.com/sstephenson/ruby-build.git
-</code></pre>
-
-<p>アンインストールも簡単にできます。
-例えば
-<code>rbenv-update</code>
-をアンインストールするなら、</p>
-
-<pre><code>rbenv unplug rbenv-update
-</code></pre>
-
-<p>のようにするか、
-<code>rbenv-</code>
-を省略して以下のようにします。</p>
-
-<pre><code>rbenv unplug update
-</code></pre>
-
-<h2>インストール方法</h2>
-
-<p>以下のようにプラグインの一般的なインストール方法そのままで、
-<code>$RBENV_ROOT/plugins</code> に <code>git clone</code> するだけです。</p>
-
-<pre><code>mkdir -p ~/.rbenv/plugins
-git clone https://github.com/znz/rbenv-plug.git ~/.rbenv/plugins/rbenv-plug
-</code></pre>
-
-<h2>仕組み</h2>
-
-<p>URL が指定された時は上の一般的なインストール方法と同様のことを実行するだけです。</p>
-
-<p>プラグイン名を指定された時は
-<code>share/rbenv-plug</code>
-の中のスクリプトを実行します。</p>
-
-<p>名前が <code>rbenv-</code> で始まるプラグインがほとんどなので、
-<code>rbenv plug</code> や <code>rbenv unplug</code> の引数では
-<code>rbenv-</code> を省略できるようにしました。</p>
-
-<p><code>share/rbenv-plug</code> のスクリプトで
-<a href="https://github.com/tpope/rbenv-aliases">rbenv-aliases</a>
-なら <code>rbenv alias --auto</code> を追加で実行したり、
-<a href="https://github.com/rkh/rbenv-use">rbenv-use</a>
-なら依存している <code>rbenv-whatis</code> もインストールしたりしています。</p>
-
-<h2>余談</h2>
-
-<p><code>share/rbenv-plug</code> のファイルを追加している時に
-<a href="https://github.com/taqtiqa/rbenv-plugin">rbenv-plugin</a>
-というのがあって、
-今の <code>rbenv-plug</code> (と <code>rbenv-unplug</code>) という名前に変えました。
-最初は <code>rbenv-plugin-install</code> (と <code>rbenv-plugin-uninstall</code>)
-という名前で作りかけていたので、
-<code>rbenv-plugin</code> のサブコマンドと思いっきり名前がかぶっていました。
-<code>rbenv-plugins-install</code> という複数形の名前も使われてしまっていたので、
-思い切って短い名前に変更しました。</p>
 ]]></content>
   </entry>
   
