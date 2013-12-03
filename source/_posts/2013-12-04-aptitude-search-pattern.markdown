@@ -12,6 +12,10 @@ Debian や Ubuntu のパッケージのインストールなどで
 `apt-get` では出来ない `aptitude`
 の便利な使い方を紹介します。
 
+この投稿は
+[ディストリビューション/パッケージマネージャー Advent Calendar 2013](http://qiita.com/advent-calendar/2013/distro-pm)
+の4日目の記事です。
+
 <!--more-->
 
 ## 残ってしまった設定ファイルの削除

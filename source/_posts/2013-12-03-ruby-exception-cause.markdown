@@ -18,6 +18,10 @@ categories: ruby
 `"literal".freeze` がコンパイル時に特別扱いされるようになった、
 というのも気になっています。
 
+この投稿は
+[Ruby Advent Calendar 2013](http://qiita.com/advent-calendar/2013/ruby)
+の3日目の記事です。
+
 <!--more-->
 
 ## Exception#cause の例
