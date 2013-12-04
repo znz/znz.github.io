@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-03T22:17:58+09:00</updated>
+  <updated>2013-12-04T11:13:52+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,82 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Rails 4.0.2のi18nで出るようになったdeprecated警告の対策方法]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-04-rails-i18n-deprecated-warning.html"/>
+    <updated>2013-12-04T10:59:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rails-i18n-deprecated-warning</id>
+    <content type="html"><![CDATA[<p>Ruby on Rails のセキュリティアップデートがあって、
+4.0.2 にあげたら i18n gem も 0.6.5 から 0.6.9 にあがって
+<code>locale</code> の設定変更をしているところで
+<code>[deprecated] I18n.enforce_available_locales will default to true in the future. If you really want to skip validation of your locale you can set I18n.enforce_available_locales = false to avoid this message.</code>
+という警告が出るようになりました。</p>
+
+<!--more-->
+
+
+<h2>警告の出るタイミング</h2>
+
+<p><a href="http://stackoverflow.com/questions/20361428/rails-4-0-2-i18n-validation-deprecation-warning">deprecated &ndash; Rails 4.0.2 I18n validation deprecation warning &ndash; Stack Overflow</a>
+経由で
+<a href="https://github.com/svenfuchs/i18n/commit/3b6e56e06fd70f6e4507996b017238505e66608c9">Add I18n.locale_available? and enforce available locales</a>
+のコミットから入った変更ということで、
+コミットログをみてみると、</p>
+
+<ul>
+<li><code>I18n.config.default_locale=</code></li>
+<li><code>I18n.config.locale=</code></li>
+<li><code>I18n.translate</code></li>
+<li><code>I18n.localize</code></li>
+<li><code>I18n.transliterate</code></li>
+</ul>
+
+
+<p>を呼んだときに影響するようです。
+つまり <code>rails new</code> で作っただけだと <code>config/application.rb</code> の
+<code>config.i18n.default_locale = :de</code> がコメントアウトされていて、
+警告は出ません。</p>
+
+<h2>日本語のみで使う場合</h2>
+
+<p>日本語のみで使うのなら、
+将来のデフォルトの
+<code>I18n.enforce_available_locales = true</code>
+にしてしまってから、
+普通に日本語をデフォルトにする
+<code>config.i18n.default_locale = :ja</code>
+を呼べば良いと思います。</p>
+
+<figure class='code'><figcaption><span>config/application.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">I18n</span><span class="o">.</span><span class="n">enforce_available_locales</span> <span class="o">=</span> <span class="kp">true</span>
+</span><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">i18n</span><span class="o">.</span><span class="n">default_locale</span> <span class="o">=</span> <span class="ss">:ja</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ただし、先にちゃんと日本語の locale ファイルを作っておかないと
+<code>I18n::InvalidLocale</code>
+という例外が発生して、
+<code>rake</code> などで
+<code>:ja is not a valid locale</code>
+と言われてしまいます。</p>
+
+<h2>今まで通りの挙動にする場合</h2>
+
+<p><code>I18n.enforce_available_locales = false</code>
+にすれば今まで通りの挙動になり、
+存在しない <code>locale</code> を設定しても例外は発生しません。</p>
+
+<h2>今のデフォルト</h2>
+
+<p>今は
+<code>I18n.enforce_available_locales = nil</code>
+がデフォルトになっていて、
+<code>nil</code> だと警告がでる、
+ということのようです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[aptitude検索パターンの紹介]]></title>
@@ -2714,138 +2790,6 @@ revision 114882 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114882 
 <p>というわけで homebrew の方に
 <a href="https://github.com/mxcl/homebrew/pull/23897">fix default-directory on Cocoa and Mavericks</a>
 として pull request を出してみました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[LC_COLLATEの問題でuniqで丸数字が同一視されてしまう]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-31-lc-collate-uniq.html"/>
-    <updated>2013-10-31T23:50:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/lc-collate-uniq</id>
-    <content type="html"><![CDATA[<p><code>uniq -c</code> で重複がないのを確認しようとしたら、
-丸数字のところだけ違う行が同一視されてしまって、
-2以上になることがあって困ったので、
-原因を調べてみました。</p>
-
-<!--more-->
-
-
-<h2>現象</h2>
-
-<p>以下のように丸数字などが同一視されています。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>$ cat n.txt
-</span><span class='line'>①
-</span><span class='line'>②
-</span><span class='line'>$ uniq n.txt
-</span><span class='line'>①
-</span><span class='line'>$ sort n.txt
-</span><span class='line'>①
-</span><span class='line'>②
-</span><span class='line'>$ tac n.txt | sort
-</span><span class='line'>②
-</span><span class='line'>①
-</span><span class='line'>$</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>$ cat n.txt
-</span><span class='line'>①
-</span><span class='line'>②
-</span><span class='line'>$ LANG=ja_JP.utf8 uniq -c n.txt
-</span><span class='line'>      2 ①
-</span><span class='line'>$ LANG=C uniq -c n.txt
-</span><span class='line'>      1 ①
-</span><span class='line'>      1 ②
-</span><span class='line'>$ uniq --version
-</span><span class='line'>uniq (GNU coreutils) 8.20
-</span><span class='line'>Copyright (C) 2012 Free Software Foundation, Inc.
-</span><span class='line'>ライセンス GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;.
-</span><span class='line'>This is free software: you are free to change and redistribute it.
-</span><span class='line'>There is NO WARRANTY, to the extent permitted by law.
-</span><span class='line'>
-</span><span class='line'>作者 Richard M. Stallman および David MacKenzie。
-</span><span class='line'>$ lsb_release -a
-</span><span class='line'>No LSB modules are available.
-</span><span class='line'>Distributor ID: Ubuntu
-</span><span class='line'>Description:    Ubuntu 13.04
-</span><span class='line'>Release:        13.04
-</span><span class='line'>Codename:       raring
-</span><span class='line'>$</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>調査</h2>
-
-<p><code>apt-get source locales</code>
-でソースをとってきて調べてみると
-<code>locales/ja_JP</code> の <code>LC_COLLATE</code> から <code>END LC_COLLATE</code>
-の間に書いていないコードポイントは同一視されているように見えました。</p>
-
-<p>これは glibc の問題だと思って、既に報告されているかどうか調べてみると
-<a href="https://sourceware.org/bugzilla/show_bug.cgi?id=13063">Bug 13063 – &lsquo;sort -u&rsquo; will erase some Chinese characters</a>
-に同じような話がありました。</p>
-
-<h2>ML で聞いてみた</h2>
-
-<p><a href="http://listserv.linux.or.jp/pipermail/linux-users/2013-October/000527.html">linux-users: 108951</a>
-で質問してみたところ、
-<a href="http://listserv.linux.or.jp/pipermail/linux-users/2013-October/000528.html">linux-users: 108952</a>
-で返信があり、
-<code>LC_COLLATE</code>
-をちゃんと定義して解決するか、
-単純にバイト順でソートしたいだけなら
-<code>LC_COLLATE=C</code> で良いという話でした。</p>
-
-<h2>結論</h2>
-
-<p>結局今回の目的はソートではなく重複検査だったので、
-<code>LC_COLLATE=C</code> で解決ということになりました。</p>
-
-<p>誰か興味のある人は真面目に
-<code>LC_COLLATE</code>
-の定義に挑戦してみると良いのではないでしょうか。</p>
-
-<p>それとは別に定義されていない文字を同一視せずにバイト順でも何でもいいので、
-適当に別の文字として扱ってくれるようになればいいのに、
-とは思いました。
-誰かそういう方向での対応も挑戦してみると
-他の言語も含めて幸せになれるのではないかと思いました。</p>
 ]]></content>
   </entry>
   

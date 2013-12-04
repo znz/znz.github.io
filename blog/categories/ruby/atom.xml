@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-03T22:17:58+09:00</updated>
+  <updated>2013-12-04T11:13:52+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,83 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Rails 4.0.2のi18nで出るようになったdeprecated警告の対策方法]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-04-rails-i18n-deprecated-warning.html"/>
+    <updated>2013-12-04T10:59:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rails-i18n-deprecated-warning</id>
+    <content type="html"><![CDATA[<p>Ruby on Rails のセキュリティアップデートがあって、
+4.0.2 にあげたら i18n gem も 0.6.5 から 0.6.9 にあがって
+<code>locale</code> の設定変更をしているところで
+<code>[deprecated] I18n.enforce_available_locales will default to true in the future. If you really want to skip validation of your locale you can set I18n.enforce_available_locales = false to avoid this message.</code>
+という警告が出るようになりました。</p>
+
+<!--more-->
+
+
+<h2>警告の出るタイミング</h2>
+
+<p><a href="http://stackoverflow.com/questions/20361428/rails-4-0-2-i18n-validation-deprecation-warning">deprecated &ndash; Rails 4.0.2 I18n validation deprecation warning &ndash; Stack Overflow</a>
+経由で
+<a href="https://github.com/svenfuchs/i18n/commit/3b6e56e06fd70f6e4507996b017238505e66608c9">Add I18n.locale_available? and enforce available locales</a>
+のコミットから入った変更ということで、
+コミットログをみてみると、</p>
+
+<ul>
+<li><code>I18n.config.default_locale=</code></li>
+<li><code>I18n.config.locale=</code></li>
+<li><code>I18n.translate</code></li>
+<li><code>I18n.localize</code></li>
+<li><code>I18n.transliterate</code></li>
+</ul>
+
+
+<p>を呼んだときに影響するようです。
+つまり <code>rails new</code> で作っただけだと <code>config/application.rb</code> の
+<code>config.i18n.default_locale = :de</code> がコメントアウトされていて、
+警告は出ません。</p>
+
+<h2>日本語のみで使う場合</h2>
+
+<p>日本語のみで使うのなら、
+将来のデフォルトの
+<code>I18n.enforce_available_locales = true</code>
+にしてしまってから、
+普通に日本語をデフォルトにする
+<code>config.i18n.default_locale = :ja</code>
+を呼べば良いと思います。</p>
+
+<p>```ruby config/application.rb</p>
+
+<pre><code>I18n.enforce_available_locales = true
+config.i18n.default_locale = :ja
+</code></pre>
+
+<p>```</p>
+
+<p>ただし、先にちゃんと日本語の locale ファイルを作っておかないと
+<code>I18n::InvalidLocale</code>
+という例外が発生して、
+<code>rake</code> などで
+<code>:ja is not a valid locale</code>
+と言われてしまいます。</p>
+
+<h2>今まで通りの挙動にする場合</h2>
+
+<p><code>I18n.enforce_available_locales = false</code>
+にすれば今まで通りの挙動になり、
+存在しない <code>locale</code> を設定しても例外は発生しません。</p>
+
+<h2>今のデフォルト</h2>
+
+<p>今は
+<code>I18n.enforce_available_locales = nil</code>
+がデフォルトになっていて、
+<code>nil</code> だと警告がでる、
+ということのようです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Ruby 2.1.0の新機能のException#cause]]></title>
@@ -387,152 +464,6 @@ git pull origin master
 
 <p>を実行していて遅いというのも <code>rbenv git</code> などを作った理由のひとつというのを
 書き忘れていたので、追記しておきます。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 5 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-20-rubymotion-mokumoku-osaka.html"/>
-    <updated>2013-11-20T21:54:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
-    <content type="html"><![CDATA[<p>第 1 回から第 4 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://connpass.com/event/3871/">第 5 回 RubyMotion もくもく会 in Osaka</a>
-に参加してきました。</p>
-
-<p>今回も東京と同時開催でしたが、
-接続などはせずに終わってしまいました。</p>
-
-<p>次回の
-<a href="http://connpass.com/event/4211/">第 6 回 RubyMotion もくもく会 in Osaka</a>
-は 12/26(木) になりました。</p>
-
-<!--more-->
-
-
-<h2>話に出たもの</h2>
-
-<p>話に出てきたサイトなどのメモです。</p>
-
-<ul>
-<li><a href="http://shin1x1.github.io/VagrantX/">http://shin1x1.github.io/VagrantX/</a>
-のサイトのデザインを
-<a href="https://wrapbootstrap.com/">https://wrapbootstrap.com/</a>
-から選ぼうとしたが、結局 github のテンプレートのまま使うことにしたという話</li>
-<li>昔は nib というバイナリだったけど今は xib という XML ファイルになっているという話</li>
-<li><a href="http://www.rainymood.com/">Rainy Mood</a>
-と
-<a href="http://tadaya.net/blog/2012/12/01">多田屋のBGM</a>
-の組み合わせが良いという話</li>
-<li>アドベントカレンダーの話
-
-<ul>
-<li><a href="http://www.adventar.org/">Adventar</a></li>
-<li><a href="http://qiita.com/advent-calendar/2013/rubymotion">RubyMotion Advent Calendar 2013</a></li>
-</ul>
-</li>
-<li><a href="http://www.img2icnsapp.com/">Img2icns</a> の無料の方で OSX アプリのアイコンへの変換が出来そうという話</li>
-<li>クラウドソーシングでアイコンを募集するのはどうかという話
-
-<ul>
-<li><a href="http://www.designclue.co/">designclue（デザインクルー） &ndash; デザインクラウドソーシング</a></li>
-</ul>
-</li>
-</ul>
-
-
-<h2>やっていたこと</h2>
-
-<h3>www.ruby-lang.org</h3>
-
-<p><a href="https://www.ruby-lang.org/ja/news/2013/09/28/design-contest/">www.ruby-lang.org のサイトデザイン募集</a>
-の投票を webmaster でやっていて、締め切りが今日だったということで、
-投票しようかと思っていたら、
-締め切りが 9:00 20 Nov(JST) だったのに気付いて諦めました。
-まだ集計前だったようなので、間に合いそうでしたが、
-無理はしないということにしました。</p>
-
-<p>ちなみに
-<a href="https://github.com/ruby/www.ruby-lang.org/issues?labels=contest">応募は7件</a>
-でした。</p>
-
-<h3>notification</h3>
-
-<p>最初は
-<a href="https://github.com/Watson1978/notification">https://github.com/Watson1978/notification</a>
-という OSX のサンプルをいじってみていました。</p>
-
-<p><code>open ./build/MacOSX-10.8-Development/notification.app</code>
-で開くと右上の通知はそもそも出てきているのかどうかわからない状態で終了してしまって、
-通知センターを開くとちゃんと送れていることが確認できたり、
-引数は <code>-psn_なんとか</code> という
-Emacs.app のカレントディレクトリ問題を調べていた時に見かけたものが渡ってきていたりしたのがわかりました。</p>
-
-<h3>Calc</h3>
-
-<p><a href="https://github.com/HipByte/RubyMotionSamples">RubyMotionSamples</a>
-の osx に Calc というのが追加されていたので、
-それを試していました。</p>
-
-<h2>デフォルトブラウザ設定</h2>
-
-<p>デフォルトブラウザはどこで設定しているんだろうと思って、
-<code>defaults read</code>
-の出力を調べたりしていたら、
-<code>LSSetDefaultHandlerForURLScheme</code>
-と
-<code>LSSetDefaultRoleHandlerForContentType</code>
-で設定できるとわかったので、
-RubyMotion の中から呼び出そうとしたのですが、
-<code>NoMethodError</code>
-になるだけで、
-結局呼び出し方がわかりませんでした。</p>
-
-<p>試したこととしては <code>Calc</code> のボタンと同じように
-ボタンが押された時に呼ばれるメソッドの中で、</p>
-
-<p>```ruby</p>
-
-<pre><code>bundle_id = NSBundle.mainBundle.bundleIdentifier
-LSSetDefaultHandlerForURLScheme("http", bundle_id) #~&gt; NoMethodError
-</code></pre>
-
-<p>```</p>
-
-<p>のように呼び出そうとしたところ、
-<code>LSSetDefaultHandlerForURLScheme</code>
-で
-<code>NoMethodError</code>
-になりました。</p>
-
-<p>それから <code>Rakefile</code> の
-<code>Motion::Project::App.setup do |app|</code>
-のブロックで
-<code>app.frameworks &lt;&lt; 'ApplicationServices'</code>
-のように
-<code>ApplicationServices</code>
-フレームワークを追加というのも試してみたのですが、
-変化はありませんでした。</p>
-
-<p>そんな感じで手詰まっていたら時間が来て終了ということになりました。</p>
-
-<p>確認したバージョンは以下の通りです。</p>
-
-<ul>
-<li>Mac OS X 10.8.5</li>
-<li>Xcode 5.0.2</li>
-<li>RubyMotion 2.14</li>
-</ul>
-
-
-<h3>解決</h3>
-
-<p><code>CoreServices</code> が必要と教えてもらったので、
-<code>app.frameworks &lt;&lt; 'CoreServices'</code>
-も足してみたのですが、
-<code>NoMethodError</code>
-のままで動かず、
-結局
-RubyMotion を 2.15 に上げると直っていました。</p>
 ]]></content>
   </entry>
   
