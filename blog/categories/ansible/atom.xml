@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ansible | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ansible/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-04T11:13:52+09:00</updated>
+  <updated>2013-12-07T02:12:02+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,136 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ansibleで1ファイルのplaybookからroleに書き換える方法]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-07-ansible-split-playbook.html"/>
+    <updated>2013-12-07T01:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ansible-split-playbook</id>
+    <content type="html"><![CDATA[<p><code>ansible</code> を使い始める時は1個の YAML ファイルから始めるのが手軽で良いのですが、
+それを
+<a href="http://www.ansibleworks.com/docs/playbooks_best_practices.html">Best Practices</a>
+にあわせて <code>roles</code> にしようとしたら、
+対応がよくわからなくて困ったことがあったので、
+書き換え方をまとめてみました。</p>
+
+<!--more-->
+
+
+<p>全体的に動作確認せずに以前使ったファイルを参考にしているので、
+間違っている部分があるかもしれないので、その時はコメントなどで
+教えてください。</p>
+
+<h2>1個の YAML ファイルの例</h2>
+
+<p>仮にこんな感じの <code>playbook.yml</code> があって、
+これを <code>roles</code> にしたいとします。</p>
+
+<h2>```yaml playbook.yml</h2>
+
+<ul>
+<li>hosts: foo-servers
+sudo: yes
+vars:
+  adminuser: vagrant
+  admingroup: vagrant
+  homedir: /home/vagrant
+tasks:
+
+<ul>
+<li>apt: pkg=zsh</li>
+<li>template: src=zshrc dest={{ homedir }}/.zshrc owner={{ adminuser }} group={{ admingroup }} mode=0644
+```</li>
+</ul>
+</li>
+</ul>
+
+
+<p>この例だとテンプレートファイルとして <code>zshrc</code> ファイルが同じディレクトリにあります。</p>
+
+<h2>role 作成</h2>
+
+<p>ここでは role の名前を <code>zsh</code> にしてみます。</p>
+
+<p>元の <code>playbook.yml</code> と <code>zshrc</code> から</p>
+
+<ul>
+<li><code>roles/zsh/tasks/main.yml</code></li>
+<li><code>roles/zsh/templates/zshrc.j2</code></li>
+<li><code>roles/zsh/vars/main.yml</code></li>
+</ul>
+
+
+<p>というファイルを作ることになります。</p>
+
+<h3>roles/zsh/tasks/main.yml</h3>
+
+<p>処理のメイン部分です。
+元の <code>playbook.yml</code> の <code>tasks</code> の値に並んでいた配列を書きます。</p>
+
+<h2>```yaml roles/zsh/tasks/main.yml</h2>
+
+<ul>
+<li>apt: pkg=zsh</li>
+<li>template: src=zshrc dest={{ homedir }}/.zshrc owner={{ adminuser }} group={{ admingroup }} mode=0644
+```</li>
+</ul>
+
+
+<h3>roles/zsh/templates/zshrc.j2</h3>
+
+<p>元の <code>zshrc</code> にテンプレート言語がわかりやすいように拡張子を付けただけです。
+例として <code>zshrc</code> にしてしまっただけなので、
+本来は <code>vars</code> の変数を展開したいファイルを使うことになると思います。</p>
+
+<h3>roles/zsh/vars/main.yml</h3>
+
+<p>変数の定義部分です。
+元の <code>playbook.yml</code> の <code>vars</code> の値に並んでいたハッシュを書きます。</p>
+
+<h2>```yaml roles/zsh/vars/main.yml</h2>
+
+<p>adminuser: vagrant
+admingroup: vagrant
+homedir: /home/vagrant
+```</p>
+
+<h3>その他</h3>
+
+<p><code>roles/zsh/handleres/main.yml</code> のような他のディレクトリとか、
+<code>main.yml</code> 以外の <code>*.yml</code> ファイルとかも使えますが、
+一番最初の段階では知らなくても大丈夫だと思います。</p>
+
+<h2>読み込み側 YAML</h2>
+
+<p><code>vars</code> とか <code>tasks</code> を並べていた代わりに <code>roles</code> を使って読み込みます。
+今回は <code>role: zsh</code> で読み込みましたが、他の例をみてみると <code>- zsh</code> だけでも良さそうです。</p>
+
+<h2>```yaml site.yml</h2>
+
+<ul>
+<li>hosts: foo-servers
+sudo: yes
+roles:
+
+<ul>
+<li>role: zsh
+```</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>まとめ</h2>
+
+<p>最初は 1ファイルの YAML と roles 用の複数の YAML ファイルの対応関係がよくわからなくて、
+roles 用の YAML ファイルに余計な記述をしてここでは使えないと言われたりして悩んだので、
+簡単に対応関係をまとめてみました。</p>
+
+<p>まだあまり使っていなくて、間違っているところもあるかもしれないので、
+何かあればコメントなどで指摘してもらえるとありがたいです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[nadokaさんの0.8.6をリリースした関連の話]]></title>

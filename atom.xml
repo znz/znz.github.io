@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-04T11:13:52+09:00</updated>
+  <updated>2013-12-07T02:11:13+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,141 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ansibleで1ファイルのplaybookからroleに書き換える方法]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-07-ansible-split-playbook.html"/>
+    <updated>2013-12-07T01:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ansible-split-playbook</id>
+    <content type="html"><![CDATA[<p><code>ansible</code> を使い始める時は1個の YAML ファイルから始めるのが手軽で良いのですが、
+それを
+<a href="http://www.ansibleworks.com/docs/playbooks_best_practices.html">Best Practices</a>
+にあわせて <code>roles</code> にしようとしたら、
+対応がよくわからなくて困ったことがあったので、
+書き換え方をまとめてみました。</p>
+
+<!--more-->
+
+
+<p>全体的に動作確認せずに以前使ったファイルを参考にしているので、
+間違っている部分があるかもしれないので、その時はコメントなどで
+教えてください。</p>
+
+<h2>1個の YAML ファイルの例</h2>
+
+<p>仮にこんな感じの <code>playbook.yml</code> があって、
+これを <code>roles</code> にしたいとします。</p>
+
+<figure class='code'><figcaption><span>playbook.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
+</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">hosts</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">foo-servers</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">sudo</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">yes</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">vars</span><span class="p-Indicator">:</span>
+</span><span class='line'>    <span class="l-Scalar-Plain">adminuser</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">vagrant</span>
+</span><span class='line'>    <span class="l-Scalar-Plain">admingroup</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">vagrant</span>
+</span><span class='line'>    <span class="l-Scalar-Plain">homedir</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/vagrant</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">tasks</span><span class="p-Indicator">:</span>
+</span><span class='line'>  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">apt</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">pkg=zsh</span>
+</span><span class='line'>  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">src=zshrc dest=/.zshrc owner= group= mode=0644</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>この例だとテンプレートファイルとして <code>zshrc</code> ファイルが同じディレクトリにあります。</p>
+
+<h2>role 作成</h2>
+
+<p>ここでは role の名前を <code>zsh</code> にしてみます。</p>
+
+<p>元の <code>playbook.yml</code> と <code>zshrc</code> から</p>
+
+<ul>
+<li><code>roles/zsh/tasks/main.yml</code></li>
+<li><code>roles/zsh/templates/zshrc.j2</code></li>
+<li><code>roles/zsh/vars/main.yml</code></li>
+</ul>
+
+
+<p>というファイルを作ることになります。</p>
+
+<h3>roles/zsh/tasks/main.yml</h3>
+
+<p>処理のメイン部分です。
+元の <code>playbook.yml</code> の <code>tasks</code> の値に並んでいた配列を書きます。</p>
+
+<figure class='code'><figcaption><span>roles/zsh/tasks/main.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
+</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">apt</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">pkg=zsh</span>
+</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">src=zshrc dest=/.zshrc owner= group= mode=0644</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>roles/zsh/templates/zshrc.j2</h3>
+
+<p>元の <code>zshrc</code> にテンプレート言語がわかりやすいように拡張子を付けただけです。
+例として <code>zshrc</code> にしてしまっただけなので、
+本来は <code>vars</code> の変数を展開したいファイルを使うことになると思います。</p>
+
+<h3>roles/zsh/vars/main.yml</h3>
+
+<p>変数の定義部分です。
+元の <code>playbook.yml</code> の <code>vars</code> の値に並んでいたハッシュを書きます。</p>
+
+<figure class='code'><figcaption><span>roles/zsh/vars/main.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
+</span><span class='line'><span class="l-Scalar-Plain">adminuser</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">vagrant</span>
+</span><span class='line'><span class="l-Scalar-Plain">admingroup</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">vagrant</span>
+</span><span class='line'><span class="l-Scalar-Plain">homedir</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/vagrant</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>その他</h3>
+
+<p><code>roles/zsh/handleres/main.yml</code> のような他のディレクトリとか、
+<code>main.yml</code> 以外の <code>*.yml</code> ファイルとかも使えますが、
+一番最初の段階では知らなくても大丈夫だと思います。</p>
+
+<h2>読み込み側 YAML</h2>
+
+<p><code>vars</code> とか <code>tasks</code> を並べていた代わりに <code>roles</code> を使って読み込みます。
+今回は <code>role: zsh</code> で読み込みましたが、他の例をみてみると <code>- zsh</code> だけでも良さそうです。</p>
+
+<figure class='code'><figcaption><span>site.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
+</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">hosts</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">foo-servers</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">sudo</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">yes</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">roles</span><span class="p-Indicator">:</span>
+</span><span class='line'>    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">role</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">zsh</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p>最初は 1ファイルの YAML と roles 用の複数の YAML ファイルの対応関係がよくわからなくて、
+roles 用の YAML ファイルに余計な記述をしてここでは使えないと言われたりして悩んだので、
+簡単に対応関係をまとめてみました。</p>
+
+<p>まだあまり使っていなくて、間違っているところもあるかもしれないので、
+何かあればコメントなどで指摘してもらえるとありがたいです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Rails 4.0.2のi18nで出るようになったdeprecated警告の対策方法]]></title>
@@ -2644,152 +2779,6 @@ Lisp についての疑問は割と解決出来ない感じで進みました。
 <li>car cadr caddr cdddr nth nthcdr</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[MavericksでEmacs.appが起動時にホームディレクトリにならない]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-01-emacs-on-mavericks.html"/>
-    <updated>2013-11-01T18:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/emacs-on-mavericks</id>
-    <content type="html"><![CDATA[<p>Mac OS X を Mavericks にあげたら homebrew で入れた
-Emacs.app を起動した時に <code>default-directory</code>
-がホームディレクトリから <code>/</code> に変わってしまっていたので、
-原因を調べてみました。</p>
-
-<p>2013-11-09 追記:
-現在は emacs の開発版から抜き出したパッチの pull request が homebrew に取り込まれていて、
-問題は起きなくなっています。</p>
-
-<!--more-->
-
-
-<h2>調べたきっかけ</h2>
-
-<p>きっかけは
-<a href="http://qiita.com/ksato9700/items/1ec373895b9693529f82">Mavericksにアップデートして遭遇した不具合　まとめ</a>
-を見て自分の環境だけで起きている現象ではないと知ったからです。</p>
-
-<h2>原因</h2>
-
-<p>Emacs のソースの以下の部分で <code>-psn</code> で始まる引数の有無で
-ホームディレクトリに移動するかどうかを判定しているのに、
-Mavericks だと引数なしで起動されるようになったからのようです。</p>
-
-<figure class='code'><figcaption><span>emacs-24.3/src/emacs.c</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'> <span class="err">#</span><span class="n">ifdef</span> <span class="n">HAVE_NS</span>
-</span><span class='line'>   <span class="n">ns_pool</span> <span class="o">=</span> <span class="n">ns_alloc_autorelease_pool</span> <span class="p">();</span>
-</span><span class='line'>   <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">noninteractive</span><span class="p">)</span>
-</span><span class='line'>     <span class="p">{</span>
-</span><span class='line'> <span class="err">#</span><span class="n">ifdef</span> <span class="n">NS_IMPL_COCOA</span>
-</span><span class='line'>       <span class="k">if</span> <span class="p">(</span><span class="n">skip_args</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">)</span>
-</span><span class='line'>         <span class="p">{</span>
-</span><span class='line'>    <span class="cm">/* FIXME: Do the right thing if getenv returns NULL, or if</span>
-</span><span class='line'><span class="cm">          chdir fails.  */</span>
-</span><span class='line'>           <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strncmp</span> <span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">skip_args</span><span class="p">],</span> <span class="s">&quot;-psn&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
-</span><span class='line'>             <span class="p">{</span>
-</span><span class='line'>               <span class="n">skip_args</span> <span class="o">+=</span> <span class="mi">1</span><span class="p">;</span>
-</span><span class='line'>               <span class="n">chdir</span> <span class="p">(</span><span class="n">getenv</span> <span class="p">(</span><span class="s">&quot;HOME&quot;</span><span class="p">));</span>
-</span><span class='line'>             <span class="p">}</span>
-</span><span class='line'>           <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">skip_args</span><span class="o">+</span><span class="mi">1</span> <span class="o">&lt;</span> <span class="n">argc</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">strncmp</span> <span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">skip_args</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="s">&quot;-psn&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
-</span><span class='line'>             <span class="p">{</span>
-</span><span class='line'>               <span class="n">skip_args</span> <span class="o">+=</span> <span class="mi">2</span><span class="p">;</span>
-</span><span class='line'>               <span class="n">chdir</span> <span class="p">(</span><span class="n">getenv</span> <span class="p">(</span><span class="s">&quot;HOME&quot;</span><span class="p">));</span>
-</span><span class='line'>             <span class="p">}</span>
-</span><span class='line'>         <span class="p">}</span>
-</span><span class='line'> <span class="err">#</span><span class="n">endif</span>  <span class="cm">/* COCOA */</span>
-</span><span class='line'>     <span class="p">}</span>
-</span><span class='line'> <span class="err">#</span><span class="n">endif</span> <span class="cm">/* HAVE_NS */</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>状況</h2>
-
-<p>ちなみに Mac OS X 10.8.5 では、たとえば
-<code>/usr/local/Cellar/emacs/24.3/Emacs.app/Contents/MacOS/Emacs -psn_0_29637698</code>
-のように起動されていました。</p>
-
-<p>Qiita の記事では Dock から起動した時のことを書いていますが、
-<code>open -a Emacs.app</code> のように起動しても同じでした。</p>
-
-<p>RubyMotion で最小限のカレントディレクトリを表示するだけのアプリを作って試してみたところ、
-起動時にカレントディレクトリが <code>/</code> になっているのは
-Cocoa アプリでは普通の動作のようでした。</p>
-
-<h2>対応状況</h2>
-
-<p><a href="http://osdir.com/ml/general/2013-10/msg61593.html">ML での情報</a>
-によると trunk には対応がチェックインされているということで、
-調べてみると
-revision 114730 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114730 -->
-と
-revision 114882 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114882 -->
-のパッチをあわせて以下のように対応すれば良さそうに見えました。</p>
-
-<figure class='code'><figcaption><span>emacs.c.diff</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gd">--- src/emacs.c.orig    2013-02-06 13:33:36.000000000 +0900</span>
-</span><span class='line'><span class="gi">+++ src/emacs.c  2013-11-02 22:38:45.000000000 +0900</span>
-</span><span class='line'><span class="gu">@@ -1158,10 +1158,13 @@</span>
-</span><span class='line'>   if (!noninteractive)
-</span><span class='line'>     {
-</span><span class='line'> #ifdef NS_IMPL_COCOA
-</span><span class='line'><span class="gi">+      /* Started from GUI? */</span>
-</span><span class='line'><span class="gi">+      /* FIXME: Do the right thing if getenv returns NULL, or if</span>
-</span><span class='line'><span class="gi">+         chdir fails.  */</span>
-</span><span class='line'><span class="gi">+      if (! inhibit_window_system &amp;&amp; ! isatty (0))</span>
-</span><span class='line'><span class="gi">+        chdir (getenv (&quot;HOME&quot;));</span>
-</span><span class='line'>       if (skip_args &lt; argc)
-</span><span class='line'>         {
-</span><span class='line'><span class="gd">-      /* FIXME: Do the right thing if getenv returns NULL, or if</span>
-</span><span class='line'><span class="gd">-         chdir fails.  */</span>
-</span><span class='line'>           if (!strncmp (argv[skip_args], &quot;-psn&quot;, 4))
-</span><span class='line'>             {
-</span><span class='line'>               skip_args += 1;
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>というわけで homebrew の方に
-<a href="https://github.com/mxcl/homebrew/pull/23897">fix default-directory on Cocoa and Mavericks</a>
-として pull request を出してみました。</p>
 ]]></content>
   </entry>
   
