@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-07T02:11:13+09:00</updated>
+  <updated>2013-12-07T23:55:32+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,132 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Rail 3.2でcache_digestsを使ってみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-08-cache-digests.html"/>
+    <updated>2013-12-08T00:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/cache-digests</id>
+    <content type="html"><![CDATA[<p>まだ Rails 3.2.16 のままのアプリで <code>cache_digests</code> gem を使って
+fragment cache を導入してみました。</p>
+
+<p>Rails 4.0 では標準になっているはずなので、
+使い方は同じだと思います。</p>
+
+<!--more-->
+
+
+<h2>インストール</h2>
+
+<p>まず <code>Gemfile</code> に以下の gem の指定を追加してインストールしました。</p>
+
+<figure class='code'><figcaption><span>Gemfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">gem</span> <span class="s1">&#39;cache_digests&#39;</span>
+</span><span class='line'><span class="n">gem</span> <span class="s1">&#39;dalli&#39;</span><span class="p">,</span> <span class="ss">group</span><span class="p">:</span> <span class="ss">:production</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>環境設定</h2>
+
+<p>キャッシュの影響の確認などのデバッグ用に <code>development</code> 環境でも
+キャッシュを有効にしました。
+ちゃんとキャッシュで来ているかどうかの確認や削除がしやすいように
+保存先はデフォルトの <code>:file_store</code> のままにしています。</p>
+
+<figure class='code'><figcaption><span>config/environments/development.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">action_controller</span><span class="o">.</span><span class="n">perform_caching</span> <span class="o">=</span> <span class="kp">true</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>production</code> 環境では <code>dalli</code> を使って <code>memcached</code> に保存するようにしました。
+<code>dalli</code> の設定はこの記事の本題ではないので、
+<code>memcached</code> の設定などは他のサイトを参考にしてください。</p>
+
+<figure class='code'><figcaption><span>config/environments/production.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">cache_store</span> <span class="o">=</span> <span class="ss">:dalli_store</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>staging</code> 環境もあったので <code>config/environments/staging.rb</code> にも同様の設定をしました。</p>
+
+<h2>fragment cache</h2>
+
+<p>すでに
+<code>app/views/comments/_comment.html.haml</code> や
+<code>app/views/posts/_post.html.haml</code> のような view を使って
+<code>render @comments</code> や <code>render @posts</code> のように使っていたので、</p>
+
+<figure class='code'><figcaption><span>app/views/comments/_comment.html.haml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>- cache comment do
+</span><span class='line'>  -# 今までの内容
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のように <code>cache comment do ... end</code> で今までの内容をくくるだけでした。
+<code>cache</code> メソッド自体の返り値は <code>=</code> で埋め込んだりせずにそのまま呼ぶだけで大丈夫でした。</p>
+
+<h2>動作確認</h2>
+
+<p><code>log/developement.log</code> などを <code>fragment</code> で検索してみると</p>
+
+<figure class='code'><figcaption><span>log/developement.log</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>Write fragment views/comments/29-20130905083500/96f0ec0ce36af8132826f3bfbe0079db 0.5ms
+</span><span class='line'>Read fragment views/comments/30-20130905083518/96f0ec0ce36af8132826f3bfbe0079db 0.4ms
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>などと記録されていて、キャッシュが使われていることが確認できました。</p>
+
+<p><code>development</code> 環境では実際のキャッシュファイルは <code>tmp/cache/</code> 以下にありました。</p>
+
+<h2>キャッシュの無効化 (invalidate)</h2>
+
+<p>キャッシュが古くなってもう有効ではないという状態にすることを invalidate というと思いますが、
+内容が更新された時に古いキャッシュが使われると問題があるので、
+その対処をする必要があります。</p>
+
+<p><code>cache</code> メソッドの引数に <code>ActiveRecord</code> のオブジェクトを渡した時の
+キャッシュのキーは先ほどの例だと
+<code>views/comments/:id-:updated_at/:md5</code>
+という感じで <code>comment</code> オブジェクトの <code>id</code> と <code>updated_at</code> と
+<code>app/views/comments/_comment.html.haml</code> の MD5 が使われていて、
+view のファイルが変更したり、
+<code>comment</code> ファイルの <code>updated_at</code> を更新したりした時に
+自動で無効になるようです。</p>
+
+<p>つまり、この view の中で別の partial render を使っていると
+反映されないということなので、
+内側の方でも <code>cache</code> を使うなどの対処が必要そうです。
+実際に <code>_post.html.haml</code> の中で <code>render post.comments</code> のようなことをしました。</p>
+
+<p>さらに以下のように <code>belongs_to</code> に <code>touch: true</code> を付けて、
+コメントが付いた時に <code>post</code> の <code>updated_at</code> も更新されるようにしました。</p>
+
+<figure class='code'><figcaption><span>app/models/comment.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">belongs_to</span> <span class="ss">:commentable</span><span class="p">,</span> <span class="ss">polymorphic</span><span class="p">:</span> <span class="kp">true</span><span class="p">,</span> <span class="ss">touch</span><span class="p">:</span> <span class="kp">true</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>キャッシュの完全削除</h2>
+
+<p><code>rails console</code> で <code>Rails.cache.clear</code> を実行すれば削除できました。
+他の sass などのキャッシュも <code>tmp/cache/</code> の中にあるので
+一緒に削除されてしまうようです。</p>
+
+<h2>まとめ</h2>
+
+<p>とりあえず使い始めるための最低限の知識をまとめてみました。</p>
+
+<p>後は
+<a href="http://ja.asciicasts.com/episodes/387-cache-digests">ASCIIcasts &ndash; “Episode 387 &ndash; Cache Digests”</a>
+で説明されている
+<code>rake cache_digests:nested_dependencies</code>
+などを知っておけば良さそうです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ansibleで1ファイルのplaybookからroleに書き換える方法]]></title>
@@ -2612,172 +2738,6 @@ audio グループに属しているか、コンソールから直接ログイ�
 </span><span class='line'>  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 </span><span class='line'> <span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Land of Lisp 読書会 第3回(兵庫県)に参加してきた]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-02-reading-land-of-lisp-3.html"/>
-    <updated>2013-11-02T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/reading-land-of-lisp-3</id>
-    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/main/tag/amagasakirb">amagasakirb</a>
-の
-<a href="http://kokucheese.com/event/index/105390/">11月2日 Ｌａｎｄ　ｏｆ　Ｌｉｓｐ 読書会　第3回(兵庫県)</a>
-に参加してきました。
-今回は第III部でした。</p>
-
-<p>次回は会場の予約が取れなかったということで、12月は無くて、
-1月第2週以降の予定で第一候補は 2014年1月11日ということでした。</p>
-
-<!--more-->
-
-
-<p>今回は他のイベントとも日程が重なっていたらしく、
-それが原因かどうかはわかりませんが、
-Lisper の人がいなかったので、
-Lisp についての疑問は割と解決出来ない感じで進みました。
-そういうこともあってか、結構雑談とか Ruby の話が多かったです。</p>
-
-<p>以下はメモです。</p>
-
-<ul>
-<li>p.188 の挿絵の意味がよくわからない?</li>
-<li><code>loop</code> の <code>for</code> が複数あるときに同時に動く (Ruby の <code>Array#zip</code> のように) のが気持ち悪い
-
-<ul>
-<li>別々に動くのは <code>loop</code> のネストで代用できるからこういう仕様なのでは。</li>
-</ul>
-</li>
-<li>網膜に焼き付ける話から Google Glass の話</li>
-<li><code>(setf アクセサ 値)</code> というのが気持ち悪いという話
-
-<ul>
-<li>p.197 の <code>(setf (gethash ...) t)</code> とか</li>
-<li>左辺値と右辺値の見た目が同じ言語は多い</li>
-<li>シェルスクリプトは x=値 と $x で違う</li>
-</ul>
-</li>
-<li>話には出しませんでしたが <code>*plants*</code> の値は <code>t</code> の代わりに <code>plant-energy</code> にするのもありかもと思いました。</li>
-<li>変数名とかの名前の付け方がよくわからない。
-
-<ul>
-<li>p.202 <code>xnu</code> とか。</li>
-</ul>
-</li>
-<li>ジャングルは add-plants で必ず植物が発生するので
-植物が発生する確率が高い領域というだけで
-最初から植物がたくさんあるわけではない。</li>
-<li>loop はミニ言語
-
-<ul>
-<li>Perl の正規表現</li>
-<li>Python のリスト内包表記</li>
-<li>scala のリスト内包表記</li>
-</ul>
-</li>
-<li>独自言語の話
-
-<ul>
-<li><code>printf</code> の書式文字列</li>
-<li>C++ のマニピュレータは難しすぎるという話</li>
-<li>Ruby の <code>#{}</code> は独自言語というほどのものではない</li>
-<li>pack / unpack のテンプレート (これも Perl 由来なので、 Ruby 独自ではない)</li>
-</ul>
-</li>
-<li>p.216 チルド文字
-
-<ul>
-<li>tilde なので変というわけではないがチルダの方がよく見かける</li>
-<li>チルドの方が元の英語の発音に近い?</li>
-</ul>
-</li>
-<li><code>@</code> は <code>printf</code> の <code>%-10d</code> のような <code>-</code> とフラグの有無での左右が逆</li>
-<li>Ruby で
-
-<ul>
-<li><code>%d</code> とか <code>%f</code> 以外はあまり使わない?</li>
-<li>ljust とか rjust とかあるから <code>%s</code> と数字の組み合わせはあまり使わない?</li>
-<li><code>"%7.2f"</code> は他の方法では難しそう</li>
-</ul>
-</li>
-<li><code>'</code> の必要性の話
-
-<ul>
-<li><code>'a</code> とかを指定出来るようにするため?</li>
-<li><code>'</code> で埋めたい場合は <code>''</code> とか</li>
-</ul>
-</li>
-<li><code>format</code> の方が <code>loop</code> にあった周期表のような表が欲しい</li>
-<li><code>printf</code> の書式指定文字列に別の文字で埋める指定はできるか?
-
-<ul>
-<li>ljust や rjust ならできる (例: <code>"hoge".rjust(10, "!")</code>)</li>
-<li><code>printf</code> は不明 (できなさそう?)</li>
-<li><code>%{}d</code> とか <code>%()</code> とかの話</li>
-</ul>
-</li>
-<li><code>~$</code> は日本円だとあまり使わなさそう
-
-<ul>
-<li>アメリカはクオーターとかダイムとか (日本人には) わかりにくい</li>
-</ul>
-</li>
-<li><code>(fresh-line)</code> が便利なときの例は?
-
-<ul>
-<li>Ruby は <code>puts</code> が便利だから <code>fresh-line</code> のような機能の必要性が低い?</li>
-</ul>
-</li>
-<li>p.222 <code>~t</code> 相当は Ruby にはなさそう
-
-<ul>
-<li>pack テンプレートなら <code>@</code> で似たことはできそう</li>
-</ul>
-</li>
-<li>pack テンプレートの代わりに C の構造体をパースするものがあればわかりやすい?</li>
-<li>「33文字分出力したら改行してくれ」の 33 とか数えたくない</li>
-<li>p.228 のゲームは実際に実行しても <code>-</code> の繰り返しの上下の枠線の行はない</li>
-<li>名前がよくない?
-
-<ul>
-<li>prin1 とか</li>
-</ul>
-</li>
-<li>他の言語でも printf, strstr, stdio</li>
-<li>cout の読み方とか</li>
-<li>13.5章は表紙ページがない</li>
-<li>p.233 挿絵はストリームが邪悪な感じというのを表している?</li>
-<li>p.239 「残念ながら、ソケットの標準化は ANSI Common Lisp の仕様化に間に合わなかったので、ソケットを扱う標準の方法というのはない。」
-
-<ul>
-<li><a href="http://ja.wikipedia.org/wiki/Common_Lisp">Common Lisp &ndash; Wikipedia</a> によると「1984年、1994年にANSIにより標準化」</li>
-</ul>
-</li>
-<li>p.248 REPL にエラープロンプトを表示するのは REPL から実行した時だけ</li>
-<li>repl に戻る話から Ruby の話
-
-<ul>
-<li><code>better_errors</code></li>
-<li><code>binding_of_caller</code></li>
-<li><code>ppp</code></li>
-</ul>
-</li>
-<li>Web 関連の雑談
-
-<ul>
-<li>Active Scaffold が IE10 で変?</li>
-<li>CoffeeScript</li>
-<li>ClojureScript</li>
-<li>ブラウザで Ruby</li>
-<li>ActiveScriptRuby</li>
-<li>NougakuDo</li>
-<li>Google の bot は JavaScript や CSS も解釈する</li>
-</ul>
-</li>
-<li>p.250 q値</li>
-<li>car cadr caddr cdddr nth nthcdr</li>
-</ul>
 
 ]]></content>
   </entry>

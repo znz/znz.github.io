@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-07T02:12:02+09:00</updated>
+  <updated>2013-12-07T23:55:32+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,123 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Rail 3.2でcache_digestsを使ってみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-08-cache-digests.html"/>
+    <updated>2013-12-08T00:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/cache-digests</id>
+    <content type="html"><![CDATA[<p>まだ Rails 3.2.16 のままのアプリで <code>cache_digests</code> gem を使って
+fragment cache を導入してみました。</p>
+
+<p>Rails 4.0 では標準になっているはずなので、
+使い方は同じだと思います。</p>
+
+<!--more-->
+
+
+<h2>インストール</h2>
+
+<p>まず <code>Gemfile</code> に以下の gem の指定を追加してインストールしました。</p>
+
+<p><code>ruby Gemfile
+gem 'cache_digests'
+gem 'dalli', group: :production
+</code></p>
+
+<h2>環境設定</h2>
+
+<p>キャッシュの影響の確認などのデバッグ用に <code>development</code> 環境でも
+キャッシュを有効にしました。
+ちゃんとキャッシュで来ているかどうかの確認や削除がしやすいように
+保存先はデフォルトの <code>:file_store</code> のままにしています。</p>
+
+<p><code>ruby config/environments/development.rb
+  config.action_controller.perform_caching = true
+</code></p>
+
+<p><code>production</code> 環境では <code>dalli</code> を使って <code>memcached</code> に保存するようにしました。
+<code>dalli</code> の設定はこの記事の本題ではないので、
+<code>memcached</code> の設定などは他のサイトを参考にしてください。</p>
+
+<p><code>ruby config/environments/production.rb
+  config.cache_store = :dalli_store
+</code></p>
+
+<p><code>staging</code> 環境もあったので <code>config/environments/staging.rb</code> にも同様の設定をしました。</p>
+
+<h2>fragment cache</h2>
+
+<p>すでに
+<code>app/views/comments/_comment.html.haml</code> や
+<code>app/views/posts/_post.html.haml</code> のような view を使って
+<code>render @comments</code> や <code>render @posts</code> のように使っていたので、</p>
+
+<p><code>text app/views/comments/_comment.html.haml
+- cache comment do
+  -# 今までの内容
+</code></p>
+
+<p>のように <code>cache comment do ... end</code> で今までの内容をくくるだけでした。
+<code>cache</code> メソッド自体の返り値は <code>=</code> で埋め込んだりせずにそのまま呼ぶだけで大丈夫でした。</p>
+
+<h2>動作確認</h2>
+
+<p><code>log/developement.log</code> などを <code>fragment</code> で検索してみると</p>
+
+<p><code>text log/developement.log
+Write fragment views/comments/29-20130905083500/96f0ec0ce36af8132826f3bfbe0079db 0.5ms
+Read fragment views/comments/30-20130905083518/96f0ec0ce36af8132826f3bfbe0079db 0.4ms
+</code></p>
+
+<p>などと記録されていて、キャッシュが使われていることが確認できました。</p>
+
+<p><code>development</code> 環境では実際のキャッシュファイルは <code>tmp/cache/</code> 以下にありました。</p>
+
+<h2>キャッシュの無効化 (invalidate)</h2>
+
+<p>キャッシュが古くなってもう有効ではないという状態にすることを invalidate というと思いますが、
+内容が更新された時に古いキャッシュが使われると問題があるので、
+その対処をする必要があります。</p>
+
+<p><code>cache</code> メソッドの引数に <code>ActiveRecord</code> のオブジェクトを渡した時の
+キャッシュのキーは先ほどの例だと
+<code>views/comments/:id-:updated_at/:md5</code>
+という感じで <code>comment</code> オブジェクトの <code>id</code> と <code>updated_at</code> と
+<code>app/views/comments/_comment.html.haml</code> の MD5 が使われていて、
+view のファイルが変更したり、
+<code>comment</code> ファイルの <code>updated_at</code> を更新したりした時に
+自動で無効になるようです。</p>
+
+<p>つまり、この view の中で別の partial render を使っていると
+反映されないということなので、
+内側の方でも <code>cache</code> を使うなどの対処が必要そうです。
+実際に <code>_post.html.haml</code> の中で <code>render post.comments</code> のようなことをしました。</p>
+
+<p>さらに以下のように <code>belongs_to</code> に <code>touch: true</code> を付けて、
+コメントが付いた時に <code>post</code> の <code>updated_at</code> も更新されるようにしました。</p>
+
+<p><code>ruby app/models/comment.rb
+  belongs_to :commentable, polymorphic: true, touch: true
+</code></p>
+
+<h2>キャッシュの完全削除</h2>
+
+<p><code>rails console</code> で <code>Rails.cache.clear</code> を実行すれば削除できました。
+他の sass などのキャッシュも <code>tmp/cache/</code> の中にあるので
+一緒に削除されてしまうようです。</p>
+
+<h2>まとめ</h2>
+
+<p>とりあえず使い始めるための最低限の知識をまとめてみました。</p>
+
+<p>後は
+<a href="http://ja.asciicasts.com/episodes/387-cache-digests">ASCIIcasts &ndash; “Episode 387 &ndash; Cache Digests”</a>
+で説明されている
+<code>rake cache_digests:nested_dependencies</code>
+などを知っておけば良さそうです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Rails 4.0.2のi18nで出るようになったdeprecated警告の対策方法]]></title>
@@ -343,127 +460,6 @@ puts "旧暦#{q.year}年#{q.uruu ? '閏' : nil}#{q.month}月#{q.day}日(#{q.roku
 <p>実際には IRC の bot に使いました。
 旧暦計算は自分で実装するのは面倒なので、
 ライブラリがあるのは非常にありがたいです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[anyenvやrbenvのpluginsの更新などをしやすくするプラグインを作った]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-21-anyenv-rbenv-plugins.html"/>
-    <updated>2013-11-21T18:25:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/anyenv-rbenv-plugins</id>
-    <content type="html"><![CDATA[<p><a href="https://github.com/sstephenson/rbenv">rbenv</a>
-には
-<a href="https://github.com/rkh/rbenv-update">rbenv-update</a>
-というプラグインがあって、アップデートだけは簡単にできるのに、
-他の <code>git</code> の操作をまとめて実行するのが面倒なので、
-まとめて実行できる
-<a href="https://github.com/znz/rbenv-git">rbenv-git</a>
-というプラグインを作りました。</p>
-
-<p>それから
-<a href="https://github.com/riywo/anyenv">anyenv</a>
-の方でもすべての <code>**env</code> も含めてアップデートできると便利だと思い、
-<a href="https://github.com/znz/anyenv-update">anyenv-update</a>
-と
-<a href="https://github.com/znz/anyenv-git">anyenv-git</a>
-を作成しました。</p>
-
-<!--more-->
-
-
-<h2>インストール</h2>
-
-<p>それぞれ <code>plugins</code> のディレクトリの中に <code>git clone</code> でとってくるだけです。</p>
-
-<ul>
-<li><code>git clone https://github.com/znz/rbenv-git.git $(rbenv root)/plugins/rbenv-git</code></li>
-<li><code>git clone https://github.com/znz/anyenv-update.git $(anyenv root)/plugins/anyenv-update</code></li>
-<li><code>git clone https://github.com/znz/anyenv-git.git $(anyenv root)/plugins/anyenv-git</code></li>
-</ul>
-
-
-<p><code>README</code> の方には <code>mkdir -p $(anyenv root)/plugins</code> も書いていますが、
-git version 1.8.4.3 だと不要で、自動で親ディレクトリも作ってくれるようです。
-git のどのバージョンからなのかわからないので、
-<code>README</code> には <code>mkdir -p</code> を残しています。</p>
-
-<h2>使い方</h2>
-
-<h3>rbenv git</h3>
-
-<p><code>rbenv</code> と <code>rbenv</code> のプラグインの <code>git</code> 操作をまとめて実行できます。</p>
-
-<p><code>rbenv git pull</code> で <code>rbenv update</code> の代用が出来ます。
-<code>rbenv update</code> だと <code>rbenv</code> 自体を homebrew で入れている時にも
-<code>RBENV_ROOT</code> で <code>git</code> コマンドを実行してしまいますが、
-<code>rbenv git</code> なら大丈夫です。</p>
-
-<p><code>rbenv git gc</code> で cleanup も出来ます。</p>
-
-<p><code>rbenv git remote -v</code> でどこからとってきたのか確認したり、
-<code>rbenv git status</code> でローカルで何か変更しているかどうか確認したりも出来ます。</p>
-
-<h3>anyenv update</h3>
-
-<p><code>anyenv update</code> で</p>
-
-<ul>
-<li><code>anyenv</code></li>
-<li><code>anyenv</code> のプラグイン</li>
-<li><code>**env</code></li>
-<li><code>**env</code> のプラグイン</li>
-</ul>
-
-
-<p>がアップデートできます。</p>
-
-<p>git 管理ではないものは skip します。</p>
-
-<h3>anyenv git</h3>
-
-<p><code>rbenv git</code> と同様の操作が
-<code>anyenv update</code> と同様の対象に
-まとめて実行できます。</p>
-
-<ul>
-<li><code>anyenv git pull</code></li>
-<li><code>anyenv git gc</code></li>
-<li><code>anyenv git remote -v</code></li>
-<li><code>anyenv git status</code></li>
-</ul>
-
-
-<p>など、
-<code>git</code> の各種操作ができます。</p>
-
-<h2>裏話</h2>
-
-<p>最初は <code>rbenv update</code> のコードを fork しようとしていたのですが、
-ライセンスが明記されていなかったので止めて、
-他の MIT License と明示されているプラグインを主に参考にして作りました。
-他にも <code>set -eo pipefail</code> というのは
-<a href="https://github.com/progrium/dokku">dokku</a>
-を参考にしました。</p>
-
-<p>ライセンスが不明だと参考にするのにも困るので、
-github のレポジトリを作成する時の LICENSE ファイルそのままだけでも良いので、
-どういうライセンスにしたいのか明記されているとありがたいと思いました。</p>
-
-<h2>追記</h2>
-
-<p><code>rbenv update</code> だと <code>git pull</code> ではなく、毎回</p>
-
-<p>```</p>
-
-<pre><code>git checkout master
-git fetch origin
-git pull origin master
-</code></pre>
-
-<p>```</p>
-
-<p>を実行していて遅いというのも <code>rbenv git</code> などを作った理由のひとつというのを
-書き忘れていたので、追記しておきます。</p>
 ]]></content>
   </entry>
   
