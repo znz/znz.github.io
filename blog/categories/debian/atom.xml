@@ -4,7 +4,7 @@
   <title><![CDATA[Category: debian | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/debian/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-07T23:55:32+09:00</updated>
+  <updated>2013-12-08T15:02:39+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,104 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[debian-goodiesのcheckrestartで再起動が必要なプロセスを調べる]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-06-checkrestart.html"/>
+    <updated>2013-12-06T14:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/checkrestart</id>
+    <content type="html"><![CDATA[<p><a href="http://qiita.com/advent-calendar/2013/distro-pm">ディストリビューション/パッケージマネージャー Advent Calendar 2013</a> の 12/6 のところが空いていたので、後から書いています。</p>
+
+<p>この投稿は
+<a href="http://qiita.com/advent-calendar/2013/distro-pm">ディストリビューション/パッケージマネージャー Advent Calendar 2013</a>
+の6日目の記事です。</p>
+
+<!--more-->
+
+
+<h2>debian-goodies パッケージ</h2>
+
+<p><a href="http://packages.qa.debian.org/d/debian-goodies.html">debian-goodies パッケージ</a>
+には <code>/usr/bin/</code> に複数のコマンドと <code>/usr/sbin/checkrestart</code> が入っています。</p>
+
+<p><code>/usr/bin/</code> のコマンドについては
+<a href="http://uwabami.junkhub.org/log/20131204.html#p01">uwabami さんの記事</a>
+を参照してください。</p>
+
+<p>ここでは <code>checkrestart</code> を紹介します。</p>
+
+<h2>checkrestart</h2>
+
+<p>ライブラリのパッケージが更新されたときに、
+特にセキュリティアップデートだと
+そのライブラリを使っているデーモンなども再起動したいと
+思うことが多いと思います。</p>
+
+<p>そういうときに <code>checkrestart</code> コマンドを使うと
+どのプロセスが置き換えられたライブラリを使っているか
+調べることが出来ます。</p>
+
+<h2>使用例 1</h2>
+
+<p>例えば init スクリプトから起動している <code>whoopsie</code>
+の再起動が必要なときは以下のようなメッセージが出てくるので、
+<code>sudo /etc/init.d/whoopsie restart</code> とか
+<code>sudo service whoopsie restart</code> とかで再起動すれば良いと思います。</p>
+
+<p>```
+$ sudo checkrestart
+Found 1 processes using old versions of upgraded files
+(1 distinct program)
+(1 distinct packages)</p>
+
+<p>Of these, 1 seem to contain init scripts which can be used to restart them:
+The following packages seem to have init scripts that could be used
+to restart them:
+whoopsie:</p>
+
+<pre><code>    953     /usr/bin/whoopsie
+</code></pre>
+
+<p>These are the init scripts:
+/etc/init.d/whoopsie restart
+```</p>
+
+<h2>使用例 2</h2>
+
+<p>デーモン以外などで起動しているプロセスが使っているファイルが置き換えられた場合、以下のように対応する init script がわからないというメッセージが出てきます。</p>
+
+<p>```
+$ sudo checkrestart
+Found 1 processes using old versions of upgraded files
+(1 distinct program)
+(1 distinct packages)
+These processes do not seem to have an associated init script to restart them:
+ruby1.8:</p>
+
+<pre><code>    906     /usr/bin/ruby1.8
+</code></pre>
+
+<p>```</p>
+
+<p>こういうときは
+<code>sudo ls -l /proc/906</code> や
+<code>sudo cat -v /proc/906/cmdline</code>
+などで対応するプログラムを調べて再起動します。</p>
+
+<h2>使用例 3</h2>
+
+<p>再起動が必要なものがみつからなかった場合は以下のようなメッセージが出てきます。</p>
+
+<p><code>
+$ sudo checkrestart
+Found 0 processes using old versions of upgraded files
+</code></p>
+
+<h2>まとめ</h2>
+
+<p>今回は <code>debian-goodies</code> の中から <code>checkrestart</code> を紹介しました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[aptitude検索パターンの紹介]]></title>
@@ -554,109 +652,6 @@ return 0;
 
 <p> }
 ```</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[LC_COLLATEの問題でuniqで丸数字が同一視されてしまう]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-31-lc-collate-uniq.html"/>
-    <updated>2013-10-31T23:50:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/lc-collate-uniq</id>
-    <content type="html"><![CDATA[<p><code>uniq -c</code> で重複がないのを確認しようとしたら、
-丸数字のところだけ違う行が同一視されてしまって、
-2以上になることがあって困ったので、
-原因を調べてみました。</p>
-
-<!--more-->
-
-
-<h2>現象</h2>
-
-<p>以下のように丸数字などが同一視されています。</p>
-
-<p><code>
-$ cat n.txt
-①
-②
-$ uniq n.txt
-①
-$ sort n.txt
-①
-②
-$ tac n.txt | sort
-②
-①
-$
-</code></p>
-
-<p>```
-$ cat n.txt
-①
-②
-$ LANG=ja_JP.utf8 uniq -c n.txt</p>
-
-<pre><code>  2 ①
-</code></pre>
-
-<p>$ LANG=C uniq -c n.txt</p>
-
-<pre><code>  1 ①
-  1 ②
-</code></pre>
-
-<p>$ uniq &mdash;version
-uniq (GNU coreutils) 8.20
-Copyright &copy; 2012 Free Software Foundation, Inc.
-ライセンス GPLv3+: GNU GPL version 3 or later <a href="http://gnu.org/licenses/gpl.html">http://gnu.org/licenses/gpl.html</a>.
-This is free software: you are free to change and redistribute it.
-There is NO WARRANTY, to the extent permitted by law.</p>
-
-<p>作者 Richard M. Stallman および David MacKenzie。
-$ lsb_release -a
-No LSB modules are available.
-Distributor ID: Ubuntu
-Description:    Ubuntu 13.04
-Release:        13.04
-Codename:       raring
-$
-```</p>
-
-<h2>調査</h2>
-
-<p><code>apt-get source locales</code>
-でソースをとってきて調べてみると
-<code>locales/ja_JP</code> の <code>LC_COLLATE</code> から <code>END LC_COLLATE</code>
-の間に書いていないコードポイントは同一視されているように見えました。</p>
-
-<p>これは glibc の問題だと思って、既に報告されているかどうか調べてみると
-<a href="https://sourceware.org/bugzilla/show_bug.cgi?id=13063">Bug 13063 – &lsquo;sort -u&rsquo; will erase some Chinese characters</a>
-に同じような話がありました。</p>
-
-<h2>ML で聞いてみた</h2>
-
-<p><a href="http://listserv.linux.or.jp/pipermail/linux-users/2013-October/000527.html">linux-users: 108951</a>
-で質問してみたところ、
-<a href="http://listserv.linux.or.jp/pipermail/linux-users/2013-October/000528.html">linux-users: 108952</a>
-で返信があり、
-<code>LC_COLLATE</code>
-をちゃんと定義して解決するか、
-単純にバイト順でソートしたいだけなら
-<code>LC_COLLATE=C</code> で良いという話でした。</p>
-
-<h2>結論</h2>
-
-<p>結局今回の目的はソートではなく重複検査だったので、
-<code>LC_COLLATE=C</code> で解決ということになりました。</p>
-
-<p>誰か興味のある人は真面目に
-<code>LC_COLLATE</code>
-の定義に挑戦してみると良いのではないでしょうか。</p>
-
-<p>それとは別に定義されていない文字を同一視せずにバイト順でも何でもいいので、
-適当に別の文字として扱ってくれるようになればいいのに、
-とは思いました。
-誰かそういう方向での対応も挑戦してみると
-他の言語も含めて幸せになれるのではないかと思いました。</p>
 ]]></content>
   </entry>
   

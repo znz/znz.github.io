@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-07T23:55:32+09:00</updated>
+  <updated>2013-12-08T15:02:39+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,104 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[debian-goodiesのcheckrestartで再起動が必要なプロセスを調べる]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-06-checkrestart.html"/>
+    <updated>2013-12-06T14:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/checkrestart</id>
+    <content type="html"><![CDATA[<p><a href="http://qiita.com/advent-calendar/2013/distro-pm">ディストリビューション/パッケージマネージャー Advent Calendar 2013</a> の 12/6 のところが空いていたので、後から書いています。</p>
+
+<p>この投稿は
+<a href="http://qiita.com/advent-calendar/2013/distro-pm">ディストリビューション/パッケージマネージャー Advent Calendar 2013</a>
+の6日目の記事です。</p>
+
+<!--more-->
+
+
+<h2>debian-goodies パッケージ</h2>
+
+<p><a href="http://packages.qa.debian.org/d/debian-goodies.html">debian-goodies パッケージ</a>
+には <code>/usr/bin/</code> に複数のコマンドと <code>/usr/sbin/checkrestart</code> が入っています。</p>
+
+<p><code>/usr/bin/</code> のコマンドについては
+<a href="http://uwabami.junkhub.org/log/20131204.html#p01">uwabami さんの記事</a>
+を参照してください。</p>
+
+<p>ここでは <code>checkrestart</code> を紹介します。</p>
+
+<h2>checkrestart</h2>
+
+<p>ライブラリのパッケージが更新されたときに、
+特にセキュリティアップデートだと
+そのライブラリを使っているデーモンなども再起動したいと
+思うことが多いと思います。</p>
+
+<p>そういうときに <code>checkrestart</code> コマンドを使うと
+どのプロセスが置き換えられたライブラリを使っているか
+調べることが出来ます。</p>
+
+<h2>使用例 1</h2>
+
+<p>例えば init スクリプトから起動している <code>whoopsie</code>
+の再起動が必要なときは以下のようなメッセージが出てくるので、
+<code>sudo /etc/init.d/whoopsie restart</code> とか
+<code>sudo service whoopsie restart</code> とかで再起動すれば良いと思います。</p>
+
+<p>```
+$ sudo checkrestart
+Found 1 processes using old versions of upgraded files
+(1 distinct program)
+(1 distinct packages)</p>
+
+<p>Of these, 1 seem to contain init scripts which can be used to restart them:
+The following packages seem to have init scripts that could be used
+to restart them:
+whoopsie:</p>
+
+<pre><code>    953     /usr/bin/whoopsie
+</code></pre>
+
+<p>These are the init scripts:
+/etc/init.d/whoopsie restart
+```</p>
+
+<h2>使用例 2</h2>
+
+<p>デーモン以外などで起動しているプロセスが使っているファイルが置き換えられた場合、以下のように対応する init script がわからないというメッセージが出てきます。</p>
+
+<p>```
+$ sudo checkrestart
+Found 1 processes using old versions of upgraded files
+(1 distinct program)
+(1 distinct packages)
+These processes do not seem to have an associated init script to restart them:
+ruby1.8:</p>
+
+<pre><code>    906     /usr/bin/ruby1.8
+</code></pre>
+
+<p>```</p>
+
+<p>こういうときは
+<code>sudo ls -l /proc/906</code> や
+<code>sudo cat -v /proc/906/cmdline</code>
+などで対応するプログラムを調べて再起動します。</p>
+
+<h2>使用例 3</h2>
+
+<p>再起動が必要なものがみつからなかった場合は以下のようなメッセージが出てきます。</p>
+
+<p><code>
+$ sudo checkrestart
+Found 0 processes using old versions of upgraded files
+</code></p>
+
+<h2>まとめ</h2>
+
+<p>今回は <code>debian-goodies</code> の中から <code>checkrestart</code> を紹介しました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[aptitude検索パターンの紹介]]></title>
@@ -687,117 +785,6 @@ $
 とは思いました。
 誰かそういう方向での対応も挑戦してみると
 他の言語も含めて幸せになれるのではないかと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Ubuntuでの対応が悪いと感じた話]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-20-ubuntu-bugs-related-me.html"/>
-    <updated>2013-09-20T19:43:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ubuntu-bugs-related-me</id>
-    <content type="html"><![CDATA[<p>このエントリは愚痴が含まれます。
-そういうのが嫌な人は読まない方が良いですよ。
-警告しましたからね。</p>
-
-<!--more-->
-
-
-<p>結論としては、こういういろいろなことが積み重なって、
-最近は ubuntu にはあまり積極的には貢献をしないようになった
-という話です。</p>
-
-<p>コミュニティ運営のアンチパターンの例として使えるのかもしれません。</p>
-
-<p>最初の4項目は Ubuntu の Launchpad での話で、
-後の2項目は ubuntu-jp での話です。</p>
-
-<p>もちろん、対応が悪かったものだけ集めているので、
-他の多数のバグの対応は良かったことが多いです。
-全体的に Ubuntu のバグ対応は
-Debian に比べると遅いという気はしますが。</p>
-
-<h2>最近の例 (bind9)</h2>
-
-<p>最初は Ubuntu 12.04 LTS の <code>bind9</code> の
-<code>/etc/bind/db.root</code> が更新されない話です。</p>
-
-<p>どういう話かというと
-D-ROOT-SERVERS.NET に IPv6 アドレスが追加されて、
-その後 IPv4 アドレスの変更があったのに <code>db.root</code> が
-更新されないという話です。</p>
-
-<p>ちょっと探して見つかっただけでも4個見つかります。
-4個目のは3個目の重複という印がついてます。</p>
-
-<ul>
-<li><a href="https://launchpad.net/ubuntu/+source/bind9/+bug/1023600">db.root file outdated</a></li>
-<li><a href="https://bugs.launchpad.net/ubuntu/+source/bind9/+bug/1160464">Bind db.root outdated, backport only the db.root file, for LTS important to keep db.root updated</a></li>
-<li><a href="https://bugs.launchpad.net/ubuntu/+source/bind9/+bug/1090593">D.ROOT-SERVERS.NET changing January 3rd 2013</a></li>
-<li><a href="https://bugs.launchpad.net/ubuntu/+source/bind9/+bug/1097050">d-root ipv4 has changed. Update db.root to show this</a></li>
-</ul>
-
-
-<p>IPv6 アドレスが追加された時点では重要ではないということで、
-次の更新があれば一緒に更新するという反応だったようですが、
-2013年1月3日に IPv4 アドレスが変更されて、
-その後、移行期間として6ヶ月あったのですが、
-それが終わった後も更新されないままです。</p>
-
-<p>事前に見つけていた上2個のbugは移行期間中につつてみたりしたのですが、
-全く反応がありませんでした。</p>
-
-<p>そして未だに更新されていません。
-これはひどいと思います。</p>
-
-<h2>quick-fix?</h2>
-
-<p><a href="https://bugs.launchpad.net/ubuntu-website-content/+bug/619920">Version mismatch of link in Code of Conduct</a>
-で CoC の説明のバージョンが間違っていると指摘した時の話です。</p>
-
-<p>一度 Confirmed になったのに Invalid になったというのが
-嫌な印象を受けました。</p>
-
-<h2>dbskkd-cdb を rebuild するだけの簡単なお仕事</h2>
-
-<p><a href="https://bugs.launchpad.net/ubuntu/+source/dbskkd-cdb/+bug/58355">wrong reply via netkit-inetd</a>
-で dbskkd-cdb を rebuild するだけで直るという報告をしたつもりだったのですが、
-今見直してみると、こちらの反応がなかったのが悪かったようにも見えました。
-追加情報を求められた時にはもう使ってなかったとはいえ、ちょっと反省。</p>
-
-<h2>気付くのが遅すぎた</h2>
-
-<p><a href="https://bugs.launchpad.net/ubuntu/+source/inspircd/+bug/978206">FreezeException request&mdash; Sync with Debian unstable</a>
-で inspircd が古すぎて upstream の
-セキュリティアップデートも出ないようなバージョンなので、
-まずいんじゃないかと伝えてみたつもりだったんですが、
-結局古いまま入ってしまいました。</p>
-
-<p>古いまま入るぐらいなら消せば良かったのに、と思いましたが、
-英語で書けなかった
-(そもそも最初の説明も書けなかったのでリンクですませた)
-ので、
-自分で使うのは inspircd を止めて ngircd に乗り換えました。</p>
-
-<h2>何もやってない (ように見える) 話</h2>
-
-<p>「#ubuntu-jp IRCミーティングの議事録」というのが
-ubuntu-jp の ML に流れるのですが、
-アクションアイテムの冒頭が毎回同じで、
-そこだけみると
-(というかいつも最初の数行しかみてないのですが)
-いつも何もしていないように見えるので、
-順番を変えた方が良いんじゃないか、
-というようなことを IRC とかで言ってみたことが
-あるのですが、何も変わりませんでした。</p>
-
-<h2>査読とは?</h2>
-
-<p>アクションアイテムをもうちょっと下まで見た時に
-<code>* [ ] 誰か査読して！</code>
-と書いてあったので、
-読んでみて返信してみたのですが、
-次の週もそのままだったので、
-あれは査読に含まれないのかと思ってがっかりしました。</p>
 ]]></content>
   </entry>
   
