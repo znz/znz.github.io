@@ -13,7 +13,7 @@ Rails 4.0 では標準になっているはずなので、
 
 この投稿は
 [Ruby on Rails Advent Calendar 2013](http://qiita.com/advent-calendar/2013/ruby-on-rails)
-の6日目の記事です。
+の8日目の記事です。
 
 <!--more-->
 
