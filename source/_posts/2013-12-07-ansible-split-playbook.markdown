@@ -12,6 +12,10 @@ categories: ansible
 対応がよくわからなくて困ったことがあったので、
 書き換え方をまとめてみました。
 
+この投稿は
+[Ansible Advent Calendar 2013](http://qiita.com/advent-calendar/2013/ansible)
+の7日目の記事です。
+
 <!--more-->
 
 全体的に動作確認せずに以前使ったファイルを参考にしているので、

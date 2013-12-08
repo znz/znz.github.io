@@ -11,6 +11,10 @@ fragment cache を導入してみました。
 Rails 4.0 では標準になっているはずなので、
 使い方は同じだと思います。
 
+この投稿は
+[Ruby on Rails Advent Calendar 2013](http://qiita.com/advent-calendar/2013/ruby-on-rails)
+の6日目の記事です。
+
 <!--more-->
 
 ## インストール
