@@ -4,7 +4,7 @@
   <title><![CDATA[Category: zsh | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/zsh/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-08T15:02:39+09:00</updated>
+  <updated>2013-12-09T23:55:31+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,72 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[.zshrcの自動再コンパイル]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-10-auto-zshrc-recompile.html"/>
+    <updated>2013-12-10T00:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/auto-zshrc-recompile</id>
+    <content type="html"><![CDATA[<p>zsh のスクリプトは <code>zcompile</code> コマンドでコンパイルすることができます。
+<code>.zshrc</code> も大きくなって読み込みに時間がかかるようになったらコンパイルすれば良さそうですが、
+変更したときに手動でコンパイルし直すのは面倒なので、
+自動で再コンパイルする設定を紹介します。</p>
+
+<p>この投稿は
+<a href="http://qiita.com/advent-calendar/2013/zsh">zsh Advent Calendar 2013</a>
+の10日目の記事です。</p>
+
+<!--more-->
+
+
+<h2>設定方法</h2>
+
+<p><code>.zshrc</code> の適当な場所に以下の設定を追加します。</p>
+
+<p><code>sh
+if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
+   zcompile ~/.zshrc
+fi
+</code></p>
+
+<p>これで <code>.zshrc.zwc</code> より <code>.zshrc</code> の方が新しい時に
+<code>zcompile .zshrc</code> が自動で実行されます。</p>
+
+<p><code>.zshrc.zwc</code> がある時だけ実行されるので、
+最初に <code>zcompile ~/.zshrc</code> を手動で実行しておきます。</p>
+
+<h2>読み込み順序</h2>
+
+<p>zsh 自体が <code>file.zwc</code> よりも <code>file</code> の方が新しい時に
+<code>file</code> の方を読み込むようになっているので、
+<code>.zshrc</code> の方が新しくて <code>zcompile</code> し直していないときに
+<code>.zshrc.zwc</code> が読み込まれて
+古い設定のままになるということはありません。</p>
+
+<h2>自動作成もする場合</h2>
+
+<p>ファイルを分割していて <code>.zshrc</code> はコンパイルする必要がない環境では
+何もしない挙動になってほしいので、
+こうしていますが、
+最初から自動作成してほしいのなら、
+存在チェックも付けて以下のようにすれば良いと思います。</p>
+
+<p><code>sh
+if [ ! -f ~/.zshrc.zwc -o ~/.zshrc -nt ~/.zshrc.zwc ]; then
+   zcompile ~/.zshrc
+fi
+</code></p>
+
+<h2>まとめ</h2>
+
+<p>ここでは <code>.zshrc</code> だけを対象にしましたが、
+他にも自前の <code>fpath</code> のファイルなどで自動で再コンパイルしたいファイルがあれば
+同様のことをするのがよいかもしれません。</p>
+
+<p>あまり変更しないファイルなら更新チェックの無駄の方が大きいかもしれないので、
+そのトレードオフは考えておく必要がありそうです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[zshでcdの履歴管理に標準添付のcdrを使う]]></title>
