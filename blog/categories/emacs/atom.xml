@@ -4,7 +4,7 @@
   <title><![CDATA[Category: emacs | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/emacs/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-09T23:55:31+09:00</updated>
+  <updated>2013-12-10T23:59:42+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,152 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[emacsのmode-lineのminor-modeなどに色をつける]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-11-emacs-color-mode-line.html"/>
+    <updated>2013-12-11T00:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/emacs-color-mode-line</id>
+    <content type="html"><![CDATA[<p>emacs の mode-line の minor mode の表示が長いので短くしているのですが、
+単純に短くするとわかりにくいので、色もつけています。</p>
+
+<p>ところが、変数で設定できるようになっているものだと単純に
+<code>propertize</code> して <code>setq</code> するだけでは色がつかなかったので、
+その対処も含めてまとめてみました。</p>
+
+<p>この投稿は
+<a href="http://qiita.com/advent-calendar/2013/dot-emacs">.emacs Advent Calendar 2013</a>
+の11日目の記事です。</p>
+
+<!--more-->
+
+
+<h2>単純に短くする</h2>
+
+<p>単純に短くするには <code>minor-mode-alist</code> の文字列を直接変更してしまうだけです。</p>
+
+<p><code>common-lisp
+(when (consp (assq 'abbrev-mode minor-mode-alist))
+  (setcar (cdr (assq 'abbrev-mode minor-mode-alist)) " ab"))
+(when (consp (assq 'auto-fill-function minor-mode-alist))
+  (setcar (cdr (assq 'auto-fill-function minor-mode-alist)) " Fil"))
+</code></p>
+
+<h2>色も付ける</h2>
+
+<p><code>propertize</code> で <code>face</code> を付けた文字列を設定すると色が付きます。</p>
+
+<p><code>face</code> プロパティの設定としては、
+最低限 <code>:foreground</code> と <code>:background</code> を知っておけば良いと思います。
+指定できる色は <code>list-colors-display</code> で一覧できます。</p>
+
+<p>```common-lisp
+(when (consp (assq &lsquo;abbrev-mode minor-mode-alist))
+  (setcar (cdr (assq 'abbrev-mode minor-mode-alist))</p>
+
+<pre><code>  (propertize "省" 'face '(:foreground "green"))))
+</code></pre>
+
+<p>(when (consp (assq &lsquo;auto-fill-function minor-mode-alist))
+  (setcar (cdr (assq 'auto-fill-function minor-mode-alist))</p>
+
+<pre><code>  (propertize "詰" 'face '(:foreground "yellow"))))
+</code></pre>
+
+<p>```</p>
+
+<h2>設定対象の探し方</h2>
+
+<p>ここでは例として <code>abbrev-mode</code> と <code>auto-fill-mode</code> をあげていますが、
+<code>auto-fill-mode</code> が <code>auto-fill-function</code> になっているなど、
+単純に決まっているものだけではなさそうなので、
+他の設定をどうするのかは、
+<code>describe-variable</code> で <code>minor-mode-alist</code> をみて探すのが良さそうでした。</p>
+
+<h2>設定用関数</h2>
+
+<p>毎回長々と書くのは面倒なので、以下の関数を定義して使っています。</p>
+
+<p>```common-lisp
+(defun my-shorten-minor-mode-name (mode-sym short-name &amp;optional face)
+  &ldquo;minor-modeの名前を短くする。&rdquo;
+  (let ((cell (assq mode-sym minor-mode-alist)))</p>
+
+<pre><code>(when (consp cell)
+  (if face
+      (setq short-name (propertize short-name 'face face))
+    (setq short-name (concat " " short-name)))
+  (setcar (cdr cell) short-name))
+))
+</code></pre>
+
+<p>```</p>
+
+<h2>起動時に読み込まれていない minor-mode の設定</h2>
+
+<p><code>view-mode</code> のように起動時に読み込まれていない <code>minor-mode</code> は
+<code>.emacs</code> のタイミングで書き換えようとしても
+<code>minor-mode-alist</code> に登録されていないのでうまくいきません。
+こういう場合は <code>eval-after-load</code> で設定しています。</p>
+
+<p>```common-lisp
+(eval-after-load &ldquo;view&rdquo;
+  &lsquo;(my-shorten-minor-mode-name</p>
+
+<pre><code>'view-mode "見" '(:foreground "white" :background "DeepPink1")))
+</code></pre>
+
+<p>```</p>
+
+<h2>変数で設定できる場合</h2>
+
+<p><code>eldoc-minor-mode</code> のように変数で設定できるようになっているものがあります。
+こういう場合は単純に <code>propertize</code> した文字列を <code>setq</code> しても
+プロパティが無視されて色がつきません。</p>
+
+<p>理由は <code>mode-line-format</code> のドキュメントの
+<a href="http://www.gnu.org/software/emacs/manual/html_node/elisp/Properties-in-Mode.html#Properties-in-Mode">23.4.6 Properties in the Mode Line</a>
+に書いてあって、
+<code>risky-local-variable</code> が non-nil じゃないとテキストプロパティが
+無視されるということでした。</p>
+
+<p>そこで <code>risky-local-variable</code> に <code>t</code> を設定すれば色がつくようになりました。</p>
+
+<p>```common-lisp
+(put &lsquo;eldoc-minor-mode-string 'risky-local-variable t)
+(setq eldoc-minor-mode-string</p>
+
+<pre><code>  (propertize "d" 'face '(:foreground "purple" :background "yellow")))
+</code></pre>
+
+<p>```</p>
+
+<h2>anzu.el での例</h2>
+
+<p>他の例も挙げておくと
+<a href="http://qiita.com/syohex/items/56cf3b7f7d9943f7a7ba">anzu.el</a>
+なら以下のように設定しています。</p>
+
+<p>```common-lisp
+  (when (require &lsquo;anzu nil t)</p>
+
+<pre><code>(put 'anzu-mode-lighter 'risky-local-variable t)
+(setq anzu-mode-lighter (propertize "杏" 'face 'anzu-mode-line))
+(global-anzu-mode +1)
+)
+</code></pre>
+
+<p>```</p>
+
+<h2>まとめ</h2>
+
+<p>ここでは <code>minor-mode</code> を中心に <code>mode-line</code> を短くして、
+色をつける方法に付いて紹介しました。
+<code>major-mode</code> も含めて実際に使っている設定は
+<a href="https://github.com/znz/dot-emacs/blob/8434c73ba833791eedc1411360e10441e52b370e/init.el.d/50mode-line.el">50mode-line.el</a>
+に公開しているので、参考にしてください。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Mac OS XでのIME制御についての考察]]></title>
@@ -566,51 +712,6 @@ github の方が新しくて互換性がなくなっているのが理由でし�
 <p>ちなみに <code>M-x</code> で <code>helm-</code> で始まる <code>interactive</code> な関数を探すのは
 <code>helm</code> 関係のバッファでのキーバインドようの関数が混ざっているので
 この用途には使えません。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[elscreen で Symbol's value as variable is void: last-command-char]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-24-elscreen-last-command-char.html"/>
-    <updated>2013-09-24T13:50:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/elscreen-last-command-char</id>
-    <content type="html"><![CDATA[<p>elscreen で
-<code>Symbol's value as variable is void: last-command-char</code>
-というエラーになったので、
-<a href="http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=705436">elscreen: From Emacs 24.3: Symbol&rsquo;s value as variable is void: last-command-char</a>
-のパッチを参考にして解決しました。</p>
-
-<!--more-->
-
-
-<p><code>Symbol's value as variable is void: last-command-char</code>
-で検索すると
-<a href="http://oku.edu.mie-u.ac.jp/~okumura/texwiki/?YaTeX">Emacs 24.3 は last-input-char, last-command-char が削除されています</a>
-という話が一番目に見つかって、
-<code>last-command-char elscreen</code>
-で検索すると
-<a href="http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=705436">elscreen: From Emacs 24.3: Symbol&rsquo;s value as variable is void: last-command-char</a>
-が一番目に見つかって解決方法がわかりました。</p>
-
-<p>パッチを見てみると、
-<code>xemacs</code>
-の時は
-<code>(event-to-character last-command-event)</code>
-で、それ以外は
-<code>last-command-event</code>
-となっていて、
-手元では GNU Emacs だけ対応出来れば良いので、
-<a href="https://github.com/znz/dot-emacs/commit/12599e870f9b1a5b4411ef875c3cb647ef3096dd">defadvice で last-command-event を last-command-char に設定</a>
-することにしました。</p>
-
-<p>```scheme
-  (defadvice elscreen-jump (around elscreen-last-command-char-event activate)</p>
-
-<pre><code>(let ((last-command-char last-command-event))
-  ad-do-it))
-</code></pre>
-
-<p>```</p>
 ]]></content>
   </entry>
   
