@@ -4,7 +4,7 @@
   <title><![CDATA[Category: debian | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/debian/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-10T23:59:42+09:00</updated>
+  <updated>2013-12-11T12:54:37+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,50 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[mailmanでDKIM-Signatureヘッダを削除する]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-11-mailman-strip-dkim-signature.html"/>
+    <updated>2013-12-11T12:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/mailman-strip-dkim-signature</id>
+    <content type="html"><![CDATA[<p>fml から移行した mailman で Subject の書き換える設定をしていると、
+元の <code>DKIM-Signature</code> が残っていると受け取った側で
+メールを改ざんしているのと区別がつかないので、
+<code>DKIM</code> の検証に失敗してしまいます。</p>
+
+<p>そこで mailman で <code>DKIM-Signature</code> を削除するように設定しました。</p>
+
+<!--more-->
+
+
+<h2>mailman の設定</h2>
+
+<p><code>REMOVE_DKIM_HEADERS</code> という設定があったので、
+<code>/etc/mailman/mm_cfg.py</code> の末尾に</p>
+
+<p><code>
+REMOVE_DKIM_HEADERS = Yes
+</code></p>
+
+<p>という設定を追加して、
+<code>sudo service mailman restart</code>
+しました。</p>
+
+<p><code>mm_cfg.py</code> での設定なので、
+ML 個別の設定ではなく
+mailman 全体の設定になるようです。</p>
+
+<h2>参考</h2>
+
+<p><a href="https://bugs.launchpad.net/mailman/+bug/557493">Bug #557493 “Mailman must not strip DKIM-Signature headers” : Bugs : GNU Mailman</a>
+という話があって、設定が追加されたようです。</p>
+
+<p><code>mm_cfg.py</code> で設定できる項目の一覧は
+<code>/usr/lib/mailman/Mailman/Defaults.py</code>
+にあります。
+このファイルを良く見ていれば、もっと早くこの設定項目に気付けたのかもしれません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[debian-goodiesのcheckrestartで再起動が必要なプロセスを調べる]]></title>
@@ -539,119 +583,6 @@ command)
 spam 対策は milter-manager だったり、
 firewall は <a href="packages.debian.org/ufw">ufw</a> だったり、
 いろいろと共通で使えるものが増えてきて楽になってきたように思います。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[/dev/snd/hwC0D0でPermission deniedになる問題を調べた]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-04-dev-snd-hwc0d0-permission-denied.html"/>
-    <updated>2013-11-04T14:22:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/dev-snd-hwc0d0-permission-denied</id>
-    <content type="html"><![CDATA[<p><code>/dev/snd/hwC0D0</code> を <code>O_RDWR</code> で <code>open(2)</code> するところで
-<code>Permission denied</code> になるという話
-(
-<a href="https://twitter.com/takaswie/status/397014733494026240">ツイート</a>、
-<a href="https://forums.ubuntulinux.jp/viewtopic.php?pid=100488#p100488">Ubuntu日本語フォーラム</a>
-)
-が気になったので、調べてみました。</p>
-
-<!--more-->
-
-
-<h2>結論</h2>
-
-<p>最終的にどうすれば良いか知りたい人向けの情報としては、
-<code>setcap cap_sys_rawio=ep filename</code>
-でケーパビリティ (capability) を設定する、ということになります。</p>
-
-<p>以下は、その結論にたどり着くまでに調べたことのメモです。</p>
-
-<h2>パーミッションと ACL</h2>
-
-<p><a href="http://blog.n-z.jp/blog/2013-10-27-kansai-debian-meeting.html">第 77 回 関西 Debian 勉強会に参加した</a>
-で書いたように、
-audio グループに属しているか、コンソールから直接ログインしていれば
-パーミッションの問題はないはずです。</p>
-
-<h2>余談: デバイスの sticky bit</h2>
-
-<p><code>crw-rw---T</code> になっていて、
-もしかして末尾の sticky bit が影響しているのかと思って調べてみたところ、
-<a href="http://lists.debian.org/debian-user/2012/02/msg01273.html">Re: Sticky bit on device files?</a>
-によると udev の管理用のフラグとして使われているようでした。
-今回の件とは関係なさそうだったので、これ以上深追いはしていません。</p>
-
-<h2>AppArmor</h2>
-
-<p><code>/etc/apparmor.d/abstractions/audio</code> に
-<code>/dev/snd/*      rw,</code> とあるので、
-念のため
-<code>sudo service apparmor stop</code>
-で <code>AppArmor</code> を止めて試してみましたが、
-変化が無かったので、
-<code>sudo service apparmor start</code>
-で戻しました。</p>
-
-<h2>カーネルのソースコード探索</h2>
-
-<p><code>strace</code> などで確認しても、
-ユーザーランドでは <code>EACCES</code> が返ってくるとしかわからないので、
-こうなったらカーネルのソースコードから <code>EACCES</code> を返しているところを
-探すしかないということで、
-<code>apt-get source linux-image-$(uname -r)</code>
-でソースコードをダウンロードして探してみました。</p>
-
-<p><code>grep -r EACCES sound</code> で探してみると
-<code>sound/pci/hda/hda_hwdep.c</code> で以下のように
-<code>CAP_SYS_RAWIO</code> をみていることがわかりました。</p>
-
-<p>```c sound/pci/hda/hda_hwdep.c
- static int hda_hwdep_open(struct snd_hwdep <em>hw, struct file </em>file)
- {
- #ifndef CONFIG_SND_DEBUG_VERBOSE</p>
-
-<pre><code>if (!capable(CAP_SYS_RAWIO))
-    return -EACCES;
-</code></pre>
-
-<p> #endif</p>
-
-<pre><code>return 0;
-</code></pre>
-
-<p> }
-```</p>
-
-<h2>Linux のケーパビリティ (capability)</h2>
-
-<p><a href="http://linuxjm.sourceforge.jp/html/LDP_man-pages/man7/capabilities.7.html">Man page of CAPABILITIES</a>
-が関係しているということがわかったところで、
-設定方法も調べてみると、
-<code>setcap</code> で設定できるとわかったので、
-以下のような簡単なテストプログラムを用意して、
-<code>sudo setcap cap_sys_rawio=ep ./a.out</code>
-でケーパビリティを設定すると
-<code>open(2)</code>
-に成功するのを確認できました。
-<code>cap_sys_rawio=ep</code> は危険そうなので、
-テストプログラムとはいえ、
-任意のパスを受け取れるようにするのは止めた方が良さそうに思いました。</p>
-
-<p>```c open-hwC0D0.c
- #include &lt;sys/types.h>
- #include &lt;sys/stat.h>
- #include &lt;fcntl.h>
- #include &lt;stdio.h></p>
-
-<p> int main() {</p>
-
-<pre><code>open("/dev/snd/hwC0D0", O_RDWR);
-perror("open");
-return 0;
-</code></pre>
-
-<p> }
-```</p>
 ]]></content>
   </entry>
   

@@ -5,11 +5,14 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: milter-manager - @znz blog</title>
+  <title>mailmanでDKIM-Signatureヘッダを削除する - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Category: milter-manager">
+  <meta name="description" content="fml から移行した mailman で Subject の書き換える設定をしていると、
+元の DKIM-Signature が残っていると受け取った側で
+メールを改ざんしているのと区別がつかないので、
+DKIM の検証に失敗してしまいます。 そこで mailman で DKIM- &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +21,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jpblog/categories/milter-manager/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-12-11-mailman-strip-dkim-signature.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,36 +79,143 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: milter-manager</h1>
+    
+      <h1 class="entry-title">mailmanでDKIM-Signatureヘッダを削除する</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-12-11T12:30:00+09:00" pubdate data-updated="true">2013-12-11 (Wed)</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
+<div class="entry-content"><p>fml から移行した mailman で Subject の書き換える設定をしていると、
+元の <code>DKIM-Signature</code> が残っていると受け取った側で
+メールを改ざんしているのと区別がつかないので、
+<code>DKIM</code> の検証に失敗してしまいます。</p>
 
-  
-  <h2>2013</h2>
+<p>そこで mailman で <code>DKIM-Signature</code> を削除するように設定しました。</p>
 
-<article>
-  
-<h1><a href="/blog/2013-11-23-postfix-and-milter-manager.html">postfixとmilter-managerの設定をした</a></h1>
-<time datetime="2013-11-23T21:25:00+09:00" pubdate><span class='month'>Nov</span> <span class='day'>23</span> <span class='year'>2013</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/linux/'>linux</a>, <a class='category' href='/blog/categories/milter-manager/'>milter-manager</a>, <a class='category' href='/blog/categories/postfix/'>postfix</a></span>
-</footer>
+<!--more-->
 
 
-</article>
+<h2>mailman の設定</h2>
 
+<p><code>REMOVE_DKIM_HEADERS</code> という設定があったので、
+<code>/etc/mailman/mm_cfg.py</code> の末尾に</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>REMOVE_DKIM_HEADERS = Yes</span></code></pre></td></tr></table></div></figure>
+
+
+<p>という設定を追加して、
+<code>sudo service mailman restart</code>
+しました。</p>
+
+<p><code>mm_cfg.py</code> での設定なので、
+ML 個別の設定ではなく
+mailman 全体の設定になるようです。</p>
+
+<h2>参考</h2>
+
+<p><a href="https://bugs.launchpad.net/mailman/+bug/557493">Bug #557493 “Mailman must not strip DKIM-Signature headers” : Bugs : GNU Mailman</a>
+という話があって、設定が追加されたようです。</p>
+
+<p><code>mm_cfg.py</code> で設定できる項目の一覧は
+<code>/usr/lib/mailman/Mailman/Defaults.py</code>
+にあります。
+このファイルを良く見ていれば、もっと早くこの設定項目に気付けたのかもしれません。</p>
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-12-11T12:30:00+09:00" pubdate data-updated="true">2013-12-11 (Wed)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/mailman/'>mailman</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-12-11-mailman-strip-dkim-signature.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-12-11-mailman-strip-dkim-signature.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-12-11-mailman-strip-dkim-signature.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013-12-11-emacs-color-mode-line.html" title="Previous Post: emacsのmode-lineのminor-modeなどに色をつける">&laquo; emacsのmode-lineのminor-modeなどに色をつける</a>
+      
+      
+    </p>
+  </footer>
 </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -209,7 +319,10 @@
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-12-11-mailman-strip-dkim-signature.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-12-11-mailman-strip-dkim-signature.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
