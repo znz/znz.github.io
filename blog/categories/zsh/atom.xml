@@ -4,7 +4,7 @@
   <title><![CDATA[Category: zsh | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/zsh/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-11T12:54:37+09:00</updated>
+  <updated>2013-12-11T23:12:07+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,82 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[zshのPATHの自動重複削除や余計なPATHの削除]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-12-zsh-cleanup-path.html"/>
+    <updated>2013-12-12T00:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/zsh-cleanup-path</id>
+    <content type="html"><![CDATA[<p>シェルの中から <code>exec zsh</code> をしたり、
+GNU screen や tmux を経由して間接的にシェルの中でシェルを開いたりするときに
+何も考えずに <code>PATH</code> を追加していくと
+どんどん長くなっていってしまうと思います。</p>
+
+<p><code>bash</code> などでも使えるように汎用的にしようとすると自前で頑張らないといけないのですが、
+<code>zsh</code> では <code>zsh</code> 自体の機能で簡単に重複を防げます。</p>
+
+<p>また、パスに望ましくないものが入っていた時に削除する方法も紹介します。</p>
+
+<p>この投稿は
+<a href="http://qiita.com/advent-calendar/2013/zsh">zsh Advent Calendar 2013</a>
+の12日目の記事です。</p>
+
+<!--more-->
+
+
+<h2>重複削除</h2>
+
+<p>重複を削除するには</p>
+
+<p><code>
+typeset -U path PATH
+</code></p>
+
+<p>で <code>path</code> と <code>PATH</code> に unique という属性を付けて、
+重複した値の最初だけ残すようにします。</p>
+
+<p>ちゃんと設定できていれば、パラメーター展開の <code>t</code>
+で調べた時に <code>unique</code> が付いています。</p>
+
+<p><code>
+% echo ${(t)path}
+array-unique-special
+% echo ${(t)PATH}
+scalar-export-unique-special
+</code></p>
+
+<h2>望ましくないパスの削除</h2>
+
+<p>ここでは 3 種類のパスを望ましくないものとして
+除外するようにしました。</p>
+
+<ol>
+<li><code>NULL_GLOB</code> の <code>N</code> を使って存在しないディレクトリを除外</li>
+<li><code>-/</code> を使ってシンボリックリンクの場合のリンク先もチェックした上でディレクトリのみ残す</li>
+<li><code>^W</code> で world-writable という実行ファイルのパスとしては危険なパーミッションになっているディレクトリを除外</li>
+</ol>
+
+
+<p>Glob Qualifiers なので <code>PATH</code> ではなく <code>path</code> を使ってフィルタリングしています。</p>
+
+<p>```
+path=(</p>
+
+<pre><code># allow directories only (-/)
+# reject world-writable directories (^W)
+$path(N-/^W)
+</code></pre>
+
+<p>)
+```</p>
+
+<h2>まとめ</h2>
+
+<p>ここでは <code>zsh</code> の機能を活用してコマンド探索パス <code>PATH</code> をきれいにする方法を紹介しました。</p>
+
+<p>これを応用して <code>fpath</code> などにも適用してみると良いかもしれません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[.zshrcの自動再コンパイル]]></title>
