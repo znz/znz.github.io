@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-13T18:54:25+09:00</updated>
+  <updated>2013-12-14T01:29:25+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,117 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[upstart-socket-bridgeとrubyを組み合わせる]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-14-upstart-socket-bridge-with-ruby.html"/>
+    <updated>2013-12-14T00:45:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/upstart-socket-bridge-with-ruby</id>
+    <content type="html"><![CDATA[<p><a href="http://gihyo.jp/admin/clip/01/ubuntu-topics/201312/06">Ubuntu Weekly Topics 2013年12月6日号</a>
+の「その他のニュース」で紹介されていた
+「upstart-socket-bridgeをxinetdライクなソケット待ち受け管理機構として扱う
+<a href="http://cheesehead-techblog.blogspot.jp/2013/12/upstart-socket-bridge.html">アプリケーションの作り方</a>
+。」
+が python3 で書かれていて、
+同じことが ruby で実装できるのか気になったので、
+IRC でちょっと助言を受けつつ移植してみました。</p>
+
+<!--more-->
+
+
+<h2>試した環境</h2>
+
+<ul>
+<li>amd64 の Ubuntu 13.10 (saucy)</li>
+<li><code>/usr/bin/ruby</code> は <code>ruby 1.9.3p194 (2012-04-20 revision 35410) [x86_64-linux]</code></li>
+</ul>
+
+
+<h2>ruby で試す</h2>
+
+<p>必須なのはソケット周りだけですが、
+デバッグ用のメッセージをファイルに残すようにして
+動作確認していたので、
+その部分も残しています。</p>
+
+<p>```ruby /tmp/test-service.rb
+ #!/usr/bin/ruby
+ require &lsquo;socket&rsquo;
+ open(&ldquo;/tmp/test.log&rdquo;, &ldquo;w&rdquo;) do |f|
+   ENV.each do |key, value|</p>
+
+<pre><code> f.puts "#{key}=#{value}"
+</code></pre>
+
+<p>   end
+   begin</p>
+
+<pre><code> serv_socket = Socket.for_fd(ENV["UPSTART_FDS"].to_i)
+ client_socket, client_addrinfo = serv_socket.accept
+ message = client_socket.recv(1024)
+ f.puts message
+ client_socket.send("I got your message: #{message}", 0)
+ client_socket.close
+</code></pre>
+
+<p>   rescue Exception => e</p>
+
+<pre><code> f.puts e.inspect
+ f.puts e.backtrace
+</code></pre>
+
+<p>   end
+   f.puts &ldquo;finished&rdquo;
+ end
+```</p>
+
+<p>バグとしては
+<code>for_fd</code> の引数の <code>to_i</code> を忘れていたり、
+<code>send</code> の引数が足りなかったりしました。</p>
+
+<p><code>text /etc/init/socket-test.conf
+ description "upstart-socket-bridge test"
+ start on socket PROTO=inet PORT=34567 ADDR=127.0.0.1  # 34567 番ポートで待ち受け
+ setuid exampleuser                                    # root ではなく exampleuser で動作
+ exec /usr/bin/ruby /tmp/test-service.rb               # サービス起動
+</code></p>
+
+<p><code>nc</code> コマンドで接続して動作確認します。</p>
+
+<p><code>console
+ $ nc localhost 34567
+ Hello Ruby
+ I got your message: Hello Ruby
+</code></p>
+
+<p>最後にテストで作成したファイルを削除しておきます。</p>
+
+<p><code>console
+ $ sudo rm /etc/init/socket-test.conf  # ブリッジとの接続解除
+ $ rm /tmp/test-service.rb             # テストサービス削除
+ $ rm /tmp/test.log                    # ログファイル削除
+</code></p>
+
+<h2>まとめ</h2>
+
+<p>python3 の <code>socket.fromfd</code> に相当するのは
+ruby だと <code>BasicSocket.for_fd</code> で、
+<code>BasicSocket</code> クラスには <code>accept</code> がないので、
+<code>BasicSocket</code> クラスを継承している <code>Socket</code> クラスの
+<code>Socket#for_fd</code> を使いました。</p>
+
+<p><code>inetd</code> や <code>xinetd</code> だと標準入出力にソケットをつないでくれて、
+サービスは簡単にかけるのに、
+<code>upstart</code> だと <code>accept</code> して <code>accept</code> から返ってきたソケットを
+<code>close</code> するまでがサービス側でやらないといけないようになっていて、
+ちょっと面倒に感じました。</p>
+
+<p>たまたま目についたプログラムを移植してみただけで、
+深追いはしていないのですが、
+どういう利点があるものなのか、
+調べてみるのも良いのかもしれません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Rail 3.2でcache_digestsを使ってみた]]></title>
@@ -428,42 +539,6 @@ SSL の証明書の問題などがあるので、
 
 <p>とりあえず自分が使っている限りはリリースも続くと思いますし、
 新しいバージョンの ruby への対応も続けていけると思います。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[旧暦を計算するgemを使った]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-26-qreki.html"/>
-    <updated>2013-11-26T23:46:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/qreki</id>
-    <content type="html"><![CDATA[<p><a href="https://forkwell.com/pub/github.com/ozamasa/qreki">https://forkwell.com/pub/github.com/ozamasa/qreki</a>
-で知った
-<a href="https://github.com/ozamasa/qreki">旧暦を計算するgem</a>
-を使って旧暦表示を試してみました。</p>
-
-<!--more-->
-
-
-<p><a href="https://github.com/ozamasa/qreki">qreki</a>
-の <code>README.md</code> には書いていませんが、
-普通は
-<code>require "qreki"</code>
-も必要です。</p>
-
-<p>例えば以下のように使えます。</p>
-
-<p><code>ruby
-require 'qreki'
-q = Qreki.calc_from_date(Date.today)
-puts "旧暦#{q.year}年#{q.uruu ? '閏' : nil}#{q.month}月#{q.day}日(#{q.rokuyou})#{q.sekki}"
-</code></p>
-
-<p>出力例としては <code>旧暦2013年10月24日(先負)</code> のようになります。
-<code>Date.today</code> の代わりに <code>Time.now</code> のように <code>Time</code> オブジェクトも使えました。</p>
-
-<p>実際には IRC の bot に使いました。
-旧暦計算は自分で実装するのは面倒なので、
-ライブラリがあるのは非常にありがたいです。</p>
 ]]></content>
   </entry>
   

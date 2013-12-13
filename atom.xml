@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-13T18:54:25+09:00</updated>
+  <updated>2013-12-14T01:29:25+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,137 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[upstart-socket-bridgeとrubyを組み合わせる]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-14-upstart-socket-bridge-with-ruby.html"/>
+    <updated>2013-12-14T00:45:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/upstart-socket-bridge-with-ruby</id>
+    <content type="html"><![CDATA[<p><a href="http://gihyo.jp/admin/clip/01/ubuntu-topics/201312/06">Ubuntu Weekly Topics 2013年12月6日号</a>
+の「その他のニュース」で紹介されていた
+「upstart-socket-bridgeをxinetdライクなソケット待ち受け管理機構として扱う
+<a href="http://cheesehead-techblog.blogspot.jp/2013/12/upstart-socket-bridge.html">アプリケーションの作り方</a>
+。」
+が python3 で書かれていて、
+同じことが ruby で実装できるのか気になったので、
+IRC でちょっと助言を受けつつ移植してみました。</p>
+
+<!--more-->
+
+
+<h2>試した環境</h2>
+
+<ul>
+<li>amd64 の Ubuntu 13.10 (saucy)</li>
+<li><code>/usr/bin/ruby</code> は <code>ruby 1.9.3p194 (2012-04-20 revision 35410) [x86_64-linux]</code></li>
+</ul>
+
+
+<h2>ruby で試す</h2>
+
+<p>必須なのはソケット周りだけですが、
+デバッグ用のメッセージをファイルに残すようにして
+動作確認していたので、
+その部分も残しています。</p>
+
+<figure class='code'><figcaption><span>/tmp/test-service.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'> <span class="c1">#!/usr/bin/ruby</span>
+</span><span class='line'> <span class="nb">require</span> <span class="s1">&#39;socket&#39;</span>
+</span><span class='line'> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;/tmp/test.log&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">f</span><span class="o">|</span>
+</span><span class='line'>   <span class="no">ENV</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="o">|</span>
+</span><span class='line'>     <span class="n">f</span><span class="o">.</span><span class="n">puts</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">key</span><span class="si">}</span><span class="s2">=</span><span class="si">#{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span class='line'>   <span class="k">end</span>
+</span><span class='line'>   <span class="k">begin</span>
+</span><span class='line'>     <span class="n">serv_socket</span> <span class="o">=</span> <span class="no">Socket</span><span class="o">.</span><span class="n">for_fd</span><span class="p">(</span><span class="no">ENV</span><span class="o">[</span><span class="s2">&quot;UPSTART_FDS&quot;</span><span class="o">].</span><span class="n">to_i</span><span class="p">)</span>
+</span><span class='line'>     <span class="n">client_socket</span><span class="p">,</span> <span class="n">client_addrinfo</span> <span class="o">=</span> <span class="n">serv_socket</span><span class="o">.</span><span class="n">accept</span>
+</span><span class='line'>     <span class="n">message</span> <span class="o">=</span> <span class="n">client_socket</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
+</span><span class='line'>     <span class="n">f</span><span class="o">.</span><span class="n">puts</span> <span class="n">message</span>
+</span><span class='line'>     <span class="n">client_socket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">&quot;I got your message: </span><span class="si">#{</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</span><span class='line'>     <span class="n">client_socket</span><span class="o">.</span><span class="n">close</span>
+</span><span class='line'>   <span class="k">rescue</span> <span class="no">Exception</span> <span class="o">=&gt;</span> <span class="n">e</span>
+</span><span class='line'>     <span class="n">f</span><span class="o">.</span><span class="n">puts</span> <span class="n">e</span><span class="o">.</span><span class="n">inspect</span>
+</span><span class='line'>     <span class="n">f</span><span class="o">.</span><span class="n">puts</span> <span class="n">e</span><span class="o">.</span><span class="n">backtrace</span>
+</span><span class='line'>   <span class="k">end</span>
+</span><span class='line'>   <span class="n">f</span><span class="o">.</span><span class="n">puts</span> <span class="s2">&quot;finished&quot;</span>
+</span><span class='line'> <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>バグとしては
+<code>for_fd</code> の引数の <code>to_i</code> を忘れていたり、
+<code>send</code> の引数が足りなかったりしました。</p>
+
+<figure class='code'><figcaption><span>/etc/init/socket-test.conf</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'> description &quot;upstart-socket-bridge test&quot;
+</span><span class='line'> start on socket PROTO=inet PORT=34567 ADDR=127.0.0.1  # 34567 番ポートで待ち受け
+</span><span class='line'> setuid exampleuser                                    # root ではなく exampleuser で動作
+</span><span class='line'> exec /usr/bin/ruby /tmp/test-service.rb               # サービス起動
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>nc</code> コマンドで接続して動作確認します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go"> $ nc localhost 34567</span>
+</span><span class='line'><span class="go"> Hello Ruby</span>
+</span><span class='line'><span class="go"> I got your message: Hello Ruby</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>最後にテストで作成したファイルを削除しておきます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go"> $ sudo rm /etc/init/socket-test.conf  # ブリッジとの接続解除</span>
+</span><span class='line'><span class="go"> $ rm /tmp/test-service.rb             # テストサービス削除</span>
+</span><span class='line'><span class="go"> $ rm /tmp/test.log                    # ログファイル削除</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p>python3 の <code>socket.fromfd</code> に相当するのは
+ruby だと <code>BasicSocket.for_fd</code> で、
+<code>BasicSocket</code> クラスには <code>accept</code> がないので、
+<code>BasicSocket</code> クラスを継承している <code>Socket</code> クラスの
+<code>Socket#for_fd</code> を使いました。</p>
+
+<p><code>inetd</code> や <code>xinetd</code> だと標準入出力にソケットをつないでくれて、
+サービスは簡単にかけるのに、
+<code>upstart</code> だと <code>accept</code> して <code>accept</code> から返ってきたソケットを
+<code>close</code> するまでがサービス側でやらないといけないようになっていて、
+ちょっと面倒に感じました。</p>
+
+<p>たまたま目についたプログラムを移植してみただけで、
+深追いはしていないのですが、
+どういう利点があるものなのか、
+調べてみるのも良いのかもしれません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[dockerのカスタムベースイメージを作成する]]></title>
@@ -2608,68 +2739,6 @@ heroku と違って確認なしにいきなり削除されてしまうので注�
 <p>で一覧が出てきます。</p>
 
 <p>普段使いそうなのは <code>config</code> 関連と <code>logs</code> だと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Mac OS XでのIME制御についての考察]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-14-macosx-ime.html"/>
-    <updated>2013-11-14T02:24:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/macosx-ime</id>
-    <content type="html"><![CDATA[<p><a href="http://blog.n-z.jp/blog/2013-11-12-cocoa-emacs-ime.html">Cocoa Emacs のインラインパッチ関連の設定</a>
-の時や
-<a href="http://blog.n-z.jp/blog/2013-11-13-tty-ime.html">iTerm2 で IME 制御シーケンスがきかないのを調べた</a>
-時にも気になったのですが、
-Mac の IME に open/close という概念はあるのかという話です。</p>
-
-<!--more-->
-
-
-<h2>IME の開閉状態?</h2>
-
-<p>iBus 1.5 関連の記事の
-<a href="http://www.kaoriya.net/blog/2013/10/18/">iBusがクソになった理由 — KaoriYa</a>
-で知ったのですが、
-Mac OS X は IME のオン・オフのような状態の切り替えではなく、
-「ことえりのひらがな」とか
-「ことえりのカタカナ」とか
-「ことえりの英字」とか
-のようなIMEの種類を切り替えて入力するようになっています。</p>
-
-<p>この考え方と開閉状態しか考慮していない二値的な制御シーケンスは相性が悪いのではないかと思いました。</p>
-
-<h2>Cocoa Emacs のインラインパッチでは?</h2>
-
-<p>Cocoa Emacs のインラインパッチをよく見ると
-<code>mac-toggle-input-source</code>
-という関数があって、
-<code>(mac-toggle-input-source nil)</code>
-で IME オフ相当に、
-<code>(mac-toggle-input-source t)</code>
-で IME オン相当にできるようなので、
-対応は不可能ではないのかもしれません。</p>
-
-<h2>端末の制御シーケンスでは?</h2>
-
-<p><a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html">TeraTerm Pro の対応制御シーケンス</a>
-には以下の3種類の IME 関連の制御シーケンスがあります。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
-</span><span class='line'>  CSI &lt; s    TTIMESVIME の開閉状態を保存する。
-</span><span class='line'>  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。
-</span><span class='line'>               Ps = 0      IME を閉じる。
-</span><span class='line'>                  = 1      IME を開く。</span></code></pre></td></tr></table></div></figure>
-
-
-<p>この中の <code>TTIMESTIME</code> の <code>Ps</code> を拡張して、
-2 以上も受け付けるようにして、
-(別の状態が不可能なら 1 と同じ挙動で)
-可能ならカタカナ入力などの別の IME の状態を設定できるようにするという案を思いつきました。</p>
 ]]></content>
   </entry>
   
