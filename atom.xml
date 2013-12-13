@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-11T23:11:15+09:00</updated>
+  <updated>2013-12-13T18:54:25+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,350 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[dockerのカスタムベースイメージを作成する]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-13-docker-custom-base-image.html"/>
+    <updated>2013-12-13T18:49:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/docker-custom-base-image</id>
+    <content type="html"><![CDATA[<p>例などにある ubuntu の base image は
+apt-line が archive.ubuntu.com になっていて、
+apt-get install などが遅いです。</p>
+
+<p>日本で使うのなら日本のミラーを使った方が良いので、
+そういう base image を作ります。</p>
+
+<p>base image はあまりカスタマイズせずに、
+派生するイメージにDockerfile などを使って
+カスタマイズをした方が望ましいのですが、
+ほぼ必須のものを毎回インストールするのは無駄なので、
+ついでに日本語 locale を入れるというカスタマイズもしておきます。</p>
+
+<!--more-->
+
+
+<h2>docker 向けのポイント</h2>
+
+<p>最初に docker 向けのポイントをまとめておきます。</p>
+
+<ul>
+<li>最小限にするなら <code>--variant=minbase</code></li>
+<li><code>--include=iproute</code> などで <code>iproute</code> パッケージを入れておかないとネットワークにつながらない</li>
+<li><code>policy-rc.d</code> とか <code>initctl</code> を対処しておかないとパッケージのインストール時に変なことになるかも</li>
+<li><code>dpkg</code> に <code>force-unsafe-io</code> を設定すると <code>apt</code> を高速化できる</li>
+<li><a href="https://github.com/dotcloud/docker/blob/master/contrib/mkimage-debootstrap.sh">mkimage-debootstrap.sh</a> をそのまま使う場合も日本のミラーを指定する方が良い</li>
+</ul>
+
+
+<h2>base image の作り方</h2>
+
+<p>公式ドキュメントの
+<a href="http://docs.docker.io/en/latest/use/baseimages/">Base Image Creation</a>
+を参考にして、基本は
+<a href="https://github.com/dotcloud/docker/blob/master/contrib/mkimage-debootstrap.sh">mkimage-debootstrap.sh</a>
+の手順を使います。</p>
+
+<p>カスタマイズのため、手順を追いかけるだけで直接は使いません。</p>
+
+<h2>debootstrap の実行</h2>
+
+<p>最初は以下のように <code>/tmp/wheezy64</code> などの適当な場所に
+<code>debootstrap</code> で <code>chroot</code> 環境を作成します。
+proxy 環境なら <code>sudo http_proxy=$http_proxy debootstrap ...</code>
+のように指定すれば良いようです。</p>
+
+<p>Debian での例:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo debootstrap --verbose --variant=minbase --include=iproute --arch=amd64 wheezy /tmp/wheezy64 http://cdn.debian.or.jp/debian</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Ubuntu での例:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo debootstrap --verbose --variant=minbase --arch=amd64 precise /tmp/precise64 http://ftp.jaist.ac.jp/pub/Linux/ubuntu/</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>variant</h3>
+
+<p><code>variant</code> で <code>minbase</code> を指定するとインストールされるパッケージが減って、
+本当に最小限の環境になります。
+具体的には <code>Essential: yes</code> のパッケージ
+( <code>aptitude search '~E'</code> または <code>aptitude search '?essential'</code> で一覧)
+と <code>apt</code> がインストールされます。</p>
+
+<p><code>buildd</code> という <code>variant</code> もあって <code>minbase</code> に加えて
+<code>build-essential</code> が追加でインストールされるようなので、
+CI 環境用などの base image なら <code>--variant=buildd</code> の方が
+良いかもしれません。</p>
+
+<p>デフォルトだと <code>Priority</code> が <code>imporant</code> のパッケージ
+( <code>aptitude search '~pimportant</code> または <code>aptitude search '?priority(important)' で一覧)
+がインストールされるようです。
+インストールされるパッケージの差分は
+</code>aptitude search &lsquo;~pimportant!~E`
+で調べられます。</p>
+
+<h3>include</h3>
+
+<p>元の <code>mkimage-debootstrap.sh</code> では <code>iproute,iputils-ping</code> と指定してますが、
+<code>iputils-ping</code> は必須ではないのでここでは省略しています。</p>
+
+<p><code>iproute</code> は docker 環境では必須です。
+このパッケージに含まれる <code>ip</code> コマンドが入っていないとネットワークにつながりません。</p>
+
+<p><code>iproute</code> パッケージは <code>Priority</code> が <code>optional</code> なので
+普通に <code>debootstrap</code> を実行しても入らないので、
+注意が必要です。</p>
+
+<h3>その他の引数</h3>
+
+<p>arch の指定とか suite の指定とか生成先ディレクトリの指定とか、
+ミラーの指定とかは見てわかる通りです。</p>
+
+<h2>docker 向けのカスタマイズ</h2>
+
+<p>次に生成されたディレクトリの中で
+<code>mkimage-debootstrap.sh</code>
+にデフォルト (<code>-d</code> オプションが指定されなかったとき) の処理をしていきます。</p>
+
+<h3>policy-rc.d</h3>
+
+<p>ファイルの作成方法は何でも良いのですが、
+exit status で 101 を返す <code>usr/sbin/policy-rc.d</code> を作成して、
+パッケージのインストールやアップデートなどで init スクリプトが
+実行されないようにします。</p>
+
+<p>ちなみに
+<code>$'...'</code> は bash に <code>\n</code> を解釈させるための書き方なので、
+<code>'...'</code> や <code>"..."</code> の間違いではありません。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> echo $'#!/bin/sh\nexit 101' | sudo tee usr/sbin/policy-rc.d &gt; /dev/null
+</span><span class='line'> sudo chmod +x usr/sbin/policy-rc.d</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>policy-rc.d</code> については <code>invoke-rc.d</code> の man を参照してください。</p>
+
+<h3>sbin/initctl</h3>
+
+<p>initctl を実行してしまう upstart スクリプトがあるらしく、
+その対処もします。</p>
+
+<p>policy-rc.d は存在しなかったので、作成するだけでしたが、
+<code>sbin/initctl</code> はパッケージ管理のファイルとして存在するので
+<code>dpkg-divert</code> でパッケージの更新などで上書きされないようにしています。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo chroot . dpkg-divert --local --rename --add /sbin/initctl
+</span><span class='line'> sudo ln -sf /bin/true sbin/initctl</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>パッケージのキャッシュの削除</h3>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo chroot . apt-get clean</span></code></pre></td></tr></table></div></figure>
+
+
+<p>を実行して不要な deb ファイルなどを削除して、
+イメージのサイズを削減しています。</p>
+
+<p>後で独自カスタマイズのところでパッケージをインストールして、
+その後でまた実行するので、その場合はここでは実行しなくてもかまいません。</p>
+
+<h3>apt の高速化など</h3>
+
+<p><code>mkimage-debootstrap.sh</code> のコメントには
+<code>dpkg</code> がパッケージの展開後に <code>sync()</code> を呼んでいるのが
+原因で無駄に遅くなっているので、
+強制的に <code>sync()</code> を呼ばなくさせると書いています。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> echo 'force-unsafe-io' | sudo tee etc/dpkg/dpkg.cfg.d/02apt-speedup &gt; /dev/null</span></code></pre></td></tr></table></div></figure>
+
+
+<p>それから、 deb ファイルを残さないようにして image ファイルが大きくならないようにしています。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> echo 'DPkg::Post-Invoke {"/bin/rm -f /var/cache/apt/archives/*.deb || true";};' | sudo tee etc/apt/apt.conf.d/no-cache &gt; /dev/null</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>元に戻す方法</h3>
+
+<p><code>mkimage-debootstrap.sh</code> のコメントに
+元に戻す方法も書いてありました。
+<code>dpkg-divert</code> 以外はファイルを消すだけです。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> rm /usr/sbin/policy-rc.d
+</span><span class='line'> rm /sbin/initctl; dpkg-divert --rename --remove /sbin/initctl
+</span><span class='line'> rm /etc/dpkg/dpkg.cfg.d/02apt-speedup
+</span><span class='line'> rm /etc/apt/apt.conf.d/no-cache</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>apt-line の変更</h3>
+
+<p><code>etc/apt/sources.list</code> をみると</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> deb http://cdn.debian.or.jp/debian wheezy main</span></code></pre></td></tr></table></div></figure>
+
+
+<p>だけになっているので、 <code>updates</code> と <code>security</code> を追加します。</p>
+
+<p><code>mkimage-debootstrap.sh</code> もデフォルト
+(<code>-d</code> も <code>-s</code> も指定されていないとき)
+の動作では追加します。</p>
+
+<p>この例では以下のようにしました。</p>
+
+<p>debian での例:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> deb http://cdn.debian.or.jp/debian wheezy main
+</span><span class='line'> deb http://cdn.debian.or.jp/debian wheezy-updates main
+</span><span class='line'> deb http://security.debian.org/ wheezy/updates main</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ubuntu での例:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> deb http://ftp.jaist.ac.jp/pub/Linux/ubuntu precise main universe
+</span><span class='line'> deb http://ftp.jaist.ac.jp/pub/Linux/ubuntu precise-updates main universe
+</span><span class='line'> deb http://ftp.jaist.ac.jp/pub/Linux/ubuntu precise-security main universe</span></code></pre></td></tr></table></div></figure>
+
+
+<p>main 以外を追加したい場合はここで追加しておくと良さそうです。
+<code>mkimage-debootstrap.sh</code> でも ubuntu の場合は <code>universe</code> が追加されていました。</p>
+
+<h2>独自カスタマイズ</h2>
+
+<p>ここから独自カスタマイズになります。</p>
+
+<h3>アップデート実行</h3>
+
+<p>base image にセキュリティアップデートも入れておきたいなら、
+更新しておきます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo chroot . apt-get update
+</span><span class='line'> sudo chroot . apt-get dist-upgrade</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>日本語 locale 追加</h3>
+
+<p>debian の場合は
+別環境で <code>debconf-get-selections</code> で調べておいた設定を使って、
+<code>debconf-set-selections</code> で設定を入れておいて
+<code>DEBIAN_FRONTEND=noninteractive</code> でインストールします。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> echo locales locales/locales_to_be_generated multiselect ja_JP.EUC-JP EUC-JP, ja_JP.UTF-8 UTF-8 | sudo chroot . debconf-set-selections
+</span><span class='line'> echo locales locales/default_environment_locale select ja_JP.UTF-8 | sudo chroot . debconf-set-selections
+</span><span class='line'> sudo chroot . env DEBIAN_FRONTEND=noninteractive apt-get install locales</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ubuntu の場合は
+<code>language-pack-ja</code> パッケージを入れても良いのですが、
+不要なパッケージを入れるのが嫌なら <code>locale-gen</code> コマンドで
+生成しても良いです。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo chroot . locale-gen ja_JP.UTF-8
+</span><span class='line'> sudo chroot . locale-gen ja_JP.EUC-JP</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>パッケージのキャッシュの削除</h3>
+
+<p>カスタマイズが終わったら clean を実行しておきます。
+<code>etc/apt/apt.conf.d/no-cache</code> を作成していれば不要かもしれません。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo chroot . apt-get clean</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>イメージ作成と取り込み</h2>
+
+<h3>tarball 作成</h3>
+
+<p><code>mkimage-debootstrap.sh</code> は <code>-t</code> オプションが指定されたときに
+docker のイメージではなく tarball を作成します。
+直接取り込むならこの手順は不要です。</p>
+
+<p>作成方法としては
+最初に <code>touch</code> で一般ユーザー権限のファイルになるようにしておいて、
+中身は <code>root</code> 権限で入れるようにしています。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> touch /tmp/wheezy64.tar.xz
+</span><span class='line'> sudo tar --numeric-owner -caf /tmp/wheezy64.tar.xz .</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>イメージ取り込み</h3>
+
+<p><code>sudo docker</code> は root 権限が不要な設定にいていれば <code>docker</code> だけでかまいません。</p>
+
+<p><code>mkimage-debootstrap.sh</code> は安定版や LTS に <code>latest</code> タグを設定したり、
+<code>etc/debian_version</code> や <code>etc/lsb-release</code> をみて
+タグを設定しているので、必要に応じて設定しておきます。</p>
+
+<p>イメージ名としては「ユーザー名/レポジトリ名」という形式が推奨されていますが、
+ここでは例として「ユーザー名」の部分は「local」にしておきます。
+そして「レポジトリ名」としては日本語 locale を入れたということで
+<code>-ja</code> を付けました。
+日本のミラーを使っているということで <code>-ja-jp</code> にしても良かったのですが、
+長かったので、 <code>-ja</code> だけにしました。</p>
+
+<p>Debian での例:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo tar --numeric-owner -c . | sudo docker import - local/debian-ja:wheezy
+</span><span class='line'> sudo docker tag local/debian-ja:wheezy local/debian-ja:latest
+</span><span class='line'> sudo docker tag local/debian-ja:wheezy local/debian-ja:7.2</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Ubuntu での例:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo tar --numeric-owner -c . | sudo docker import - local/ubuntu-ja:precise
+</span><span class='line'> sudo docker tag local/ubuntu-ja:precise local/ubuntu-ja:latest
+</span><span class='line'> sudo docker tag local/ubuntu-ja:precise local/ubuntu-ja:12.04</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p><a href="https://github.com/dotcloud/docker/blob/master/contrib/mkimage-debootstrap.sh">mkimage-debootstrap.sh</a>
+で何をやっているのか、
+同じことを手動でやるのはどうするのかということを説明しました。</p>
+
+<p>最初のポイントにも書きましたが
+<code>mkimage-debootstrap.sh</code>
+を直接使うのも良いですが、
+最低限ミラーを指定するのがおすすめです。</p>
+
+<p>目的によっては <code>variant</code> を変更したり、
+<code>include</code> でインストールするパッケージを増やしておくだけでも
+便利になると思います。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[zshのPATHの自動重複削除や余計なPATHの削除]]></title>
@@ -2326,104 +2670,6 @@ Mac OS X は IME のオン・オフのような状態の切り替えではなく
 2 以上も受け付けるようにして、
 (別の状態が不可能なら 1 と同じ挙動で)
 可能ならカタカナ入力などの別の IME の状態を設定できるようにするという案を思いつきました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[launchdでdistnotedを定期的に終了させる]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-13-killall-distnoted-periodically.html"/>
-    <updated>2013-11-13T18:23:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/killall-distnoted-periodically</id>
-    <content type="html"><![CDATA[<p>Mac OS X 10.9 Mavericks で気がつくと
-<code>distnoted</code> というプロセスのメモリ消費が増えて
-大変なことになっていることがあって、
-気がついた時は手動で <code>killall distnoted</code> で対処したり、
-OS 自体を再起動したりしていました。</p>
-
-<p>たまに気がつかないうちに大量にメモリを消費して、
-確認のためのアクティビティモニタを開くのも大変なことがあったので、
-さすがにまずいと思って <code>launchd</code> で定期的に実行するようにしました。</p>
-
-<!--more-->
-
-
-<h2>distnoted とは?</h2>
-
-<p>man によると <code>distributed notification server</code> というものらしいのですが、
-詳細はよくわかりませんでした。</p>
-
-<p>man には自動で起動するものなので、
-手動で起動するものではないとは書いてありました。</p>
-
-<p>必要に応じて自動で起動してくるので、
-<code>killall</code> などで止めてしまっても問題が無いという情報は
-どこかでみかけました。</p>
-
-<p><code>ps</code> でプロセスを確認すると <code>root</code> 権限で
-<code>/usr/sbin/distnoted daemon</code> が動いていて、
-他にいくつかの
-<code>/usr/sbin/distnoted agent</code>
-がユーザー権限で動いていました。
-そのうちの1個がログインしたユーザーの権限で動いていて、
-それがメモリを大量に消費していて、
-<code>killall distnoted</code>
-ではそのプロセスだけを終了させています。</p>
-
-<h2>launchd による定期実行</h2>
-
-<p><code>launchd</code> で定期的に実行するには</p>
-
-<figure class='code'><figcaption><span>~/Library/LaunchAgents/local.killall.distnoted.plist</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="cp">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span>
-</span><span class='line'><span class="cp">&lt;!DOCTYPE plist PUBLIC &quot;-//Apple//DTD PLIST 1.0//EN&quot; &quot;http://www.apple.com/DTDs/PropertyList-1.0.dtd&quot;&gt;</span>
-</span><span class='line'><span class="nt">&lt;plist</span> <span class="na">version=</span><span class="s">&quot;1.0&quot;</span><span class="nt">&gt;</span>
-</span><span class='line'><span class="nt">&lt;dict&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;key&gt;</span>Label<span class="nt">&lt;/key&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;string&gt;</span>local.killall.distnoted<span class="nt">&lt;/string&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;key&gt;</span>ProgramArguments<span class="nt">&lt;/key&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;array&gt;</span>
-</span><span class='line'>      <span class="nt">&lt;string&gt;</span>/usr/bin/killall<span class="nt">&lt;/string&gt;</span>
-</span><span class='line'>      <span class="nt">&lt;string&gt;</span>distnoted<span class="nt">&lt;/string&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;/array&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;key&gt;</span>StartInterval<span class="nt">&lt;/key&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;integer&gt;</span>600<span class="nt">&lt;/integer&gt;</span>
-</span><span class='line'><span class="nt">&lt;/dict&gt;</span>
-</span><span class='line'><span class="nt">&lt;/plist&gt;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>という内容のファイルを
-<code>~/Library/LaunchAgents/local.killall.distnoted.plist</code>
-に作成して
-<code>launchctl load ~/Library/LaunchAgents/local.killall.distnoted.plist</code>
-で反映します。</p>
-
-<p>設定を変更したときは</p>
-
-<figure class='code'><figcaption><span>~/Library/LaunchAgents/local.killall.distnoted.plist</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='xml'><span class='line'>launchctl unload ~/Library/LaunchAgents/local.killall.distnoted.plist
-</span><span class='line'>launchctl load ~/Library/LaunchAgents/local.killall.distnoted.plist
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>で反映します。</p>
-
-<p><code>StartInterval</code> は秒単位なので <code>600</code> だと10分間隔です。</p>
 ]]></content>
   </entry>
   

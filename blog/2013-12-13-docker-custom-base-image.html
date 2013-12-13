@@ -1,0 +1,673 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>dockerのカスタムベースイメージを作成する - @znz blog</title>
+  <meta name="author" content="Kazuhiro NISHIYAMA">
+
+  
+  <meta name="description" content="例などにある ubuntu の base image は
+apt-line が archive.ubuntu.com になっていて、
+apt-get install などが遅いです。 日本で使うのなら日本のミラーを使った方が良いので、
+そういう base image を作ります。 base &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-12-13-docker-custom-base-image.html">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/lib/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-43859023-1', 'n-z.jp');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">@znz blog</a></h1>
+  
+    <h2>ZnZ の memo のようなもの</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://www.google.co.jp/cse" id="cse-search-box">
+  <div>
+    <input type="hidden" name="cx" value="partner-pub-4711975605457723:5173725094" />
+    <input type="hidden" name="ie" value="UTF-8" />
+    <input type="text" name="q" size="40" />
+    <input type="submit" name="sa" value="検索" />
+  </div>
+</form>
+
+<script type="text/javascript" src="http://www.google.co.jp/coop/cse/brand?form=cse-search-box&amp;lang=ja"></script>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">dockerのカスタムベースイメージを作成する</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-12-13T18:49:00+09:00" pubdate data-updated="true">2013-12-13 (Fri)</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>例などにある ubuntu の base image は
+apt-line が archive.ubuntu.com になっていて、
+apt-get install などが遅いです。</p>
+
+<p>日本で使うのなら日本のミラーを使った方が良いので、
+そういう base image を作ります。</p>
+
+<p>base image はあまりカスタマイズせずに、
+派生するイメージにDockerfile などを使って
+カスタマイズをした方が望ましいのですが、
+ほぼ必須のものを毎回インストールするのは無駄なので、
+ついでに日本語 locale を入れるというカスタマイズもしておきます。</p>
+
+<!--more-->
+
+
+<h2>docker 向けのポイント</h2>
+
+<p>最初に docker 向けのポイントをまとめておきます。</p>
+
+<ul>
+<li>最小限にするなら <code>--variant=minbase</code></li>
+<li><code>--include=iproute</code> などで <code>iproute</code> パッケージを入れておかないとネットワークにつながらない</li>
+<li><code>policy-rc.d</code> とか <code>initctl</code> を対処しておかないとパッケージのインストール時に変なことになるかも</li>
+<li><code>dpkg</code> に <code>force-unsafe-io</code> を設定すると <code>apt</code> を高速化できる</li>
+<li><a href="https://github.com/dotcloud/docker/blob/master/contrib/mkimage-debootstrap.sh">mkimage-debootstrap.sh</a> をそのまま使う場合も日本のミラーを指定する方が良い</li>
+</ul>
+
+
+<h2>base image の作り方</h2>
+
+<p>公式ドキュメントの
+<a href="http://docs.docker.io/en/latest/use/baseimages/">Base Image Creation</a>
+を参考にして、基本は
+<a href="https://github.com/dotcloud/docker/blob/master/contrib/mkimage-debootstrap.sh">mkimage-debootstrap.sh</a>
+の手順を使います。</p>
+
+<p>カスタマイズのため、手順を追いかけるだけで直接は使いません。</p>
+
+<h2>debootstrap の実行</h2>
+
+<p>最初は以下のように <code>/tmp/wheezy64</code> などの適当な場所に
+<code>debootstrap</code> で <code>chroot</code> 環境を作成します。
+proxy 環境なら <code>sudo http_proxy=$http_proxy debootstrap ...</code>
+のように指定すれば良いようです。</p>
+
+<p>Debian での例:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo debootstrap --verbose --variant=minbase --include=iproute --arch=amd64 wheezy /tmp/wheezy64 http://cdn.debian.or.jp/debian</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Ubuntu での例:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo debootstrap --verbose --variant=minbase --arch=amd64 precise /tmp/precise64 http://ftp.jaist.ac.jp/pub/Linux/ubuntu/</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>variant</h3>
+
+<p><code>variant</code> で <code>minbase</code> を指定するとインストールされるパッケージが減って、
+本当に最小限の環境になります。
+具体的には <code>Essential: yes</code> のパッケージ
+( <code>aptitude search '~E'</code> または <code>aptitude search '?essential'</code> で一覧)
+と <code>apt</code> がインストールされます。</p>
+
+<p><code>buildd</code> という <code>variant</code> もあって <code>minbase</code> に加えて
+<code>build-essential</code> が追加でインストールされるようなので、
+CI 環境用などの base image なら <code>--variant=buildd</code> の方が
+良いかもしれません。</p>
+
+<p>デフォルトだと <code>Priority</code> が <code>imporant</code> のパッケージ
+( <code>aptitude search '~pimportant</code> または <code>aptitude search '?priority(important)' で一覧)
+がインストールされるようです。
+インストールされるパッケージの差分は
+</code>aptitude search &lsquo;~pimportant!~E`
+で調べられます。</p>
+
+<h3>include</h3>
+
+<p>元の <code>mkimage-debootstrap.sh</code> では <code>iproute,iputils-ping</code> と指定してますが、
+<code>iputils-ping</code> は必須ではないのでここでは省略しています。</p>
+
+<p><code>iproute</code> は docker 環境では必須です。
+このパッケージに含まれる <code>ip</code> コマンドが入っていないとネットワークにつながりません。</p>
+
+<p><code>iproute</code> パッケージは <code>Priority</code> が <code>optional</code> なので
+普通に <code>debootstrap</code> を実行しても入らないので、
+注意が必要です。</p>
+
+<h3>その他の引数</h3>
+
+<p>arch の指定とか suite の指定とか生成先ディレクトリの指定とか、
+ミラーの指定とかは見てわかる通りです。</p>
+
+<h2>docker 向けのカスタマイズ</h2>
+
+<p>次に生成されたディレクトリの中で
+<code>mkimage-debootstrap.sh</code>
+にデフォルト (<code>-d</code> オプションが指定されなかったとき) の処理をしていきます。</p>
+
+<h3>policy-rc.d</h3>
+
+<p>ファイルの作成方法は何でも良いのですが、
+exit status で 101 を返す <code>usr/sbin/policy-rc.d</code> を作成して、
+パッケージのインストールやアップデートなどで init スクリプトが
+実行されないようにします。</p>
+
+<p>ちなみに
+<code>$'...'</code> は bash に <code>\n</code> を解釈させるための書き方なので、
+<code>'...'</code> や <code>"..."</code> の間違いではありません。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> echo $'#!/bin/sh\nexit 101' | sudo tee usr/sbin/policy-rc.d &gt; /dev/null
+</span><span class='line'> sudo chmod +x usr/sbin/policy-rc.d</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>policy-rc.d</code> については <code>invoke-rc.d</code> の man を参照してください。</p>
+
+<h3>sbin/initctl</h3>
+
+<p>initctl を実行してしまう upstart スクリプトがあるらしく、
+その対処もします。</p>
+
+<p>policy-rc.d は存在しなかったので、作成するだけでしたが、
+<code>sbin/initctl</code> はパッケージ管理のファイルとして存在するので
+<code>dpkg-divert</code> でパッケージの更新などで上書きされないようにしています。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo chroot . dpkg-divert --local --rename --add /sbin/initctl
+</span><span class='line'> sudo ln -sf /bin/true sbin/initctl</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>パッケージのキャッシュの削除</h3>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo chroot . apt-get clean</span></code></pre></td></tr></table></div></figure>
+
+
+<p>を実行して不要な deb ファイルなどを削除して、
+イメージのサイズを削減しています。</p>
+
+<p>後で独自カスタマイズのところでパッケージをインストールして、
+その後でまた実行するので、その場合はここでは実行しなくてもかまいません。</p>
+
+<h3>apt の高速化など</h3>
+
+<p><code>mkimage-debootstrap.sh</code> のコメントには
+<code>dpkg</code> がパッケージの展開後に <code>sync()</code> を呼んでいるのが
+原因で無駄に遅くなっているので、
+強制的に <code>sync()</code> を呼ばなくさせると書いています。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> echo 'force-unsafe-io' | sudo tee etc/dpkg/dpkg.cfg.d/02apt-speedup &gt; /dev/null</span></code></pre></td></tr></table></div></figure>
+
+
+<p>それから、 deb ファイルを残さないようにして image ファイルが大きくならないようにしています。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> echo 'DPkg::Post-Invoke {"/bin/rm -f /var/cache/apt/archives/*.deb || true";};' | sudo tee etc/apt/apt.conf.d/no-cache &gt; /dev/null</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>元に戻す方法</h3>
+
+<p><code>mkimage-debootstrap.sh</code> のコメントに
+元に戻す方法も書いてありました。
+<code>dpkg-divert</code> 以外はファイルを消すだけです。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> rm /usr/sbin/policy-rc.d
+</span><span class='line'> rm /sbin/initctl; dpkg-divert --rename --remove /sbin/initctl
+</span><span class='line'> rm /etc/dpkg/dpkg.cfg.d/02apt-speedup
+</span><span class='line'> rm /etc/apt/apt.conf.d/no-cache</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>apt-line の変更</h3>
+
+<p><code>etc/apt/sources.list</code> をみると</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> deb http://cdn.debian.or.jp/debian wheezy main</span></code></pre></td></tr></table></div></figure>
+
+
+<p>だけになっているので、 <code>updates</code> と <code>security</code> を追加します。</p>
+
+<p><code>mkimage-debootstrap.sh</code> もデフォルト
+(<code>-d</code> も <code>-s</code> も指定されていないとき)
+の動作では追加します。</p>
+
+<p>この例では以下のようにしました。</p>
+
+<p>debian での例:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> deb http://cdn.debian.or.jp/debian wheezy main
+</span><span class='line'> deb http://cdn.debian.or.jp/debian wheezy-updates main
+</span><span class='line'> deb http://security.debian.org/ wheezy/updates main</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ubuntu での例:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> deb http://ftp.jaist.ac.jp/pub/Linux/ubuntu precise main universe
+</span><span class='line'> deb http://ftp.jaist.ac.jp/pub/Linux/ubuntu precise-updates main universe
+</span><span class='line'> deb http://ftp.jaist.ac.jp/pub/Linux/ubuntu precise-security main universe</span></code></pre></td></tr></table></div></figure>
+
+
+<p>main 以外を追加したい場合はここで追加しておくと良さそうです。
+<code>mkimage-debootstrap.sh</code> でも ubuntu の場合は <code>universe</code> が追加されていました。</p>
+
+<h2>独自カスタマイズ</h2>
+
+<p>ここから独自カスタマイズになります。</p>
+
+<h3>アップデート実行</h3>
+
+<p>base image にセキュリティアップデートも入れておきたいなら、
+更新しておきます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo chroot . apt-get update
+</span><span class='line'> sudo chroot . apt-get dist-upgrade</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>日本語 locale 追加</h3>
+
+<p>debian の場合は
+別環境で <code>debconf-get-selections</code> で調べておいた設定を使って、
+<code>debconf-set-selections</code> で設定を入れておいて
+<code>DEBIAN_FRONTEND=noninteractive</code> でインストールします。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> echo locales locales/locales_to_be_generated multiselect ja_JP.EUC-JP EUC-JP, ja_JP.UTF-8 UTF-8 | sudo chroot . debconf-set-selections
+</span><span class='line'> echo locales locales/default_environment_locale select ja_JP.UTF-8 | sudo chroot . debconf-set-selections
+</span><span class='line'> sudo chroot . env DEBIAN_FRONTEND=noninteractive apt-get install locales</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ubuntu の場合は
+<code>language-pack-ja</code> パッケージを入れても良いのですが、
+不要なパッケージを入れるのが嫌なら <code>locale-gen</code> コマンドで
+生成しても良いです。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo chroot . locale-gen ja_JP.UTF-8
+</span><span class='line'> sudo chroot . locale-gen ja_JP.EUC-JP</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>パッケージのキャッシュの削除</h3>
+
+<p>カスタマイズが終わったら clean を実行しておきます。
+<code>etc/apt/apt.conf.d/no-cache</code> を作成していれば不要かもしれません。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo chroot . apt-get clean</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>イメージ作成と取り込み</h2>
+
+<h3>tarball 作成</h3>
+
+<p><code>mkimage-debootstrap.sh</code> は <code>-t</code> オプションが指定されたときに
+docker のイメージではなく tarball を作成します。
+直接取り込むならこの手順は不要です。</p>
+
+<p>作成方法としては
+最初に <code>touch</code> で一般ユーザー権限のファイルになるようにしておいて、
+中身は <code>root</code> 権限で入れるようにしています。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> touch /tmp/wheezy64.tar.xz
+</span><span class='line'> sudo tar --numeric-owner -caf /tmp/wheezy64.tar.xz .</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>イメージ取り込み</h3>
+
+<p><code>sudo docker</code> は root 権限が不要な設定にいていれば <code>docker</code> だけでかまいません。</p>
+
+<p><code>mkimage-debootstrap.sh</code> は安定版や LTS に <code>latest</code> タグを設定したり、
+<code>etc/debian_version</code> や <code>etc/lsb-release</code> をみて
+タグを設定しているので、必要に応じて設定しておきます。</p>
+
+<p>イメージ名としては「ユーザー名/レポジトリ名」という形式が推奨されていますが、
+ここでは例として「ユーザー名」の部分は「local」にしておきます。
+そして「レポジトリ名」としては日本語 locale を入れたということで
+<code>-ja</code> を付けました。
+日本のミラーを使っているということで <code>-ja-jp</code> にしても良かったのですが、
+長かったので、 <code>-ja</code> だけにしました。</p>
+
+<p>Debian での例:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo tar --numeric-owner -c . | sudo docker import - local/debian-ja:wheezy
+</span><span class='line'> sudo docker tag local/debian-ja:wheezy local/debian-ja:latest
+</span><span class='line'> sudo docker tag local/debian-ja:wheezy local/debian-ja:7.2</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Ubuntu での例:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> sudo tar --numeric-owner -c . | sudo docker import - local/ubuntu-ja:precise
+</span><span class='line'> sudo docker tag local/ubuntu-ja:precise local/ubuntu-ja:latest
+</span><span class='line'> sudo docker tag local/ubuntu-ja:precise local/ubuntu-ja:12.04</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p><a href="https://github.com/dotcloud/docker/blob/master/contrib/mkimage-debootstrap.sh">mkimage-debootstrap.sh</a>
+で何をやっているのか、
+同じことを手動でやるのはどうするのかということを説明しました。</p>
+
+<p>最初のポイントにも書きましたが
+<code>mkimage-debootstrap.sh</code>
+を直接使うのも良いですが、
+最低限ミラーを指定するのがおすすめです。</p>
+
+<p>目的によっては <code>variant</code> を変更したり、
+<code>include</code> でインストールするパッケージを増やしておくだけでも
+便利になると思います。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-12-13T18:49:00+09:00" pubdate data-updated="true">2013-12-13 (Fri)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/docker/'>docker</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-12-13-docker-custom-base-image.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-12-13-docker-custom-base-image.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-12-13-docker-custom-base-image.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013-12-12-zsh-cleanup-path.html" title="Previous Post: zshのPATHの自動重複削除や余計なPATHの削除">&laquo; zshのPATHの自動重複削除や余計なPATHの削除</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- sidebar -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:160px;height:600px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4210402292"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+<section>
+  <h1>About Me</h1>
+  <p><a href="http://rubycommitters.org/">Ruby のコミッター</a>とかやってます。</p>
+<script data-gittip-username="znz"
+        data-gittip-widget="button"
+        src="//gttp.co/v1.js"></script>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013-12-13-docker-custom-base-image.html">dockerのカスタムベースイメージを作成する</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-12-12-zsh-cleanup-path.html">zshのPATHの自動重複削除や余計なPATHの削除</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-12-11-mailman-strip-dkim-signature.html">mailmanでDKIM-Signatureヘッダを削除する</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-12-11-emacs-color-mode-line.html">emacsのmode-lineのminor-modeなどに色をつける</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-12-10-auto-zshrc-recompile.html">.zshrcの自動再コンパイル</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>Tag Cloud</h1>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 105.45454545454545%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 105.45454545454545%'>amagasakirb(2)</a> <a href='/blog/categories/ansible' style='font-size: 108.18181818181819%'>ansible(3)</a> <a href='/blog/categories/anyenv' style='font-size: 102.72727272727273%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 102.72727272727273%'>authorization(1)</a> <a href='/blog/categories/bts' style='font-size: 102.72727272727273%'>bts(1)</a> <a href='/blog/categories/certification' style='font-size: 102.72727272727273%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 102.72727272727273%'>coffeescript(1)</a> <a href='/blog/categories/community' style='font-size: 108.18181818181819%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 127.27272727272728%'>debian(10)</a> <a href='/blog/categories/devise' style='font-size: 105.45454545454545%'>devise(2)</a> <a href='/blog/categories/docker' style='font-size: 105.45454545454545%'>docker(2)</a> <a href='/blog/categories/dokku' style='font-size: 102.72727272727273%'>dokku(1)</a> <a href='/blog/categories/doorkeeper' style='font-size: 102.72727272727273%'>doorkeeper(1)</a> <a href='/blog/categories/elscreen' style='font-size: 102.72727272727273%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 116.36363636363636%'>emacs(6)</a> <a href='/blog/categories/event' style='font-size: 135.45454545454544%'>event(13)</a> <a href='/blog/categories/gem' style='font-size: 102.72727272727273%'>gem(1)</a> <a href='/blog/categories/git' style='font-size: 102.72727272727273%'>git(1)</a> <a href='/blog/categories/github' style='font-size: 113.63636363636364%'>github(5)</a> <a href='/blog/categories/homebrew' style='font-size: 113.63636363636364%'>homebrew(5)</a> <a href='/blog/categories/html5' style='font-size: 105.45454545454545%'>html5(2)</a> <a href='/blog/categories/ime' style='font-size: 108.18181818181819%'>ime(3)</a> <a href='/blog/categories/irb' style='font-size: 102.72727272727273%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 102.72727272727273%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 108.18181818181819%'>javascript(3)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 105.45454545454545%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 102.72727272727273%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.72727272727273%'>jus(1)</a> <a href='/blog/categories/k-of' style='font-size: 102.72727272727273%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 105.45454545454545%'>kansaidebian(2)</a> <a href='/blog/categories/kernelvm' style='font-size: 102.72727272727273%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 102.72727272727273%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 105.45454545454545%'>land-of-lisp(2)</a> <a href='/blog/categories/linux' style='font-size: 110.9090909090909%'>linux(4)</a> <a href='/blog/categories/lxc' style='font-size: 102.72727272727273%'>lxc(1)</a> <a href='/blog/categories/mac' style='font-size: 130.0%'>mac(11)</a> <a href='/blog/categories/mailman' style='font-size: 105.45454545454545%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 105.45454545454545%'>mavericks(2)</a> <a href='/blog/categories/milter-manager' style='font-size: 102.72727272727273%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 102.72727272727273%'>mojibake(1)</a> <a href='/blog/categories/nadoka' style='font-size: 102.72727272727273%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 102.72727272727273%'>oauth2(1)</a> <a href='/blog/categories/octopress' style='font-size: 108.18181818181819%'>octopress(3)</a> <a href='/blog/categories/omniauth' style='font-size: 102.72727272727273%'>omniauth(1)</a> <a href='/blog/categories/postfix' style='font-size: 105.45454545454545%'>postfix(2)</a> <a href='/blog/categories/pundit' style='font-size: 102.72727272727273%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 102.72727272727273%'>pyenv(1)</a> <a href='/blog/categories/rabbit' style='font-size: 105.45454545454545%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 135.45454545454544%'>rails(13)</a> <a href='/blog/categories/rbenv' style='font-size: 108.18181818181819%'>rbenv(3)</a> <a href='/blog/categories/rubima' style='font-size: 102.72727272727273%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(22)</a> <a href='/blog/categories/rubykaigi' style='font-size: 102.72727272727273%'>rubykaigi(1)</a> <a href='/blog/categories/rubymotion' style='font-size: 108.18181818181819%'>rubymotion(3)</a> <a href='/blog/categories/shell' style='font-size: 102.72727272727273%'>shell(1)</a> <a href='/blog/categories/td2planet' style='font-size: 102.72727272727273%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 108.18181818181819%'>tty(3)</a> <a href='/blog/categories/ubuntu' style='font-size: 124.54545454545455%'>ubuntu(9)</a> <a href='/blog/categories/zsh' style='font-size: 108.18181818181819%'>zsh(3)</a> </span>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/znz">@znz</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'znz',
+            count: 3,
+            skip_forks: false,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - Kazuhiro NISHIYAMA -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'znzblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-12-13-docker-custom-base-image.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-12-13-docker-custom-base-image.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+<script type="text/javascript" src="http://b.st-hatena.com/js/bookmark_button.js" charset="utf-8" async="async"></script>
+
+
+</body>
+</html>
