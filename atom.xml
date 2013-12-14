@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-14T10:59:42+09:00</updated>
+  <updated>2013-12-14T19:58:19+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,387 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[dockerのWeb UI 3種類を比較してみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-15-compare-docker-web-ui.html"/>
+    <updated>2013-12-15T00:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/compare-docker-web-ui</id>
+    <content type="html"><![CDATA[<p><a href="http://www.docker.io/">docker</a> の Web UI を比較してみました。</p>
+
+<p>対象は以下の3種類の Web UI です。
+検索すると <code>DockerUI</code> 以外が見つけにくいようなので、
+まとめて紹介します。</p>
+
+<ul>
+<li><a href="https://github.com/shipyard/shipyard">Shipyard</a></li>
+<li><a href="https://github.com/dynport/dockland">Dockland</a></li>
+<li><a href="https://github.com/crosbymichael/dockerui">DockerUI</a></li>
+</ul>
+
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<p>先月末頃にも試したのですが、
+その時にはこんなに <code>docker</code> が流行るとは思っていなかったので、
+ちゃんとまとめていませんでした。</p>
+
+<p>そこで改めて新しいバージョンを試しつつ比較したいと思います。</p>
+
+<ul>
+<li>amd64 の Ubuntu 13.04 (raring)</li>
+<li>docker 0.7.1</li>
+<li>Shipyard version 0dc558</li>
+<li>Dockland 5a02db9d20</li>
+<li>DockerUI v0.3 (5094acc024)</li>
+</ul>
+
+
+<h2>Shipyard</h2>
+
+<h3>インストール</h3>
+
+<p><a href="https://github.com/shipyard/shipyard/wiki/QuickStart">QuickStart</a>
+の説明を参考にして <code>/etc/default/docker</code> を作成して <code>DOCKER_OPTS</code> を設定します。
+<code>-d</code> は <code>/etc/init/docker.conf</code> の方に書いてあるので不要です。</p>
+
+<p>VirtualBox の中で試したので、
+IP アドレスは <code>10.0.2.15</code> にしています。</p>
+
+<figure class='code'><figcaption><span>/etc/default/docker</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">DOCKER_OPTS</span><span class="o">=</span><span class="s2">&quot;-H tcp://10.0.2.15:4243 -H unix:///var/run/docker.sock&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>公開されている latest Shipyard image を使って起動します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">docker pull shipyard/shipyard</span>
+</span><span class='line'><span class="go">docker run -i -t -d -p 80:80 -p 8000:8000 shipyard/shipyard</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>バージョンアップの時も同様に <code>docker pull</code> でとってくると
+古いイメージがたまっていくので、
+<code>docker images</code> で一覧を確認して
+<code>REPOSITORY</code> や <code>TAG</code> が <code>&lt;none&gt;</code> になっているイメージを
+適当に <code>docker rmi</code> で削除すると良いと思います。</p>
+
+<h3>初期設定</h3>
+
+<p><code>http://127.0.0.1:8000/</code>
+を開いて</p>
+
+<ul>
+<li>username: <code>admin</code></li>
+<li>password: <code>shipyard</code></li>
+</ul>
+
+
+<p>でログインします。</p>
+
+<p>左の <code>Hosts</code> を開いて <code>Add</code> で <code>docker</code> のホストを追加します。
+例えば以下のような設定になります。</p>
+
+<ul>
+<li>Name: raring64</li>
+<li>Hostname: 10.0.2.15</li>
+<li>Public hostname: (空欄のまま)</li>
+<li>Port: 4243</li>
+</ul>
+
+
+<h3>設定変更など</h3>
+
+<p>以前は右上の <code>admin</code> から <code>administration</code> を選んで、
+Django administration から追加する必要があったと思うのですが、
+今は shipyard の方で設定できるようになっているようです。
+追加や有効・無効の切り替えや削除は出来ても、
+編集はまだ出来ないようなので、
+<code>Name</code> などを変更したい時は
+Django administration
+の方を開く必要があるようです。</p>
+
+<p>ログインパスワードの変更などのユーザー管理も
+Django administration
+の方を開く必要があるようです。</p>
+
+<h3>使用感</h3>
+
+<p>左の <code>Containers</code> や <code>Images</code> を開いてみて見ると何となく使い方がわかると思います。
+バージョンアップで機能が増えていきそうなので、細かくは書きませんが、
+ログが見えたりするのは便利です。</p>
+
+<p><code>Applications</code> は
+<a href="https://github.com/dotcloud/hipache">hipache</a>
+に関連しているようです。</p>
+
+<h2>Dockland</h2>
+
+<h3>バージョン</h3>
+
+<p>作りはじめで放置されているようで、
+6 commits しかなくて、
+latest commit も 2013 年 6 月になっています。
+そのためバージョンは前回と変わっていません。</p>
+
+<h3>依存関係</h3>
+
+<p>sinatra ベースで作られていて、
+graphviz も必要なので、
+クリーンな環境に入れるのは大変です。</p>
+
+<p>前回は docker のホスト側に入れたら大変だったので、
+今回は <code>Dockerfile</code> を使ってインストールしました。</p>
+
+<h3>インストール</h3>
+
+<p>README にあった <code>dockland.dockerfile</code>
+は古い docker のバージョンが対象のようなので、
+最近の docker にあわせて
+<code>EXPOSE</code> をコメントアウトするなどの
+変更をして使います。
+<code>APP_REVISION</code> のあたりは特定のリビジョンに固定して使いたい時のものだと思ったので、コメントアウトしています。</p>
+
+<figure class='code'><figcaption><span>dockland.dockerfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'># /tmp/dockland.dockerfile
+</span><span class='line'>FROM ubuntu:12.04
+</span><span class='line'>
+</span><span class='line'>RUN sed 's/main$/main universe/' -i /etc/apt/sources.list && apt-get update && apt-get upgrade -y
+</span><span class='line'>RUN apt-get install ruby1.9.1 ruby1.9.1-dev build-essential git-core graphviz libssl-dev -y
+</span><span class='line'>
+</span><span class='line'>RUN git clone https://github.com/dynport/dockland.git /app
+</span><span class='line'>
+</span><span class='line'># this is to speed up updates
+</span><span class='line'>RUN cd /app && gem install bundler --no-ri --no-rdoc && bundle
+</span><span class='line'>
+</span><span class='line'># change the revision to update your image
+</span><span class='line'>#ENV APP_REVISION 51f5445abeeb080568edeca248d68b29a66f1387
+</span><span class='line'>#RUN cd /app && git fetch -q origin  && git reset -q --hard $APP_REVISION && git clean -q -d -x -f && bundle
+</span><span class='line'>
+</span><span class='line'>#EXPOSE 80
+</span><span class='line'>
+</span><span class='line'>CMD cd /app && bundle exec ./bin/dockland -h ${DOCKER_HOST-http://10.0.2.15:4243} -p 80</span></code></pre></td></tr></table></div></figure>
+
+
+<p>公開するポートの指定は
+docker 0.6.5 から
+<code>Dockerfile</code> の
+<code>EXPOSE</code> では出来なくなっていて、
+<code>docker run</code> の引数の <code>-p</code> で指定する必要があります。
+( <a href="http://blog.docker.io/2013/11/docker-0-7-docker-now-runs-on-any-linux-distribution/">Docker 0.7 runs on all Linux distributions – and 6 other major features | Docker Blog</a> の Feature 4: Advanced port redirects 参照)
+<code>EXPOSE 80</code> のような指定はまだ使えるように書いてあるのですが、
+ちゃんと使えたとしても外側のポートが可変なのは使いにくいので、
+起動する時に指定するようにしました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">docker build -t dockland:dockland - &lt; /tmp/dockland.dockerfile</span>
+</span><span class='line'><span class="go">id=$(docker run -d -p 8080:80 dockland:dockland)</span>
+</span><span class='line'><span class="go">curl -I http://127.0.0.1:8080</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>docker 側の API の公開設定は shipyard の方で設定したのと同じです。</p>
+
+<h3>使用感</h3>
+
+<p><code>graphviz</code> が必須ということからわかるかもしれませんが、
+<code>docker images -viz</code> から生成できるイメージの有向グラフを使っています。
+上の例だと <code>http://127.0.0.1:8080/</code> を開くと
+矢印で繋がったイメージの ID 一覧が出てきて、
+楕円の中の ID をクリックするとイメージの詳細情報が表示できます。</p>
+
+<p>詳細ページには <code>DELETE</code> というボタンがあったり、
+History から祖先のイメージをたどれたりするだけで
+機能はほとんどありません。</p>
+
+<p><code>docker images -viz</code> の図を良い感じに見たい、
+という用途には良さそうです。</p>
+
+<h2>DockerUI</h2>
+
+<p>最後は DockerUI です。</p>
+
+<h3>インストール</h3>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">docker pull crosbymichael/dockerui</span>
+</span><span class='line'><span class="go">docker run -d -p 9000:9000 crosbymichael/dockerui -e=&quot;http://10.0.2.15:4243&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3><code>-api-enable-cors</code> は必要?</h3>
+
+<p>DockerUI は docker 側の引数に <code>-api-enable-cors</code> が必要と書いていますが、
+ちょっと表示を試した感じでは付けていなくても動いていました。
+本当に必要なのでしょうか?</p>
+
+<h3>使用感</h3>
+
+<p>最初の画面で円グラフが表示されているなど、
+見た目は良く、
+前回試した時に比べて機能も増えているように感じました。</p>
+
+<p>認証がなかったり、 <code>-api-enable-cors</code> が必要と書いていたりして
+セキュリティ的に気になる点がありました。</p>
+
+<p>VM の中で動かすだけなので、セキュリティ的なことは気にしないとか、
+firewall などで別途セキュリティは確保できるという状態なら
+良いのではないでしょうか。</p>
+
+<h3>dokku 環境にインストール</h3>
+
+<p>もうちょっと調べていたところ、
+<a href="https://github.com/crosbymichael/dockerui/pull/14">Makes dockerui compatible with dokku</a>
+という変更が入っているようなので、
+<code>dokku</code> 環境では <code>docker pull</code> の代わりに
+<code>dokku</code> への <code>git push</code> で簡単に最新版を使えるようになるようです。</p>
+
+<p><code>dokku</code> への <code>git push</code> は Installing のところで少し時間がかかります。</p>
+
+<p>deploy 出来れば他の <code>dokku</code> に deploy したアプリと同じように
+<code>http://dockerui.deploy.127.0.0.1.xip.io</code>
+のような <code>dokku</code> で設定した URL で見えるようになります。</p>
+
+<p>参考のため、実際に試したログを載せておきます。
+<code>~/.ssh/config</code> で <code>raring64</code> という名前で <code>ssh</code> 接続できるようにしていて、
+<code>dokku</code> ユーザーに接続する必要があるので、
+<code>dokku@raring64</code> になっています。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> git clone https://github.com/crosbymichael/dockerui
+</span><span class='line'><span class="go">Cloning into &#39;dockerui&#39;...</span>
+</span><span class='line'><span class="go">remote: Counting objects: 709, done.</span>
+</span><span class='line'><span class="go">remote: Compressing objects: 100% (385/385), done.</span>
+</span><span class='line'><span class="go">remote: Total 709 (delta 315), reused 705 (delta 314)</span>
+</span><span class='line'><span class="go">Receiving objects: 100% (709/709), 2.50 MiB | 585.00 KiB/s, done.</span>
+</span><span class='line'><span class="go">Resolving deltas: 100% (315/315), done.</span>
+</span><span class='line'><span class="go">Checking connectivity... done.</span>
+</span><span class='line'><span class="gp">%</span> <span class="nb">cd </span>dockerui
+</span><span class='line'><span class="gp">%</span> git remote add raring64 dokku@raring64:dockerui
+</span><span class='line'><span class="gp">%</span> git push raring64 master
+</span><span class='line'><span class="go">Counting objects: 705, done.</span>
+</span><span class='line'><span class="go">Delta compression using up to 4 threads.</span>
+</span><span class='line'><span class="go">Compressing objects: 100% (389/389), done.</span>
+</span><span class='line'><span class="go">Writing objects: 100% (705/705), 2.50 MiB | 0 bytes/s, done.</span>
+</span><span class='line'><span class="go">Total 705 (delta 313), reused 698 (delta 306)</span>
+</span><span class='line'><span class="go">-----&gt; Cleaning up ...</span>
+</span><span class='line'><span class="go">-----&gt; Building dockerui ...</span>
+</span><span class='line'><span class="go">       Go app detected</span>
+</span><span class='line'><span class="go">-----&gt; Installing Go 1.1.2... done</span>
+</span><span class='line'><span class="go">       Installing Virtualenv... done</span>
+</span><span class='line'><span class="go">       Installing Mercurial... done</span>
+</span><span class='line'><span class="go">       Installing Bazaar... done</span>
+</span><span class='line'><span class="go">-----&gt; Running: go get -tags heroku ./...</span>
+</span><span class='line'><span class="go">-----&gt; Discovering process types</span>
+</span><span class='line'><span class="go">       Procfile declares types -&gt; web</span>
+</span><span class='line'><span class="go">-----&gt; Releasing dockerui ...</span>
+</span><span class='line'><span class="go">-----&gt; Deploying dockerui ...</span>
+</span><span class='line'><span class="go">=====&gt; Application deployed:</span>
+</span><span class='line'><span class="go">       http://dockerui.deploy.127.0.0.1.xip.io</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">To dokku@raring64:dockerui</span>
+</span><span class='line'><span class="go"> * [new branch]      master -&gt; master</span>
+</span><span class='line'><span class="go">Killed by signal 1.</span>
+</span><span class='line'><span class="gp">%</span> ssh dokku@raring64 config:set dockerui <span class="nv">DOCKER_ENDPOINT</span><span class="o">=</span>http://10.0.2.15:4243
+</span><span class='line'><span class="go">-----&gt; Setting config vars and restarting dockerui</span>
+</span><span class='line'><span class="go">DOCKER_ENDPOINT: http://10.0.2.15:4243</span>
+</span><span class='line'><span class="go">-----&gt; Releasing dockerui ...</span>
+</span><span class='line'><span class="go">-----&gt; Release complete!</span>
+</span><span class='line'><span class="go">-----&gt; Deploying dockerui ...</span>
+</span><span class='line'><span class="go">-----&gt; Deploy complete!</span>
+</span><span class='line'><span class="go">Killed by signal 1.</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>最初は pull request の説明にあった <code>config:add</code> で試していて、
+<code>ssh dokku@raring64 logs dockerui</code> で確認してみても
+<code>http: proxy error: unsupported protocol scheme ""</code>
+とログに出ているだけでうまく情報がとれていないと思ったら、
+<code>config:set</code> が正しい、というのが原因でした。</p>
+
+<h2>まとめ</h2>
+
+<p>以前に試した時は <code>Shipyard</code>
+が一番高機能で開発も活発に見えて良さそうに感じましたが、
+今は <code>DockerUI</code> も機能が増えていて、
+今後、どちらも主流になる可能性があるように感じました。</p>
+
+<p><code>DockerUI</code> の方は認証がなかったり、
+docker の設定に <code>-api-enable-cors</code> が必要と書いていたりするので、
+セキュリティを気にするのなら、
+<code>Shipyard</code> の方がお勧めできると思いました。</p>
+
+<p><code>Dockland</code> は <code>docker images -viz</code> を使っているというアイデアは
+良さそうに感じたので、ぜひ他の Web UI でも採用されると便利そうだと
+思いました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[upstart-socket-bridgeとrubyを組み合わせる]]></title>
@@ -2458,287 +2839,6 @@ RubyMotion の中から呼び出そうとしたのですが、
 のままで動かず、
 結局
 RubyMotion を 2.15 に上げると直っていました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[VirtualBoxでdokkuを試した]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-15-dokku.html"/>
-    <updated>2013-11-15T15:35:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/dokku</id>
-    <content type="html"><![CDATA[<p>VirtualBox の中に Ubuntu 13.04 を入れて
-<a href="https://github.com/progrium/dokku">dokku</a>
-を試してみました。</p>
-
-<p><a href="http://blog.coiney.com/2013/08/10/create-my-own-heroku/">dokku + VirtualBoxで自分のHerokuを作る</a>
-を参考にしたのですが、
-情報が古いのか、
-README
-に書いてあるのとコマンドが違うところ
-(<code>gitreceive</code> が <code>sshcommand</code> になっているなど)
-があるので、
-README
-の手順を基準にするのが良さそうです。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<p>dokku の README に Ubuntu 13.10 と docker の組み合わせは
-まだ問題があり、
-13.04 が推奨と書いてあったので、
-13.04 を使いました。</p>
-
-<ul>
-<li>ホストOS : OS X 10.9</li>
-<li>VirtualBox 4.3.2</li>
-<li>ゲストOS : Ubuntu 13.04 (amd64)</li>
-<li>lxc-docker : 0.6.6</li>
-<li>dokku : 今の master ブランチ (59ef6510bc)</li>
-</ul>
-
-
-<h2>Ubuntu 13.04 (amd64) のインストール</h2>
-
-<p>OS のインストールは自分がこうしたというだけの話なので、
-興味が無ければ dokku のインストールまで飛ばしてください。</p>
-
-<p>いつものように
-<a href="http://ftp.jaist.ac.jp/pub/Linux/ubuntu-releases/">Ubuntu Releases の jaist ミラー</a>
-から
-<code>ubuntu-13.04-server-amd64.iso</code>
-をダウンロードしてインストールしました。</p>
-
-<p>最初のユーザーは <code>adminuser</code> で、
-<code>ssh</code> は後で入れるので、
-パッケージのチェックは入れずにインストールしました。
-ディスクは多めに 20GB に設定した以外はほぼデフォルトでインストールしました。</p>
-
-<h3>etckeeper の設定</h3>
-
-<ul>
-<li><code>sudo aptitude install etckeeper git</code> で <code>git</code> と一緒にインストールして <code>bzr</code> をインストールしないようにします。
-<code>bzr</code> がないので自動での <code>etckeeper init</code> は失敗するので、手動で実行します。</li>
-<li><code>EDITOR=vi sudoedit /etc/etckeeper/etckeeper.conf</code> で <code>VCS="git"</code> と <code>GIT_COMMIT_OPTIONS="-v"</code> に変更します。</li>
-<li><code>sudo etckeeper init</code> で初期化します。</li>
-<li><code>sudo etckeeper commit "Initial commit"</code> で今の状態をコミットしておきます。</li>
-<li><code>(cd /etc/ &amp;&amp; sudo git gc)</code> で <code>git gc</code> しておきます。</li>
-</ul>
-
-
-<h3>ufw の設定</h3>
-
-<ul>
-<li><code>/etc/default/ufw</code> の <code>DEFAULT_FORWARD_POLICY</code> を <code>DROP</code> から <code>ACCEPT</code> に変更しておきます。
-<code>DROP</code> のままだと後で <code>docker</code> の中から DNS の解決ができないのが原因で <code>! [remote rejected] master -&gt; master (pre-receive hook declined)</code> になります。</li>
-<li><code>sudo ufw enable</code> で有効にします。</li>
-<li><code>sudo ufw allow 22/tcp</code> で <code>ssh</code> を許可します。</li>
-<li><code>sudo ufw allow 80/tcp</code> で <code>http</code> を許可します。</li>
-<li><code>sudo etckeeper commit "enable ufw"</code> などで変更を保存します。</li>
-</ul>
-
-
-<h3>ssh の設定</h3>
-
-<ul>
-<li><code>sudo aptitude install ssh</code> でインストールします。</li>
-<li><code>/etc/hosts.deny</code> に <code>ALL: ALL</code> を追加してデフォルト拒否にします。</li>
-<li><code>/etc/hosts.allow</code> に <code>sshd: 127.0.0.1 [::1]</code>
-を追加してローカルホストからの接続を許可します。</li>
-<li><code>/etc/hosts.allow</code> に <code>sshd: 10.0.0.0/8</code> も追加して
-VirtualBox のポートフォワーディング経由の接続を許可します。</li>
-<li><code>/etc/ssh/sshd_config</code> (<code>ssh_config</code> ではない) に
-<code>AllowUsers adminuser</code> と <code>AllowUsers dokku</code> を追加して、
-特定のユーザーにだけ <code>ssh</code> で接続できるようにします。</li>
-</ul>
-
-
-<p>ホストOS側では Vagrant も使っていたので、
-ssh 用の鍵としては
-<a href="https://github.com/mitchellh/vagrant/tree/master/keys">Vagrant の Insecure Keypair</a>
-を使いました。</p>
-
-<p>そして
-ホストOS側の
-<code>~/.ssh/config</code>
-の設定としては、
-グローバルの設定も含めると以下のようにしました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>ExitOnForwardFailure yes
-</span><span class='line'>Ciphers aes256-ctr,aes192-ctr,aes128-ctr
-</span><span class='line'>HashKnownHosts no
-</span><span class='line'>NoHostAuthenticationForLocalhost yes
-</span><span class='line'>ServerAliveInterval 30
-</span><span class='line'>Host raring64
-</span><span class='line'>  Ciphers arcfour256,arcfour128
-</span><span class='line'>  HostName 127.0.0.1
-</span><span class='line'>  User adminuser
-</span><span class='line'>  Port 21304
-</span><span class='line'>  UserKnownHostsFile /dev/null
-</span><span class='line'>  StrictHostKeyChecking no
-</span><span class='line'>  PasswordAuthentication no
-</span><span class='line'>  IdentityFile ~/.vagrant.d/insecure_private_key
-</span><span class='line'>  IdentitiesOnly yes</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>Ciphers</code> はデフォルトはセキュアなものを使い、
-VM 用には速いものを使うようにしています。</p>
-
-<h2>VirtualBox のポートフォワーディング設定</h2>
-
-<p>設定のネットワークのポートフォワーディングのところで、</p>
-
-<ul>
-<li>名前:SSH, プロトコル:TCP, ホストIP:127.0.0.1, ホストポート:21304, ゲストIP:空欄, ゲストポート:22</li>
-<li>名前:Web, プロトコル:TCP, ホストIP:127.0.0.1, ホストポート:1384, ゲストIP:空欄, ゲストポート:80</li>
-</ul>
-
-
-<p>のような感じで設定しました。</p>
-
-<p>13.10 にしたら</p>
-
-<ul>
-<li>名前:SSH, プロトコル:TCP, ホストIP:127.0.0.1, ホストポート:21310, ゲストIP:空欄, ゲストポート:22</li>
-<li>名前:Web, プロトコル:TCP, ホストIP:127.0.0.1, ホストポート:1380, ゲストIP:空欄, ゲストポート:80</li>
-</ul>
-
-
-<p>とすれば良いかなと思っています。</p>
-
-<h2>dokku のインストール</h2>
-
-<p><a href="https://github.com/progrium/dokku/blob/1d3ae29ba6bed8e1c98991c15db45724508fae30/README.md">README</a>
-に書いてあるように
-<code>wget -qO- https://raw.github.com/progrium/dokku/master/bootstrap.sh | sudo bash</code>
-などでインストールできます。</p>
-
-<p>実際には、
-内容を確認したかったので、
-<code>wget</code> でダウンロードした後、
-<code>sudo bash &lt; bootstrap.sh</code>
-で実行しました。</p>
-
-<p>時間は5分程度かかると書いてありますが、
-実際には
-<code>docker</code>
-用のイメージのダウンロードに時間がかかるので、
-ネットワークの速度の影響が大きいようです。</p>
-
-<h2>dokku の設定</h2>
-
-<h3>VHOST の設定</h3>
-
-<p>参考にしたサイトと同じように <code>xip.io</code> を使いました。
-ポートフォワーディング経由にしているので、
-<code>127.0.0.1</code>
-にしています。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>echo deploy.127.0.0.1.xip.io | sudo tee /home/dokku/VHOST</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>ssh 公開鍵の追加</h3>
-
-<p><code>ssh</code>
-の接続は Vagrant と共通の鍵を使うことにしたので、
-<code>/home/adminuser/.ssh/authorized_keys</code>
-には <code>vagrant.pub</code> と同じ内容が入っています。</p>
-
-<p>この鍵をそのまま <code>dokku</code> の方に登録しました。</p>
-
-<p>ここもゲストOS側での作業になります。
-README の手順では <code>ssh</code> 経由で <code>sudo</code> を実行しています。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>cat ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant</span></code></pre></td></tr></table></div></figure>
-
-
-<p>この手順で追加した公開鍵は</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>sudo sshcommand acl-remove dokku vagrant</span></code></pre></td></tr></table></div></figure>
-
-
-<p>で削除できます。</p>
-
-<p>他の公開鍵を追加する時は <code>vagrant</code> の部分を変更しておかないと
-<code>acl-remove</code> でまとめて削除されてしまいます。</p>
-
-<h2>アプリケーションの deploy</h2>
-
-<p>問題なく設定できていれば以下で deploy できます。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>git clone https://github.com/heroku/node-js-sample
-</span><span class='line'>cd node-js-sample
-</span><span class='line'>git remote add raring64 dokku@raring64:node-js-app
-</span><span class='line'>git push raring64 master</span></code></pre></td></tr></table></div></figure>
-
-
-<p>エラーになったときはログをみたり、
-<code>dmesg</code>
-を見たりして原因を調べてください。</p>
-
-<p>正常に deploy できていれば
-<code>http://node-js-app.deploy.127.0.0.1.xip.io:1384</code>
-で <code>Hello World!</code> と表示されます。</p>
-
-<h2>リモートからの dokku コマンド</h2>
-
-<p>README には <code>$ dokku run node-js-app ls -alh</code> と書いてあり、
-ホストOS側には <code>dokku</code> コマンドはないので、
-どうすればいいのか悩んだのですが、</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'> ssh dokku@raring64 run node-js-app ls -alh</span></code></pre></td></tr></table></div></figure>
-
-
-<p>のように <code>git push</code> に使う <code>ssh</code> 経由で
-<code>dokku</code> コマンドが実行されているのを使えました。</p>
-
-<p>入力待ちになってしまうようで、
-<code>control+D</code> で <code>EOF</code> を入力するなどしないと
-ホストOS側のプロンプトに戻ってこないので、
-想定された使い方ではなさそうな感じです。</p>
-
-<p>他にも</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'> ssh dokku@raring64 delete node-js-app</span></code></pre></td></tr></table></div></figure>
-
-
-<p>でアプリケーションの削除もできました。
-heroku と違って確認なしにいきなり削除されてしまうので注意が必要です。</p>
-
-<p>どんなコマンドが実行できるのかは <code>dokku help</code> 相当の</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'> ssh dokku@raring64 help</span></code></pre></td></tr></table></div></figure>
-
-
-<p>で一覧が出てきます。</p>
-
-<p>普段使いそうなのは <code>config</code> 関連と <code>logs</code> だと思いました。</p>
 ]]></content>
   </entry>
   
