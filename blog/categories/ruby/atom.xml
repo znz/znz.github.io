@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-14T19:58:19+09:00</updated>
+  <updated>2013-12-15T15:07:00+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,70 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[RubyMotionとRubyのバージョン]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-15-rubymotion-ruby-version.html"/>
+    <updated>2013-12-15T14:49:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubymotion-ruby-version</id>
+    <content type="html"><![CDATA[<p>今のところ RubyMotion は毎月のもくもく会以外ではほとんど触れていないので、
+RubyMotion と Ruby のバージョンの関係と言う小ネタです。</p>
+
+<p>この投稿は
+<a href="http://qiita.com/advent-calendar/2013/rubymotion">RubyMotion Advent Calendar 2013</a>
+の12日目の記事です。</p>
+
+<!--more-->
+
+
+<h2>RUBY_DESCRIPTION 確認</h2>
+
+<p>まず <code>Rakefile</code> の先頭で <code>RUBY_DESCRIPTION</code> を入れて、
+普通の <code>ruby</code> コマンドのバージョンを表示して、
+次に開発環境のプロンプトでも確認してみました。</p>
+
+<p>```console
+% head -n2 Rakefile</p>
+
+<h1>&ndash;<em>&ndash; coding: utf-8 &ndash;</em>&ndash;</h1>
+
+<p>p RUBY_DESCRIPTION
+% rake
+&ldquo;ruby 2.0.0p353 (2013-11-22 revision 43784) [x86_64-darwin12.5.0]&rdquo;</p>
+
+<pre><code> Build ./build/MacOSX-10.8-Development
+</code></pre>
+
+<p>   Compile ./app/app_delegate.rb
+   Compile ./app/menu.rb</p>
+
+<pre><code>Create ./build/MacOSX-10.8-Development/Hello.app/Contents
+Create ./build/MacOSX-10.8-Development/Hello.app/Contents/MacOS
+  Link ./build/MacOSX-10.8-Development/Hello.app/Contents/MacOS/Hello
+Create ./build/MacOSX-10.8-Development/Hello.app/Contents/PkgInfo
+Create ./build/MacOSX-10.8-Development/Hello.app/Contents/Info.plist
+  Copy ./resources/Credits.rtf
+Create ./build/MacOSX-10.8-Development/Hello.dSYM
+   Run ./build/MacOSX-10.8-Development/Hello.app/Contents/MacOS/Hello
+</code></pre>
+
+<p>(main)> RUBY_DESCRIPTION
+=> &ldquo;RubyMotion (ruby 1.9.2) [universal-darwin13.0, x86_64]&rdquo;
+(main)> exit
+```</p>
+
+<p>外側は 2.0.0 なのに RubyMotion の方は 1.9.2 でした。</p>
+
+<h2>まとめ</h2>
+
+<p>調べたきっかけはデバッグ用に <code>File.write</code>
+(<a href="http://docs.ruby-lang.org/ja/2.0.0/class/IO.html#S_WRITE">IO.write</a>)
+が使えなかったからでした。
+それは結局普通に <code>File.open</code> して書き込むことにしましたが、
+開発環境側の Ruby のバージョンを変えても生成されるアプリ側の
+Ruby のバージョンには影響しないという話でした。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[upstart-socket-bridgeとrubyを組み合わせる]]></title>
@@ -420,125 +484,6 @@ from t.rb:12:in `&lt;main&gt;'
 </code></pre>
 
 <p>```</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[nadokaさんの0.8.6をリリースした関連の話]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-29-nadoka-086-released.html"/>
-    <updated>2013-11-29T23:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/nadoka-086-released</id>
-    <content type="html"><![CDATA[<p><a href="http://mla.n-z.jp/?ruby-list:49704">nadoka さんの 0.8.6 をリリース</a>
-したので、
-その関連の話を書いてみようと思います。</p>
-
-<!--more-->
-
-
-<h2>なぜ続けているか</h2>
-
-<p>短い答えとしては、自分が使っているからというのが一番大きな理由です。</p>
-
-<p>bot というか plugin もいくつか作って、
-サーバーの管理などにも便利に使っていて、
-わざわざ他の IRC proxy 的なソフトに乗り換えて
-プラグインを書き直すよりは、
-一応動いているものをメンテナンスし続けた方が楽というのが
-理由になっています。</p>
-
-<h2>subversion repository について</h2>
-
-<p>最初は
-<a href="http://www.atdot.net/nadoka/nadoka.ja.html">atdot.net の nadoka さん</a>
-のところに書いてある
-<code>http://www.atdot.net/svn/nadoka/trunk</code>
-にあったものが、
-ささださんのサーバー管理の都合なのか、
-rubyforge に移行して今に至ります。</p>
-
-<p>途中から
-(<a href="https://github.com/nadoka/nadoka/wiki/HowToRelease">HowToRelease</a>
-の記録によると 0.7.7 から)
-は github メインに移行しています。</p>
-
-<p>その後、しばらく放置していたかどうだったのか忘れましたが、
-最近のリリースでは github での変更をリリースのタイミングで
-rubyforge の svn にも git-svn を使ってマージしていました。</p>
-
-<p>このマージも今回で最後になります。</p>
-
-<p>その作業をするときに
-<code>http://rubyforge.org/</code>
-をみてみると
-<code>RubyForge Could Not Connect to Database:</code>
-というエラーになっていて、
-<a href="https://twitter.com/hsbt/status/406423900432506881">hsbt さん</a>
-に
-<a href="https://twitter.com/evanphx/status/399552820380053505">RubyForgeは5月15日で終了予定</a>
-という話を教えてもらいました。</p>
-
-<p>古いサーバーで svn co して、
-そのまま使っている場合でも使い続けられるように続けていましたが、
-rubyforge 自体が終わるということで、
-そういうサーバーでは、
-そのまま最後の svn up をして使い続けるか、
-git に移行する必要がありそうです。</p>
-
-<h2>git repository について</h2>
-
-<p>github が主流になっていたこともあり、
-pull request とかしやすくなることを期待して
-移行しました。</p>
-
-<p>pull request が来た件数も 0 ではないので、
-そのあたりは活発ではないプロジェクトとしては
-うまくいっているのではないでしょうか。</p>
-
-<p>github への移行方法として、
-最初は
-<a href="http://darcs.net/RelatedSoftware/Tailor">tailor</a>
-を検討したのですが、
-既にあまり使われていなくて、
-ちょっと試した感じでもうまくいかなかったので、
-git-svn で移行しました。</p>
-
-<p>今となっては変換専用ソフトはほぼ使えるものはなく、
-変換先のソフト (今回は git) のプラグイン的なものを使って
-変換元のソフト (今回は svn) の repository から取り出す、
-という方法しかないようです。</p>
-
-<h2>CloudCore VPS</h2>
-
-<p><a href="http://www.cloudcore.jp/vps/develop/">開発者支援制度 &ndash; CloudCore VPS</a>
-でサーバーを借りてみて、
-テスト用の IRC サーバーを動かしています。</p>
-
-<p>接続用の設定は
-<a href="https://github.com/nadoka/nadokarc-example">nadokarc-example</a>
-にあるので、適当に試したい時に使えると思います。</p>
-
-<p>途中の経路の問題 (モバイルでモバイルルーターの接続が切れたとか?)
-で、サーバーから応答がなくなったときに
-nadoka さんの再接続がうまくいかないのを調査するのに使いたいと
-思っているのですが、
-切れた状況を再現する部分の作り込みがまだ出来ていないです。</p>
-
-<p>ircd の設定は
-<a href="https://github.com/nadoka/ansible-ircd">ansible-ircd</a>
-のように ansible でやってみました。
-SSL の証明書の問題などがあるので、
-すべての情報を公開できるわけじゃないというのが難しいところです。</p>
-
-<h2>まとめ的なもの</h2>
-
-<p>長い間続いているといろいろあるものです。</p>
-
-<p>小規模なプロジェクトなので、
-いつも場当たり的な対応でなんとかなっていますが、
-そういうのも良いんじゃないでしょうか。</p>
-
-<p>とりあえず自分が使っている限りはリリースも続くと思いますし、
-新しいバージョンの ruby への対応も続けていけると思います。</p>
 ]]></content>
   </entry>
   
