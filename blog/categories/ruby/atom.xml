@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-15T15:07:00+09:00</updated>
+  <updated>2013-12-20T01:10:06+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,194 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[DOCKER indexのTrusted Buildsで複数バージョンのrubyを試せるimageを作ってみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-19-docker-trusted-builds.html"/>
+    <updated>2013-12-19T23:02:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/docker-trusted-builds</id>
+    <content type="html"><![CDATA[<p><a href="https://index.docker.io/">DOCKER index</a>
+には
+<a href="http://blog.docker.io/2013/11/introducing-trusted-builds/">Trusted Builds</a>
+という機能があり、
+Docker index の方で
+image の作成をしてくれます。</p>
+
+<p>image の作成方法は GitHub に Dockerfile を公開して、
+それを指定します。</p>
+
+<p>今回はそれを使って複数バージョンの ruby を試せる image を作ってみました。</p>
+
+<!--more-->
+
+
+<h2>Dockerfile の動作確認</h2>
+
+<p><code>docker build</code> への Dockerfile の指定方法は</p>
+
+<pre><code>docker build DockerfileのあるディレクトリへのパスやURL
+</code></pre>
+
+<p>という方法と</p>
+
+<pre><code>docker build - &lt; Dockerfile
+</code></pre>
+
+<p>のように <code>-</code> を指定して標準入力から渡す方法があります。</p>
+
+<p>違いとしては
+パスや URL の指定だとファイル名が Dockerfile 固定という制限があり、
+<code>-</code> の方だと <code>ADD</code> が使えない (基準となるディレクトリがわからないため)
+という制限があるようです。
+(詳しく調べていないだけなので他にもあると思います。)</p>
+
+<p>そこで、</p>
+
+<pre><code>docker build -t local/rubys .
+</code></pre>
+
+<p>または</p>
+
+<pre><code>docker build -t local/rubys - &lt; Dockerfile
+</code></pre>
+
+<p>のようにして動作確認します。</p>
+
+<h2>DOCKER index のアカウント登録</h2>
+
+<p>英小文字か数字で4文字から30文字という制限があったので、
+<code>znzj</code> というアカウントにしました。</p>
+
+<p>メールアドレスとパスワードを設定して、
+メールの確認が済んだらアカウントの作成は完了です。</p>
+
+<p>最近はサービスごとにメールアドレスを分けていて、
+アイコンが gravatar のデフォルトになってしまっていたので、
+User Settings から Gravatar email も設定しました。</p>
+
+<p>ここはメールアドレスの確認がなかったので、
+他人のアイコンでも使えてしまうように見えたのですが、
+良いのでしょうか。
+ちょっと考えてみましたが、
+画像をコピーして使えば同じようなものなので、
+気にするほどのことではなさそうに思いました。</p>
+
+<h2>GitHub のアカウントとの連携</h2>
+
+<p>hook の登録のため、ということで多少の書き込み権限も要求されるので、
+許可したくない場合は Trusted builds は使えません。</p>
+
+<h2>Trusted Builds の追加</h2>
+
+<p>ログイン中に
+<a href="https://index.docker.io/builds/">Trusted Builds</a>
+のページの <code>+Add New</code> から、
+GitHub レポジトリを選択します。
+ここでは <a href="https://github.com/znz/docker-rubys">https://github.com/znz/docker-rubys</a> を選択しました。</p>
+
+<ol>
+<li>Default Branch は <code>master</code> のまま</li>
+<li>Repo name も <code>znzj/docker-rubys</code> のまま (<code>/</code> の右の部分は英小文字か数字か <code>-</code> か <code>.</code> で 3 文字から 30 文字)</li>
+<li>Docker Tag Name も <code>latest</code> のまま</li>
+<li>Dockerfile Location は <code>/</code> から <code>rubys/</code> に変更</li>
+<li>Active にはチェックをいれたまま</li>
+</ol>
+
+
+<p>という状態で作成しました。</p>
+
+<p><code>Dockerfile</code> の push とどっちが先が良いのかわからなかったので、
+<code>Dockerfile</code> なしで追加してしまったら、
+初回は <code>Dockerfile</code> が見つからないという理由で失敗してしまったので、
+先に <code>Dockerfile</code> を push してから追加するもののようです。</p>
+
+<h2>イメージの使用</h2>
+
+<p>しばらくまつと Trusted Builds のページで
+Status が Pending から Building に変わって、
+最終的に Done になってビルドできて使えるようになるので、</p>
+
+<pre><code>docker pull znzj/docker-rubys
+</code></pre>
+
+<p>でダウンロードします。</p>
+
+<p>ダウンロードが完了したら、</p>
+
+<pre><code>docker run -i -t znzj/docker-rubys
+</code></pre>
+
+<p>で <code>/bin/bash -l</code> を起動します。
+(<code>CMD</code> で指定されています。)</p>
+
+<p>bash で</p>
+
+<pre><code>rbenv versions
+</code></pre>
+
+<p>で入っている ruby のバージョンを確認したり、</p>
+
+<pre><code>rbenv each ruby -v
+</code></pre>
+
+<p>や</p>
+
+<pre><code>rbenv each -v gem list
+</code></pre>
+
+<p>などのように
+<a href="https://github.com/chriseppstein/rbenv-each">rbenv each</a>
+を使って、
+それぞれのバージョンの ruby の環境でコマンドを実行できるようにしています。</p>
+
+<p>ホスト側とのファイルのやり取りはどうするのが良いのか
+まだ調べていないので、
+とりあえず vim でファイルを作成するか、
+wget でダウンロードすることを想定しています。</p>
+
+<h2>abuse?</h2>
+
+<p><code>GitHub: Add Trusted Build</code>
+のところに
+<code>Anyone who abuses the build system, will have their accounts disabled. If you are unsure what might be considered abuse, please ask before you build.</code>
+という注意書きがあって、
+ビルドするぐらいなら大丈夫かと思っていたのですが、
+他の Trusted Builds をみるとインストールしたり
+ファイルを追加したりしているだけのものが
+多いので心配になってしまいました。
+さらに探してみると
+<a href="https://index.docker.io/u/sameersbn/gitlab/">https://index.docker.io/u/sameersbn/gitlab/</a>
+で ruby を make しているものもあったので、
+ビルドはダメということもなさそうでした。</p>
+
+<p>しかし、頻繁にビルドして負荷をかけるのもよくなさそうなので、
+trunk の nightly build などをしようと思ったら、
+ローカルで作成して <code>docker push</code> する方がよさそうに感じました。</p>
+
+<h2>aufs の制限</h2>
+
+<p><a href="https://github.com/dotcloud/docker/issues/332">https://github.com/dotcloud/docker/issues/332</a>
+によると aufs は重ねられる数に限界 (40ぐらい?) があるようなので、
+<code>RUN</code> コマンドは出来るだけまとめて減らした方が良いのかもしれません。</p>
+
+<p><a href="https://index.docker.io/u/truongsinh/nodejs/">https://index.docker.io/u/truongsinh/nodejs/</a>
+のように <code>&amp;&amp;</code> でつなげて 1 個の <code>RUN</code> にまとめている例もありました。</p>
+
+<p>aufs 以外が主流になるかもしれないので、
+この辺りは Dockerfile の読みやすさや
+<code>docker history</code> でわかれていた方が良いのかなど、
+利点や欠点を考えつつ、
+ベストプラクティスが決まっていくまで
+試行錯誤するのが良さそうです。</p>
+
+<h2>まとめ</h2>
+
+<p>DOCKER index には Trusted Builds という向こう側で
+<code>docker build</code> してくれる仕組みがあるので、
+<code>docker push</code> とうまく使い分けて
+公開可能なイメージはどんどん公開すると良いのではないでしょうか。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[RubyMotionとRubyのバージョン]]></title>
@@ -383,107 +571,6 @@ config.i18n.default_locale = :ja
 がデフォルトになっていて、
 <code>nil</code> だと警告がでる、
 ということのようです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Ruby 2.1.0の新機能のException#cause]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-03-ruby-exception-cause.html"/>
-    <updated>2013-12-03T00:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ruby-exception-cause</id>
-    <content type="html"><![CDATA[<p><a href="https://www.ruby-lang.org/ja/news/2013/11/22/ruby-2-1-0-preview2-is-released/">Ruby 2.1.0-preview2 リリース</a>
-では
-<a href="http://d.hatena.ne.jp/nagachika/20131110/ruby_trunk_changes_43615_43636">2013-11-10 の大きめの変更</a>
-が気になっていて、
-ここでは
-<code>Exception#cause</code>
-というメソッドを紹介します。</p>
-
-<p><code>"literal"f</code> のように書く freeze された文字列リテラル機能が
-2.1.0-preview1 には入っていたのですが、それが削除されて
-<code>"literal".freeze</code> がコンパイル時に特別扱いされるようになった、
-というのも気になっています。</p>
-
-<p>この投稿は
-<a href="http://qiita.com/advent-calendar/2013/ruby">Ruby Advent Calendar 2013</a>
-の3日目の記事です。</p>
-
-<!--more-->
-
-
-<h2>Exception#cause の例</h2>
-
-<p>Ruby 2.0.0 までは <code>rescue</code> や <code>ensure</code> の中で別の例外が発生すると、
-別途保存しておかない限り、
-以前に発生した例外がわからなくなってしまっていましたが、
-Ruby 2.1.0(-preview2) からは別の例外を <code>raise</code> した時に
-以前の例外が自動で保存されて
-<code>Exception#cause</code> でたどれるようになりました。
-<code>cause</code> は <code>raise</code> のタイミングで設定されるので、
-例外オブジェクト自体は <code>rescue</code> や <code>ensure</code>
-の外で生成していても良いようです。</p>
-
-<p>```ruby</p>
-
-<h1>!/usr/bin/env ruby</h1>
-
-<p>def foo
-  raise &ldquo;foo&rdquo;
-end</p>
-
-<p>def bar
-  e = Exception.new(&ldquo;bar&rdquo;)
-  foo
-rescue
-  raise e
-end</p>
-
-<p>def baz
-  bar
-ensure
-  raise &ldquo;baz&rdquo;
-end</p>
-
-<p>begin
-  baz
-rescue
-  p $!                   #=> #&lt;RuntimeError: baz>
-  p $!.cause             #=> #&lt;Exception: bar>
-  p $!.cause.cause       #=> #&lt;RuntimeError: foo>
-  p $!.cause.cause.cause #=> nil
-end
-```</p>
-
-<h2>終了時のバックトレース</h2>
-
-<p>ちなみに、例外が保存されていても
-<code>rescue</code> せずにプログラムが終了した時のバックトレースは
-今まで通り最後の例外だけ表示されるようです。</p>
-
-<p>```console
-% cat t.rb</p>
-
-<h1>!/usr/bin/env ruby</h1>
-
-<p>def foo
-  raise &ldquo;foo&rdquo;
-end</p>
-
-<p>def bar
-  foo
-rescue
-  raise &ldquo;bar&rdquo;
-end</p>
-
-<p>bar
-% ruby t.rb
-t.rb:9:in `rescue in bar': bar (RuntimeError)</p>
-
-<pre><code>from t.rb:7:in `bar'
-from t.rb:12:in `&lt;main&gt;'
-</code></pre>
-
-<p>```</p>
 ]]></content>
   </entry>
   

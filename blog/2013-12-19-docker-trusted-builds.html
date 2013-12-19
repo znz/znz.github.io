@@ -5,14 +5,17 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>homebrew の reinstall で使われるオプションの保存場所 - @znz blog</title>
+  <title>DOCKER indexのTrusted Buildsで複数バージョンのrubyを試せるimageを作ってみた - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="rabbiter の記事
-で、
-「一度 --with-curl-ca-bundle 付きでインストールした後だと、以下のようにオプションなしの reinstall でもオプションが付くようです。」
-と書きましたが、そのオプションがどこに保存されているのかを調べました。 &hellip;">
+  <meta name="description" content="DOCKER index
+には
+Trusted Builds
+という機能があり、
+Docker index の方で
+image の作成をしてくれます。 image の作成方法は GitHub に Dockerfile を公開して、
+それを指定します。 今回はそれを使って複数バージョンの ruby &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -21,7 +24,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-09-13-homebrew-used-options.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-12-19-docker-trusted-builds.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -83,7 +86,7 @@
   
   <header>
     
-      <h1 class="entry-title">homebrew の reinstall で使われるオプションの保存場所</h1>
+      <h1 class="entry-title">DOCKER indexのTrusted Buildsで複数バージョンのrubyを試せるimageを作ってみた</h1>
     
     
       <p class="meta">
@@ -99,7 +102,7 @@
   
 
 
-<time datetime="2013-09-13T21:58:00+09:00" pubdate data-updated="true">2013-09-13 (Fri)</time>
+<time datetime="2013-12-19T23:02:00+09:00" pubdate data-updated="true">2013-12-19 (Thu)</time>
         
          | <a href="#disqus_thread">Comments</a>
         
@@ -108,24 +111,186 @@
   </header>
 
 
-<div class="entry-content"><p><a href="/blog/2013-09-08-rabbiter-on-mac.html">rabbiter の記事</a>
-で、
-「一度 <code>--with-curl-ca-bundle</code> 付きでインストールした後だと、以下のようにオプションなしの reinstall でもオプションが付くようです。」
-と書きましたが、そのオプションがどこに保存されているのかを調べました。</p>
+<div class="entry-content"><p><a href="https://index.docker.io/">DOCKER index</a>
+には
+<a href="http://blog.docker.io/2013/11/introducing-trusted-builds/">Trusted Builds</a>
+という機能があり、
+Docker index の方で
+image の作成をしてくれます。</p>
+
+<p>image の作成方法は GitHub に Dockerfile を公開して、
+それを指定します。</p>
+
+<p>今回はそれを使って複数バージョンの ruby を試せる image を作ってみました。</p>
 
 <!--more-->
 
 
-<p>実際に調べるのはソースをたどったりして結構大変だったのですが、
-最終的に
-<code>/usr/local/Cellar/glib-networking/2.36.2/INSTALL_RECEIPT.json</code>
-に <code>used_options</code> というキーで保存されているということがわかりました。</p>
+<h2>Dockerfile の動作確認</h2>
 
-<p><code>Cellar</code> はインストールしたファイルの実体が入るところなので、
-あらかじめダミーの <code>INSTALL_RECEIPT.json</code> を用意しておいて
-オプションなしの <code>brew reinstall</code> の時に使われるオプションを
-埋め込んでおくという用途に使うのには向いていないということが
-わかりました。</p>
+<p><code>docker build</code> への Dockerfile の指定方法は</p>
+
+<pre><code>docker build DockerfileのあるディレクトリへのパスやURL
+</code></pre>
+
+<p>という方法と</p>
+
+<pre><code>docker build - &lt; Dockerfile
+</code></pre>
+
+<p>のように <code>-</code> を指定して標準入力から渡す方法があります。</p>
+
+<p>違いとしては
+パスや URL の指定だとファイル名が Dockerfile 固定という制限があり、
+<code>-</code> の方だと <code>ADD</code> が使えない (基準となるディレクトリがわからないため)
+という制限があるようです。
+(詳しく調べていないだけなので他にもあると思います。)</p>
+
+<p>そこで、</p>
+
+<pre><code>docker build -t local/rubys .
+</code></pre>
+
+<p>または</p>
+
+<pre><code>docker build -t local/rubys - &lt; Dockerfile
+</code></pre>
+
+<p>のようにして動作確認します。</p>
+
+<h2>DOCKER index のアカウント登録</h2>
+
+<p>英小文字か数字で4文字から30文字という制限があったので、
+<code>znzj</code> というアカウントにしました。</p>
+
+<p>メールアドレスとパスワードを設定して、
+メールの確認が済んだらアカウントの作成は完了です。</p>
+
+<p>最近はサービスごとにメールアドレスを分けていて、
+アイコンが gravatar のデフォルトになってしまっていたので、
+User Settings から Gravatar email も設定しました。</p>
+
+<p>ここはメールアドレスの確認がなかったので、
+他人のアイコンでも使えてしまうように見えたのですが、
+良いのでしょうか。
+ちょっと考えてみましたが、
+画像をコピーして使えば同じようなものなので、
+気にするほどのことではなさそうに思いました。</p>
+
+<h2>GitHub のアカウントとの連携</h2>
+
+<p>hook の登録のため、ということで多少の書き込み権限も要求されるので、
+許可したくない場合は Trusted builds は使えません。</p>
+
+<h2>Trusted Builds の追加</h2>
+
+<p>ログイン中に
+<a href="https://index.docker.io/builds/">Trusted Builds</a>
+のページの <code>+Add New</code> から、
+GitHub レポジトリを選択します。
+ここでは <a href="https://github.com/znz/docker-rubys">https://github.com/znz/docker-rubys</a> を選択しました。</p>
+
+<ol>
+<li>Default Branch は <code>master</code> のまま</li>
+<li>Repo name も <code>znzj/docker-rubys</code> のまま (<code>/</code> の右の部分は英小文字か数字か <code>-</code> か <code>.</code> で 3 文字から 30 文字)</li>
+<li>Docker Tag Name も <code>latest</code> のまま</li>
+<li>Dockerfile Location は <code>/</code> から <code>rubys/</code> に変更</li>
+<li>Active にはチェックをいれたまま</li>
+</ol>
+
+
+<p>という状態で作成しました。</p>
+
+<p><code>Dockerfile</code> の push とどっちが先が良いのかわからなかったので、
+<code>Dockerfile</code> なしで追加してしまったら、
+初回は <code>Dockerfile</code> が見つからないという理由で失敗してしまったので、
+先に <code>Dockerfile</code> を push してから追加するもののようです。</p>
+
+<h2>イメージの使用</h2>
+
+<p>しばらくまつと Trusted Builds のページで
+Status が Pending から Building に変わって、
+最終的に Done になってビルドできて使えるようになるので、</p>
+
+<pre><code>docker pull znzj/docker-rubys
+</code></pre>
+
+<p>でダウンロードします。</p>
+
+<p>ダウンロードが完了したら、</p>
+
+<pre><code>docker run -i -t znzj/docker-rubys
+</code></pre>
+
+<p>で <code>/bin/bash -l</code> を起動します。
+(<code>CMD</code> で指定されています。)</p>
+
+<p>bash で</p>
+
+<pre><code>rbenv versions
+</code></pre>
+
+<p>で入っている ruby のバージョンを確認したり、</p>
+
+<pre><code>rbenv each ruby -v
+</code></pre>
+
+<p>や</p>
+
+<pre><code>rbenv each -v gem list
+</code></pre>
+
+<p>などのように
+<a href="https://github.com/chriseppstein/rbenv-each">rbenv each</a>
+を使って、
+それぞれのバージョンの ruby の環境でコマンドを実行できるようにしています。</p>
+
+<p>ホスト側とのファイルのやり取りはどうするのが良いのか
+まだ調べていないので、
+とりあえず vim でファイルを作成するか、
+wget でダウンロードすることを想定しています。</p>
+
+<h2>abuse?</h2>
+
+<p><code>GitHub: Add Trusted Build</code>
+のところに
+<code>Anyone who abuses the build system, will have their accounts disabled. If you are unsure what might be considered abuse, please ask before you build.</code>
+という注意書きがあって、
+ビルドするぐらいなら大丈夫かと思っていたのですが、
+他の Trusted Builds をみるとインストールしたり
+ファイルを追加したりしているだけのものが
+多いので心配になってしまいました。
+さらに探してみると
+<a href="https://index.docker.io/u/sameersbn/gitlab/">https://index.docker.io/u/sameersbn/gitlab/</a>
+で ruby を make しているものもあったので、
+ビルドはダメということもなさそうでした。</p>
+
+<p>しかし、頻繁にビルドして負荷をかけるのもよくなさそうなので、
+trunk の nightly build などをしようと思ったら、
+ローカルで作成して <code>docker push</code> する方がよさそうに感じました。</p>
+
+<h2>aufs の制限</h2>
+
+<p><a href="https://github.com/dotcloud/docker/issues/332">https://github.com/dotcloud/docker/issues/332</a>
+によると aufs は重ねられる数に限界 (40ぐらい?) があるようなので、
+<code>RUN</code> コマンドは出来るだけまとめて減らした方が良いのかもしれません。</p>
+
+<p><a href="https://index.docker.io/u/truongsinh/nodejs/">https://index.docker.io/u/truongsinh/nodejs/</a>
+のように <code>&amp;&amp;</code> でつなげて 1 個の <code>RUN</code> にまとめている例もありました。</p>
+
+<p>aufs 以外が主流になるかもしれないので、
+この辺りは Dockerfile の読みやすさや
+<code>docker history</code> でわかれていた方が良いのかなど、
+利点や欠点を考えつつ、
+ベストプラクティスが決まっていくまで
+試行錯誤するのが良さそうです。</p>
+
+<h2>まとめ</h2>
+
+<p>DOCKER index には Trusted Builds という向こう側で
+<code>docker build</code> してくれる仕組みがあるので、
+<code>docker push</code> とうまく使い分けて
+公開可能なイメージはどんどん公開すると良いのではないでしょうか。</p>
 </div>
 
 
@@ -148,12 +313,12 @@
   
 
 
-<time datetime="2013-09-13T21:58:00+09:00" pubdate data-updated="true">2013-09-13 (Fri)</time>
+<time datetime="2013-12-19T23:02:00+09:00" pubdate data-updated="true">2013-12-19 (Thu)</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/homebrew/'>homebrew</a>, <a class='category' href='/blog/categories/mac/'>mac</a>
+    <a class='category' href='/blog/categories/docker/'>docker</a>, <a class='category' href='/blog/categories/rbenv/'>rbenv</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
   
 </span>
 
@@ -162,12 +327,12 @@
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-09-13-homebrew-used-options.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-09-13-homebrew-used-options.html" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-12-19-docker-trusted-builds.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-12-19-docker-trusted-builds.html" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
   
-  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-09-13-homebrew-used-options.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-12-19-docker-trusted-builds.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
   
     <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
   
@@ -186,10 +351,8 @@
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-09-12-td2planet.html" title="Previous Post: td2planet を rubyforge から github に移行してリリース">&laquo; td2planet を rubyforge から github に移行してリリース</a>
+        <a class="basic-alignment left" href="/blog/2013-12-15-rubymotion-ruby-version.html" title="Previous Post: RubyMotionとRubyのバージョン">&laquo; RubyMotionとRubyのバージョン</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-09-14-use-custom-ruby-with-rbenv.html" title="Next Post: 独自ビルドした ruby を rbenv で使う">独自ビルドした ruby を rbenv で使う &raquo;</a>
       
     </p>
   </footer>
@@ -304,8 +467,8 @@
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-09-13-homebrew-used-options.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-09-13-homebrew-used-options.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-12-19-docker-trusted-builds.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-12-19-docker-trusted-builds.html';
         var disqus_script = 'embed.js';
       
     (function () {
