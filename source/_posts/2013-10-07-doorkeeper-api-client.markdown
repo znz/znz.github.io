@@ -211,9 +211,21 @@ doorkeeper 側では
   optional_scopes :admin, :write
 ```
 
+2013-12-20 追記:
+doorkeeper gem を 0.7.3 から 0.7.4 に上げたところ、
+シンボルだとうまく動かなくなってしまったので、
+文字列に変更しました。
+
+(doorkeeer gem 0.7.3 以前)
 ```ruby app/controllers/api/v1/posts_controller.rb
     doorkeeper_for :index,  :show,   scopes: [:public]
     doorkeeper_for :create, :update, scopes: [:admin, :write]
+```
+
+(doorkeeer gem 0.7.4 以降)
+```ruby app/controllers/api/v1/posts_controller.rb
+    doorkeeper_for :index,  :show,   scopes: %w"public"
+    doorkeeper_for :create, :update, scopes: %w"admin write"
 ```
 
 参考のため、この API の rspec も載せておきます。
