@@ -5,12 +5,15 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>@znz blog</title>
+  <title>Dockerで不要になったコンテナやイメージを削除する - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="devise 3.0.3 と devise 3.1.0 で自動生成されるファイルの差分
-をとって、バージョンアップした時に対応が必要な場所を調べました。 ">
+  <meta name="description" content="Docker を使い続けてコンテナやイメージを放置していると差分だけとはいえ、
+ディスクの消費が増えていって、
+書き込みエラー: デバイスに空き領域がありません
+(ENOSPC, write error: No space left on device)
+というエラーになってしまいます。 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +22,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/page/7/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-12-24-docker-rm.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,15 +79,12 @@
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2013-09-18-devise30-devise31.html">devise 3.0.3 と devise 3.1.0 で自動生成されるファイルの違い</a></h1>
+      <h1 class="entry-title">Dockerで不要になったコンテナやイメージを削除する</h1>
     
     
       <p class="meta">
@@ -100,85 +100,103 @@
   
 
 
-<time datetime="2013-09-18T15:09:00+09:00" pubdate data-updated="true">2013-09-18 (Wed)</time>
+<time datetime="2013-12-24T11:00:00+09:00" pubdate data-updated="true">2013-12-24 (Tue)</time>
         
-           | <a href="/blog/2013-09-18-devise30-devise31.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-09-18-devise30-devise31.html">Comments</a>
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p><a href="https://gist.github.com/znz/6603471">devise 3.0.3 と devise 3.1.0 で自動生成されるファイルの差分</a>
-をとって、バージョンアップした時に対応が必要な場所を調べました。</p>
+<div class="entry-content"><p>Docker を使い続けてコンテナやイメージを放置していると差分だけとはいえ、
+ディスクの消費が増えていって、
+<code>書き込みエラー: デバイスに空き領域がありません</code>
+(<code>ENOSPC</code>, <code>write error: No space left on device</code>)
+というエラーになってしまいます。</p>
 
+<!--more-->
+
+
+<h2>コンテナの削除</h2>
+
+<p><a href="http://docs.docker.io/en/latest/commandline/cli/#rm">docker rm</a>
+の Eamples にあるように</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go"> docker rm `docker ps -a -q`</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>で停止しているコンテナを削除できます。</p>
+
+<p>実行中のコンテナがあると削除できないというエラーが出ますが、
+意図的にやっていることなので気にする必要はありません。</p>
+
+<p>公式のドキュメントにも書いてある方法なので、
+コンテナの削除方法はこのやり方で問題ないと思います。</p>
+
+<h2>イメージの削除</h2>
+
+<p><a href="https://github.com/dotcloud/docker/blob/e960152a1e9064d8c2ae57b9ab2a33d9b27276b9/CHANGELOG.md#072-2013-12-16">0.7.2 (2013-12-16) の変更点</a>
+に
+「実行中以外であってもコンテナが依存しているイメージは削除できなくした」
+(Prevent deletion of image if ANY container is depending on it even if the container is not running)
+と書いてあって、
+今まではコンテナが停止していれば
+<code>docker rmi</code> でイメージが削除できていたのですが、
+0.7.2 からはできなくなったので、
+上記の手順でコンテナを先に削除しておく必要があります。</p>
+
+<p>不要なイメージの削除は
+<code>docker images</code> で <code>REPOSITORY</code> が
+<code>&lt;none&gt;</code> になっているものを削除すれば良いので、</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go"> docker rmi $(docker images | awk &#39;/^&lt;none&gt;/ { print $3 }&#39;)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のようにすれば可能です。</p>
+
+<p><code>Error: No such image: xxxxxxxxxxxx</code>
+のようにエラーが出ることがありますが、
+他のイメージを削除したときに一緒に削除されてしまっているだけで、
+特に問題はないようです。</p>
+
+<p><a href="https://github.com/dotcloud/docker/blob/a665517151911866285e5a72164c5f2d2f31ba65/FIXME">FIXME</a>
+に書いてある方法なので、
+現状はこの方法が無難だと思います。</p>
+
+<p>FIXME に書いてあるということで、
+将来的にはコンテナの削除の方も含めて、
+もっと簡単なコマンドが用意される予定のようです。</p>
+
+<h2>その他のイメージの削除</h2>
+
+<p><code>docker rmi local/debian-ja:7.2</code> で特定の <code>TAG</code> のイメージを削除したり、
+<code>docker rmi shipyard/shipyard</code> で特定の <code>REPOSITORY</code> のすべてのイメージを削除したりできます。</p>
+
+<h2>まとめ</h2>
+
+<p>docker を使い続けていると起きることのある問題の対処方法を紹介しました。</p>
+
+<p>本題ではないので上には書いていませんが、
+イメージがたまっている状態で削除する前に
+<a href="http://docs.docker.io/en/latest/commandline/cli/#displaying-images-visually">docker images -viz</a>
+を見てみるのも面白いかもしれません。</p>
 </div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-09-18-devise30-devise31.html">続きを読む &rarr;</a>
-    </footer>
-  
 
 
-    </article>
-  
-  
-    <article>
+  <footer>
+    <p class="meta">
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-09-15-ubuntu-server-installed.html">Ubuntu Server 12.04.3 LTS をインストールした</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
   
 
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
 
-<time datetime="2013-09-15T20:02:00+09:00" pubdate data-updated="true">2013-09-15 (Sun)</time>
-        
-           | <a href="/blog/2013-09-15-ubuntu-server-installed.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-09-15-ubuntu-server-installed.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>自宅サーバーのシステムディスク (sda) が壊れたので、 HDD を入れ替えて、せっかくなのでシステムをきれいな状態にするために <code>ubuntu-12.04.3-server-amd64.iso</code> からインストールし直しました。
-その初期設定の話です。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-09-15-ubuntu-server-installed.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-09-14-use-custom-ruby-with-rbenv.html">独自ビルドした ruby を rbenv で使う</a></h1>
-    
-    
-      <p class="meta">
-        
 
 
 
@@ -190,348 +208,33 @@
   
 
 
-<time datetime="2013-09-14T23:22:00+09:00" pubdate data-updated="true">2013-09-14 (Sat)</time>
-        
-           | <a href="/blog/2013-09-14-use-custom-ruby-with-rbenv.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-09-14-use-custom-ruby-with-rbenv.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="https://github.com/sstephenson/rbenv">rbenv</a>
-を使っているなら、
-<a href="https://github.com/sstephenson/ruby-build">ruby-build</a>
-でインストールしたもの以外にも
-自分でビルドした ruby も rbenv で切り替えたくなることがありますが、
-これは簡単に出来ます。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-09-14-use-custom-ruby-with-rbenv.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
+<time datetime="2013-12-24T11:00:00+09:00" pubdate data-updated="true">2013-12-24 (Tue)</time>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-09-13-homebrew-used-options.html">homebrew の reinstall で使われるオプションの保存場所</a></h1>
-    
-    
-      <p class="meta">
-        
 
-
-
-
-
-
-
-
+<span class="categories">
   
+    <a class='category' href='/blog/categories/docker/'>docker</a>
+  
+</span>
 
 
-<time datetime="2013-09-13T21:58:00+09:00" pubdate data-updated="true">2013-09-13 (Fri)</time>
-        
-           | <a href="/blog/2013-09-13-homebrew-used-options.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-09-13-homebrew-used-options.html">Comments</a>
-        
-      </p>
+    </p>
     
-  </header>
-
-
-  <div class="entry-content"><p><a href="/blog/2013-09-08-rabbiter-on-mac.html">rabbiter の記事</a>
-で、
-「一度 <code>--with-curl-ca-bundle</code> 付きでインストールした後だと、以下のようにオプションなしの reinstall でもオプションが付くようです。」
-と書きましたが、そのオプションがどこに保存されているのかを調べました。</p>
-
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-12-24-docker-rm.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-12-24-docker-rm.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-12-24-docker-rm.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
 </div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-09-13-homebrew-used-options.html">続きを読む &rarr;</a>
-    </footer>
-  
 
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
     
-      <h1 class="entry-title"><a href="/blog/2013-09-12-td2planet.html">td2planet を rubyforge から github に移行してリリース</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-12T22:43:00+09:00" pubdate data-updated="true">2013-09-12 (Thu)</time>
-        
-           | <a href="/blog/2013-09-12-td2planet.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-09-12-td2planet.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>tDiary の日付ごとのまとまりを意識したフィードアグリゲータの td2planet を rubyforge から github に移行して、 ruby 2.0.0 対応を確認して、 0.3.0 としてリリースしました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-09-12-td2planet.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-09-11-tagcloud.html">タグクラウドプラグインを入れた</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-11T00:00:00+09:00" pubdate data-updated="true">2013-09-11 (Wed)</time>
-        
-           | <a href="/blog/2013-09-11-tagcloud.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-09-11-tagcloud.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>探してみて見つけた中で今もちゃんとメンテナンスされてそうだった
-<a href="https://github.com/tokkonopapa/octopress-tagcloud">Tag cloud plugin for Octopress</a>
-を入れてタグクラウドが出るようにしてみました。</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-09-10-add-old-posts.html">先月のイベントでの発表の記事を追加</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-10T21:39:00+09:00" pubdate data-updated="true">2013-09-10 (Tue)</time>
-        
-           | <a href="/blog/2013-09-10-add-old-posts.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-09-10-add-old-posts.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="/blog/2013-08-24-llmatsuri.html">LLまつり</a> と <a href="/blog/2013-08-31-kansairubykaigi05.html">関西Ruby会議05</a> の記事を追加しました。</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-09-09-rabbit-on-mac.html">Mac で rabbit が動かなくなったので brew reinstall したら直った</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-09T23:00:00+09:00" pubdate data-updated="true">2013-09-09 (Mon)</time>
-        
-           | <a href="/blog/2013-09-09-rabbit-on-mac.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-09-09-rabbit-on-mac.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>いつの間にか動かなくなっていた rabbit (2.1.1) が <code>brew reinstall</code> で動くようになったという話です。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-09-09-rabbit-on-mac.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-09-08-octopress.html">octopress 始めました</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-08T22:58:00+09:00" pubdate data-updated="true">2013-09-08 (Sun)</time>
-        
-           | <a href="/blog/2013-09-08-octopress.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-09-08-octopress.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>octopress で github pages を作ってみました。
-インストール記事などは複数あるので気になった点を列挙するだけにします。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-09-08-octopress.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-09-08-rabbiter-on-mac.html">Mac で rabbiter が動いた</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-08T21:30:00+09:00" pubdate data-updated="true">2013-09-08 (Sun)</time>
-        
-           | <a href="/blog/2013-09-08-rabbiter-on-mac.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-09-08-rabbiter-on-mac.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>homebrew を使った Mac OS X 10.8.4 環境で rabbiter (2.0.1) が動くようになりました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-09-08-rabbiter-on-mac.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  <div class="pagination">
-    
-      <a class="prev" href="/blog/page/8/">&larr; Older</a>
-    
-    <a href="/blog/archives">Blog Archives</a>
-    
-    <a class="next" href="/blog/page/6/">Newer &rarr;</a>
-    
-  </div>
-  <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
 <!-- footer -->
 <ins class="adsbygoogle"
      style="display:inline-block;width:728px;height:90px"
@@ -541,7 +244,23 @@
 (adsbygoogle = window.adsbygoogle || []).push({});
 </script>
 
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013-12-21-update-octopress.html" title="Previous Post: octopressをアップデートしてisolateを使い始めた">&laquo; octopressをアップデートしてisolateを使い始めた</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+  </section>
+
+</div>
+
 <aside class="sidebar">
   
     <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
@@ -594,7 +313,7 @@
 <section>
   <h1>GitHub Repos</h1>
   <ul id="gh_repos">
-    <li class="loading">Status updating&#8230;</li>
+    <li class="loading">Status updating...</li>
   </ul>
   
   <a href="https://github.com/znz">@znz</a> on GitHub
@@ -627,6 +346,7 @@
   
 </aside>
 
+
     </div>
   </div>
   <footer role="contentinfo"><p>
@@ -641,7 +361,10 @@
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-12-24-docker-rm.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-12-24-docker-rm.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-21T23:40:20+09:00</updated>
+  <updated>2013-12-24T11:23:06+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,90 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Dockerで不要になったコンテナやイメージを削除する]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-24-docker-rm.html"/>
+    <updated>2013-12-24T11:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/docker-rm</id>
+    <content type="html"><![CDATA[<p>Docker を使い続けてコンテナやイメージを放置していると差分だけとはいえ、
+ディスクの消費が増えていって、
+<code>書き込みエラー: デバイスに空き領域がありません</code>
+(<code>ENOSPC</code>, <code>write error: No space left on device</code>)
+というエラーになってしまいます。</p>
+
+<!--more-->
+
+
+<h2>コンテナの削除</h2>
+
+<p><a href="http://docs.docker.io/en/latest/commandline/cli/#rm">docker rm</a>
+の Eamples にあるように</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go"> docker rm `docker ps -a -q`</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>で停止しているコンテナを削除できます。</p>
+
+<p>実行中のコンテナがあると削除できないというエラーが出ますが、
+意図的にやっていることなので気にする必要はありません。</p>
+
+<p>公式のドキュメントにも書いてある方法なので、
+コンテナの削除方法はこのやり方で問題ないと思います。</p>
+
+<h2>イメージの削除</h2>
+
+<p><a href="https://github.com/dotcloud/docker/blob/e960152a1e9064d8c2ae57b9ab2a33d9b27276b9/CHANGELOG.md#072-2013-12-16">0.7.2 (2013-12-16) の変更点</a>
+に
+「実行中以外であってもコンテナが依存しているイメージは削除できなくした」
+(Prevent deletion of image if ANY container is depending on it even if the container is not running)
+と書いてあって、
+今まではコンテナが停止していれば
+<code>docker rmi</code> でイメージが削除できていたのですが、
+0.7.2 からはできなくなったので、
+上記の手順でコンテナを先に削除しておく必要があります。</p>
+
+<p>不要なイメージの削除は
+<code>docker images</code> で <code>REPOSITORY</code> が
+<code>&lt;none&gt;</code> になっているものを削除すれば良いので、</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go"> docker rmi $(docker images | awk &#39;/^&lt;none&gt;/ { print $3 }&#39;)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のようにすれば可能です。</p>
+
+<p><code>Error: No such image: xxxxxxxxxxxx</code>
+のようにエラーが出ることがありますが、
+他のイメージを削除したときに一緒に削除されてしまっているだけで、
+特に問題はないようです。</p>
+
+<p><a href="https://github.com/dotcloud/docker/blob/a665517151911866285e5a72164c5f2d2f31ba65/FIXME">FIXME</a>
+に書いてある方法なので、
+現状はこの方法が無難だと思います。</p>
+
+<p>FIXME に書いてあるということで、
+将来的にはコンテナの削除の方も含めて、
+もっと簡単なコマンドが用意される予定のようです。</p>
+
+<h2>その他のイメージの削除</h2>
+
+<p><code>docker rmi local/debian-ja:7.2</code> で特定の <code>TAG</code> のイメージを削除したり、
+<code>docker rmi shipyard/shipyard</code> で特定の <code>REPOSITORY</code> のすべてのイメージを削除したりできます。</p>
+
+<h2>まとめ</h2>
+
+<p>docker を使い続けていると起きることのある問題の対処方法を紹介しました。</p>
+
+<p>本題ではないので上には書いていませんが、
+イメージがたまっている状態で削除する前に
+<a href="http://docs.docker.io/en/latest/commandline/cli/#displaying-images-visually">docker images -viz</a>
+を見てみるのも面白いかもしれません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[octopressをアップデートしてisolateを使い始めた]]></title>
@@ -2833,174 +2917,6 @@ git 1.8.4.3 の <code>git config --help</code> に
 <p>実際には IRC の bot に使いました。
 旧暦計算は自分で実装するのは面倒なので、
 ライブラリがあるのは非常にありがたいです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[debianでpostfixと連携するvirtual hostではないmailmanの設定をした]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-24-debian-postfix-mailman.html"/>
-    <updated>2013-11-24T19:50:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/debian-postfix-mailman</id>
-    <content type="html"><![CDATA[<p>Debian で postfix と mailman を組み合わせて使う時に
-<code>lists.example.net</code> のように ML 専用のサブドメインを使う場合は
-<code>/etc/mailman/postfix-to-mailman.py</code> のコメントなどを参考にして
-設定すれば良いのですが、
-ドメインを分けずに他のローカル配送などと同じドメインで
-ML を運用する設定の情報があまりなかったので、
-どう設定したのかをまとめてみました。</p>
-
-<p>要点としては <code>alias_maps</code> に追加するだけでした。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Debian GNU/Linux 7.2 (wheezy)</li>
-<li>postfix 2.9.6-2</li>
-<li>mailman 1:2.1.15-1</li>
-</ul>
-
-
-<h2>mailman のインストール</h2>
-
-<p><a href="http://posokosi.seesaa.net/article/378457038.html">nginx + mailman でメーリングリスト: ぽそこし的日乗</a>
-に書いてあるように、
-なぜかインストール時の debconf の質問で設定した内容が反映されないので、
-<code>dpkg-reconfigure mailman</code> で再設定する必要がありました。</p>
-
-<p><code>Default language for Mailman</code> の設定だけなら
-<code>/etc/mailman/mm_cfg.py</code> を直接変更でも良いのですが、
-<code>Languages to support</code> で <code>ja (Japanese)</code> にチェックしたときに
-生成されるファイルもあるので、
-<code>dpkg-reconfigure mailman</code> で再設定するのが無難です。</p>
-
-<h2>文字コードについて</h2>
-
-<p>mailman の日本語の文字コードは未だに euc-jp なので、
-文字コードを設定できる端末を使うか、
-<a href="https://github.com/vmi/cocot">cocot</a>
-で
-<code>cocot -t utf-8 -p euc-jp ssh mlserver</code>
-のように変換をするようにしておかないと文字化けして非常につらいです。</p>
-
-<p><code>LANG=C</code> で mailman 関係のコマンドを実行しても
-英語メッセージにはならないので、
-注意が必要です。</p>
-
-<h2>postfix の設定</h2>
-
-<p>すでに <code>myhostname</code> とか <code>mydestination</code> に設定しているドメインに同居させるには
-<code>alias_maps</code> に <code>hash:/var/lib/mailman/data/aliases</code> を追加するだけです。</p>
-
-<p>具体的には
-<code>alias_maps = hash:/etc/aliases</code>
-という設定だったのなら、</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>alias_maps = hash:/etc/aliases
-</span><span class='line'> hash:/var/lib/mailman/data/aliases</span></code></pre></td></tr></table></div></figure>
-
-
-<p>のように追加するだけです。
-差分をとりやすいように別の行にするのが好みですが、
-同じ行の末尾に追加でもかまいません。</p>
-
-<h2>mm_cfg.py の設定</h2>
-
-<h3>MTA</h3>
-
-<p><code>newlist</code> で ML を作成する前に
-<code>sudoedit /etc/mailman/mm_cfg.py</code> で
-<code>MTA='Postfix'</code> を有効にしておきます。</p>
-
-<p><code>newlist</code> の最後に
-<code>/var/lib/mailman/bin/genaliases</code>
-相当の処理が実行されるようなのですが、
-<code>MTA='Postfix'</code> の設定をしておくと
-<code>/var/lib/mailman/data/aliases*</code>
-が自動で作成されるようになります。</p>
-
-<p><code>MTA</code> の設定が無いと <code>aliases</code> に設定すべき内容を含むメッセージが表示されるだけでした。</p>
-
-<h3>ML のデフォルト値</h3>
-
-<p>以下のような感じで ML の設定のデフォルト値を設定しておくと
-後から Web で設定変更する手間を省けます。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>DEFAULT_SUBJECT_PREFIX = "[%(real_name)s:%%d] "
-</span><span class='line'>DEFAULT_MSG_FOOTER = ""
-</span><span class='line'>DEFAULT_REPLY_GOES_TO_LIST = 1
-</span><span class='line'>DEFAULT_MAX_MESSAGE_SIZE = 0
-</span><span class='line'>DEFAULT_LIST_ADVERTISED = No
-</span><span class='line'>DEFAULT_PRIVATE_ROSTER = 2</span></code></pre></td></tr></table></div></figure>
-
-
-<p>どんな設定項目があるのかは
-<code>/usr/lib/mailman/Mailman/Defaults.py</code>
-を参考にすれば良さそうです。</p>
-
-<p><code>sudo -u list /var/lib/mailman/bin/config_list -o - mailman | iconv -f euc-jp -t utf-8 | pager</code>
-のように既存の ML の設定を (Web で変更しつつ) 参考にするのも良さそうです。</p>
-
-<h2>パーミッション修正</h2>
-
-<p><code>sudo /var/lib/mailman/bin/check_perms -f</code>
-でパーミッションの修正をします。
-<code>/var/lib/mailman/messages/</code> の中身のパーミッションの修正があるので、
-ほぼ必須だと思います。</p>
-
-<p>最終的には 10 個残りましたが、
-シンボリックリンクでリンク先のグループは問題ないようなので、
-無視することにしました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>$ sudo /var/lib/mailman/bin/check_perms -f
-</span><span class='line'>/var/lib/mailman/bin bad group (has: root, expected list) (fixing)
-</span><span class='line'>/var/lib/mailman/logs bad group (has: root, expected list) (fixing)
-</span><span class='line'>/var/lib/mailman/cron bad group (has: root, expected list) (fixing)
-</span><span class='line'>/var/lib/mailman/icons bad group (has: root, expected list) (fixing)
-</span><span class='line'>/var/lib/mailman/Mailman bad group (has: root, expected list) (fixing)
-</span><span class='line'>/var/lib/mailman/templates bad group (has: root, expected list) (fixing)
-</span><span class='line'>/var/lib/mailman/mail bad group (has: root, expected list) (fixing)
-</span><span class='line'>/var/lib/mailman/scripts bad group (has: root, expected list) (fixing)
-</span><span class='line'>/var/lib/mailman/cgi-bin bad group (has: root, expected list) (fixing)
-</span><span class='line'>/var/lib/mailman/locks bad group (has: root, expected list) (fixing)
-</span><span class='line'>Problems found: 10
-</span><span class='line'>Re-run as list (or root) with -f flag to fix</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>ML 作成</h2>
-
-<p>mailman の依存で自動インストールされる <code>pwgen</code> を使って、
-<code>pwgen -sB 20 1</code>
-などでパスワードを生成して、
-<code>sudo -u list $mlname mladmin@example.net $listpass</code>
-のような感じで作成できます。</p>
-
-<h2>その他の設定</h2>
-
-<p>後は fml からのメールの移行とか Web 経由での設定をしていきました。</p>
 ]]></content>
   </entry>
   
