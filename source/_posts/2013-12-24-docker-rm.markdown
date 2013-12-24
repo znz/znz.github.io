@@ -1,0 +1,80 @@
+---
+layout: post
+title: "Dockerで不要になったコンテナやイメージを削除する"
+date: 2013-12-24 11:00:00 +0900
+comments: true
+categories: docker
+---
+Docker を使い続けてコンテナやイメージを放置していると差分だけとはいえ、
+ディスクの消費が増えていって、
+`書き込みエラー: デバイスに空き領域がありません`
+(`ENOSPC`, `write error: No space left on device`)
+というエラーになってしまいます。
+
+<!--more-->
+
+## コンテナの削除
+
+[docker rm](http://docs.docker.io/en/latest/commandline/cli/#rm)
+の Eamples にあるように
+
+```console
+ docker rm `docker ps -a -q`
+```
+
+で停止しているコンテナを削除できます。
+
+実行中のコンテナがあると削除できないというエラーが出ますが、
+意図的にやっていることなので気にする必要はありません。
+
+公式のドキュメントにも書いてある方法なので、
+コンテナの削除方法はこのやり方で問題ないと思います。
+
+## イメージの削除
+
+[0.7.2 (2013-12-16) の変更点](https://github.com/dotcloud/docker/blob/e960152a1e9064d8c2ae57b9ab2a33d9b27276b9/CHANGELOG.md#072-2013-12-16)
+に
+「実行中以外であってもコンテナが依存しているイメージは削除できなくした」
+(Prevent deletion of image if ANY container is depending on it even if the container is not running)
+と書いてあって、
+今まではコンテナが停止していれば
+`docker rmi` でイメージが削除できていたのですが、
+0.7.2 からはできなくなったので、
+上記の手順でコンテナを先に削除しておく必要があります。
+
+不要なイメージの削除は
+`docker images` で `REPOSITORY` が
+`<none>` になっているものを削除すれば良いので、
+
+```console
+ docker rmi $(docker images | awk '/^<none>/ { print $3 }')
+```
+
+のようにすれば可能です。
+
+`Error: No such image: xxxxxxxxxxxx`
+のようにエラーが出ることがありますが、
+他のイメージを削除したときに一緒に削除されてしまっているだけで、
+特に問題はないようです。
+
+[FIXME](https://github.com/dotcloud/docker/blob/a665517151911866285e5a72164c5f2d2f31ba65/FIXME)
+に書いてある方法なので、
+現状はこの方法が無難だと思います。
+
+FIXME に書いてあるということで、
+将来的にはコンテナの削除の方も含めて、
+もっと簡単なコマンドが用意される予定のようです。
+
+## その他のイメージの削除
+
+`docker rmi local/debian-ja:7.2` で特定の `TAG` のイメージを削除したり、
+`docker rmi shipyard/shipyard` で特定の `REPOSITORY` のすべてのイメージを削除したりできます。
+
+## まとめ
+
+docker を使い続けていると起きることのある問題の対処方法を紹介しました。
+
+本題ではないので上には書いていませんが、
+イメージがたまっている状態で削除する前に
+[docker images -viz](http://docs.docker.io/en/latest/commandline/cli/#displaying-images-visually)
+を見てみるのも面白いかもしれません。
