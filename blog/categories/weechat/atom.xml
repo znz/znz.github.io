@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: weechat | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/weechat/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2013-12-26T00:52:33+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[weechat-cursesでの罫線の文字幅問題を回避する]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-25-weechat-curses.html"/>
+    <updated>2013-12-25T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/weechat-curses</id>
+    <content type="html"><![CDATA[<p>サーバー上の端末の中で使える IRC クライアントとして
+<code>weechat-curses</code> をちょっと試しているのですが、
+<code>│</code> (U+2502 BOX DRAWINGS LIGHT VERTICAL)
+で罫線文字の文字幅問題が発生してずれるという現象に困っていたので、
+問題を回避する設定をしてみました。</p>
+
+<!--more-->
+
+
+<h2>設定</h2>
+
+<p><code>│</code> (U+2502) の代わりに <code>|</code> (U+007C VERTICAL LINE)
+を使うだけなら、</p>
+
+<p><code>
+/set weechat.look.separator_vertical "|"
+</code></p>
+
+<p>でいけます。</p>
+
+<h2>問題の文字が使われている場所</h2>
+
+<p>weechat の画面で問題が起きている行は</p>
+
+<p><code>
+時刻 nickなどのprefix 左の縦線(|) メッセージ 右の縦線(│) nick一覧
+</code></p>
+
+<p>のようになっていて、最初は両方の縦線が問題になっているのかと
+勘違いしていたのですが、実際には右側の方だけでした。</p>
+
+<p>左側の縦線の部分の設定は <code>weechat.look.prefix_suffix</code> で、
+右側は <code>weechat.look.separator_vertical</code> です。</p>
+
+<p>左側の方はデフォルトで <code>"|"</code> になっていて、問題はありませんでした。</p>
+
+<p>右側の方はデフォルトでは <code>""</code> (空文字列) になっていて、
+その場合は ncurses で縦線を描画するという意味になって、
+問題が起きていました。</p>
+
+<p>たとえば <code>":"</code> などに設定を変えてみるとどっちがどっちなのか
+よくわかると思います。</p>
+
+<h2>まとめ</h2>
+
+<p>weechat を試していて、ずっと困っていた問題が解決できたので、
+これからもうちょっと使ってみようと思えるようになりました。</p>
+
+<p>Web で検索しても全く情報がみつからなかったのですが、
+誰も困っていなかったのでしょうか。
+英語圏だと困らなさそうですが、日本語圏でも使っている人はいそうなのに
+情報がないのは他のコマンドも含めて対処していて困っていないからなのか、
+気にせずずれるまま使っているからなのかが気になりました。</p>
+]]></content>
+  </entry>
+  
+</feed>

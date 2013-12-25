@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-24T11:23:06+09:00</updated>
+  <updated>2013-12-26T00:52:33+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,67 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[weechat-cursesでの罫線の文字幅問題を回避する]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-25-weechat-curses.html"/>
+    <updated>2013-12-25T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/weechat-curses</id>
+    <content type="html"><![CDATA[<p>サーバー上の端末の中で使える IRC クライアントとして
+<code>weechat-curses</code> をちょっと試しているのですが、
+<code>│</code> (U+2502 BOX DRAWINGS LIGHT VERTICAL)
+で罫線文字の文字幅問題が発生してずれるという現象に困っていたので、
+問題を回避する設定をしてみました。</p>
+
+<!--more-->
+
+
+<h2>設定</h2>
+
+<p><code>│</code> (U+2502) の代わりに <code>|</code> (U+007C VERTICAL LINE)
+を使うだけなら、</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>/set weechat.look.separator_vertical "|"</span></code></pre></td></tr></table></div></figure>
+
+
+<p>でいけます。</p>
+
+<h2>問題の文字が使われている場所</h2>
+
+<p>weechat の画面で問題が起きている行は</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>時刻 nickなどのprefix 左の縦線(|) メッセージ 右の縦線(│) nick一覧</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のようになっていて、最初は両方の縦線が問題になっているのかと
+勘違いしていたのですが、実際には右側の方だけでした。</p>
+
+<p>左側の縦線の部分の設定は <code>weechat.look.prefix_suffix</code> で、
+右側は <code>weechat.look.separator_vertical</code> です。</p>
+
+<p>左側の方はデフォルトで <code>"|"</code> になっていて、問題はありませんでした。</p>
+
+<p>右側の方はデフォルトでは <code>""</code> (空文字列) になっていて、
+その場合は ncurses で縦線を描画するという意味になって、
+問題が起きていました。</p>
+
+<p>たとえば <code>":"</code> などに設定を変えてみるとどっちがどっちなのか
+よくわかると思います。</p>
+
+<h2>まとめ</h2>
+
+<p>weechat を試していて、ずっと困っていた問題が解決できたので、
+これからもうちょっと使ってみようと思えるようになりました。</p>
+
+<p>Web で検索しても全く情報がみつからなかったのですが、
+誰も困っていなかったのでしょうか。
+英語圏だと困らなさそうですが、日本語圏でも使っている人はいそうなのに
+情報がないのは他のコマンドも含めて対処していて困っていないからなのか、
+気にせずずれるまま使っているからなのかが気になりました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Dockerで不要になったコンテナやイメージを削除する]]></title>
@@ -2878,45 +2939,6 @@ git 1.8.4.3 の <code>git config --help</code> に
 まとめてみました。</p>
 
 <p>そして github 以外でも使えるという話も付け加えておきました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[旧暦を計算するgemを使った]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-26-qreki.html"/>
-    <updated>2013-11-26T23:46:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/qreki</id>
-    <content type="html"><![CDATA[<p><a href="https://forkwell.com/pub/github.com/ozamasa/qreki">https://forkwell.com/pub/github.com/ozamasa/qreki</a>
-で知った
-<a href="https://github.com/ozamasa/qreki">旧暦を計算するgem</a>
-を使って旧暦表示を試してみました。</p>
-
-<!--more-->
-
-
-<p><a href="https://github.com/ozamasa/qreki">qreki</a>
-の <code>README.md</code> には書いていませんが、
-普通は
-<code>require "qreki"</code>
-も必要です。</p>
-
-<p>例えば以下のように使えます。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="nb">require</span> <span class="s1">&#39;qreki&#39;</span>
-</span><span class='line'><span class="n">q</span> <span class="o">=</span> <span class="no">Qreki</span><span class="o">.</span><span class="n">calc_from_date</span><span class="p">(</span><span class="no">Date</span><span class="o">.</span><span class="n">today</span><span class="p">)</span>
-</span><span class='line'><span class="nb">puts</span> <span class="s2">&quot;旧暦</span><span class="si">#{</span><span class="n">q</span><span class="o">.</span><span class="n">year</span><span class="si">}</span><span class="s2">年</span><span class="si">#{</span><span class="n">q</span><span class="o">.</span><span class="n">uruu</span> <span class="p">?</span> <span class="s1">&#39;閏&#39;</span> <span class="p">:</span> <span class="kp">nil</span><span class="si">}#{</span><span class="n">q</span><span class="o">.</span><span class="n">month</span><span class="si">}</span><span class="s2">月</span><span class="si">#{</span><span class="n">q</span><span class="o">.</span><span class="n">day</span><span class="si">}</span><span class="s2">日(</span><span class="si">#{</span><span class="n">q</span><span class="o">.</span><span class="n">rokuyou</span><span class="si">}</span><span class="s2">)</span><span class="si">#{</span><span class="n">q</span><span class="o">.</span><span class="n">sekki</span><span class="si">}</span><span class="s2">&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>出力例としては <code>旧暦2013年10月24日(先負)</code> のようになります。
-<code>Date.today</code> の代わりに <code>Time.now</code> のように <code>Time</code> オブジェクトも使えました。</p>
-
-<p>実際には IRC の bot に使いました。
-旧暦計算は自分で実装するのは面倒なので、
-ライブラリがあるのは非常にありがたいです。</p>
 ]]></content>
   </entry>
   
