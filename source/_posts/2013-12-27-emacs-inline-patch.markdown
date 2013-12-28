@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Cocoa Emacsのinline patch修正版を使ってみた"
-date: 2013-12-28 01:03:32 +0900
+date: 2013-12-27 23:00:00 +0900
 comments: true
 categories: emacs mac
 ---
