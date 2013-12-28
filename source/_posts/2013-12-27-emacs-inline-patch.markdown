@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Cocoa Emacsのinline patch修正版を使ってみた"
+title: "distnotedの暴走が止まるというCocoa Emacsのinline patch修正版を使ってみた"
 date: 2013-12-27 23:00:00 +0900
 comments: true
 categories: emacs osx
