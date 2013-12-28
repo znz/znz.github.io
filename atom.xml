@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-28T18:51:30+09:00</updated>
+  <updated>2013-12-28T19:30:12+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -14,7 +14,107 @@
 
   
   <entry>
-    <title type="html"><![CDATA[Cocoa Emacsのinline patch修正版を使ってみた]]></title>
+    <title type="html"><![CDATA[RubyMotionのOSXアプリの起動エラー]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-28-rubymotion-error.html"/>
+    <updated>2013-12-28T18:55:18+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubymotion-error</id>
+    <content type="html"><![CDATA[<p>最近 RubyMotion で作っている OSX アプリが
+<code>LSOpenURLsWithRole() failed with error -10810</code>
+などで起動しないことがあったので原因を調べてみました。</p>
+
+<!--more-->
+
+
+<h2>LSOpenURLsWithRole() failed with error -10810</h2>
+
+<h3>よくある原因</h3>
+
+<p><code>Hello.app/Contents/MacOS/Hello</code>
+のような実行ファイルの実体に実行属性が外れているというのが
+よくある原因のようで、
+<a href="http://owncloud.org/">ownCloud</a>
+経由で同期したアプリが実行できなかったときは
+これが原因でした。</p>
+
+<h3>別の原因</h3>
+
+<p>実行属性も問題なくて悩んでいたときに
+コンソール (Console.app) のログを見てみると</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>2013/12/28 10:39:17.963 open[85406]: spawn_via_launchd() failed, errno=22 label=com.yourcompany.Hello.44032 path=.../Hello/build/MacOSX-10.9-Development/Hello.app/Contents/MacOS/Hello flags=0 : LaunchApplicationClient.cp #1168 LaunchApplicationViaLaunchDJobLabel() q=com.apple.main-thread</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のようなログが出ていたので、
+<code>LaunchApplicationViaLaunchDJobLabel</code>
+で検索してみたところ、
+<a href="http://portingteam.com/topic/9723-mavericks-problem-opening-fresh-wrapper/">Mavericks problem opening fresh wrapper</a>
+という話が見つかって、
+そこに書いてあった</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>launchctl remove $(launchctl list | grep wineskin | awk '{ print $3 }')</span></code></pre></td></tr></table></div></figure>
+
+
+<p>という手順を参考にして解決しました。</p>
+
+<p><code>Hello</code> が2個残っていて、
+<code>$()</code> だとダメだったので個別に <code>launchctl remove</code> しました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% launchctl list | grep Hello
+</span><span class='line'>- 2   com.yourcompany.Hello.44032
+</span><span class='line'>- 0   com.yourcompany.Hello.53008
+</span><span class='line'>%  launchctl remove $(launchctl list | awk '/Hello/{print $3}')
+</span><span class='line'>usage: launchctl remove &lt;job label&gt;
+</span><span class='line'>zsh: exit 1     launchctl remove $(launchctl list | awk '/Hello/{print $3}')
+</span><span class='line'>%  echo launchctl remove $(launchctl list | awk '/Hello/{print $3}')
+</span><span class='line'>launchctl remove com.yourcompany.Hello.44032 com.yourcompany.Hello.53008
+</span><span class='line'>%  launchctl remove com.yourcompany.Hello.44032
+</span><span class='line'>%  launchctl remove com.yourcompany.Hello.53008
+</span><span class='line'>%  open -a Hello</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>その他</h3>
+
+<p>その他の対象方法も含めて
+<a href="http://www.thexlab.com/faqs/error-10810.html">Error -10810 Openng Applictions or Relaunching Finder</a>
+にいろいろ書いてあるようです。
+(英語で長かったのでちゃんと読んでません。)</p>
+
+<h2>MacBookPro6,2 で EXC_BAD_INSTRUCTION (SIGILL) になって起動しない</h2>
+
+<p>未解決です。</p>
+
+<p><a href="https://github.com/MohawkApps/Hacker-Bar/issues/36">EXC_BAD_INSTRUCTION crash in App Store version&hellip;</a>
+に似た話があって、
+RubyMotion のバグっぽいという話のようです。</p>
+
+<p><code>motion create --template=osx HelloOSX</code>
+で作成しただけのものでも
+<a href="https://gist.github.com/znz/8158061#file-helloosx-report-txt">クラッシュ</a>
+して起動しませんでした。</p>
+
+<p>RubyMotion を入れている自分の MacBook Air の環境の問題かどうかを切り分けるために
+<a href="http://shin1x1.github.io/vagrantx/">VagrantX</a>
+も試してみましたが、
+<a href="https://gist.github.com/znz/8158061#file-vagrantx-report-txt">同じくクラッシュ</a>
+して起動しませんでした。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[distnotedの暴走が止まるというCocoa Emacsのinline patch修正版を使ってみた]]></title>
     <link href="http://blog.n-z.jp/blog/2013-12-27-emacs-inline-patch.html"/>
     <updated>2013-12-27T23:00:00+09:00</updated>
     <id>http://blog.n-z.jp/blog/emacs-inline-patch</id>
@@ -2776,143 +2876,6 @@ Ubuntu の apt-line 以外から入れたパッケージが検索できます。
 <p>今まで <code>apt-get</code> や <code>apt-cache</code> しか使っていなかったとか、
 <code>aptitude</code> を使っていても単純にパッケージ名を指定しかしたことがなかったとか
 いう人は <code>aptitude purge '~c'</code> だけでも試してみると良いのではないでしょうか。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Ruby 2.1.0の新機能のException#cause]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-03-ruby-exception-cause.html"/>
-    <updated>2013-12-03T00:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ruby-exception-cause</id>
-    <content type="html"><![CDATA[<p><a href="https://www.ruby-lang.org/ja/news/2013/11/22/ruby-2-1-0-preview2-is-released/">Ruby 2.1.0-preview2 リリース</a>
-では
-<a href="http://d.hatena.ne.jp/nagachika/20131110/ruby_trunk_changes_43615_43636">2013-11-10 の大きめの変更</a>
-が気になっていて、
-ここでは
-<code>Exception#cause</code>
-というメソッドを紹介します。</p>
-
-<p><code>"literal"f</code> のように書く freeze された文字列リテラル機能が
-2.1.0-preview1 には入っていたのですが、それが削除されて
-<code>"literal".freeze</code> がコンパイル時に特別扱いされるようになった、
-というのも気になっています。</p>
-
-<p>この投稿は
-<a href="http://qiita.com/advent-calendar/2013/ruby">Ruby Advent Calendar 2013</a>
-の3日目の記事です。</p>
-
-<!--more-->
-
-
-<h2>Exception#cause の例</h2>
-
-<p>Ruby 2.0.0 までは <code>rescue</code> や <code>ensure</code> の中で別の例外が発生すると、
-別途保存しておかない限り、
-以前に発生した例外がわからなくなってしまっていましたが、
-Ruby 2.1.0(-preview2) からは別の例外を <code>raise</code> した時に
-以前の例外が自動で保存されて
-<code>Exception#cause</code> でたどれるようになりました。
-<code>cause</code> は <code>raise</code> のタイミングで設定されるので、
-例外オブジェクト自体は <code>rescue</code> や <code>ensure</code>
-の外で生成していても良いようです。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1">#!/usr/bin/env ruby</span>
-</span><span class='line'><span class="k">def</span> <span class="nf">foo</span>
-</span><span class='line'>  <span class="k">raise</span> <span class="s2">&quot;foo&quot;</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">def</span> <span class="nf">bar</span>
-</span><span class='line'>  <span class="n">e</span> <span class="o">=</span> <span class="no">Exception</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">&quot;bar&quot;</span><span class="p">)</span>
-</span><span class='line'>  <span class="n">foo</span>
-</span><span class='line'><span class="k">rescue</span>
-</span><span class='line'>  <span class="k">raise</span> <span class="n">e</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">def</span> <span class="nf">baz</span>
-</span><span class='line'>  <span class="n">bar</span>
-</span><span class='line'><span class="k">ensure</span>
-</span><span class='line'>  <span class="k">raise</span> <span class="s2">&quot;baz&quot;</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">begin</span>
-</span><span class='line'>  <span class="n">baz</span>
-</span><span class='line'><span class="k">rescue</span>
-</span><span class='line'>  <span class="nb">p</span> <span class="vg">$!</span>                   <span class="c1">#=&gt; #&lt;RuntimeError: baz&gt;</span>
-</span><span class='line'>  <span class="nb">p</span> <span class="vg">$!</span><span class="o">.</span><span class="n">cause</span>             <span class="c1">#=&gt; #&lt;Exception: bar&gt;</span>
-</span><span class='line'>  <span class="nb">p</span> <span class="vg">$!</span><span class="o">.</span><span class="n">cause</span><span class="o">.</span><span class="n">cause</span>       <span class="c1">#=&gt; #&lt;RuntimeError: foo&gt;</span>
-</span><span class='line'>  <span class="nb">p</span> <span class="vg">$!</span><span class="o">.</span><span class="n">cause</span><span class="o">.</span><span class="n">cause</span><span class="o">.</span><span class="n">cause</span> <span class="c1">#=&gt; nil</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>終了時のバックトレース</h2>
-
-<p>ちなみに、例外が保存されていても
-<code>rescue</code> せずにプログラムが終了した時のバックトレースは
-今まで通り最後の例外だけ表示されるようです。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> cat t.rb
-</span><span class='line'><span class="gp">#</span>!/usr/bin/env ruby
-</span><span class='line'><span class="go">def foo</span>
-</span><span class='line'><span class="go">  raise &quot;foo&quot;</span>
-</span><span class='line'><span class="go">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">def bar</span>
-</span><span class='line'><span class="go">  foo</span>
-</span><span class='line'><span class="go">rescue</span>
-</span><span class='line'><span class="go">  raise &quot;bar&quot;</span>
-</span><span class='line'><span class="go">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">bar</span>
-</span><span class='line'><span class="gp">%</span> ruby t.rb
-</span><span class='line'><span class="go">t.rb:9:in `rescue in bar&#39;: bar (RuntimeError)</span>
-</span><span class='line'><span class="go"> from t.rb:7:in `bar&#39;</span>
-</span><span class='line'><span class="go"> from t.rb:12:in `&lt;main&gt;&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
 ]]></content>
   </entry>
   

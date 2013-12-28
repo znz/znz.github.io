@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: rubymotion | @znz blog]]></title>
-  <link href="http://blog.n-z.jp/blog/categories/rubymotion/atom.xml" rel="self"/>
+  <title><![CDATA[Category: osx | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/osx/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
   <updated>2013-12-28T19:30:12+09:00</updated>
   <id>http://blog.n-z.jp/</id>
@@ -99,6 +99,88 @@ RubyMotion のバグっぽいという話のようです。</p>
 も試してみましたが、
 <a href="https://gist.github.com/znz/8158061#file-vagrantx-report-txt">同じくクラッシュ</a>
 して起動しませんでした。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[distnotedの暴走が止まるというCocoa Emacsのinline patch修正版を使ってみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-27-emacs-inline-patch.html"/>
+    <updated>2013-12-27T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/emacs-inline-patch</id>
+    <content type="html"><![CDATA[<p><a href="/blog/2013-11-13-killall-distnoted-periodically.html">launchdでdistnotedを定期的に終了させる</a>
+話のコメントで
+<a href="https://gist.github.com/anonymous/8142555">Emacs.appでインラインパッチを当てた時にdistnotedが暴走しなくなる</a>
+修正を教えてもらったので、
+試してみました。</p>
+
+<!--more-->
+
+
+<h2>homebrew で適用するパッチの変更</h2>
+
+<p>適用法としては
+<code>brew edit emacs</code>
+で以下のように変更して、
+<code>brew reinstall emacs</code>
+で再インストールしました。</p>
+
+<p>```diff
+diff &mdash;git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb
+index 712c3d1..5ce4ce2 100644
+&mdash;&ndash; a/Library/Formula/emacs.rb
++++ b/Library/Formula/emacs.rb
+@@ -47,7 +47,7 @@ class Emacs &lt; Formula</p>
+
+<pre><code> # "--japanese" option:
+ # to apply a patch from MacEmacsJP for Japanese input methods
+ if build.include? "cocoa" and build.include? "japanese"
+</code></pre>
+
+<ul>
+<li>   p[:p0].push(&ldquo;<a href="http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583">http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583</a>&rdquo;)</li>
+<li>   p[:p0].push(&ldquo;<a href="https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch">https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch</a>&rdquo;)
+ end
+ p
+end unless build.head?
+```</li>
+</ul>
+
+
+<h2>元のパッチからの変更点</h2>
+
+<p>元の sourceforge.jp のパッチとの差分をとってみると、
+以下のメソッド呼び出しが変わっているだけでした。</p>
+
+<p>```diff
+diff &mdash;git a/emacs-inline.patch.sfjp b/emacs-inline.patch.gist
+index 52f2052..d67ad1d 100644
+&mdash;&ndash; a/emacs-inline.patch.sfjp
++++ b/emacs-inline.patch.gist
+@@ -1015,7 +1015,7 @@ diff -r -N -p ../emacs-24.3.org/src/nsterm.m src/nsterm.m</p>
+
+<pre><code>                                            name: nil object: nil]; */
+</code></pre>
+
+<ul>
+<li> [[NSDistributedNotificationCenter defaultCenter] addObserver: NSApp</li>
+<li><pre><code>            selector: @selector (changeInputMethod:)
+</code></pre>
+
+<p>&ndash;+                         name: @&ldquo;AppleSelectedInputSourcesChangedNotification&rdquo; object: nil];
+++                         name: @&ldquo;AppleSelectedInputSourcesChangedNotification&rdquo; object: nil suspensionBehavior:NSNotificationSuspensionBehaviorDeliverImmediately];</p>
+
+<p>   dpyinfo = xzalloc (sizeof *dpyinfo);</p></li>
+</ul>
+
+
+<p>```</p>
+
+<h2>まとめ</h2>
+
+<p>使ってみて問題がなければ sourceforge.jp の方に取り込んでもらうのが良さそうです。</p>
+
+<p>しばらく使ってみた感じだと distnoted のメモリ使用量が増えていっても、
+一度 Emacs.app を終了すると distnoted のメモリ使用量が一気に減るようになりました。</p>
 ]]></content>
   </entry>
   
@@ -237,70 +319,6 @@ URL を 2 回クリックするという方法で
 <p><code>keyDirectObject</code> と <code>osascript</code> を使っているところは
 他に方法がなければ
 今のままでも実用上は困らないと感じました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[RubyMotionとRubyのバージョン]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-15-rubymotion-ruby-version.html"/>
-    <updated>2013-12-15T14:49:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-ruby-version</id>
-    <content type="html"><![CDATA[<p>今のところ RubyMotion は毎月のもくもく会以外ではほとんど触れていないので、
-RubyMotion と Ruby のバージョンの関係と言う小ネタです。</p>
-
-<p>この投稿は
-<a href="http://qiita.com/advent-calendar/2013/rubymotion">RubyMotion Advent Calendar 2013</a>
-の12日目の記事です。</p>
-
-<!--more-->
-
-
-<h2>RUBY_DESCRIPTION 確認</h2>
-
-<p>まず <code>Rakefile</code> の先頭で <code>RUBY_DESCRIPTION</code> を入れて、
-普通の <code>ruby</code> コマンドのバージョンを表示して、
-次に開発環境のプロンプトでも確認してみました。</p>
-
-<p>```console
-% head -n2 Rakefile</p>
-
-<h1>&ndash;<em>&ndash; coding: utf-8 &ndash;</em>&ndash;</h1>
-
-<p>p RUBY_DESCRIPTION
-% rake
-&ldquo;ruby 2.0.0p353 (2013-11-22 revision 43784) [x86_64-darwin12.5.0]&rdquo;</p>
-
-<pre><code> Build ./build/MacOSX-10.8-Development
-</code></pre>
-
-<p>   Compile ./app/app_delegate.rb
-   Compile ./app/menu.rb</p>
-
-<pre><code>Create ./build/MacOSX-10.8-Development/Hello.app/Contents
-Create ./build/MacOSX-10.8-Development/Hello.app/Contents/MacOS
-  Link ./build/MacOSX-10.8-Development/Hello.app/Contents/MacOS/Hello
-Create ./build/MacOSX-10.8-Development/Hello.app/Contents/PkgInfo
-Create ./build/MacOSX-10.8-Development/Hello.app/Contents/Info.plist
-  Copy ./resources/Credits.rtf
-Create ./build/MacOSX-10.8-Development/Hello.dSYM
-   Run ./build/MacOSX-10.8-Development/Hello.app/Contents/MacOS/Hello
-</code></pre>
-
-<p>(main)> RUBY_DESCRIPTION
-=> &ldquo;RubyMotion (ruby 1.9.2) [universal-darwin13.0, x86_64]&rdquo;
-(main)> exit
-```</p>
-
-<p>外側は 2.0.0 なのに RubyMotion の方は 1.9.2 でした。</p>
-
-<h2>まとめ</h2>
-
-<p>調べたきっかけはデバッグ用に <code>File.write</code>
-(<a href="http://docs.ruby-lang.org/ja/2.0.0/class/IO.html#S_WRITE">IO.write</a>)
-が使えなかったからでした。
-それは結局普通に <code>File.open</code> して書き込むことにしましたが、
-開発環境側の Ruby のバージョンを変えても生成されるアプリ側の
-Ruby のバージョンには影響しないという話でした。</p>
 ]]></content>
   </entry>
   
@@ -451,120 +469,63 @@ RubyMotion を 2.15 に上げると直っていました。</p>
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[第 4 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-23-rubymotion-mokumoku-osaka.html"/>
-    <updated>2013-10-23T19:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
-    <content type="html"><![CDATA[<p>第 1 回から第 3 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://connpass.com/event/3557/">第 4 回 RubyMotion もくもく会 in Osaka</a>
-に参加してきました。</p>
-
-<p>今回も前回と同じく東京と同時開催でした。
-前回はハングアウトで接続していたのですが、
-今回は接続せずに終わってしまいました。</p>
+    <title type="html"><![CDATA[Mac OS XでのIME制御についての考察]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-11-14-macosx-ime.html"/>
+    <updated>2013-11-14T02:24:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/macosx-ime</id>
+    <content type="html"><![CDATA[<p><a href="/blog/2013-11-12-cocoa-emacs-ime.html">Cocoa Emacs のインラインパッチ関連の設定</a>
+の時や
+<a href="/blog/2013-11-13-tty-ime.html">iTerm2 で IME 制御シーケンスがきかないのを調べた</a>
+時にも気になったのですが、
+Mac の IME に open/close という概念はあるのかという話です。</p>
 
 <!--more-->
 
 
-<h2>話に出たもの</h2>
+<h2>IME の開閉状態?</h2>
 
-<p>話に出てきたアプリやサイトのメモです。</p>
+<p>iBus 1.5 関連の記事の
+<a href="http://www.kaoriya.net/blog/2013/10/18/">iBusがクソになった理由 — KaoriYa</a>
+で知ったのですが、
+Mac OS X は IME のオン・オフのような状態の切り替えではなく、
+「ことえりのひらがな」とか
+「ことえりのカタカナ」とか
+「ことえりの英字」とか
+のようなIMEの種類を切り替えて入力するようになっています。</p>
 
-<ul>
-<li><a href="http://www.airsquirrels.com/reflectorc/">Reflector &ndash; AirPlay mirror your iPhone or iPad to any Mac or PC</a>
+<p>この考え方と開閉状態しか考慮していない二値的な制御シーケンスは相性が悪いのではないかと思いました。</p>
 
-<ul>
-<li>Mac OS X が Apple TV の代わりに iOS の画面を受け取れるようになる (有償 $12.99)。</li>
-<li>最後の成果発表の時に、複数の画面を同時に受け取れるという発見がありました。</li>
-<li>それを使えば複数の画面をまとめて同時に Apple TV に出せました。</li>
-<li>同じ会社が作っている
-<a href="http://www.airsquirrels.com/airparrot/">AirParrot &ndash; AirPlay your Mac or PC&rsquo;s screen to Apple TV</a>
-を使えば Windows PC からでも Apple TV に画面を飛ばせるという話もありました。</li>
-</ul>
-</li>
-<li><a href="https://popapp.in/">POP &ndash; Prototyping on Paper | iPhone App Prototyping Made Easy</a>
-ペーパープロトタイピングで UI の設計 (無償)</li>
-<li><a href="https://www.flinto.com/">Flinto – iPhone and iPad Prototyping</a>
-こちらもペーパープロトタイピングでブラウザ上でも見えます (有償)。
-画像のアップロードが面倒なので POP の方を使っているという話でした。</li>
-<li><a href="http://asciiwwdc.com/">ASCIIwwdc</a>
-WWDC をテキストにおこしたサイト</li>
-<li><a href="http://estimote.com/">Estimote Beacons — real world context for your apps</a>
-iBeacon 関連のハードウェア</li>
-<li><a href="http://www.rainymood.com/">Rainy Mood</a>
-落ち着く BGM</li>
-<li><a href="http://connpass.com/event/3871/">第 5 回 RubyMotion もくもく会 in Osaka &ndash; connpass</a>
-次回は 2013/11/20(水) 19:30 〜 21:30
-(ハッシュタグが設定されていない?)</li>
-<li><a href="http://connpass.com/event/3870/">第15回 RubyMotion もくもく会 in Tokyo &ndash; connpass</a>
-東京の次回
-(ハッシュタグが設定されているから参加しますツイートにハッシュタグがついている?)</li>
-<li><a href="http://www.bohemiancoding.com/sketch/">Sketch | The designer’s toolbox</a>
-iOS アプリでアイコンとか作るのに使っているという話</li>
-<li><a href="http://peatix.com/">Peatix | 簡単イベント管理、チケット販売サイト（ピーティックス） | Peatix</a>
-手数料が安いという話</li>
-</ul>
+<h2>Cocoa Emacs のインラインパッチでは?</h2>
 
+<p>Cocoa Emacs のインラインパッチをよく見ると
+<code>mac-toggle-input-source</code>
+という関数があって、
+<code>(mac-toggle-input-source nil)</code>
+で IME オフ相当に、
+<code>(mac-toggle-input-source t)</code>
+で IME オン相当にできるようなので、
+対応は不可能ではないのかもしれません。</p>
 
-<h2>やっていたこと</h2>
+<h2>端末の制御シーケンスでは?</h2>
 
-<p>前回の続きで
-<a href="https://github.com/HipByte/RubyMotionSamples">https://github.com/HipByte/RubyMotionSamples</a>
-のサンプルを試していたのですが、
-<a href="https://github.com/HipByte/RubyMotionSamples/tree/master/osx/Tweets">https://github.com/HipByte/RubyMotionSamples/tree/master/osx/Tweets</a>
-が Twitter API 1.1 への変更の影響で動かなくなっていました。</p>
+<p><a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html">TeraTerm Pro の対応制御シーケンス</a>
+には以下の3種類の IME 関連の制御シーケンスがあります。</p>
 
-<p>具体的には</p>
+<p>```
+  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
+  CSI &lt; s    TTIMESVIME の開閉状態を保存する。
+  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。</p>
 
-<p>```ruby</p>
-
-<pre><code>    begin
-      json = JSONParser.parse_from_url(url)
-    rescue RuntimeError =&gt; e
-      presentError e.message
-    end
+<pre><code>           Ps = 0      IME を閉じる。
+              = 1      IME を開く。
 </code></pre>
 
 <p>```</p>
 
-<p>という部分で</p>
-
-<p><code>``
-Terminating app due to uncaught exception 'TypeError', reason: 'data_parser.rb:6:in</code>parse:&lsquo;: exception class/object expected (TypeError)</p>
-
-<pre><code>from json_parser.rb:3:in `parse_from_url:'
-from app_delegate.rb:71:in `block in search:'
-</code></pre>
-
-<p>```</p>
-
-<p>というエラーになっていました。</p>
-
-<p>ブラウザで
-<code>http://search.twitter.com/search.json?q=xcode%20crash</code>
-にアクセスしてみると
-<code>{"errors": [{"message": "The Twitter REST API v1 is no longer active. Please migrate to API v1.1. https://dev.twitter.com/docs/api/1.1/overview.", "code": 68}]}</code>
-というエラーが
-<code>HTTP/1.1 410 Gone</code>
-で返ってきていました。</p>
-
-<p>API 1.1 に対応するには OAuth 対応が必須ということで、
-簡単には対処できなさそうでしたが、
-<a href="https://github.com/HipByte/RubyMotionSamples/issues/31">https://github.com/HipByte/RubyMotionSamples/issues/31</a>
-に報告がすでにあったのでコメントをつけておきました。</p>
-
-<p>それとは別に、エラー処理も <code>RuntimeError</code> しか <code>rescue</code> していないので、
-<code>TypeError</code> は <code>rescue</code> できていなかったり、
-<code>rescue</code> できても</p>
-
-<p><code>
-Terminating app due to uncaught exception 'NoMethodError', reason: 'app_delegate.rb:73:in `block in search:': undefined method `presentError' for #&lt;AppDelegate:0x7fe1eb107910 ...&gt; (NoMethodError)
-</code></p>
-
-<p>でエラー処理がちゃんと動いていなかったりしました。</p>
-
-<p>これは <code>NSApplication.sharedApplication.presentError error_ptr</code> にすれば良いのかも、
-と思って試してみたけどうまくいかない、というところで時間が来て終了になりました。</p>
+<p>この中の <code>TTIMESTIME</code> の <code>Ps</code> を拡張して、
+2 以上も受け付けるようにして、
+(別の状態が不可能なら 1 と同じ挙動で)
+可能ならカタカナ入力などの別の IME の状態を設定できるようにするという案を思いつきました。</p>
 ]]></content>
   </entry>
   
