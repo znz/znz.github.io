@@ -3,7 +3,7 @@ layout: post
 title: "HomebrewのEmacsにIMEインラインパッチが取り込まれたので設定した"
 date: 2013-11-12 18:30
 comments: true
-categories: emacs mac ime
+categories: emacs osx ime
 ---
 [h12o さんのインラインパッチの pull request が取り込まれた](http://qiita.com/h12o@github/items/07f773909da5ebdb7b7c)
 (コメント参照)

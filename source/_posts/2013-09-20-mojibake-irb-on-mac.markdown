@@ -3,7 +3,7 @@ layout: post
 title: "Macでirbなどでの文字化けを直した"
 date: 2013-09-20 18:00
 comments: true
-categories: mac irb rails mojibake
+categories: osx irb rails mojibake
 ---
 基本的には
 [rails cで日本語が通らないときの直し方](http://qiita.com/irohiroki/items/c82657b5cb4bdb2aaac4)

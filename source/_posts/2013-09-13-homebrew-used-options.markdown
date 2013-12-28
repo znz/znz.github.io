@@ -3,7 +3,7 @@ layout: post
 title: "homebrew の reinstall で使われるオプションの保存場所"
 date: 2013-09-13 21:58
 comments: true
-categories: homebrew mac
+categories: homebrew osx
 ---
 
 [rabbiter の記事](/blog/2013-09-08-rabbiter-on-mac.html)

@@ -3,7 +3,7 @@ layout: post
 title: "Mac OS XでのIME制御についての考察"
 date: 2013-11-14 02:24
 comments: true
-categories: mac emacs tty ime
+categories: osx emacs tty ime
 ---
 [Cocoa Emacs のインラインパッチ関連の設定](/blog/2013-11-12-cocoa-emacs-ime.html)
 の時や

@@ -3,7 +3,7 @@ layout: post
 title: "Mac で rabbiter が動いた"
 date: 2013-09-08 21:30
 comments: true
-categories: rabbit mac homebrew
+categories: rabbit osx homebrew
 ---
 homebrew を使った Mac OS X 10.8.4 環境で rabbiter (2.0.1) が動くようになりました。
 

@@ -3,7 +3,7 @@ layout: post
 title: "MavericksでEmacs.appが起動時にホームディレクトリにならない"
 date: 2013-11-01 18:00
 comments: true
-categories: emacs mavericks mac homebrew
+categories: emacs mavericks osx homebrew
 ---
 Mac OS X を Mavericks にあげたら homebrew で入れた
 Emacs.app を起動した時に `default-directory`

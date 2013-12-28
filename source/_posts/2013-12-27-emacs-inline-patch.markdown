@@ -3,7 +3,7 @@ layout: post
 title: "Cocoa Emacsのinline patch修正版を使ってみた"
 date: 2013-12-27 23:00:00 +0900
 comments: true
-categories: emacs mac
+categories: emacs osx
 ---
 [launchdでdistnotedを定期的に終了させる](/blog/2013-11-13-killall-distnoted-periodically.html)
 話のコメントで

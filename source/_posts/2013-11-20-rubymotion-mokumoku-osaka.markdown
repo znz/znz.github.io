@@ -3,7 +3,7 @@ layout: post
 title: "第 5 回 RubyMotion もくもく会 in Osaka に参加した"
 date: 2013-11-20 21:54
 comments: true
-categories: event ruby rubymotion
+categories: event ruby rubymotion osx
 ---
 第 1 回から第 4 回にも参加した RubyMotion もくもく会 in Osaka の
 [第 5 回 RubyMotion もくもく会 in Osaka](http://connpass.com/event/3871/)

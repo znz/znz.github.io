@@ -3,7 +3,7 @@ layout: post
 title: "Mac で rabbit が動かなくなったので brew reinstall したら直った"
 date: 2013-09-09 23:00
 comments: true
-categories: rabbit mac homebrew
+categories: rabbit osx homebrew
 ---
 いつの間にか動かなくなっていた rabbit (2.1.1) が `brew reinstall` で動くようになったという話です。
 

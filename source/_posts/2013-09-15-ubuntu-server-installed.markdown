@@ -3,7 +3,7 @@ layout: post
 title: "Ubuntu Server 12.04.3 LTS をインストールした"
 date: 2013-09-15 20:02
 comments: true
-categories: mac ubuntu
+categories: osx ubuntu
 ---
 自宅サーバーのシステムディスク (sda) が壊れたので、 HDD を入れ替えて、せっかくなのでシステムをきれいな状態にするために `ubuntu-12.04.3-server-amd64.iso` からインストールし直しました。
 その初期設定の話です。

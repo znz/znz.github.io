@@ -3,7 +3,7 @@ layout: post
 title: "launchdでdistnotedを定期的に終了させる"
 date: 2013-11-13 18:23
 comments: true
-categories: mac mavericks
+categories: osx mavericks
 ---
 Mac OS X 10.9 Mavericks で気がつくと
 `distnoted` というプロセスのメモリ消費が増えて
