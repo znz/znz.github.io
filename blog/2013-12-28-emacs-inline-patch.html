@@ -5,15 +5,16 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>nadokaさんの0.8.6をリリースした関連の話 - @znz blog</title>
+  <title>Cocoa Emacsのinline patch修正版を使ってみた - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="nadoka さんの 0.8.6 をリリース
-したので、
-その関連の話を書いてみようと思います。 なぜ続けているか 短い答えとしては、自分が使っているからというのが一番大きな理由です。 bot というか plugin もいくつか作って、
-サーバーの管理などにも便利に使っていて、
-わざわざ他の &hellip;">
+  <meta name="description" content="launchdでdistnotedを定期的に終了させる
+話のコメントで
+Emacs.appでインラインパッチを当てた時にdistnotedが暴走しなくなる
+修正を教えてもらったので、
+試してみました。 homebrew で適用するパッチの変更 適用法としては
+brew edit emacs &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -22,7 +23,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-11-29-nadoka-086-released.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-12-28-emacs-inline-patch.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -84,7 +85,7 @@
   
   <header>
     
-      <h1 class="entry-title">nadokaさんの0.8.6をリリースした関連の話</h1>
+      <h1 class="entry-title">Cocoa Emacsのinline patch修正版を使ってみた</h1>
     
     
       <p class="meta">
@@ -100,7 +101,7 @@
   
 
 
-<time datetime="2013-11-29T23:30:00+09:00" pubdate data-updated="true">2013-11-29 (Fri)</time>
+<time datetime="2013-12-28T01:03:32+09:00" pubdate data-updated="true">2013-12-28 (Sat)</time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -110,117 +111,92 @@
   </header>
 
 
-<div class="entry-content"><p><a href="http://mla.n-z.jp/?ruby-list:49704">nadoka さんの 0.8.6 をリリース</a>
-したので、
-その関連の話を書いてみようと思います。</p>
+<div class="entry-content"><p><a href="/blog/2013-11-13-killall-distnoted-periodically.html">launchdでdistnotedを定期的に終了させる</a>
+話のコメントで
+<a href="https://gist.github.com/anonymous/8142555">Emacs.appでインラインパッチを当てた時にdistnotedが暴走しなくなる</a>
+修正を教えてもらったので、
+試してみました。</p>
 
 <!--more-->
 
 
-<h2>なぜ続けているか</h2>
+<h2>homebrew で適用するパッチの変更</h2>
 
-<p>短い答えとしては、自分が使っているからというのが一番大きな理由です。</p>
+<p>適用法としては
+<code>brew edit emacs</code>
+で以下のように変更して、
+<code>brew reinstall emacs</code>
+で再インストールしました。</p>
 
-<p>bot というか plugin もいくつか作って、
-サーバーの管理などにも便利に使っていて、
-わざわざ他の IRC proxy 的なソフトに乗り換えて
-プラグインを書き直すよりは、
-一応動いているものをメンテナンスし続けた方が楽というのが
-理由になっています。</p>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gh">diff --git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb</span>
+</span><span class='line'><span class="gh">index 712c3d1..5ce4ce2 100644</span>
+</span><span class='line'><span class="gd">--- a/Library/Formula/emacs.rb</span>
+</span><span class='line'><span class="gi">+++ b/Library/Formula/emacs.rb</span>
+</span><span class='line'><span class="gu">@@ -47,7 +47,7 @@ class Emacs &lt; Formula</span>
+</span><span class='line'>     # &quot;--japanese&quot; option:
+</span><span class='line'>     # to apply a patch from MacEmacsJP for Japanese input methods
+</span><span class='line'>     if build.include? &quot;cocoa&quot; and build.include? &quot;japanese&quot;
+</span><span class='line'><span class="gd">-      p[:p0].push(&quot;http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583&quot;)</span>
+</span><span class='line'><span class="gi">+      p[:p0].push(&quot;https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch&quot;)</span>
+</span><span class='line'>     end
+</span><span class='line'>     p
+</span><span class='line'>   end unless build.head?
+</span></code></pre></td></tr></table></div></figure>
 
-<h2>subversion repository について</h2>
 
-<p>最初は
-<a href="http://www.atdot.net/nadoka/nadoka.ja.html">atdot.net の nadoka さん</a>
-のところに書いてある
-<code>http://www.atdot.net/svn/nadoka/trunk</code>
-にあったものが、
-ささださんのサーバー管理の都合なのか、
-rubyforge に移行して今に至ります。</p>
+<h2>元のパッチからの変更点</h2>
 
-<p>途中から
-(<a href="https://github.com/nadoka/nadoka/wiki/HowToRelease">HowToRelease</a>
-の記録によると 0.7.7 から)
-は github メインに移行しています。</p>
+<p>元の sourceforge.jp のパッチとの差分をとってみると、
+以下のメソッド呼び出しが変わっているだけでした。</p>
 
-<p>その後、しばらく放置していたかどうだったのか忘れましたが、
-最近のリリースでは github での変更をリリースのタイミングで
-rubyforge の svn にも git-svn を使ってマージしていました。</p>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gh">diff --git a/emacs-inline.patch.sfjp b/emacs-inline.patch.gist</span>
+</span><span class='line'><span class="gh">index 52f2052..d67ad1d 100644</span>
+</span><span class='line'><span class="gd">--- a/emacs-inline.patch.sfjp</span>
+</span><span class='line'><span class="gi">+++ b/emacs-inline.patch.gist</span>
+</span><span class='line'><span class="gu">@@ -1015,7 +1015,7 @@ diff -r -N -p ../emacs-24.3.org/src/nsterm.m src/nsterm.m</span>
+</span><span class='line'>                                                name: nil object: nil]; */
+</span><span class='line'> +   [[NSDistributedNotificationCenter defaultCenter] addObserver: NSApp
+</span><span class='line'> +                    selector: @selector (changeInputMethod:)
+</span><span class='line'><span class="gd">-+                          name: @&quot;AppleSelectedInputSourcesChangedNotification&quot; object: nil];</span>
+</span><span class='line'><span class="gi">++                          name: @&quot;AppleSelectedInputSourcesChangedNotification&quot; object: nil suspensionBehavior:NSNotificationSuspensionBehaviorDeliverImmediately];</span>
+</span><span class='line'>
+</span><span class='line'>     dpyinfo = xzalloc (sizeof *dpyinfo);
+</span><span class='line'>
+</span></code></pre></td></tr></table></div></figure>
 
-<p>このマージも今回で最後になります。</p>
 
-<p>その作業をするときに
-<code>http://rubyforge.org/</code>
-をみてみると
-<code>RubyForge Could Not Connect to Database:</code>
-というエラーになっていて、
-<a href="https://twitter.com/hsbt/status/406423900432506881">hsbt さん</a>
-に
-<a href="https://twitter.com/evanphx/status/399552820380053505">RubyForgeは5月15日で終了予定</a>
-という話を教えてもらいました。</p>
+<h2>まとめ</h2>
 
-<p>古いサーバーで svn co して、
-そのまま使っている場合でも使い続けられるように続けていましたが、
-rubyforge 自体が終わるということで、
-そういうサーバーでは、
-そのまま最後の svn up をして使い続けるか、
-git に移行する必要がありそうです。</p>
+<p>使ってみて問題がなければ sourceforge.jp の方に取り込んでもらうのが良さそうです。</p>
 
-<h2>git repository について</h2>
-
-<p>github が主流になっていたこともあり、
-pull request とかしやすくなることを期待して
-移行しました。</p>
-
-<p>pull request が来た件数も 0 ではないので、
-そのあたりは活発ではないプロジェクトとしては
-うまくいっているのではないでしょうか。</p>
-
-<p>github への移行方法として、
-最初は
-<a href="http://darcs.net/RelatedSoftware/Tailor">tailor</a>
-を検討したのですが、
-既にあまり使われていなくて、
-ちょっと試した感じでもうまくいかなかったので、
-git-svn で移行しました。</p>
-
-<p>今となっては変換専用ソフトはほぼ使えるものはなく、
-変換先のソフト (今回は git) のプラグイン的なものを使って
-変換元のソフト (今回は svn) の repository から取り出す、
-という方法しかないようです。</p>
-
-<h2>CloudCore VPS</h2>
-
-<p><a href="http://www.cloudcore.jp/vps/develop/">開発者支援制度 &ndash; CloudCore VPS</a>
-でサーバーを借りてみて、
-テスト用の IRC サーバーを動かしています。</p>
-
-<p>接続用の設定は
-<a href="https://github.com/nadoka/nadokarc-example">nadokarc-example</a>
-にあるので、適当に試したい時に使えると思います。</p>
-
-<p>途中の経路の問題 (モバイルでモバイルルーターの接続が切れたとか?)
-で、サーバーから応答がなくなったときに
-nadoka さんの再接続がうまくいかないのを調査するのに使いたいと
-思っているのですが、
-切れた状況を再現する部分の作り込みがまだ出来ていないです。</p>
-
-<p>ircd の設定は
-<a href="https://github.com/nadoka/ansible-ircd">ansible-ircd</a>
-のように ansible でやってみました。
-SSL の証明書の問題などがあるので、
-すべての情報を公開できるわけじゃないというのが難しいところです。</p>
-
-<h2>まとめ的なもの</h2>
-
-<p>長い間続いているといろいろあるものです。</p>
-
-<p>小規模なプロジェクトなので、
-いつも場当たり的な対応でなんとかなっていますが、
-そういうのも良いんじゃないでしょうか。</p>
-
-<p>とりあえず自分が使っている限りはリリースも続くと思いますし、
-新しいバージョンの ruby への対応も続けていけると思います。</p>
+<p>しばらく使ってみた感じだと distnoted のメモリ使用量が増えていっても、
+一度 Emacs.app を終了すると distnoted のメモリ使用量が一気に減るようになりました。</p>
 </div>
 
 
@@ -243,12 +219,12 @@ SSL の証明書の問題などがあるので、
   
 
 
-<time datetime="2013-11-29T23:30:00+09:00" pubdate data-updated="true">2013-11-29 (Fri)</time>
+<time datetime="2013-12-28T01:03:32+09:00" pubdate data-updated="true">2013-12-28 (Sat)</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/ansible/'>ansible</a>, <a class='category' href='/blog/categories/community/'>community</a>, <a class='category' href='/blog/categories/github/'>github</a>, <a class='category' href='/blog/categories/nadoka/'>nadoka</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
+    <a class='category' href='/blog/categories/emacs/'>emacs</a>, <a class='category' href='/blog/categories/mac/'>mac</a>
   
 </span>
 
@@ -257,12 +233,12 @@ SSL の証明書の問題などがあるので、
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-11-29-nadoka-086-released.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-11-29-nadoka-086-released.html" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-12-28-emacs-inline-patch.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-12-28-emacs-inline-patch.html" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
   
-  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-11-29-nadoka-086-released.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-12-28-emacs-inline-patch.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
   
     <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
   
@@ -281,10 +257,8 @@ SSL の証明書の問題などがあるので、
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-11-28-git-insteadof.html" title="Previous Post: githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法">&laquo; githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法</a>
+        <a class="basic-alignment left" href="/blog/2013-12-26-rubymotion-mokumoku-osaka.html" title="Previous Post: 第 6 回 RubyMotion もくもく会 in Osaka に参加した">&laquo; 第 6 回 RubyMotion もくもく会 in Osaka に参加した</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-12-03-ruby-exception-cause.html" title="Next Post: Ruby 2.1.0の新機能のException#cause">Ruby 2.1.0の新機能のException#cause &raquo;</a>
       
     </p>
   </footer>
@@ -399,8 +373,8 @@ SSL の証明書の問題などがあるので、
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-11-29-nadoka-086-released.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-11-29-nadoka-086-released.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-12-28-emacs-inline-patch.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2013-12-28-emacs-inline-patch.html';
         var disqus_script = 'embed.js';
       
     (function () {

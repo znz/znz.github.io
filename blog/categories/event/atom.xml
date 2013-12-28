@@ -4,7 +4,7 @@
   <title><![CDATA[Category: event | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/event/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-26T00:52:33+09:00</updated>
+  <updated>2013-12-28T18:49:56+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,144 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 6 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-26-rubymotion-mokumoku-osaka.html"/>
+    <updated>2013-12-26T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
+    <content type="html"><![CDATA[<p>第 1 回から第 5 回にも参加した RubyMotion もくもく会 in Osaka の
+<a href="http://connpass.com/event/4211/">第 6 回 RubyMotion もくもく会 in Osaka</a>
+に参加してきました。</p>
+
+<p>次回の
+<a href="http://connpass.com/event/4560/">第 7 回 RubyMotion もくもく会 in Osaka</a>
+は 1/22(水) になりました。</p>
+
+<!--more-->
+
+
+<h2>話に出たもの</h2>
+
+<p>話に出てきたサイトなどのメモです。</p>
+
+<ul>
+<li><a href="http://shin1x1.github.io/vagrantx/">http://shin1x1.github.io/vagrantx/</a>
+
+<ul>
+<li>URL が小文字に変わっていました。</li>
+</ul>
+</li>
+<li><a href="https://www.cocoacontrols.com/">Cocoa Controls</a></li>
+<li><a href="http://getpocket.com/">Pocket</a></li>
+<li><a href="http://71squared.com/ja/particledesigner">Particle Designer</a></li>
+<li>UIMotionEffect で視差効果が簡単に実装できる</li>
+<li>All Cast という Android アプリで Apple TV に AirPlay できる</li>
+</ul>
+
+
+<h2>やっていたこと</h2>
+
+<p>今回は前回作り始めていたデフォルトブラウザを乗っ取って、
+Firefox とか Chrome とか Safari とかに起動し分けられる
+OSX アプリの作成の続きをやっていました。</p>
+
+<p>今回の最後ではスクリーンショットのようになりました。</p>
+
+<p><img src="/images/2013-12-26-hello.png" title="&ldquo;screenshot&rdquo; &ldquo;作成途中のアプリのスクリーンショット&rdquo;" ></p>
+
+<p>適当に作った Hello.app に動作確認用のメソッドを付け足していただけなので、
+まだタイトルは Hello のままになっています。</p>
+
+<h3>URL 受け取り問題</h3>
+
+<p>LimeChat で URL をクリックしたときなどに受け取るのは
+前回調べていた <code>LSSetDefaultHandlerForURLScheme</code> での
+デフォルトブラウザ設定とあわせて、</p>
+
+<p>```ruby</p>
+
+<pre><code>NSAppleEventManager.sharedAppleEventManager.setEventHandler(
+  self,
+  andSelector: :'handleGetURLEvent:withReplyEvent:',
+  forEventClass: KInternetEventClass,
+  andEventID: KAEGetURL)
+</code></pre>
+
+<p>```</p>
+
+<p>でイベントを受け取ると Hello.app 起動中は受け取れたのですが、
+起動していない時の URL クリックのイベントを受け取れない問題は
+結局解決できませんでした。</p>
+
+<p><code>open -a Hello --args URL</code>
+というなら
+<code>NSProcessInfo.processInfo.arguments</code>
+で受け取れるのですが、
+LimeChat などでの URL クリックで起動された時や
+<code>open -a Hello URL</code>
+という起動方法だと受け取り方がわかりませんでした。</p>
+
+<p>他のブラウザの起動も
+<code>open -a 'Google Chrome' http://localhost:4000/ --args -incognito</code>
+のように URL は args ではない方法で渡さないと開けませんでした。</p>
+
+<h3><code>keyDirectObject</code> がない問題と前面に出てこない問題</h3>
+
+<p>URL の受け取り部分は今のところ、以下のようにしています。</p>
+
+<p>```ruby
+  def handleGetURLEvent(event, withReplyEvent: replyEvent)</p>
+
+<pre><code>keyDirectObject = '----'.unpack('L')[0]
+urlStr = event.paramDescriptorForKeyword(keyDirectObject).stringValue
+@text.stringValue = urlStr
+
+Process.spawn("osascript", "-e", &lt;&lt;-SCRIPT)
+</code></pre>
+
+<p>tell Application &ldquo;#{NSBundle.mainBundle.infoDictionary[&lsquo;CFBundleName&rsquo;]}&rdquo;
+  activate
+end tell</p>
+
+<pre><code>SCRIPT
+</code></pre>
+
+<p>  end
+```</p>
+
+<p>最初の問題として、
+<code>keyDirectObject</code> が RubyMotion にはなさそうだったので、
+値を調べて <code>unpack</code> で同等の値を生成するようにしました。
+この部分は前回から今回までの間に調査して作成済みだったので、
+詳しい調査方法は忘れてしまいましたが、
+引数のオブジェクトを調べて見つけたような気がします。</p>
+
+<p>前面に出てこない問題は
+今回のもくもく会の間に対処しました。</p>
+
+<p>前面に持ってくる方法がどういう API を呼べばよいのかわからず、
+AppleScript を使った方法は情報があったので、
+とりあえず <code>osascript</code> を呼び出してしまうことにしました。</p>
+
+<p>最初は <code>spawn</code> ではなく <code>system</code> を使ってしまったら、
+デッドロックしてしまって強制終了するしかなくなってしまったので、
+<code>Process.spawn</code> を使いました。</p>
+
+<h2>まとめ</h2>
+
+<p>今回は作りたいものが決まっていて、しっかりもくもく出来ました。</p>
+
+<p>起動時に URL が受け取れない問題は
+自分が使うだけなら
+URL を 2 回クリックするという方法で
+回避できるのですが、なんとかしたいところです。</p>
+
+<p><code>keyDirectObject</code> と <code>osascript</code> を使っているところは
+他に方法がなければ
+今のままでも実用上は困らないと感じました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 5 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -522,118 +660,6 @@ session optional            pam_ck_connector.so nox11
 <code># systemd replaces udev-acl entirely, skip if active</code>
 と書いてあったので、 <code>systemd</code> を使っている環境だと
 <code>udev-acl</code> は何もしないようです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第8回 関西Emacs勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-26-kansai-emacs.html"/>
-    <updated>2013-10-26T14:19:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansai-emacs</id>
-    <content type="html"><![CDATA[<p><a href="http://atnd.org/events/44155">(kansai-emacs #x08) #関西Emacs : ATND</a>
-というイベントに参加してきました。</p>
-
-<!--more-->
-
-
-<h2>ポジションペーパー</h2>
-
-<p>以前作りかけで一部は
-<a href="http://regional.rubykaigi.org/kansai05">関西Ruby会議05</a>
-の時に使った rabbit での自己紹介のスライドに
-Emacs 関係の情報を追加して作った PDF だったので、
-1ページにできずに複数ページになってしまいました。</p>
-
-<p>会場への移動中に作成したのですが、
-作成前に既にアップロードされているものを確認したら
-複数ページのものがあるので、
-まあいいかと思ったのも理由でした。</p>
-
-<h2>会場到着から開始まで</h2>
-
-<p>到着時点では知っている人がいなくて、
-どうすればいいのかよくわからなかったので、
-入り口近くで座って twitter とか見ながら待っていました。
-13時を少しすぎたところで準備ができたらしく案内があったので、
-席に移動しました。</p>
-
-<h2>発表</h2>
-
-<p><code>package-install</code> だと
-環境を作り直した時に magit とかがバージョンアップで挙動が変わって
-困ることがあるのでどうするのが良いのかという相談とか、
-<code>ac-mozc</code> の紹介とか、ちゃんとメモをとっていなかったのですが、
-いろいろありました。</p>
-
-<p><code>ac-mozc</code> の質疑応答では</p>
-
-<ul>
-<li>英単語に続けて日本語を入力する時はスペースを入れて入力して、確定するとスペースが消える、スペースが必要な時はその直後に undo すればいい</li>
-<li>英単語を入力していてローマ字ともみなせて不要なのに ac-mozc の候補が出てきたときは ac のキャンセルと同じように C-g で消せばいい</li>
-<li>コメントの中とか文字列の中とかで一部だけ変換したい時とかは変換用のコマンドを直接呼び出せばいい</li>
-</ul>
-
-
-<p>のような話があったと記憶しています。</p>
-
-<h2>やっていたこと</h2>
-
-<h3>package.el</h3>
-
-<p><a href="http://emacs-jp.github.io/packages/package-management/package-el.html">package.el &ndash; Emacs JP</a>
-を参考にして <code>package.el</code> を使う設定をしました。</p>
-
-<h3>shell-pop</h3>
-
-<p>上のメモには書いていませんが、発表にあった <code>shell-pop</code> を
-<code>package.el</code> を使って入れてみました。
-昔ちょっと試したことがあって、その設定が悪さをしていて、
-最初は
-<code>(void-function shell-pop-set-internal-mode)</code>
-というエラーになってしまっていましたが、
-古い設定を削除すれば直りました。</p>
-
-<p><a href="http://www.emacswiki.org/emacs/ShellPop">EmacsWiki の Shell Pop</a>
-には上の方に小さく書いてあるだけですが、
-github の方が新しくて互換性がなくなっているのが理由でした。</p>
-
-<h3>ansi-term</h3>
-
-<p><code>shell-pop</code> の設定例にある <code>ansi-term</code> を使ってみると
-最下行で文字を入力すると一瞬上にスクロールして戻るという現象が出て、
-<code>ansi-term</code> 単体でもおきたので、
-<code>ansi-term</code> の問題かと思ってクリーンな環境でも試してみると発生しませんでした。</p>
-
-<p>scroll 関係の設定があやしいと思って、
-<code>scroll-margin</code> を <code>2</code> にしていたのを <code>0</code> にしたらなおったのですが、
-クリーンな環境で <code>scroll-margin</code> だけ変更しても現象が出なかったので、
-結局何が再現条件なのかはわかりませんでした。
-<code>scroll-step</code> を <code>1</code> にしているのも関係しているかと思ったのですが、
-関係ありませんでした。</p>
-
-<h3>elscreen</h3>
-
-<p><code>auto-install</code> でインストールしていた <code>elscreen.el</code> を
-<code>package.el</code> でインストールしたものに変更しました。</p>
-
-<p><code>(elscreen-start)</code> が必要になっているというのを知らなかったので、
-うまく動かなくてかなり悩んでいましたが、教えてもらって解決しました。</p>
-
-<h3>anything.el から helm への変更</h3>
-
-<p><code>anything.el</code> は一時期はいろいろ設定を頑張っていたのですが、
-結局デフォルトの <code>anything</code> 以外はほとんど使っていなかったので、
-<code>helm-mini</code> に置き換えるだけで問題なさそうな感じでした。</p>
-
-<p><code>anything.el</code> だとメニューに登録されていたり
-<code>(anything-execute-anything-command)</code> とか
-<code>(anything-call-source)</code> のようなメタ機能があったりして、
-存在を知らない機能でも探しやすいのですが、
-<code>helm</code> にはそういうものがあるのかどうかわかりませんでした。</p>
-
-<p>ちなみに <code>M-x</code> で <code>helm-</code> で始まる <code>interactive</code> な関数を探すのは
-<code>helm</code> 関係のバッファでのキーバインドようの関数が混ざっているので
-この用途には使えません。</p>
 ]]></content>
   </entry>
   

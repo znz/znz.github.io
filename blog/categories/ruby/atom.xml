@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-26T00:52:33+09:00</updated>
+  <updated>2013-12-28T18:49:56+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,144 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 6 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-26-rubymotion-mokumoku-osaka.html"/>
+    <updated>2013-12-26T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
+    <content type="html"><![CDATA[<p>第 1 回から第 5 回にも参加した RubyMotion もくもく会 in Osaka の
+<a href="http://connpass.com/event/4211/">第 6 回 RubyMotion もくもく会 in Osaka</a>
+に参加してきました。</p>
+
+<p>次回の
+<a href="http://connpass.com/event/4560/">第 7 回 RubyMotion もくもく会 in Osaka</a>
+は 1/22(水) になりました。</p>
+
+<!--more-->
+
+
+<h2>話に出たもの</h2>
+
+<p>話に出てきたサイトなどのメモです。</p>
+
+<ul>
+<li><a href="http://shin1x1.github.io/vagrantx/">http://shin1x1.github.io/vagrantx/</a>
+
+<ul>
+<li>URL が小文字に変わっていました。</li>
+</ul>
+</li>
+<li><a href="https://www.cocoacontrols.com/">Cocoa Controls</a></li>
+<li><a href="http://getpocket.com/">Pocket</a></li>
+<li><a href="http://71squared.com/ja/particledesigner">Particle Designer</a></li>
+<li>UIMotionEffect で視差効果が簡単に実装できる</li>
+<li>All Cast という Android アプリで Apple TV に AirPlay できる</li>
+</ul>
+
+
+<h2>やっていたこと</h2>
+
+<p>今回は前回作り始めていたデフォルトブラウザを乗っ取って、
+Firefox とか Chrome とか Safari とかに起動し分けられる
+OSX アプリの作成の続きをやっていました。</p>
+
+<p>今回の最後ではスクリーンショットのようになりました。</p>
+
+<p><img src="/images/2013-12-26-hello.png" title="&ldquo;screenshot&rdquo; &ldquo;作成途中のアプリのスクリーンショット&rdquo;" ></p>
+
+<p>適当に作った Hello.app に動作確認用のメソッドを付け足していただけなので、
+まだタイトルは Hello のままになっています。</p>
+
+<h3>URL 受け取り問題</h3>
+
+<p>LimeChat で URL をクリックしたときなどに受け取るのは
+前回調べていた <code>LSSetDefaultHandlerForURLScheme</code> での
+デフォルトブラウザ設定とあわせて、</p>
+
+<p>```ruby</p>
+
+<pre><code>NSAppleEventManager.sharedAppleEventManager.setEventHandler(
+  self,
+  andSelector: :'handleGetURLEvent:withReplyEvent:',
+  forEventClass: KInternetEventClass,
+  andEventID: KAEGetURL)
+</code></pre>
+
+<p>```</p>
+
+<p>でイベントを受け取ると Hello.app 起動中は受け取れたのですが、
+起動していない時の URL クリックのイベントを受け取れない問題は
+結局解決できませんでした。</p>
+
+<p><code>open -a Hello --args URL</code>
+というなら
+<code>NSProcessInfo.processInfo.arguments</code>
+で受け取れるのですが、
+LimeChat などでの URL クリックで起動された時や
+<code>open -a Hello URL</code>
+という起動方法だと受け取り方がわかりませんでした。</p>
+
+<p>他のブラウザの起動も
+<code>open -a 'Google Chrome' http://localhost:4000/ --args -incognito</code>
+のように URL は args ではない方法で渡さないと開けませんでした。</p>
+
+<h3><code>keyDirectObject</code> がない問題と前面に出てこない問題</h3>
+
+<p>URL の受け取り部分は今のところ、以下のようにしています。</p>
+
+<p>```ruby
+  def handleGetURLEvent(event, withReplyEvent: replyEvent)</p>
+
+<pre><code>keyDirectObject = '----'.unpack('L')[0]
+urlStr = event.paramDescriptorForKeyword(keyDirectObject).stringValue
+@text.stringValue = urlStr
+
+Process.spawn("osascript", "-e", &lt;&lt;-SCRIPT)
+</code></pre>
+
+<p>tell Application &ldquo;#{NSBundle.mainBundle.infoDictionary[&lsquo;CFBundleName&rsquo;]}&rdquo;
+  activate
+end tell</p>
+
+<pre><code>SCRIPT
+</code></pre>
+
+<p>  end
+```</p>
+
+<p>最初の問題として、
+<code>keyDirectObject</code> が RubyMotion にはなさそうだったので、
+値を調べて <code>unpack</code> で同等の値を生成するようにしました。
+この部分は前回から今回までの間に調査して作成済みだったので、
+詳しい調査方法は忘れてしまいましたが、
+引数のオブジェクトを調べて見つけたような気がします。</p>
+
+<p>前面に出てこない問題は
+今回のもくもく会の間に対処しました。</p>
+
+<p>前面に持ってくる方法がどういう API を呼べばよいのかわからず、
+AppleScript を使った方法は情報があったので、
+とりあえず <code>osascript</code> を呼び出してしまうことにしました。</p>
+
+<p>最初は <code>spawn</code> ではなく <code>system</code> を使ってしまったら、
+デッドロックしてしまって強制終了するしかなくなってしまったので、
+<code>Process.spawn</code> を使いました。</p>
+
+<h2>まとめ</h2>
+
+<p>今回は作りたいものが決まっていて、しっかりもくもく出来ました。</p>
+
+<p>起動時に URL が受け取れない問題は
+自分が使うだけなら
+URL を 2 回クリックするという方法で
+回避できるのですが、なんとかしたいところです。</p>
+
+<p><code>keyDirectObject</code> と <code>osascript</code> を使っているところは
+他に方法がなければ
+今のままでも実用上は困らないと感じました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[DOCKER indexのTrusted Buildsで複数バージョンのrubyを試せるimageを作ってみた]]></title>
@@ -494,83 +632,6 @@ view のファイルが変更したり、
 で説明されている
 <code>rake cache_digests:nested_dependencies</code>
 などを知っておけば良さそうです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Rails 4.0.2のi18nで出るようになったdeprecated警告の対策方法]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-04-rails-i18n-deprecated-warning.html"/>
-    <updated>2013-12-04T10:59:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rails-i18n-deprecated-warning</id>
-    <content type="html"><![CDATA[<p>Ruby on Rails のセキュリティアップデートがあって、
-4.0.2 にあげたら i18n gem も 0.6.5 から 0.6.9 にあがって
-<code>locale</code> の設定変更をしているところで
-<code>[deprecated] I18n.enforce_available_locales will default to true in the future. If you really want to skip validation of your locale you can set I18n.enforce_available_locales = false to avoid this message.</code>
-という警告が出るようになりました。</p>
-
-<!--more-->
-
-
-<h2>警告の出るタイミング</h2>
-
-<p><a href="http://stackoverflow.com/questions/20361428/rails-4-0-2-i18n-validation-deprecation-warning">deprecated &ndash; Rails 4.0.2 I18n validation deprecation warning &ndash; Stack Overflow</a>
-経由で
-<a href="https://github.com/svenfuchs/i18n/commit/3b6e56e06fd70f6e4507996b017238505e66608c9">Add I18n.locale_available? and enforce available locales</a>
-のコミットから入った変更ということで、
-コミットログをみてみると、</p>
-
-<ul>
-<li><code>I18n.config.default_locale=</code></li>
-<li><code>I18n.config.locale=</code></li>
-<li><code>I18n.translate</code></li>
-<li><code>I18n.localize</code></li>
-<li><code>I18n.transliterate</code></li>
-</ul>
-
-
-<p>を呼んだときに影響するようです。
-つまり <code>rails new</code> で作っただけだと <code>config/application.rb</code> の
-<code>config.i18n.default_locale = :de</code> がコメントアウトされていて、
-警告は出ません。</p>
-
-<h2>日本語のみで使う場合</h2>
-
-<p>日本語のみで使うのなら、
-将来のデフォルトの
-<code>I18n.enforce_available_locales = true</code>
-にしてしまってから、
-普通に日本語をデフォルトにする
-<code>config.i18n.default_locale = :ja</code>
-を呼べば良いと思います。</p>
-
-<p>```ruby config/application.rb</p>
-
-<pre><code>I18n.enforce_available_locales = true
-config.i18n.default_locale = :ja
-</code></pre>
-
-<p>```</p>
-
-<p>ただし、先にちゃんと日本語の locale ファイルを作っておかないと
-<code>I18n::InvalidLocale</code>
-という例外が発生して、
-<code>rake</code> などで
-<code>:ja is not a valid locale</code>
-と言われてしまいます。</p>
-
-<h2>今まで通りの挙動にする場合</h2>
-
-<p><code>I18n.enforce_available_locales = false</code>
-にすれば今まで通りの挙動になり、
-存在しない <code>locale</code> を設定しても例外は発生しません。</p>
-
-<h2>今のデフォルト</h2>
-
-<p>今は
-<code>I18n.enforce_available_locales = nil</code>
-がデフォルトになっていて、
-<code>nil</code> だと警告がでる、
-ということのようです。</p>
 ]]></content>
   </entry>
   

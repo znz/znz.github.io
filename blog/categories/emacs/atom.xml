@@ -4,7 +4,7 @@
   <title><![CDATA[Category: emacs | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/emacs/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-26T00:52:33+09:00</updated>
+  <updated>2013-12-28T18:49:56+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,88 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Cocoa Emacsのinline patch修正版を使ってみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-28-emacs-inline-patch.html"/>
+    <updated>2013-12-28T01:03:32+09:00</updated>
+    <id>http://blog.n-z.jp/blog/emacs-inline-patch</id>
+    <content type="html"><![CDATA[<p><a href="/blog/2013-11-13-killall-distnoted-periodically.html">launchdでdistnotedを定期的に終了させる</a>
+話のコメントで
+<a href="https://gist.github.com/anonymous/8142555">Emacs.appでインラインパッチを当てた時にdistnotedが暴走しなくなる</a>
+修正を教えてもらったので、
+試してみました。</p>
+
+<!--more-->
+
+
+<h2>homebrew で適用するパッチの変更</h2>
+
+<p>適用法としては
+<code>brew edit emacs</code>
+で以下のように変更して、
+<code>brew reinstall emacs</code>
+で再インストールしました。</p>
+
+<p>```diff
+diff &mdash;git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb
+index 712c3d1..5ce4ce2 100644
+&mdash;&ndash; a/Library/Formula/emacs.rb
++++ b/Library/Formula/emacs.rb
+@@ -47,7 +47,7 @@ class Emacs &lt; Formula</p>
+
+<pre><code> # "--japanese" option:
+ # to apply a patch from MacEmacsJP for Japanese input methods
+ if build.include? "cocoa" and build.include? "japanese"
+</code></pre>
+
+<ul>
+<li>   p[:p0].push(&ldquo;<a href="http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583">http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583</a>&rdquo;)</li>
+<li>   p[:p0].push(&ldquo;<a href="https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch">https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch</a>&rdquo;)
+ end
+ p
+end unless build.head?
+```</li>
+</ul>
+
+
+<h2>元のパッチからの変更点</h2>
+
+<p>元の sourceforge.jp のパッチとの差分をとってみると、
+以下のメソッド呼び出しが変わっているだけでした。</p>
+
+<p>```diff
+diff &mdash;git a/emacs-inline.patch.sfjp b/emacs-inline.patch.gist
+index 52f2052..d67ad1d 100644
+&mdash;&ndash; a/emacs-inline.patch.sfjp
++++ b/emacs-inline.patch.gist
+@@ -1015,7 +1015,7 @@ diff -r -N -p ../emacs-24.3.org/src/nsterm.m src/nsterm.m</p>
+
+<pre><code>                                            name: nil object: nil]; */
+</code></pre>
+
+<ul>
+<li> [[NSDistributedNotificationCenter defaultCenter] addObserver: NSApp</li>
+<li><pre><code>            selector: @selector (changeInputMethod:)
+</code></pre>
+
+<p>&ndash;+                         name: @&ldquo;AppleSelectedInputSourcesChangedNotification&rdquo; object: nil];
+++                         name: @&ldquo;AppleSelectedInputSourcesChangedNotification&rdquo; object: nil suspensionBehavior:NSNotificationSuspensionBehaviorDeliverImmediately];</p>
+
+<p>   dpyinfo = xzalloc (sizeof *dpyinfo);</p></li>
+</ul>
+
+
+<p>```</p>
+
+<h2>まとめ</h2>
+
+<p>使ってみて問題がなければ sourceforge.jp の方に取り込んでもらうのが良さそうです。</p>
+
+<p>しばらく使ってみた感じだと distnoted のメモリ使用量が増えていっても、
+一度 Emacs.app を終了すると distnoted のメモリ使用量が一気に減るようになりました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[emacsのmode-lineのminor-modeなどに色をつける]]></title>
@@ -600,118 +682,6 @@ revision 114882 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114882 
 <p>というわけで homebrew の方に
 <a href="https://github.com/mxcl/homebrew/pull/23897">fix default-directory on Cocoa and Mavericks</a>
 として pull request を出してみました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第8回 関西Emacs勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-26-kansai-emacs.html"/>
-    <updated>2013-10-26T14:19:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansai-emacs</id>
-    <content type="html"><![CDATA[<p><a href="http://atnd.org/events/44155">(kansai-emacs #x08) #関西Emacs : ATND</a>
-というイベントに参加してきました。</p>
-
-<!--more-->
-
-
-<h2>ポジションペーパー</h2>
-
-<p>以前作りかけで一部は
-<a href="http://regional.rubykaigi.org/kansai05">関西Ruby会議05</a>
-の時に使った rabbit での自己紹介のスライドに
-Emacs 関係の情報を追加して作った PDF だったので、
-1ページにできずに複数ページになってしまいました。</p>
-
-<p>会場への移動中に作成したのですが、
-作成前に既にアップロードされているものを確認したら
-複数ページのものがあるので、
-まあいいかと思ったのも理由でした。</p>
-
-<h2>会場到着から開始まで</h2>
-
-<p>到着時点では知っている人がいなくて、
-どうすればいいのかよくわからなかったので、
-入り口近くで座って twitter とか見ながら待っていました。
-13時を少しすぎたところで準備ができたらしく案内があったので、
-席に移動しました。</p>
-
-<h2>発表</h2>
-
-<p><code>package-install</code> だと
-環境を作り直した時に magit とかがバージョンアップで挙動が変わって
-困ることがあるのでどうするのが良いのかという相談とか、
-<code>ac-mozc</code> の紹介とか、ちゃんとメモをとっていなかったのですが、
-いろいろありました。</p>
-
-<p><code>ac-mozc</code> の質疑応答では</p>
-
-<ul>
-<li>英単語に続けて日本語を入力する時はスペースを入れて入力して、確定するとスペースが消える、スペースが必要な時はその直後に undo すればいい</li>
-<li>英単語を入力していてローマ字ともみなせて不要なのに ac-mozc の候補が出てきたときは ac のキャンセルと同じように C-g で消せばいい</li>
-<li>コメントの中とか文字列の中とかで一部だけ変換したい時とかは変換用のコマンドを直接呼び出せばいい</li>
-</ul>
-
-
-<p>のような話があったと記憶しています。</p>
-
-<h2>やっていたこと</h2>
-
-<h3>package.el</h3>
-
-<p><a href="http://emacs-jp.github.io/packages/package-management/package-el.html">package.el &ndash; Emacs JP</a>
-を参考にして <code>package.el</code> を使う設定をしました。</p>
-
-<h3>shell-pop</h3>
-
-<p>上のメモには書いていませんが、発表にあった <code>shell-pop</code> を
-<code>package.el</code> を使って入れてみました。
-昔ちょっと試したことがあって、その設定が悪さをしていて、
-最初は
-<code>(void-function shell-pop-set-internal-mode)</code>
-というエラーになってしまっていましたが、
-古い設定を削除すれば直りました。</p>
-
-<p><a href="http://www.emacswiki.org/emacs/ShellPop">EmacsWiki の Shell Pop</a>
-には上の方に小さく書いてあるだけですが、
-github の方が新しくて互換性がなくなっているのが理由でした。</p>
-
-<h3>ansi-term</h3>
-
-<p><code>shell-pop</code> の設定例にある <code>ansi-term</code> を使ってみると
-最下行で文字を入力すると一瞬上にスクロールして戻るという現象が出て、
-<code>ansi-term</code> 単体でもおきたので、
-<code>ansi-term</code> の問題かと思ってクリーンな環境でも試してみると発生しませんでした。</p>
-
-<p>scroll 関係の設定があやしいと思って、
-<code>scroll-margin</code> を <code>2</code> にしていたのを <code>0</code> にしたらなおったのですが、
-クリーンな環境で <code>scroll-margin</code> だけ変更しても現象が出なかったので、
-結局何が再現条件なのかはわかりませんでした。
-<code>scroll-step</code> を <code>1</code> にしているのも関係しているかと思ったのですが、
-関係ありませんでした。</p>
-
-<h3>elscreen</h3>
-
-<p><code>auto-install</code> でインストールしていた <code>elscreen.el</code> を
-<code>package.el</code> でインストールしたものに変更しました。</p>
-
-<p><code>(elscreen-start)</code> が必要になっているというのを知らなかったので、
-うまく動かなくてかなり悩んでいましたが、教えてもらって解決しました。</p>
-
-<h3>anything.el から helm への変更</h3>
-
-<p><code>anything.el</code> は一時期はいろいろ設定を頑張っていたのですが、
-結局デフォルトの <code>anything</code> 以外はほとんど使っていなかったので、
-<code>helm-mini</code> に置き換えるだけで問題なさそうな感じでした。</p>
-
-<p><code>anything.el</code> だとメニューに登録されていたり
-<code>(anything-execute-anything-command)</code> とか
-<code>(anything-call-source)</code> のようなメタ機能があったりして、
-存在を知らない機能でも探しやすいのですが、
-<code>helm</code> にはそういうものがあるのかどうかわかりませんでした。</p>
-
-<p>ちなみに <code>M-x</code> で <code>helm-</code> で始まる <code>interactive</code> な関数を探すのは
-<code>helm</code> 関係のバッファでのキーバインドようの関数が混ざっているので
-この用途には使えません。</p>
 ]]></content>
   </entry>
   

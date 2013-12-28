@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rubymotion | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rubymotion/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-26T00:52:33+09:00</updated>
+  <updated>2013-12-28T18:49:56+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,144 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 6 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-26-rubymotion-mokumoku-osaka.html"/>
+    <updated>2013-12-26T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
+    <content type="html"><![CDATA[<p>第 1 回から第 5 回にも参加した RubyMotion もくもく会 in Osaka の
+<a href="http://connpass.com/event/4211/">第 6 回 RubyMotion もくもく会 in Osaka</a>
+に参加してきました。</p>
+
+<p>次回の
+<a href="http://connpass.com/event/4560/">第 7 回 RubyMotion もくもく会 in Osaka</a>
+は 1/22(水) になりました。</p>
+
+<!--more-->
+
+
+<h2>話に出たもの</h2>
+
+<p>話に出てきたサイトなどのメモです。</p>
+
+<ul>
+<li><a href="http://shin1x1.github.io/vagrantx/">http://shin1x1.github.io/vagrantx/</a>
+
+<ul>
+<li>URL が小文字に変わっていました。</li>
+</ul>
+</li>
+<li><a href="https://www.cocoacontrols.com/">Cocoa Controls</a></li>
+<li><a href="http://getpocket.com/">Pocket</a></li>
+<li><a href="http://71squared.com/ja/particledesigner">Particle Designer</a></li>
+<li>UIMotionEffect で視差効果が簡単に実装できる</li>
+<li>All Cast という Android アプリで Apple TV に AirPlay できる</li>
+</ul>
+
+
+<h2>やっていたこと</h2>
+
+<p>今回は前回作り始めていたデフォルトブラウザを乗っ取って、
+Firefox とか Chrome とか Safari とかに起動し分けられる
+OSX アプリの作成の続きをやっていました。</p>
+
+<p>今回の最後ではスクリーンショットのようになりました。</p>
+
+<p><img src="/images/2013-12-26-hello.png" title="&ldquo;screenshot&rdquo; &ldquo;作成途中のアプリのスクリーンショット&rdquo;" ></p>
+
+<p>適当に作った Hello.app に動作確認用のメソッドを付け足していただけなので、
+まだタイトルは Hello のままになっています。</p>
+
+<h3>URL 受け取り問題</h3>
+
+<p>LimeChat で URL をクリックしたときなどに受け取るのは
+前回調べていた <code>LSSetDefaultHandlerForURLScheme</code> での
+デフォルトブラウザ設定とあわせて、</p>
+
+<p>```ruby</p>
+
+<pre><code>NSAppleEventManager.sharedAppleEventManager.setEventHandler(
+  self,
+  andSelector: :'handleGetURLEvent:withReplyEvent:',
+  forEventClass: KInternetEventClass,
+  andEventID: KAEGetURL)
+</code></pre>
+
+<p>```</p>
+
+<p>でイベントを受け取ると Hello.app 起動中は受け取れたのですが、
+起動していない時の URL クリックのイベントを受け取れない問題は
+結局解決できませんでした。</p>
+
+<p><code>open -a Hello --args URL</code>
+というなら
+<code>NSProcessInfo.processInfo.arguments</code>
+で受け取れるのですが、
+LimeChat などでの URL クリックで起動された時や
+<code>open -a Hello URL</code>
+という起動方法だと受け取り方がわかりませんでした。</p>
+
+<p>他のブラウザの起動も
+<code>open -a 'Google Chrome' http://localhost:4000/ --args -incognito</code>
+のように URL は args ではない方法で渡さないと開けませんでした。</p>
+
+<h3><code>keyDirectObject</code> がない問題と前面に出てこない問題</h3>
+
+<p>URL の受け取り部分は今のところ、以下のようにしています。</p>
+
+<p>```ruby
+  def handleGetURLEvent(event, withReplyEvent: replyEvent)</p>
+
+<pre><code>keyDirectObject = '----'.unpack('L')[0]
+urlStr = event.paramDescriptorForKeyword(keyDirectObject).stringValue
+@text.stringValue = urlStr
+
+Process.spawn("osascript", "-e", &lt;&lt;-SCRIPT)
+</code></pre>
+
+<p>tell Application &ldquo;#{NSBundle.mainBundle.infoDictionary[&lsquo;CFBundleName&rsquo;]}&rdquo;
+  activate
+end tell</p>
+
+<pre><code>SCRIPT
+</code></pre>
+
+<p>  end
+```</p>
+
+<p>最初の問題として、
+<code>keyDirectObject</code> が RubyMotion にはなさそうだったので、
+値を調べて <code>unpack</code> で同等の値を生成するようにしました。
+この部分は前回から今回までの間に調査して作成済みだったので、
+詳しい調査方法は忘れてしまいましたが、
+引数のオブジェクトを調べて見つけたような気がします。</p>
+
+<p>前面に出てこない問題は
+今回のもくもく会の間に対処しました。</p>
+
+<p>前面に持ってくる方法がどういう API を呼べばよいのかわからず、
+AppleScript を使った方法は情報があったので、
+とりあえず <code>osascript</code> を呼び出してしまうことにしました。</p>
+
+<p>最初は <code>spawn</code> ではなく <code>system</code> を使ってしまったら、
+デッドロックしてしまって強制終了するしかなくなってしまったので、
+<code>Process.spawn</code> を使いました。</p>
+
+<h2>まとめ</h2>
+
+<p>今回は作りたいものが決まっていて、しっかりもくもく出来ました。</p>
+
+<p>起動時に URL が受け取れない問題は
+自分が使うだけなら
+URL を 2 回クリックするという方法で
+回避できるのですが、なんとかしたいところです。</p>
+
+<p><code>keyDirectObject</code> と <code>osascript</code> を使っているところは
+他に方法がなければ
+今のままでも実用上は困らないと感じました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[RubyMotionとRubyのバージョン]]></title>

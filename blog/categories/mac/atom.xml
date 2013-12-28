@@ -4,7 +4,7 @@
   <title><![CDATA[Category: mac | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/mac/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2013-12-26T00:52:33+09:00</updated>
+  <updated>2013-12-28T18:49:56+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,88 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Cocoa Emacsのinline patch修正版を使ってみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-28-emacs-inline-patch.html"/>
+    <updated>2013-12-28T01:03:32+09:00</updated>
+    <id>http://blog.n-z.jp/blog/emacs-inline-patch</id>
+    <content type="html"><![CDATA[<p><a href="/blog/2013-11-13-killall-distnoted-periodically.html">launchdでdistnotedを定期的に終了させる</a>
+話のコメントで
+<a href="https://gist.github.com/anonymous/8142555">Emacs.appでインラインパッチを当てた時にdistnotedが暴走しなくなる</a>
+修正を教えてもらったので、
+試してみました。</p>
+
+<!--more-->
+
+
+<h2>homebrew で適用するパッチの変更</h2>
+
+<p>適用法としては
+<code>brew edit emacs</code>
+で以下のように変更して、
+<code>brew reinstall emacs</code>
+で再インストールしました。</p>
+
+<p>```diff
+diff &mdash;git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb
+index 712c3d1..5ce4ce2 100644
+&mdash;&ndash; a/Library/Formula/emacs.rb
++++ b/Library/Formula/emacs.rb
+@@ -47,7 +47,7 @@ class Emacs &lt; Formula</p>
+
+<pre><code> # "--japanese" option:
+ # to apply a patch from MacEmacsJP for Japanese input methods
+ if build.include? "cocoa" and build.include? "japanese"
+</code></pre>
+
+<ul>
+<li>   p[:p0].push(&ldquo;<a href="http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583">http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583</a>&rdquo;)</li>
+<li>   p[:p0].push(&ldquo;<a href="https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch">https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch</a>&rdquo;)
+ end
+ p
+end unless build.head?
+```</li>
+</ul>
+
+
+<h2>元のパッチからの変更点</h2>
+
+<p>元の sourceforge.jp のパッチとの差分をとってみると、
+以下のメソッド呼び出しが変わっているだけでした。</p>
+
+<p>```diff
+diff &mdash;git a/emacs-inline.patch.sfjp b/emacs-inline.patch.gist
+index 52f2052..d67ad1d 100644
+&mdash;&ndash; a/emacs-inline.patch.sfjp
++++ b/emacs-inline.patch.gist
+@@ -1015,7 +1015,7 @@ diff -r -N -p ../emacs-24.3.org/src/nsterm.m src/nsterm.m</p>
+
+<pre><code>                                            name: nil object: nil]; */
+</code></pre>
+
+<ul>
+<li> [[NSDistributedNotificationCenter defaultCenter] addObserver: NSApp</li>
+<li><pre><code>            selector: @selector (changeInputMethod:)
+</code></pre>
+
+<p>&ndash;+                         name: @&ldquo;AppleSelectedInputSourcesChangedNotification&rdquo; object: nil];
+++                         name: @&ldquo;AppleSelectedInputSourcesChangedNotification&rdquo; object: nil suspensionBehavior:NSNotificationSuspensionBehaviorDeliverImmediately];</p>
+
+<p>   dpyinfo = xzalloc (sizeof *dpyinfo);</p></li>
+</ul>
+
+
+<p>```</p>
+
+<h2>まとめ</h2>
+
+<p>使ってみて問題がなければ sourceforge.jp の方に取り込んでもらうのが良さそうです。</p>
+
+<p>しばらく使ってみた感じだと distnoted のメモリ使用量が増えていっても、
+一度 Emacs.app を終了すると distnoted のメモリ使用量が一気に減るようになりました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Mac OS XでのIME制御についての考察]]></title>
@@ -88,6 +170,11 @@ OS 自体を再起動したりしていました。</p>
 <p>たまに気がつかないうちに大量にメモリを消費して、
 確認のためのアクティビティモニタを開くのも大変なことがあったので、
 さすがにまずいと思って <code>launchd</code> で定期的に実行するようにしました。</p>
+
+<p>2013-12-28 追記:
+続きとして
+<a href="/blog/2013-12-27-emacs-inline-patch.html">コメントにあったパッチを試してみた話</a>
+を書きました。</p>
 
 <!--more-->
 
@@ -474,131 +561,6 @@ TeraTerm Pro のように IME の状態によってカーソルの表示を変�
 </code></pre>
 
 <p>```</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[MavericksでEmacs.appが起動時にホームディレクトリにならない]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-01-emacs-on-mavericks.html"/>
-    <updated>2013-11-01T18:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/emacs-on-mavericks</id>
-    <content type="html"><![CDATA[<p>Mac OS X を Mavericks にあげたら homebrew で入れた
-Emacs.app を起動した時に <code>default-directory</code>
-がホームディレクトリから <code>/</code> に変わってしまっていたので、
-原因を調べてみました。</p>
-
-<p>2013-11-09 追記:
-現在は emacs の開発版から抜き出したパッチの pull request が homebrew に取り込まれていて、
-問題は起きなくなっています。</p>
-
-<!--more-->
-
-
-<h2>調べたきっかけ</h2>
-
-<p>きっかけは
-<a href="http://qiita.com/ksato9700/items/1ec373895b9693529f82">Mavericksにアップデートして遭遇した不具合　まとめ</a>
-を見て自分の環境だけで起きている現象ではないと知ったからです。</p>
-
-<h2>原因</h2>
-
-<p>Emacs のソースの以下の部分で <code>-psn</code> で始まる引数の有無で
-ホームディレクトリに移動するかどうかを判定しているのに、
-Mavericks だと引数なしで起動されるようになったからのようです。</p>
-
-<p>```c emacs-24.3/src/emacs.c
- #ifdef HAVE_NS
-   ns_pool = ns_alloc_autorelease_pool ();
-   if (!noninteractive)</p>
-
-<pre><code> {
-</code></pre>
-
-<p> #ifdef NS_IMPL_COCOA</p>
-
-<pre><code>   if (skip_args &lt; argc)
-     {
-  /* FIXME: Do the right thing if getenv returns NULL, or if
-     chdir fails.  */
-       if (!strncmp (argv[skip_args], "-psn", 4))
-         {
-           skip_args += 1;
-           chdir (getenv ("HOME"));
-         }
-       else if (skip_args+1 &lt; argc &amp;&amp; !strncmp (argv[skip_args+1], "-psn", 4))
-         {
-           skip_args += 2;
-           chdir (getenv ("HOME"));
-         }
-     }
-</code></pre>
-
-<p> #endif  /<em> COCOA </em>/</p>
-
-<pre><code> }
-</code></pre>
-
-<p> #endif /<em> HAVE_NS </em>/
-```</p>
-
-<h2>状況</h2>
-
-<p>ちなみに Mac OS X 10.8.5 では、たとえば
-<code>/usr/local/Cellar/emacs/24.3/Emacs.app/Contents/MacOS/Emacs -psn_0_29637698</code>
-のように起動されていました。</p>
-
-<p>Qiita の記事では Dock から起動した時のことを書いていますが、
-<code>open -a Emacs.app</code> のように起動しても同じでした。</p>
-
-<p>RubyMotion で最小限のカレントディレクトリを表示するだけのアプリを作って試してみたところ、
-起動時にカレントディレクトリが <code>/</code> になっているのは
-Cocoa アプリでは普通の動作のようでした。</p>
-
-<h2>対応状況</h2>
-
-<p><a href="http://osdir.com/ml/general/2013-10/msg61593.html">ML での情報</a>
-によると trunk には対応がチェックインされているということで、
-調べてみると
-revision 114730 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114730 -->
-と
-revision 114882 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114882 -->
-のパッチをあわせて以下のように対応すれば良さそうに見えました。</p>
-
-<p>```diff emacs.c.diff
-&mdash;&ndash; src/emacs.c.orig    2013-02-06 13:33:36.000000000 +0900
-+++ src/emacs.c 2013-11-02 22:38:45.000000000 +0900
-@@ -1158,10 +1158,13 @@
-   if (!noninteractive)</p>
-
-<pre><code> {
-</code></pre>
-
-<p> #ifdef NS_IMPL_COCOA
-+      /<em> Started from GUI? </em>/
-+      /<em> FIXME: Do the right thing if getenv returns NULL, or if
-+         chdir fails.  </em>/
-+      if (! inhibit_window_system &amp;&amp; ! isatty (0))
-+        chdir (getenv (&ldquo;HOME&rdquo;));</p>
-
-<pre><code>   if (skip_args &lt; argc)
-     {
-</code></pre>
-
-<ul>
-<li>  /* FIXME: Do the right thing if getenv returns NULL, or if</li>
-<li><pre><code> chdir fails.  */
-   if (!strncmp (argv[skip_args], "-psn", 4))
-     {
-       skip_args += 1;
-</code></pre>
-
-<p>```</p></li>
-</ul>
-
-
-<p>というわけで homebrew の方に
-<a href="https://github.com/mxcl/homebrew/pull/23897">fix default-directory on Cocoa and Mavericks</a>
-として pull request を出してみました。</p>
 ]]></content>
   </entry>
   
