@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: dkms | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/dkms/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-01-05T00:22:58+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[virtualboxでdkmsによるモジュールのリビルドが動いていなかったので対処した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-01-04-virtualbox-dkms.html"/>
+    <updated>2014-01-04T23:47:41+09:00</updated>
+    <id>http://blog.n-z.jp/blog/virtualbox-dkms</id>
+    <content type="html"><![CDATA[<p>Ubuntu 12.04.3 LTS の環境で
+virtualbox.org から入れた VirtualBox を
+virtualbox-4.2 (4.2.20-90983~Ubuntu~precise)
+から
+virtualbox-4.3 (4.3.6-91406~Ubuntu~precise)
+にあげても dkms によるモジュールのリビルドがちゃんと動かないままだったので、
+直し方を調べて対処してみました。</p>
+
+<!--more-->
+
+
+<h2>状況</h2>
+
+<p>カーネルを linux-image-3.8.0-34-generic から
+linux-image-3.8.0-35-generic にあげるときに
+virtualbox-4.2 (4.2.20-90983~Ubuntu~precise)
+から
+virtualbox-4.3 (4.3.6-91406~Ubuntu~precise)
+にあげました。</p>
+
+<p>以下の作業は linux-image-3.8.0-34-generic で起動中に
+再起動後に使われる linux-image-3.8.0-35-generic 用の
+VirtualBox のカーネルモジュールをビルドしようとしています。</p>
+
+<h2>エラーの状況</h2>
+
+<p><code>dkms status</code> で調べると以下のエラーメッセージが出る状態でした。</p>
+
+<p><code>console
+  $ sudo dkms status
+  Error! Could not locate dkms.conf file.
+  File:  does not exist.
+</code></p>
+
+<h2>対処その1</h2>
+
+<p><code>/var/lib/dkms/vboxhost</code> を退避して
+<code>dpkg-reconfigure</code> しなおせば良いという情報があったので
+試してみました。</p>
+
+<p>この段階での <code>dkms status</code> は調べ忘れていたのですが、
+後の状況からすると
+今起動中のカーネルのモジュールだけビルドされたようです。</p>
+
+<p><code>console
+  $ sudo mv /var/lib/dkms/vboxhost /tmp/
+  $ sudo dpkg-reconfigure virtualbox-4.3
+  Stopping VirtualBox kernel modules ...done.
+  addgroup: グループ `vboxusers' はシステムグループとしてすでに存在しています。終了します。
+  Unknown media type in type 'all/all'
+  Unknown media type in type 'all/allfiles'
+  Unknown media type in type 'uri/mms'
+  Unknown media type in type 'uri/mmst'
+  Unknown media type in type 'uri/mmsu'
+  Unknown media type in type 'uri/pnm'
+  Unknown media type in type 'uri/rtspt'
+  Unknown media type in type 'uri/rtspu'
+  Stopping VirtualBox kernel modules ...done.
+  Uninstalling old VirtualBox DKMS kernel modules ...done.
+  Removing old VirtualBox pci kernel module ...done.
+  Removing old VirtualBox netadp kernel module ...done.
+  Removing old VirtualBox netflt kernel module ...done.
+  Removing old VirtualBox kernel module ...done.
+  Trying to register the VirtualBox kernel modules using DKMS ...done.
+  Starting VirtualBox kernel modules ...done.
+</code></p>
+
+<h2>対処その2</h2>
+
+<p>purge した古いカーネルのモジュールが残っていたので、
+削除しました。
+安全のため <code>/tmp</code> への移動にしていますが、
+いきなり <code>rm -rf</code> で削除しても良いと思います。
+他の古いバージョンも残っていれば削除してしまっても
+大丈夫だと思います。</p>
+
+<p>ねんのため
+<code>/etc/init.d/vboxdrv setup</code>
+を実行してみましたが、
+<code>dpkg-reconfigure</code>
+で既に実行済みだったので関係なかったようです。</p>
+
+<p>この段階で <code>dkms status</code> を確認してみると
+起動中のカーネルのモジュールだけビルドされていることがわかります。</p>
+
+<p><code>console
+  $ sudo mv /lib/modules/3.8.0-33-generic/ /tmp/
+  $ sudo /etc/init.d/vboxdrv setup
+  Stopping VirtualBox kernel modules ...done.
+  Uninstalling old VirtualBox DKMS kernel modules ...done.
+  Trying to register the VirtualBox kernel modules using DKMS ...done.
+  Starting VirtualBox kernel modules ...done.
+  $ sudo dkms status
+  vboxhost, 4.3.6, 3.8.0-34-generic, x86_64: installed
+</code></p>
+
+<h2>対処その3</h2>
+
+<p>dkms でのモジュールのビルドは
+<code>/etc/kernel/postinst.d/dkms</code>
+で実行されているので、
+カーネルを再インストールすれば確実ということで、
+カーネルを <code>aptitude reinstall</code> しました。</p>
+
+<p>その結果、正常にビルドされていることが確認できたので、
+再起動して VirtualBox の動作確認をしました。</p>
+
+<p>```console
+  $ sudo aptitude reinstall linux-image-3.8.0-35-generic
+  以下のパッケージが再インストールされます:</p>
+
+<pre><code>linux-image-3.8.0-35-generic
+</code></pre>
+
+<p>  0 個のパッケージを更新、 0 個を新たにインストール、 再インストール: 1 個、 0 個を削除予定 、0 個が更新されていない。
+  アーカイブ 48.2 M バイト中 0  バイトを取得する必要があります。 展開後に 0  バイトのディス ク領域が新たに消費されます。
+  (データベースを読み込んでいます &hellip; 現在 117478 個のファイルとディレクトリがインストールされています。)
+  linux-image-3.8.0-35-generic 3.8.0-35.50~precise1 を (&hellip;/linux-image-3.8.0-35-generic_3.8.0-35.50~precise1_amd64.deb で) 置換するための準備をしています &hellip;
+  Done.
+  linux-image-3.8.0-35-generic を展開し、置換しています&hellip;
+  Examining /etc/kernel/postrm.d .
+  run-parts: executing /etc/kernel/postrm.d/initramfs-tools 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic
+  run-parts: executing /etc/kernel/postrm.d/zz-update-grub 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic
+  linux-image-3.8.0-35-generic (3.8.0-35.50~precise1) を設定しています &hellip;
+  Running depmod.
+  update-initramfs: deferring update (hook will be called later)
+  Not updating initrd symbolic links since we are being updated/reinstalled
+  (3.8.0-35.50~precise1 was configured last, according to dpkg)
+  Not updating image symbolic links since we are being updated/reinstalled
+  (3.8.0-35.50~precise1 was configured last, according to dpkg)
+  Examining /etc/kernel/postinst.d.
+  run-parts: executing /etc/kernel/postinst.d/apt-auto-removal 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic
+  run-parts: executing /etc/kernel/postinst.d/dkms 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic
+  run-parts: executing /etc/kernel/postinst.d/initramfs-tools 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic
+  update-initramfs: Generating /boot/initrd.img-3.8.0-35-generic
+  run-parts: executing /etc/kernel/postinst.d/pm-utils 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic
+  run-parts: executing /etc/kernel/postinst.d/update-notifier 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic
+  run-parts: executing /etc/kernel/postinst.d/zz-update-grub 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic
+  Generating grub.cfg &hellip;
+  Found linux image: /boot/vmlinuz-3.8.0-35-generic
+  Found initrd image: /boot/initrd.img-3.8.0-35-generic
+  Found linux image: /boot/vmlinuz-3.8.0-34-generic
+  Found initrd image: /boot/initrd.img-3.8.0-34-generic
+  Found memtest86+ image: /memtest86+.bin
+  done
+  $ sudo dkms status
+  vboxhost, 4.3.6, 3.8.0-34-generic, x86_64: installed
+  vboxhost, 4.3.6, 3.8.0-35-generic, x86_64: installed
+  $
+```</p>
+
+<h2>まとめ</h2>
+
+<p>古いバージョンは再起動で消えてしまって確認できないのですが、
+多分古い VirtualBox では
+<code>/var/lib/dkms/vboxhost/*/source/dkms.conf</code>
+が存在していなくて、
+バージョンを上げても古いバージョンの <code>source</code> が残ったままだと
+同じエラーが出続けるようなので、
+クリーンインストールやそれに近い状態にすると直るということのようです。</p>
+]]></content>
+  </entry>
+  
+</feed>

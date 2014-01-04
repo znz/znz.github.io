@@ -1,0 +1,565 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>virtualboxでdkmsによるモジュールのリビルドが動いていなかったので対処した - @znz blog</title>
+  <meta name="author" content="Kazuhiro NISHIYAMA">
+
+  
+  <meta name="description" content="Ubuntu 12.04.3 LTS の環境で
+virtualbox.org から入れた VirtualBox を
+virtualbox-4.2 (4.2.20-90983~Ubuntu~precise)
+から
+virtualbox-4.3 (4.3.6-91406~Ubuntu~precise &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-01-04-virtualbox-dkms.html">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-43859023-1', 'n-z.jp');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">@znz blog</a></h1>
+  
+    <h2>ZnZ の memo のようなもの</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://www.google.co.jp/cse" id="cse-search-box">
+  <div>
+    <input type="hidden" name="cx" value="partner-pub-4711975605457723:5173725094" />
+    <input type="hidden" name="ie" value="UTF-8" />
+    <input type="text" name="q" size="40" />
+    <input type="submit" name="sa" value="検索" />
+  </div>
+</form>
+
+<script type="text/javascript" src="http://www.google.co.jp/coop/cse/brand?form=cse-search-box&amp;lang=ja"></script>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">virtualboxでdkmsによるモジュールのリビルドが動いていなかったので対処した</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-01-04T23:47:41+09:00" pubdate data-updated="true">2014-01-04 (Sat)</time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Ubuntu 12.04.3 LTS の環境で
+virtualbox.org から入れた VirtualBox を
+virtualbox-4.2 (4.2.20-90983~Ubuntu~precise)
+から
+virtualbox-4.3 (4.3.6-91406~Ubuntu~precise)
+にあげても dkms によるモジュールのリビルドがちゃんと動かないままだったので、
+直し方を調べて対処してみました。</p>
+
+<!--more-->
+
+
+<h2>状況</h2>
+
+<p>カーネルを linux-image-3.8.0-34-generic から
+linux-image-3.8.0-35-generic にあげるときに
+virtualbox-4.2 (4.2.20-90983~Ubuntu~precise)
+から
+virtualbox-4.3 (4.3.6-91406~Ubuntu~precise)
+にあげました。</p>
+
+<p>以下の作業は linux-image-3.8.0-34-generic で起動中に
+再起動後に使われる linux-image-3.8.0-35-generic 用の
+VirtualBox のカーネルモジュールをビルドしようとしています。</p>
+
+<h2>エラーの状況</h2>
+
+<p><code>dkms status</code> で調べると以下のエラーメッセージが出る状態でした。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">  $ sudo dkms status</span>
+</span><span class='line'><span class="go">  Error! Could not locate dkms.conf file.</span>
+</span><span class='line'><span class="go">  File:  does not exist.</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>対処その1</h2>
+
+<p><code>/var/lib/dkms/vboxhost</code> を退避して
+<code>dpkg-reconfigure</code> しなおせば良いという情報があったので
+試してみました。</p>
+
+<p>この段階での <code>dkms status</code> は調べ忘れていたのですが、
+後の状況からすると
+今起動中のカーネルのモジュールだけビルドされたようです。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">  $ sudo mv /var/lib/dkms/vboxhost /tmp/</span>
+</span><span class='line'><span class="go">  $ sudo dpkg-reconfigure virtualbox-4.3</span>
+</span><span class='line'><span class="go">  Stopping VirtualBox kernel modules ...done.</span>
+</span><span class='line'><span class="go">  addgroup: グループ `vboxusers&#39; はシステムグループとしてすでに存在しています。終了します。</span>
+</span><span class='line'><span class="go">  Unknown media type in type &#39;all/all&#39;</span>
+</span><span class='line'><span class="go">  Unknown media type in type &#39;all/allfiles&#39;</span>
+</span><span class='line'><span class="go">  Unknown media type in type &#39;uri/mms&#39;</span>
+</span><span class='line'><span class="go">  Unknown media type in type &#39;uri/mmst&#39;</span>
+</span><span class='line'><span class="go">  Unknown media type in type &#39;uri/mmsu&#39;</span>
+</span><span class='line'><span class="go">  Unknown media type in type &#39;uri/pnm&#39;</span>
+</span><span class='line'><span class="go">  Unknown media type in type &#39;uri/rtspt&#39;</span>
+</span><span class='line'><span class="go">  Unknown media type in type &#39;uri/rtspu&#39;</span>
+</span><span class='line'><span class="go">  Stopping VirtualBox kernel modules ...done.</span>
+</span><span class='line'><span class="go">  Uninstalling old VirtualBox DKMS kernel modules ...done.</span>
+</span><span class='line'><span class="go">  Removing old VirtualBox pci kernel module ...done.</span>
+</span><span class='line'><span class="go">  Removing old VirtualBox netadp kernel module ...done.</span>
+</span><span class='line'><span class="go">  Removing old VirtualBox netflt kernel module ...done.</span>
+</span><span class='line'><span class="go">  Removing old VirtualBox kernel module ...done.</span>
+</span><span class='line'><span class="go">  Trying to register the VirtualBox kernel modules using DKMS ...done.</span>
+</span><span class='line'><span class="go">  Starting VirtualBox kernel modules ...done.</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>対処その2</h2>
+
+<p>purge した古いカーネルのモジュールが残っていたので、
+削除しました。
+安全のため <code>/tmp</code> への移動にしていますが、
+いきなり <code>rm -rf</code> で削除しても良いと思います。
+他の古いバージョンも残っていれば削除してしまっても
+大丈夫だと思います。</p>
+
+<p>ねんのため
+<code>/etc/init.d/vboxdrv setup</code>
+を実行してみましたが、
+<code>dpkg-reconfigure</code>
+で既に実行済みだったので関係なかったようです。</p>
+
+<p>この段階で <code>dkms status</code> を確認してみると
+起動中のカーネルのモジュールだけビルドされていることがわかります。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">  $ sudo mv /lib/modules/3.8.0-33-generic/ /tmp/</span>
+</span><span class='line'><span class="go">  $ sudo /etc/init.d/vboxdrv setup</span>
+</span><span class='line'><span class="go">  Stopping VirtualBox kernel modules ...done.</span>
+</span><span class='line'><span class="go">  Uninstalling old VirtualBox DKMS kernel modules ...done.</span>
+</span><span class='line'><span class="go">  Trying to register the VirtualBox kernel modules using DKMS ...done.</span>
+</span><span class='line'><span class="go">  Starting VirtualBox kernel modules ...done.</span>
+</span><span class='line'><span class="go">  $ sudo dkms status</span>
+</span><span class='line'><span class="go">  vboxhost, 4.3.6, 3.8.0-34-generic, x86_64: installed</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>対処その3</h2>
+
+<p>dkms でのモジュールのビルドは
+<code>/etc/kernel/postinst.d/dkms</code>
+で実行されているので、
+カーネルを再インストールすれば確実ということで、
+カーネルを <code>aptitude reinstall</code> しました。</p>
+
+<p>その結果、正常にビルドされていることが確認できたので、
+再起動して VirtualBox の動作確認をしました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">  $ sudo aptitude reinstall linux-image-3.8.0-35-generic</span>
+</span><span class='line'><span class="go">  以下のパッケージが再インストールされます:</span>
+</span><span class='line'><span class="go">    linux-image-3.8.0-35-generic</span>
+</span><span class='line'><span class="go">  0 個のパッケージを更新、 0 個を新たにインストール、 再インストール: 1 個、 0 個を削除予定 、0 個が更新されていない。</span>
+</span><span class='line'><span class="go">  アーカイブ 48.2 M バイト中 0  バイトを取得する必要があります。 展開後に 0  バイトのディス ク領域が新たに消費されます。</span>
+</span><span class='line'><span class="go">  (データベースを読み込んでいます ... 現在 117478 個のファイルとディレクトリがインストールされています。)</span>
+</span><span class='line'><span class="go">  linux-image-3.8.0-35-generic 3.8.0-35.50~precise1 を (.../linux-image-3.8.0-35-generic_3.8.0-35.50~precise1_amd64.deb で) 置換するための準備をしています ...</span>
+</span><span class='line'><span class="go">  Done.</span>
+</span><span class='line'><span class="go">  linux-image-3.8.0-35-generic を展開し、置換しています...</span>
+</span><span class='line'><span class="go">  Examining /etc/kernel/postrm.d .</span>
+</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postrm.d/initramfs-tools 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
+</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postrm.d/zz-update-grub 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
+</span><span class='line'><span class="go">  linux-image-3.8.0-35-generic (3.8.0-35.50~precise1) を設定しています ...</span>
+</span><span class='line'><span class="go">  Running depmod.</span>
+</span><span class='line'><span class="go">  update-initramfs: deferring update (hook will be called later)</span>
+</span><span class='line'><span class="go">  Not updating initrd symbolic links since we are being updated/reinstalled</span>
+</span><span class='line'><span class="go">  (3.8.0-35.50~precise1 was configured last, according to dpkg)</span>
+</span><span class='line'><span class="go">  Not updating image symbolic links since we are being updated/reinstalled</span>
+</span><span class='line'><span class="go">  (3.8.0-35.50~precise1 was configured last, according to dpkg)</span>
+</span><span class='line'><span class="go">  Examining /etc/kernel/postinst.d.</span>
+</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postinst.d/apt-auto-removal 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
+</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postinst.d/dkms 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
+</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postinst.d/initramfs-tools 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
+</span><span class='line'><span class="go">  update-initramfs: Generating /boot/initrd.img-3.8.0-35-generic</span>
+</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postinst.d/pm-utils 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
+</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postinst.d/update-notifier 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
+</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postinst.d/zz-update-grub 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
+</span><span class='line'><span class="go">  Generating grub.cfg ...</span>
+</span><span class='line'><span class="go">  Found linux image: /boot/vmlinuz-3.8.0-35-generic</span>
+</span><span class='line'><span class="go">  Found initrd image: /boot/initrd.img-3.8.0-35-generic</span>
+</span><span class='line'><span class="go">  Found linux image: /boot/vmlinuz-3.8.0-34-generic</span>
+</span><span class='line'><span class="go">  Found initrd image: /boot/initrd.img-3.8.0-34-generic</span>
+</span><span class='line'><span class="go">  Found memtest86+ image: /memtest86+.bin</span>
+</span><span class='line'><span class="go">  done</span>
+</span><span class='line'><span class="go">  $ sudo dkms status</span>
+</span><span class='line'><span class="go">  vboxhost, 4.3.6, 3.8.0-34-generic, x86_64: installed</span>
+</span><span class='line'><span class="go">  vboxhost, 4.3.6, 3.8.0-35-generic, x86_64: installed</span>
+</span><span class='line'><span class="go">  $</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p>古いバージョンは再起動で消えてしまって確認できないのですが、
+多分古い VirtualBox では
+<code>/var/lib/dkms/vboxhost/*/source/dkms.conf</code>
+が存在していなくて、
+バージョンを上げても古いバージョンの <code>source</code> が残ったままだと
+同じエラーが出続けるようなので、
+クリーンインストールやそれに近い状態にすると直るということのようです。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-01-04T23:47:41+09:00" pubdate data-updated="true">2014-01-04 (Sat)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/dkms/'>dkms</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>, <a class='category' href='/blog/categories/virtualbox/'>virtualbox</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2014-01-04-virtualbox-dkms.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2014-01-04-virtualbox-dkms.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2014-01-04-virtualbox-dkms.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013-12-28-rubymotion-error.html" title="Previous Post: RubyMotionのOSXアプリの起動エラー">&laquo; RubyMotionのOSXアプリの起動エラー</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- sidebar -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:160px;height:600px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4210402292"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+<section>
+  <h1>About Me</h1>
+  <p><a href="http://rubycommitters.org/">Ruby のコミッター</a>とかやってます。</p>
+<script data-gittip-username="znz"
+        data-gittip-widget="button"
+        src="//gttp.co/v1.js"></script>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014-01-04-virtualbox-dkms.html">virtualboxでdkmsによるモジュールのリビルドが動いていなかったので対処した</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-12-28-rubymotion-error.html">RubyMotionのOSXアプリの起動エラー</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-12-27-emacs-inline-patch.html">distnotedの暴走が止まるというCocoa Emacsのinline patch修正版を使ってみた</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-12-26-rubymotion-mokumoku-osaka.html">第 6 回 RubyMotion もくもく会 in Osaka に参加した</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013-12-25-weechat-curses.html">weechat-cursesでの罫線の文字幅問題を回避する</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>Tag Cloud</h1>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 104.44444444444444%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 104.44444444444444%'>amagasakirb(2)</a> <a href='/blog/categories/ansible' style='font-size: 106.66666666666667%'>ansible(3)</a> <a href='/blog/categories/anyenv' style='font-size: 102.22222222222223%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 102.22222222222223%'>authorization(1)</a> <a href='/blog/categories/bts' style='font-size: 102.22222222222223%'>bts(1)</a> <a href='/blog/categories/certification' style='font-size: 102.22222222222223%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 102.22222222222223%'>coffeescript(1)</a> <a href='/blog/categories/community' style='font-size: 106.66666666666667%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 122.22222222222223%'>debian(10)</a> <a href='/blog/categories/devise' style='font-size: 104.44444444444444%'>devise(2)</a> <a href='/blog/categories/dkms' style='font-size: 102.22222222222223%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 111.11111111111111%'>docker(5)</a> <a href='/blog/categories/dokku' style='font-size: 102.22222222222223%'>dokku(1)</a> <a href='/blog/categories/doorkeeper' style='font-size: 102.22222222222223%'>doorkeeper(1)</a> <a href='/blog/categories/elscreen' style='font-size: 102.22222222222223%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 115.55555555555556%'>emacs(7)</a> <a href='/blog/categories/event' style='font-size: 131.11111111111111%'>event(14)</a> <a href='/blog/categories/gem' style='font-size: 102.22222222222223%'>gem(1)</a> <a href='/blog/categories/git' style='font-size: 104.44444444444444%'>git(2)</a> <a href='/blog/categories/github' style='font-size: 111.11111111111111%'>github(5)</a> <a href='/blog/categories/homebrew' style='font-size: 111.11111111111111%'>homebrew(5)</a> <a href='/blog/categories/html5' style='font-size: 104.44444444444444%'>html5(2)</a> <a href='/blog/categories/ime' style='font-size: 106.66666666666667%'>ime(3)</a> <a href='/blog/categories/irb' style='font-size: 102.22222222222223%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 102.22222222222223%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 106.66666666666667%'>javascript(3)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 104.44444444444444%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 102.22222222222223%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.22222222222223%'>jus(1)</a> <a href='/blog/categories/k-of' style='font-size: 102.22222222222223%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 104.44444444444444%'>kansaidebian(2)</a> <a href='/blog/categories/kernelvm' style='font-size: 102.22222222222223%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 102.22222222222223%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 104.44444444444444%'>land-of-lisp(2)</a> <a href='/blog/categories/linux' style='font-size: 108.88888888888889%'>linux(4)</a> <a href='/blog/categories/lxc' style='font-size: 102.22222222222223%'>lxc(1)</a> <a href='/blog/categories/mailman' style='font-size: 104.44444444444444%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 104.44444444444444%'>mavericks(2)</a> <a href='/blog/categories/milter-manager' style='font-size: 102.22222222222223%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 102.22222222222223%'>mojibake(1)</a> <a href='/blog/categories/nadoka' style='font-size: 102.22222222222223%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 102.22222222222223%'>oauth2(1)</a> <a href='/blog/categories/octopress' style='font-size: 108.88888888888889%'>octopress(4)</a> <a href='/blog/categories/omniauth' style='font-size: 102.22222222222223%'>omniauth(1)</a> <a href='/blog/categories/osx' style='font-size: 133.33333333333334%'>osx(15)</a> <a href='/blog/categories/postfix' style='font-size: 104.44444444444444%'>postfix(2)</a> <a href='/blog/categories/pundit' style='font-size: 102.22222222222223%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 102.22222222222223%'>pyenv(1)</a> <a href='/blog/categories/rabbit' style='font-size: 104.44444444444444%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 128.88888888888889%'>rails(13)</a> <a href='/blog/categories/rbenv' style='font-size: 108.88888888888889%'>rbenv(4)</a> <a href='/blog/categories/rubima' style='font-size: 102.22222222222223%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(27)</a> <a href='/blog/categories/rubykaigi' style='font-size: 102.22222222222223%'>rubykaigi(1)</a> <a href='/blog/categories/rubymotion' style='font-size: 113.33333333333333%'>rubymotion(6)</a> <a href='/blog/categories/shell' style='font-size: 102.22222222222223%'>shell(1)</a> <a href='/blog/categories/td2planet' style='font-size: 102.22222222222223%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 108.88888888888889%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 124.44444444444444%'>ubuntu(11)</a> <a href='/blog/categories/upstart' style='font-size: 102.22222222222223%'>upstart(1)</a> <a href='/blog/categories/virtualbox' style='font-size: 102.22222222222223%'>virtualbox(1)</a> <a href='/blog/categories/weechat' style='font-size: 102.22222222222223%'>weechat(1)</a> <a href='/blog/categories/zsh' style='font-size: 108.88888888888889%'>zsh(4)</a> </span>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/znz">@znz</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'znz',
+            count: 3,
+            skip_forks: false,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Kazuhiro NISHIYAMA -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'znzblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-01-04-virtualbox-dkms.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-01-04-virtualbox-dkms.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+<script type="text/javascript" src="http://b.st-hatena.com/js/bookmark_button.js" charset="utf-8" async="async"></script>
+
+
+</body>
+</html>
