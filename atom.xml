@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-01-05T00:22:58+09:00</updated>
+  <updated>2014-01-12T15:30:08+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,234 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[tapsでMySQLからPostgreSQLに移行した後に起きたトラブル事例]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-01-12-taps-trouble.html"/>
+    <updated>2014-01-12T14:15:41+09:00</updated>
+    <id>http://blog.n-z.jp/blog/taps-trouble</id>
+    <content type="html"><![CDATA[<p>2013年7月ごろに <a href="http://rubygems.org/gems/taps">taps</a> を使って redmine のデータベースを MySQL から PostgreSQL に移行しました。</p>
+
+<p>その時に移行が不十分で問題が少し起きていたので、その原因を調べて修正しました。</p>
+
+<!--more-->
+
+
+<h2>taps での移行</h2>
+
+<p>taps の使い方については既に情報がたくさんあるので、簡単に書いておくだけにします。
+昨年7月時点の情報なので、今だとさらにバージョン指定を増やさないとダメかもしれません。</p>
+
+<p>まず、 Ruby 1.9.1 以降に対応できていないようなので、 Ruby 1.8.7 を使いました。
+rack も新しいバージョンに対応できていないので、以下のような Gemfile でバージョンを指定して<code>bundle install --path vendor/bundle</code> して使いました。</p>
+
+<figure class='code'><figcaption><span>Gemfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">source</span> <span class="s2">&quot;https://rubygems.org&quot;</span>
+</span><span class='line'>  <span class="n">gem</span> <span class="s2">&quot;taps&quot;</span>
+</span><span class='line'>  <span class="n">gem</span> <span class="s2">&quot;sqlite3&quot;</span>
+</span><span class='line'>  <span class="n">gem</span> <span class="s2">&quot;mysql&quot;</span>
+</span><span class='line'>  <span class="n">gem</span> <span class="s2">&quot;pg&quot;</span>
+</span><span class='line'>  <span class="n">gem</span> <span class="s2">&quot;rack&quot;</span><span class="p">,</span> <span class="s2">&quot;1.0.1&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>元の <code>config/database.yml</code> の設定が</p>
+
+<figure class='code'><figcaption><span>config/database.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="l-Scalar-Plain">production</span><span class="p-Indicator">:</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">adapter</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">mysql2</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">database</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">redmine_db</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">host</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">localhost</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">username</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">redminemyuser</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">password</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">my_password</span>
+</span><span class='line'>  <span class="l-Scalar-Plain">encoding</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">utf8</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>という感じなら、 MySQL を動かしている方で
+<code>bundle exec taps server mysql://redminemyuser:my_password@localhost/redmine_db tapsuser tapspass</code>
+と起動します。</p>
+
+<p>PostgreSQL の方では</p>
+
+<figure class='code'><figcaption><span>sudo -u postgres psql</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">CREATE ROLE redminepguser LOGIN ENCRYPTED PASSWORD &#39;pg_password&#39; NOINHERIT VALID UNTIL &#39;infinity&#39;;</span>
+</span><span class='line'><span class="go">CREATE DATABASE redmine_db WITH ENCODING=&#39;UTF8&#39; OWNER=redminepguser;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>という感じでデータベースを作っておいて、
+<code>bundle exec taps pull postgres://redminepguser:pg_password@localhost/redmine_db http://tapsuser:tapspass@localhost:5000</code>
+という感じでデータを移行しました。</p>
+
+<p>同じサーバーで移行したので taps の http も localhost にしていますが、別サーバーなら ssh のポートフォワーディングなどを使ってつなげば良いと思います。</p>
+
+<h2>redmine でのトラブル</h2>
+
+<p>管理者権限でログインして、管理からグループを追加 (/groups/new) しようとするとエラーになって、 log/production.log を確認すると
+<code>ActiveRecord::StatementInvalid (PG::NotNullViolation: ERROR:  null value in column "mail_notification" violates not-null constraint</code>
+または
+<code>(ActiveRecord::StatementInvalid (PG::NotNullViolation: ERROR:  列"mail_notification"内のNULL値はNOT NULL制約違反です</code>
+というエラーが出ていました。</p>
+
+<h2>トラブルの原因</h2>
+
+<p>いろいろ調べてみると <code>db/schema.rb</code> でいうと <code>mail_notification</code> に default がないのが問題だとわかりました。
+後で追加調査したところ、 default が <code>""</code> (空文字列) のときにうまく移行できていないことがあるようでした。</p>
+
+<h2>原因修正</h2>
+
+<p><code>rails dbconsole</code> で
+<code>ALTER TABLE users ALTER mail_notification SET DEFAULT '';</code>
+で設定して、
+<code>rake db:migrate</code> で <code>db/schema.rb</code> にも反映して
+redmine を再起動すると直りました。</p>
+
+<h2>その他の DEFAULT の修正</h2>
+
+<p>別途 PostgreSQL の環境を用意して redmine を新規インストールして <code>rake db:migrate</code> で生成した <code>db/schema.rb</code> と比較して全体としては以下の修正をしました。</p>
+
+<figure class='code'><figcaption><span>rails dbconsole</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">attachments</span> <span class="k">ALTER</span> <span class="n">filename</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">attachments</span> <span class="k">ALTER</span> <span class="n">disk_filename</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">attachments</span> <span class="k">ALTER</span> <span class="n">content_type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">attachments</span> <span class="k">ALTER</span> <span class="n">digest</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">auth_sources</span> <span class="k">ALTER</span> <span class="k">type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">auth_sources</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">auth_sources</span> <span class="k">ALTER</span> <span class="n">account_password</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">boards</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">changes</span> <span class="k">ALTER</span> <span class="n">action</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">comments</span> <span class="k">ALTER</span> <span class="n">commented_type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">custom_fields</span> <span class="k">ALTER</span> <span class="k">type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">custom_fields</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">custom_fields</span> <span class="k">ALTER</span> <span class="n">field_format</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">custom_fields</span> <span class="k">ALTER</span> <span class="n">regexp</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">custom_values</span> <span class="k">ALTER</span> <span class="n">customized_type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">documents</span> <span class="k">ALTER</span> <span class="n">title</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">enumerations</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">wiki_contents</span> <span class="k">ALTER</span> <span class="n">comments</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">issue_categories</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">issue_relations</span> <span class="k">ALTER</span> <span class="n">relation_type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">issue_statuses</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">issues</span> <span class="k">ALTER</span> <span class="n">subject</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">journal_details</span> <span class="k">ALTER</span> <span class="n">property</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">journal_details</span> <span class="k">ALTER</span> <span class="n">prop_key</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">journals</span> <span class="k">ALTER</span> <span class="n">journalized_type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">messages</span> <span class="k">ALTER</span> <span class="n">subject</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">news</span> <span class="k">ALTER</span> <span class="n">title</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">news</span> <span class="k">ALTER</span> <span class="n">summary</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">projects</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">projects</span> <span class="k">ALTER</span> <span class="n">homepage</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">queries</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">repositories</span> <span class="k">ALTER</span> <span class="n">url</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">repositories</span> <span class="k">ALTER</span> <span class="n">login</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">repositories</span> <span class="k">ALTER</span> <span class="n">password</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">repositories</span> <span class="k">ALTER</span> <span class="n">root_url</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">roles</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">settings</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">tokens</span> <span class="k">ALTER</span> <span class="n">action</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">tokens</span> <span class="k">ALTER</span> <span class="n">value</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">trackers</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="n">hashed_password</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="n">firstname</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="n">mail</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="k">language</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">versions</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">versions</span> <span class="k">ALTER</span> <span class="n">description</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">watchers</span> <span class="k">ALTER</span> <span class="n">watchable_type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">wiki_content_versions</span> <span class="k">ALTER</span> <span class="n">compression</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">wiki_content_versions</span> <span class="k">ALTER</span> <span class="n">comments</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="n">mail_notification</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="n">lastname</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span>rails dbconsole</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="n">mail_notification</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>はすでに実行済みで、</p>
+
+<figure class='code'><figcaption><span>rails dbconsole</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="n">lastname</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>は既に default が <code>""</code> になっていたので不要でしたが、
+重複して実行しても問題が起きないようなので、上の SQL にも入れています。</p>
+
+<h2>まとめ</h2>
+
+<p>最初のデータベース選択は重要で、アプリケーションが両方対応していても、後から変更するのは大変です。</p>
+
+<p>問題が起きそうなデータ型を使っていなければ <code>taps</code> ですんなり移行できるように見えますが、別途クリーンな環境を用意して生成した <code>db/schema.rb</code> と比較するなどのチェックも必要でした。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[virtualboxでdkmsによるモジュールのリビルドが動いていなかったので対処した]]></title>
@@ -2839,82 +3067,6 @@ roles 用の YAML ファイルに余計な記述をしてここでは使えな�
 <h2>まとめ</h2>
 
 <p>今回は <code>debian-goodies</code> の中から <code>checkrestart</code> を紹介しました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Rails 4.0.2のi18nで出るようになったdeprecated警告の対策方法]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-04-rails-i18n-deprecated-warning.html"/>
-    <updated>2013-12-04T10:59:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rails-i18n-deprecated-warning</id>
-    <content type="html"><![CDATA[<p>Ruby on Rails のセキュリティアップデートがあって、
-4.0.2 にあげたら i18n gem も 0.6.5 から 0.6.9 にあがって
-<code>locale</code> の設定変更をしているところで
-<code>[deprecated] I18n.enforce_available_locales will default to true in the future. If you really want to skip validation of your locale you can set I18n.enforce_available_locales = false to avoid this message.</code>
-という警告が出るようになりました。</p>
-
-<!--more-->
-
-
-<h2>警告の出るタイミング</h2>
-
-<p><a href="http://stackoverflow.com/questions/20361428/rails-4-0-2-i18n-validation-deprecation-warning">deprecated &ndash; Rails 4.0.2 I18n validation deprecation warning &ndash; Stack Overflow</a>
-経由で
-<a href="https://github.com/svenfuchs/i18n/commit/3b6e56e06fd70f6e4507996b017238505e66608c9">Add I18n.locale_available? and enforce available locales</a>
-のコミットから入った変更ということで、
-コミットログをみてみると、</p>
-
-<ul>
-<li><code>I18n.config.default_locale=</code></li>
-<li><code>I18n.config.locale=</code></li>
-<li><code>I18n.translate</code></li>
-<li><code>I18n.localize</code></li>
-<li><code>I18n.transliterate</code></li>
-</ul>
-
-
-<p>を呼んだときに影響するようです。
-つまり <code>rails new</code> で作っただけだと <code>config/application.rb</code> の
-<code>config.i18n.default_locale = :de</code> がコメントアウトされていて、
-警告は出ません。</p>
-
-<h2>日本語のみで使う場合</h2>
-
-<p>日本語のみで使うのなら、
-将来のデフォルトの
-<code>I18n.enforce_available_locales = true</code>
-にしてしまってから、
-普通に日本語をデフォルトにする
-<code>config.i18n.default_locale = :ja</code>
-を呼べば良いと思います。</p>
-
-<figure class='code'><figcaption><span>config/application.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">I18n</span><span class="o">.</span><span class="n">enforce_available_locales</span> <span class="o">=</span> <span class="kp">true</span>
-</span><span class='line'><span class="n">config</span><span class="o">.</span><span class="n">i18n</span><span class="o">.</span><span class="n">default_locale</span> <span class="o">=</span> <span class="ss">:ja</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>ただし、先にちゃんと日本語の locale ファイルを作っておかないと
-<code>I18n::InvalidLocale</code>
-という例外が発生して、
-<code>rake</code> などで
-<code>:ja is not a valid locale</code>
-と言われてしまいます。</p>
-
-<h2>今まで通りの挙動にする場合</h2>
-
-<p><code>I18n.enforce_available_locales = false</code>
-にすれば今まで通りの挙動になり、
-存在しない <code>locale</code> を設定しても例外は発生しません。</p>
-
-<h2>今のデフォルト</h2>
-
-<p>今は
-<code>I18n.enforce_available_locales = nil</code>
-がデフォルトになっていて、
-<code>nil</code> だと警告がでる、
-ということのようです。</p>
 ]]></content>
   </entry>
   

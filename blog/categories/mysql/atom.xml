@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: mysql | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/mysql/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-01-12T15:30:08+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[tapsでMySQLからPostgreSQLに移行した後に起きたトラブル事例]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-01-12-taps-trouble.html"/>
+    <updated>2014-01-12T14:15:41+09:00</updated>
+    <id>http://blog.n-z.jp/blog/taps-trouble</id>
+    <content type="html"><![CDATA[<p>2013年7月ごろに <a href="http://rubygems.org/gems/taps">taps</a> を使って redmine のデータベースを MySQL から PostgreSQL に移行しました。</p>
+
+<p>その時に移行が不十分で問題が少し起きていたので、その原因を調べて修正しました。</p>
+
+<!--more-->
+
+
+<h2>taps での移行</h2>
+
+<p>taps の使い方については既に情報がたくさんあるので、簡単に書いておくだけにします。
+昨年7月時点の情報なので、今だとさらにバージョン指定を増やさないとダメかもしれません。</p>
+
+<p>まず、 Ruby 1.9.1 以降に対応できていないようなので、 Ruby 1.8.7 を使いました。
+rack も新しいバージョンに対応できていないので、以下のような Gemfile でバージョンを指定して<code>bundle install --path vendor/bundle</code> して使いました。</p>
+
+<p><code>ruby Gemfile
+  source "https://rubygems.org"
+  gem "taps"
+  gem "sqlite3"
+  gem "mysql"
+  gem "pg"
+  gem "rack", "1.0.1"
+</code></p>
+
+<p>元の <code>config/database.yml</code> の設定が</p>
+
+<p><code>yaml config/database.yml
+production:
+  adapter: mysql2
+  database: redmine_db
+  host: localhost
+  username: redminemyuser
+  password: my_password
+  encoding: utf8
+</code></p>
+
+<p>という感じなら、 MySQL を動かしている方で
+<code>bundle exec taps server mysql://redminemyuser:my_password@localhost/redmine_db tapsuser tapspass</code>
+と起動します。</p>
+
+<p>PostgreSQL の方では</p>
+
+<p><code>console sudo -u postgres psql
+CREATE ROLE redminepguser LOGIN ENCRYPTED PASSWORD 'pg_password' NOINHERIT VALID UNTIL 'infinity';
+CREATE DATABASE redmine_db WITH ENCODING='UTF8' OWNER=redminepguser;
+</code></p>
+
+<p>という感じでデータベースを作っておいて、
+<code>bundle exec taps pull postgres://redminepguser:pg_password@localhost/redmine_db http://tapsuser:tapspass@localhost:5000</code>
+という感じでデータを移行しました。</p>
+
+<p>同じサーバーで移行したので taps の http も localhost にしていますが、別サーバーなら ssh のポートフォワーディングなどを使ってつなげば良いと思います。</p>
+
+<h2>redmine でのトラブル</h2>
+
+<p>管理者権限でログインして、管理からグループを追加 (/groups/new) しようとするとエラーになって、 log/production.log を確認すると
+<code>ActiveRecord::StatementInvalid (PG::NotNullViolation: ERROR:  null value in column "mail_notification" violates not-null constraint</code>
+または
+<code>(ActiveRecord::StatementInvalid (PG::NotNullViolation: ERROR:  列"mail_notification"内のNULL値はNOT NULL制約違反です</code>
+というエラーが出ていました。</p>
+
+<h2>トラブルの原因</h2>
+
+<p>いろいろ調べてみると <code>db/schema.rb</code> でいうと <code>mail_notification</code> に default がないのが問題だとわかりました。
+後で追加調査したところ、 default が <code>""</code> (空文字列) のときにうまく移行できていないことがあるようでした。</p>
+
+<h2>原因修正</h2>
+
+<p><code>rails dbconsole</code> で
+<code>ALTER TABLE users ALTER mail_notification SET DEFAULT '';</code>
+で設定して、
+<code>rake db:migrate</code> で <code>db/schema.rb</code> にも反映して
+redmine を再起動すると直りました。</p>
+
+<h2>その他の DEFAULT の修正</h2>
+
+<p>別途 PostgreSQL の環境を用意して redmine を新規インストールして <code>rake db:migrate</code> で生成した <code>db/schema.rb</code> と比較して全体としては以下の修正をしました。</p>
+
+<p><code>sql rails dbconsole
+ALTER TABLE attachments ALTER filename SET DEFAULT '';
+ALTER TABLE attachments ALTER disk_filename SET DEFAULT '';
+ALTER TABLE attachments ALTER content_type SET DEFAULT '';
+ALTER TABLE attachments ALTER digest SET DEFAULT '';
+ALTER TABLE auth_sources ALTER type SET DEFAULT '';
+ALTER TABLE auth_sources ALTER name SET DEFAULT '';
+ALTER TABLE auth_sources ALTER account_password SET DEFAULT '';
+ALTER TABLE boards ALTER name SET DEFAULT '';
+ALTER TABLE changes ALTER action SET DEFAULT '';
+ALTER TABLE comments ALTER commented_type SET DEFAULT '';
+ALTER TABLE custom_fields ALTER type SET DEFAULT '';
+ALTER TABLE custom_fields ALTER name SET DEFAULT '';
+ALTER TABLE custom_fields ALTER field_format SET DEFAULT '';
+ALTER TABLE custom_fields ALTER regexp SET DEFAULT '';
+ALTER TABLE custom_values ALTER customized_type SET DEFAULT '';
+ALTER TABLE documents ALTER title SET DEFAULT '';
+ALTER TABLE enumerations ALTER name SET DEFAULT '';
+ALTER TABLE wiki_contents ALTER comments SET DEFAULT '';
+ALTER TABLE issue_categories ALTER name SET DEFAULT '';
+ALTER TABLE issue_relations ALTER relation_type SET DEFAULT '';
+ALTER TABLE issue_statuses ALTER name SET DEFAULT '';
+ALTER TABLE issues ALTER subject SET DEFAULT '';
+ALTER TABLE journal_details ALTER property SET DEFAULT '';
+ALTER TABLE journal_details ALTER prop_key SET DEFAULT '';
+ALTER TABLE journals ALTER journalized_type SET DEFAULT '';
+ALTER TABLE messages ALTER subject SET DEFAULT '';
+ALTER TABLE news ALTER title SET DEFAULT '';
+ALTER TABLE news ALTER summary SET DEFAULT '';
+ALTER TABLE projects ALTER name SET DEFAULT '';
+ALTER TABLE projects ALTER homepage SET DEFAULT '';
+ALTER TABLE queries ALTER name SET DEFAULT '';
+ALTER TABLE repositories ALTER url SET DEFAULT '';
+ALTER TABLE repositories ALTER login SET DEFAULT '';
+ALTER TABLE repositories ALTER password SET DEFAULT '';
+ALTER TABLE repositories ALTER root_url SET DEFAULT '';
+ALTER TABLE roles ALTER name SET DEFAULT '';
+ALTER TABLE settings ALTER name SET DEFAULT '';
+ALTER TABLE tokens ALTER action SET DEFAULT '';
+ALTER TABLE tokens ALTER value SET DEFAULT '';
+ALTER TABLE trackers ALTER name SET DEFAULT '';
+ALTER TABLE users ALTER hashed_password SET DEFAULT '';
+ALTER TABLE users ALTER firstname SET DEFAULT '';
+ALTER TABLE users ALTER mail SET DEFAULT '';
+ALTER TABLE users ALTER language SET DEFAULT '';
+ALTER TABLE versions ALTER name SET DEFAULT '';
+ALTER TABLE versions ALTER description SET DEFAULT '';
+ALTER TABLE watchers ALTER watchable_type SET DEFAULT '';
+ALTER TABLE wiki_content_versions ALTER compression SET DEFAULT '';
+ALTER TABLE wiki_content_versions ALTER comments SET DEFAULT '';
+ALTER TABLE users ALTER mail_notification SET DEFAULT '';
+ALTER TABLE users ALTER lastname SET DEFAULT '';
+</code></p>
+
+<p><code>sql rails dbconsole
+ALTER TABLE users ALTER mail_notification SET DEFAULT '';
+</code></p>
+
+<p>はすでに実行済みで、</p>
+
+<p><code>sql rails dbconsole
+ALTER TABLE users ALTER lastname SET DEFAULT '';
+</code></p>
+
+<p>は既に default が <code>""</code> になっていたので不要でしたが、
+重複して実行しても問題が起きないようなので、上の SQL にも入れています。</p>
+
+<h2>まとめ</h2>
+
+<p>最初のデータベース選択は重要で、アプリケーションが両方対応していても、後から変更するのは大変です。</p>
+
+<p>問題が起きそうなデータ型を使っていなければ <code>taps</code> ですんなり移行できるように見えますが、別途クリーンな環境を用意して生成した <code>db/schema.rb</code> と比較するなどのチェックも必要でした。</p>
+]]></content>
+  </entry>
+  
+</feed>
