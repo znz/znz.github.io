@@ -22,7 +22,7 @@ categories: event ruby rubymotion osx
 
 話に出てきたサイトなどのメモです。
 
-- http://shin1x1.github.io/VagrantX/
+- http://shin1x1.github.io/vagrantx/
   のサイトのデザインを
   https://wrapbootstrap.com/
   から選ぼうとしたが、結局 github のテンプレートのまま使うことにしたという話
