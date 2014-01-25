@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-01-22T23:21:41+09:00</updated>
+  <updated>2014-01-25T13:23:02+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,72 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[heroku で passenger を使うようにした]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-01-24-passenger-ruby-heroku.html"/>
+    <updated>2014-01-24T23:23:25+09:00</updated>
+    <id>http://blog.n-z.jp/blog/passenger-ruby-heroku</id>
+    <content type="html"><![CDATA[<p>今は heroku で動いている <a href="https://bugs.ruby-lang.org/">https://bugs.ruby-lang.org/</a> が thin から passenger に切り替えて安定したという話を IRC で知ったので、自分が heroku で動かしている Rails アプリも passenger に切り替えてみました。
+(ruby-lang.org の方はいろいろ試すために今後他のものに切り替える可能性もあります。)</p>
+
+<!--more-->
+
+
+<h2>概要</h2>
+
+<p><a href="https://github.com/phusion/passenger-ruby-heroku-demo">https://github.com/phusion/passenger-ruby-heroku-demo</a>
+を参考にして Gemfile と Procfile を設定するだけです。</p>
+
+<h2>Gemfile の書き換え</h2>
+
+<p><code>gem "unicorn"</code> や  <code>gem "thin"</code> があればコメントアウトするなり削除するなりして、
+代わりに <code>gem "passenger"</code> を追加します。</p>
+
+<h2>Procfile の設定</h2>
+
+<p>Procfile がなければ新規作成します。
+既存の Procfile があって以下のような行があれば削除します。</p>
+
+<pre><code>web: bundle exec ruby web.rb -p $PORT
+web: bundle exec unicorn -p $PORT
+web: bundle exec thin start -p $PORT
+</code></pre>
+
+<p>Procfile に以下の設定を追加します。</p>
+
+<pre><code>web: bundle exec passenger start -p $PORT --max-pool-size 3
+</code></pre>
+
+<h2>切り替え反映</h2>
+
+<p>以下のように切り替えを反映します。</p>
+
+<pre><code>bundle install
+git commit -a -m "Switch to Phusion Passenger"
+git push heroku master
+</code></pre>
+
+<p>ここまでは
+<a href="https://github.com/phusion/passenger-ruby-heroku-demo">https://github.com/phusion/passenger-ruby-heroku-demo</a>
+の手順そのままです。</p>
+
+<h2>ローカルで使う</h2>
+
+<p><code>gem install foreman</code> で <code>foreman</code> を入れておいて <code>env PORT=3000 foreman start</code> とか、
+<code>bundle exec passenger start -p 3000 --max-pool-size 3</code> とかで
+3000 番ポートで passenger を使えます。</p>
+
+<p>初回起動時は standalone 版 passenger の初期設定が走るので、
+少し時間がかかります。</p>
+
+<h2>まとめ</h2>
+
+<p>あまりアクセスが多くない無料の範囲内で使っている Rails アプリなので、
+違いはあまりわかっていませんが、簡単に切り替えられるので、
+選択肢のひとつとして使われやすくなるのではないかと思います。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 7 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -514,70 +580,6 @@ trunk の nightly build などをしようと思ったら、
 <code>docker build</code> してくれる仕組みがあるので、
 <code>docker push</code> とうまく使い分けて
 公開可能なイメージはどんどん公開すると良いのではないでしょうか。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[RubyMotionとRubyのバージョン]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-15-rubymotion-ruby-version.html"/>
-    <updated>2013-12-15T14:49:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-ruby-version</id>
-    <content type="html"><![CDATA[<p>今のところ RubyMotion は毎月のもくもく会以外ではほとんど触れていないので、
-RubyMotion と Ruby のバージョンの関係と言う小ネタです。</p>
-
-<p>この投稿は
-<a href="http://qiita.com/advent-calendar/2013/rubymotion">RubyMotion Advent Calendar 2013</a>
-の12日目の記事です。</p>
-
-<!--more-->
-
-
-<h2>RUBY_DESCRIPTION 確認</h2>
-
-<p>まず <code>Rakefile</code> の先頭で <code>RUBY_DESCRIPTION</code> を入れて、
-普通の <code>ruby</code> コマンドのバージョンを表示して、
-次に開発環境のプロンプトでも確認してみました。</p>
-
-<p>```console
-% head -n2 Rakefile</p>
-
-<h1>&ndash;<em>&ndash; coding: utf-8 &ndash;</em>&ndash;</h1>
-
-<p>p RUBY_DESCRIPTION
-% rake
-&ldquo;ruby 2.0.0p353 (2013-11-22 revision 43784) [x86_64-darwin12.5.0]&rdquo;</p>
-
-<pre><code> Build ./build/MacOSX-10.8-Development
-</code></pre>
-
-<p>   Compile ./app/app_delegate.rb
-   Compile ./app/menu.rb</p>
-
-<pre><code>Create ./build/MacOSX-10.8-Development/Hello.app/Contents
-Create ./build/MacOSX-10.8-Development/Hello.app/Contents/MacOS
-  Link ./build/MacOSX-10.8-Development/Hello.app/Contents/MacOS/Hello
-Create ./build/MacOSX-10.8-Development/Hello.app/Contents/PkgInfo
-Create ./build/MacOSX-10.8-Development/Hello.app/Contents/Info.plist
-  Copy ./resources/Credits.rtf
-Create ./build/MacOSX-10.8-Development/Hello.dSYM
-   Run ./build/MacOSX-10.8-Development/Hello.app/Contents/MacOS/Hello
-</code></pre>
-
-<p>(main)> RUBY_DESCRIPTION
-=> &ldquo;RubyMotion (ruby 1.9.2) [universal-darwin13.0, x86_64]&rdquo;
-(main)> exit
-```</p>
-
-<p>外側は 2.0.0 なのに RubyMotion の方は 1.9.2 でした。</p>
-
-<h2>まとめ</h2>
-
-<p>調べたきっかけはデバッグ用に <code>File.write</code>
-(<a href="http://docs.ruby-lang.org/ja/2.0.0/class/IO.html#S_WRITE">IO.write</a>)
-が使えなかったからでした。
-それは結局普通に <code>File.open</code> して書き込むことにしましたが、
-開発環境側の Ruby のバージョンを変えても生成されるアプリ側の
-Ruby のバージョンには影響しないという話でした。</p>
 ]]></content>
   </entry>
   

@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-01-22T23:21:41+09:00</updated>
+  <updated>2014-01-25T13:23:02+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,72 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[heroku で passenger を使うようにした]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-01-24-passenger-ruby-heroku.html"/>
+    <updated>2014-01-24T23:23:25+09:00</updated>
+    <id>http://blog.n-z.jp/blog/passenger-ruby-heroku</id>
+    <content type="html"><![CDATA[<p>今は heroku で動いている <a href="https://bugs.ruby-lang.org/">https://bugs.ruby-lang.org/</a> が thin から passenger に切り替えて安定したという話を IRC で知ったので、自分が heroku で動かしている Rails アプリも passenger に切り替えてみました。
+(ruby-lang.org の方はいろいろ試すために今後他のものに切り替える可能性もあります。)</p>
+
+<!--more-->
+
+
+<h2>概要</h2>
+
+<p><a href="https://github.com/phusion/passenger-ruby-heroku-demo">https://github.com/phusion/passenger-ruby-heroku-demo</a>
+を参考にして Gemfile と Procfile を設定するだけです。</p>
+
+<h2>Gemfile の書き換え</h2>
+
+<p><code>gem "unicorn"</code> や  <code>gem "thin"</code> があればコメントアウトするなり削除するなりして、
+代わりに <code>gem "passenger"</code> を追加します。</p>
+
+<h2>Procfile の設定</h2>
+
+<p>Procfile がなければ新規作成します。
+既存の Procfile があって以下のような行があれば削除します。</p>
+
+<pre><code>web: bundle exec ruby web.rb -p $PORT
+web: bundle exec unicorn -p $PORT
+web: bundle exec thin start -p $PORT
+</code></pre>
+
+<p>Procfile に以下の設定を追加します。</p>
+
+<pre><code>web: bundle exec passenger start -p $PORT --max-pool-size 3
+</code></pre>
+
+<h2>切り替え反映</h2>
+
+<p>以下のように切り替えを反映します。</p>
+
+<pre><code>bundle install
+git commit -a -m "Switch to Phusion Passenger"
+git push heroku master
+</code></pre>
+
+<p>ここまでは
+<a href="https://github.com/phusion/passenger-ruby-heroku-demo">https://github.com/phusion/passenger-ruby-heroku-demo</a>
+の手順そのままです。</p>
+
+<h2>ローカルで使う</h2>
+
+<p><code>gem install foreman</code> で <code>foreman</code> を入れておいて <code>env PORT=3000 foreman start</code> とか、
+<code>bundle exec passenger start -p 3000 --max-pool-size 3</code> とかで
+3000 番ポートで passenger を使えます。</p>
+
+<p>初回起動時は standalone 版 passenger の初期設定が走るので、
+少し時間がかかります。</p>
+
+<h2>まとめ</h2>
+
+<p>あまりアクセスが多くない無料の範囲内で使っている Rails アプリなので、
+違いはあまりわかっていませんが、簡単に切り替えられるので、
+選択肢のひとつとして使われやすくなるのではないかと思います。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 7 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -2853,136 +2919,6 @@ mailman 全体の設定になるようです。</p>
 
 <p>あまり変更しないファイルなら更新チェックの無駄の方が大きいかもしれないので、
 そのトレードオフは考えておく必要がありそうです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Rail 3.2でcache_digestsを使ってみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-08-cache-digests.html"/>
-    <updated>2013-12-08T00:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/cache-digests</id>
-    <content type="html"><![CDATA[<p>まだ Rails 3.2.16 のままのアプリで <code>cache_digests</code> gem を使って
-fragment cache を導入してみました。</p>
-
-<p>Rails 4.0 では標準になっているはずなので、
-使い方は同じだと思います。</p>
-
-<p>この投稿は
-<a href="http://qiita.com/advent-calendar/2013/ruby-on-rails">Ruby on Rails Advent Calendar 2013</a>
-の8日目の記事です。</p>
-
-<!--more-->
-
-
-<h2>インストール</h2>
-
-<p>まず <code>Gemfile</code> に以下の gem の指定を追加してインストールしました。</p>
-
-<figure class='code'><figcaption><span>Gemfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">gem</span> <span class="s1">&#39;cache_digests&#39;</span>
-</span><span class='line'><span class="n">gem</span> <span class="s1">&#39;dalli&#39;</span><span class="p">,</span> <span class="ss">group</span><span class="p">:</span> <span class="ss">:production</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>環境設定</h2>
-
-<p>キャッシュの影響の確認などのデバッグ用に <code>development</code> 環境でも
-キャッシュを有効にしました。
-ちゃんとキャッシュで来ているかどうかの確認や削除がしやすいように
-保存先はデフォルトの <code>:file_store</code> のままにしています。</p>
-
-<figure class='code'><figcaption><span>config/environments/development.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">action_controller</span><span class="o">.</span><span class="n">perform_caching</span> <span class="o">=</span> <span class="kp">true</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>production</code> 環境では <code>dalli</code> を使って <code>memcached</code> に保存するようにしました。
-<code>dalli</code> の設定はこの記事の本題ではないので、
-<code>memcached</code> の設定などは他のサイトを参考にしてください。</p>
-
-<figure class='code'><figcaption><span>config/environments/production.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">cache_store</span> <span class="o">=</span> <span class="ss">:dalli_store</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>staging</code> 環境もあったので <code>config/environments/staging.rb</code> にも同様の設定をしました。</p>
-
-<h2>fragment cache</h2>
-
-<p>すでに
-<code>app/views/comments/_comment.html.haml</code> や
-<code>app/views/posts/_post.html.haml</code> のような view を使って
-<code>render @comments</code> や <code>render @posts</code> のように使っていたので、</p>
-
-<figure class='code'><figcaption><span>app/views/comments/_comment.html.haml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>- cache comment do
-</span><span class='line'>  -# 今までの内容
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>のように <code>cache comment do ... end</code> で今までの内容をくくるだけでした。
-<code>cache</code> メソッド自体の返り値は <code>=</code> で埋め込んだりせずにそのまま呼ぶだけで大丈夫でした。</p>
-
-<h2>動作確認</h2>
-
-<p><code>log/developement.log</code> などを <code>fragment</code> で検索してみると</p>
-
-<figure class='code'><figcaption><span>log/developement.log</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>Write fragment views/comments/29-20130905083500/96f0ec0ce36af8132826f3bfbe0079db 0.5ms
-</span><span class='line'>Read fragment views/comments/30-20130905083518/96f0ec0ce36af8132826f3bfbe0079db 0.4ms
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>などと記録されていて、キャッシュが使われていることが確認できました。</p>
-
-<p><code>development</code> 環境では実際のキャッシュファイルは <code>tmp/cache/</code> 以下にありました。</p>
-
-<h2>キャッシュの無効化 (invalidate)</h2>
-
-<p>キャッシュが古くなってもう有効ではないという状態にすることを invalidate というと思いますが、
-内容が更新された時に古いキャッシュが使われると問題があるので、
-その対処をする必要があります。</p>
-
-<p><code>cache</code> メソッドの引数に <code>ActiveRecord</code> のオブジェクトを渡した時の
-キャッシュのキーは先ほどの例だと
-<code>views/comments/:id-:updated_at/:md5</code>
-という感じで <code>comment</code> オブジェクトの <code>id</code> と <code>updated_at</code> と
-<code>app/views/comments/_comment.html.haml</code> の MD5 が使われていて、
-view のファイルが変更したり、
-<code>comment</code> ファイルの <code>updated_at</code> を更新したりした時に
-自動で無効になるようです。</p>
-
-<p>つまり、この view の中で別の partial render を使っていると
-反映されないということなので、
-内側の方でも <code>cache</code> を使うなどの対処が必要そうです。
-実際に <code>_post.html.haml</code> の中で <code>render post.comments</code> のようなことをしました。</p>
-
-<p>さらに以下のように <code>belongs_to</code> に <code>touch: true</code> を付けて、
-コメントが付いた時に <code>post</code> の <code>updated_at</code> も更新されるようにしました。</p>
-
-<figure class='code'><figcaption><span>app/models/comment.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">belongs_to</span> <span class="ss">:commentable</span><span class="p">,</span> <span class="ss">polymorphic</span><span class="p">:</span> <span class="kp">true</span><span class="p">,</span> <span class="ss">touch</span><span class="p">:</span> <span class="kp">true</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>キャッシュの完全削除</h2>
-
-<p><code>rails console</code> で <code>Rails.cache.clear</code> を実行すれば削除できました。
-他の sass などのキャッシュも <code>tmp/cache/</code> の中にあるので
-一緒に削除されてしまうようです。</p>
-
-<h2>まとめ</h2>
-
-<p>とりあえず使い始めるための最低限の知識をまとめてみました。</p>
-
-<p>後は
-<a href="http://ja.asciicasts.com/episodes/387-cache-digests">ASCIIcasts &ndash; “Episode 387 &ndash; Cache Digests”</a>
-で説明されている
-<code>rake cache_digests:nested_dependencies</code>
-などを知っておけば良さそうです。</p>
 ]]></content>
   </entry>
   

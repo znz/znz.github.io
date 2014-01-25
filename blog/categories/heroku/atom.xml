@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: heroku | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/heroku/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-01-25T13:23:02+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[heroku で passenger を使うようにした]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-01-24-passenger-ruby-heroku.html"/>
+    <updated>2014-01-24T23:23:25+09:00</updated>
+    <id>http://blog.n-z.jp/blog/passenger-ruby-heroku</id>
+    <content type="html"><![CDATA[<p>今は heroku で動いている <a href="https://bugs.ruby-lang.org/">https://bugs.ruby-lang.org/</a> が thin から passenger に切り替えて安定したという話を IRC で知ったので、自分が heroku で動かしている Rails アプリも passenger に切り替えてみました。
+(ruby-lang.org の方はいろいろ試すために今後他のものに切り替える可能性もあります。)</p>
+
+<!--more-->
+
+
+<h2>概要</h2>
+
+<p><a href="https://github.com/phusion/passenger-ruby-heroku-demo">https://github.com/phusion/passenger-ruby-heroku-demo</a>
+を参考にして Gemfile と Procfile を設定するだけです。</p>
+
+<h2>Gemfile の書き換え</h2>
+
+<p><code>gem "unicorn"</code> や  <code>gem "thin"</code> があればコメントアウトするなり削除するなりして、
+代わりに <code>gem "passenger"</code> を追加します。</p>
+
+<h2>Procfile の設定</h2>
+
+<p>Procfile がなければ新規作成します。
+既存の Procfile があって以下のような行があれば削除します。</p>
+
+<pre><code>web: bundle exec ruby web.rb -p $PORT
+web: bundle exec unicorn -p $PORT
+web: bundle exec thin start -p $PORT
+</code></pre>
+
+<p>Procfile に以下の設定を追加します。</p>
+
+<pre><code>web: bundle exec passenger start -p $PORT --max-pool-size 3
+</code></pre>
+
+<h2>切り替え反映</h2>
+
+<p>以下のように切り替えを反映します。</p>
+
+<pre><code>bundle install
+git commit -a -m "Switch to Phusion Passenger"
+git push heroku master
+</code></pre>
+
+<p>ここまでは
+<a href="https://github.com/phusion/passenger-ruby-heroku-demo">https://github.com/phusion/passenger-ruby-heroku-demo</a>
+の手順そのままです。</p>
+
+<h2>ローカルで使う</h2>
+
+<p><code>gem install foreman</code> で <code>foreman</code> を入れておいて <code>env PORT=3000 foreman start</code> とか、
+<code>bundle exec passenger start -p 3000 --max-pool-size 3</code> とかで
+3000 番ポートで passenger を使えます。</p>
+
+<p>初回起動時は standalone 版 passenger の初期設定が走るので、
+少し時間がかかります。</p>
+
+<h2>まとめ</h2>
+
+<p>あまりアクセスが多くない無料の範囲内で使っている Rails アプリなので、
+違いはあまりわかっていませんが、簡単に切り替えられるので、
+選択肢のひとつとして使われやすくなるのではないかと思います。</p>
+]]></content>
+  </entry>
+  
+</feed>
