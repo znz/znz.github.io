@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: mail | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/mail/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-01-26T22:43:33+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[slideshareからのメールが届かなかったのでなんとかした]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-01-26-slideshare-cannot-send-mail.html"/>
+    <updated>2014-01-26T22:07:01+09:00</updated>
+    <id>http://blog.n-z.jp/blog/slideshare-cannot-send-mail</id>
+    <content type="html"><![CDATA[<p>spam 対策にひっかかって <code>slideshare.net</code> からのメールが届いていなかったので、回避策をとって受け取れるようになったという話です。</p>
+
+<!--more-->
+
+
+<h2>背景</h2>
+
+<p>spam 対策の手段のひとつとして、メールアドレスのドメインに MX レコードだけ設定して A レコードは設定しないという方法があります。</p>
+
+<p>この方法はまともな MTA を使っている送信元なら MX レコードを見てくれるので問題は起きないはずです。</p>
+
+<p>そして、まともでない MTA だと A レコードがみつからないということで送信できずに諦めているのではないかと思います。
+その場合はこちらには全くログが残らないので、本当はどういう状況なのかはわからないので、推測しかできません。</p>
+
+<p>メールサーバーのログを <code>tail -F /var/log/mail.log</code> で確認しながら <code>slideshare.net</code> の確認メールの再送を何度押してもログに出なかったので、もしかしてこの spam 対策にひっかかっているのではないかと推測しました。</p>
+
+<h2>対処</h2>
+
+<p>MX レコードの他に A レコードを追加するという設定はしたくなかったので、
+<code>/etc/postfix/main.cf</code> の <code>mydestination</code> に設定していて
+A レコードが存在するサブドメインをメールアドレスのドメインとして
+<code>slideshare.net</code> のメールアドレスに設定しました。</p>
+
+<p>その結果、確認メールをやっと受け取ることができました。</p>
+
+<h2>まとめ</h2>
+
+<p>世界中で使われているようなサービスでも、まともにメール送信できないようなところが存在するようです。</p>
+
+<p>受信側としては Gmail のように IPv6 でも逆引き必須にしているような特殊な設定をしているところもありますが、
+Gmail のように利用者が多いところだと送信側が気付きやすいので、対応していることが多いような気がします。</p>
+
+<p>困った時は Gmail などの利用者が多いドメインのメールアドレスを使って送信側の問題かどうか切り分けるというのも有効だと思います。</p>
+]]></content>
+  </entry>
+  
+</feed>
