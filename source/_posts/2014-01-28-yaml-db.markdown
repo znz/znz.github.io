@@ -1,0 +1,154 @@
+---
+layout: post
+title: "yaml_dbでMySQLからPostgreSQLに移行した"
+date: 2014-01-28 21:25:00 +0900
+comments: true
+categories: ruby rails mysql postgresql
+---
+先週 redmine を MySQL から PostgreSQL に移行するときに、最近の ruby では動かなくなっている taps ではなく yaml_db を使ってみました。
+
+その後、自作 Rails アプリでも yaml_db を使って移行しました。
+
+<!--more-->
+
+## yaml_db 選び
+
+yaml_db は `gem install yaml_db` でインストールできるものが新しい rails などに
+対応していないため fork が乱立していて、どれを使えばいいのか悩ましいのですが、
+どこかで見かけた情報を元に
+`gem 'yaml_db', github: 'jetthoughts/yaml_db', ref: 'fb4b6bd7e12de3cffa93e0a298a1e5253d7e92ba'`
+を使いました。(今だと別の指定の方が良さそうです。後述)
+
+redmine の場合は `Gemfile.local` に書いて (なければ作成)、
+`bundle` でインストールすれば使えます。
+
+## データベース移行
+
+アプリを止めるなどして、データベースの変更が発生しない状態にして移行作業をします。
+YAML の互換性の問題などがあるので、データベースの移行と Ruby や Redmine のバージョンアップは別々にした方が良いです。
+
+1. まず `RAILS_ENV=production bundle exec rake db:data:dump` で `db/data.yml` を作成します。
+2. つぎに Ruby や Rails や Redmine のバージョンはそのままで `config/database.yml` を変更します。
+3. 必要に応じて `bundle` でデータベースアダプターの gem をインストールします。
+4. データベースの作成をしたり `db:migrate` をしておきます。
+4. `RAILS_ENV=production bundle exec rake db:data:load` で読み込みます。
+
+## yaml_db の fork の再調査
+
+[yaml_db gem](https://rubygems.org/gems/yaml_db) ( [ludicast/yaml_db](https://github.com/ludicast/yaml_db) )
+からの fork としては
+[gitlab_yaml_db](https://rubygems.org/gems/gitlab_yaml_db) ( [gitlabhq/yaml_db](https://github.com/gitlabhq/yaml_db) ? )
+のインストール数が
+多いようですが、これは以前の gitlabhq が依存していたからのようです。 (今は依存していない)
+
+新しい fork として
+[yaml_db_with_schema_tables](https://rubygems.org/gems/yaml_db_with_schema_tables)
+( [zweitag/yaml_db](https://github.com/zweitag/yaml_db) )
+がありましたが、古い yaml_db からの fork なので、新しい rails への対応が入っていないような気がします。
+他の fork との違いとして `schema_info` と `schema_migrations` も dump するようにしているようです。
+
+[jetthoughts/yaml_db](https://github.com/jetthoughts/yaml_db) という fork は
+rubygems.org にはリリースしていないようですが、
+Rails 4 に対応して、 README の `This gem is now Rails 3 only.` という記述を削除しているなど、メンテナンスが続いていそうなので、
+次はこの fork を使うのが良さそうだと思いました。
+(古いブログの記事だと `gem 'yaml_db', github: 'jetthoughts/yaml_db', branch: 'rails4'` で rails4 ブランチを指定している例もあるようですが、 master にマージ済みなので branch 指定は不要です。)
+
+## 別 Rails アプリの移行
+
+続きとして、本日、自作の Rails アプリを `jetthoughts/yaml_db` を使って移行してみました。
+
+### postgresql のデータベース作成
+
+データベースの作成は事前に出来るので、
+`sudo -u postgres psql`
+で作成しておきます。
+
+```
+CREATE ROLE dbuser LOGIN ENCRYPTED PASSWORD 'dbpass' NOINHERIT VALID UNTIL 'infinity';
+CREATE DATABASE dbname WITH ENCODING='UTF8' OWNER=dbuser;
+```
+
+データベースの作成方法はいつも
+[RedmineInstall](http://www.redmine.org/projects/redmine/wiki/RedmineInstall)
+を参考にしています。
+
+### pg gem
+
+pg gem も忘れずにあらかじめ入れておきます。
+
+### メンテナンス中画面設定
+
+まず apache2 + passenger の方でメンテナンス中画面を出すようにしました。
+
+```
+    <Directory /path/to/app>
+        Options FollowSymLinks
+        AllowOverride None
+        #Order allow,deny
+        #allow from all
+        Order deny,allow
+        deny from all
+    </Directory>
+    ErrorDocument 403 "&#x30e1;&#x30f3;&#x30c6;&#x30ca;&#x30f3;&#x30b9;&#x4e2d;&#x3067;&#x3059;&#x3002;&#x20;&#x3057;&#x3070;&#x3089;&#x304f;&#x304a;&#x5f85;&#x3061;&#x304f;&#x3060;&#x3055;&#x3044;&#x3002;"
+```
+
+`ErrorDocument` の埋め込み文字列は `Content-Type: text/html;charset=iso-8859-1` になってNいたので、
+`'メンテナンス中です。 しばらくお待ちください。'.unpack('U*').map{|c| '&#x%x;' % c }.join('')`
+のようにして、すべてエスケープして日本語を埋め込みました。
+
+本来は 5xx のステータスにすべきですが、一時的なものなので 403 で妥協しました。
+後日メンテナンスをするときはちゃんと 5xx にしたいと思っています。
+
+### データベースのバックアップとダンプ
+
+cron で動かしているデータベースのバックアップと yaml_db でのダンプをしました。
+
+```
+/path/to/app$ sudo /etc/cron.daily/local-dump
+/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:dump
+```
+
+### config/database.yml 書き換え
+
+database.yml で postgresql の方を使うように書き換えます。
+
+```
+  adapter: postgresql
+  encoding: unicode
+  database: dbname
+  pool: 5
+  username: dbuser
+  password: dbpass
+  host: localhost
+  #port: 5432
+  min_messages: warning
+```
+
+### データの読み込み
+
+`rake db:migrate` でマイグレーションを実行した後、
+`rake db:data:load` でデータを読み込みます。
+
+```
+/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:migrate
+/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:load
+```
+
+### メンテナンス解除と確認
+
+apache2 の設定を戻して、動作確認します。
+
+## まとめ
+
+Rails のデータベースの移行に yaml_db を使ってみました。
+
+yaml_db の方が taps より昔からあって、
+しばらくメンテナンスが止まっていて、
+taps の方が主流になるかと思っていたら、
+逆に taps の方がメンテナンスがあまりされなくなって、
+yaml_db の方が fork が乱立して、新しい rails に対応したものもでてきて、
+結局今のところデータベースの移行には yaml_db が無難という状況になっているようです。
+
+taps は新しい Ruby に対応できていなかったり、
+以前の記事に書いたようにスキーマの移行が不十分なところがあったりして、
+使われなくなっていくように感じました。
