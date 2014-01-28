@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-01-26T22:43:33+09:00</updated>
+  <updated>2014-01-28T21:29:03+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,168 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[yaml_dbでMySQLからPostgreSQLに移行した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-01-28-yaml-db.html"/>
+    <updated>2014-01-28T21:25:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/yaml-db</id>
+    <content type="html"><![CDATA[<p>先週 redmine を MySQL から PostgreSQL に移行するときに、最近の ruby では動かなくなっている taps ではなく yaml_db を使ってみました。</p>
+
+<p>その後、自作 Rails アプリでも yaml_db を使って移行しました。</p>
+
+<!--more-->
+
+
+<h2>yaml_db 選び</h2>
+
+<p>yaml_db は <code>gem install yaml_db</code> でインストールできるものが新しい rails などに
+対応していないため fork が乱立していて、どれを使えばいいのか悩ましいのですが、
+どこかで見かけた情報を元に
+<code>gem 'yaml_db', github: 'jetthoughts/yaml_db', ref: 'fb4b6bd7e12de3cffa93e0a298a1e5253d7e92ba'</code>
+を使いました。(今だと別の指定の方が良さそうです。後述)</p>
+
+<p>redmine の場合は <code>Gemfile.local</code> に書いて (なければ作成)、
+<code>bundle</code> でインストールすれば使えます。</p>
+
+<h2>データベース移行</h2>
+
+<p>アプリを止めるなどして、データベースの変更が発生しない状態にして移行作業をします。
+YAML の互換性の問題などがあるので、データベースの移行と Ruby や Redmine のバージョンアップは別々にした方が良いです。</p>
+
+<ol>
+<li>まず <code>RAILS_ENV=production bundle exec rake db:data:dump</code> で <code>db/data.yml</code> を作成します。</li>
+<li>つぎに Ruby や Rails や Redmine のバージョンはそのままで <code>config/database.yml</code> を変更します。</li>
+<li>必要に応じて <code>bundle</code> でデータベースアダプターの gem をインストールします。</li>
+<li>データベースの作成をしたり <code>db:migrate</code> をしておきます。</li>
+<li><code>RAILS_ENV=production bundle exec rake db:data:load</code> で読み込みます。</li>
+</ol>
+
+
+<h2>yaml_db の fork の再調査</h2>
+
+<p><a href="https://rubygems.org/gems/yaml_db">yaml_db gem</a> ( <a href="https://github.com/ludicast/yaml_db">ludicast/yaml_db</a> )
+からの fork としては
+<a href="https://rubygems.org/gems/gitlab_yaml_db">gitlab_yaml_db</a> ( <a href="https://github.com/gitlabhq/yaml_db">gitlabhq/yaml_db</a> ? )
+のインストール数が
+多いようですが、これは以前の gitlabhq が依存していたからのようです。 (今は依存していない)</p>
+
+<p>新しい fork として
+<a href="https://rubygems.org/gems/yaml_db_with_schema_tables">yaml_db_with_schema_tables</a>
+( <a href="https://github.com/zweitag/yaml_db">zweitag/yaml_db</a> )
+がありましたが、古い yaml_db からの fork なので、新しい rails への対応が入っていないような気がします。
+他の fork との違いとして <code>schema_info</code> と <code>schema_migrations</code> も dump するようにしているようです。</p>
+
+<p><a href="https://github.com/jetthoughts/yaml_db">jetthoughts/yaml_db</a> という fork は
+rubygems.org にはリリースしていないようですが、
+Rails 4 に対応して、 README の <code>This gem is now Rails 3 only.</code> という記述を削除しているなど、メンテナンスが続いていそうなので、
+次はこの fork を使うのが良さそうだと思いました。
+(古いブログの記事だと <code>gem 'yaml_db', github: 'jetthoughts/yaml_db', branch: 'rails4'</code> で rails4 ブランチを指定している例もあるようですが、 master にマージ済みなので branch 指定は不要です。)</p>
+
+<h2>別 Rails アプリの移行</h2>
+
+<p>続きとして、本日、自作の Rails アプリを <code>jetthoughts/yaml_db</code> を使って移行してみました。</p>
+
+<h3>postgresql のデータベース作成</h3>
+
+<p>データベースの作成は事前に出来るので、
+<code>sudo -u postgres psql</code>
+で作成しておきます。</p>
+
+<p><code>
+CREATE ROLE dbuser LOGIN ENCRYPTED PASSWORD 'dbpass' NOINHERIT VALID UNTIL 'infinity';
+CREATE DATABASE dbname WITH ENCODING='UTF8' OWNER=dbuser;
+</code></p>
+
+<p>データベースの作成方法はいつも
+<a href="http://www.redmine.org/projects/redmine/wiki/RedmineInstall">RedmineInstall</a>
+を参考にしています。</p>
+
+<h3>pg gem</h3>
+
+<p>pg gem も忘れずにあらかじめ入れておきます。</p>
+
+<h3>メンテナンス中画面設定</h3>
+
+<p>まず apache2 + passenger の方でメンテナンス中画面を出すようにしました。</p>
+
+<p>```</p>
+
+<pre><code>&lt;Directory /path/to/app&gt;
+    Options FollowSymLinks
+    AllowOverride None
+    #Order allow,deny
+    #allow from all
+    Order deny,allow
+    deny from all
+&lt;/Directory&gt;
+ErrorDocument 403 "&amp;#x30e1;&amp;#x30f3;&amp;#x30c6;&amp;#x30ca;&amp;#x30f3;&amp;#x30b9;&amp;#x4e2d;&amp;#x3067;&amp;#x3059;&amp;#x3002;&amp;#x20;&amp;#x3057;&amp;#x3070;&amp;#x3089;&amp;#x304f;&amp;#x304a;&amp;#x5f85;&amp;#x3061;&amp;#x304f;&amp;#x3060;&amp;#x3055;&amp;#x3044;&amp;#x3002;"
+</code></pre>
+
+<p>```</p>
+
+<p><code>ErrorDocument</code> の埋め込み文字列は <code>Content-Type: text/html;charset=iso-8859-1</code> になってNいたので、
+<code>'メンテナンス中です。 しばらくお待ちください。'.unpack('U*').map{|c| '&amp;#x%x;' % c }.join('')</code>
+のようにして、すべてエスケープして日本語を埋め込みました。</p>
+
+<p>本来は 5xx のステータスにすべきですが、一時的なものなので 403 で妥協しました。
+後日メンテナンスをするときはちゃんと 5xx にしたいと思っています。</p>
+
+<h3>データベースのバックアップとダンプ</h3>
+
+<p>cron で動かしているデータベースのバックアップと yaml_db でのダンプをしました。</p>
+
+<p><code>
+/path/to/app$ sudo /etc/cron.daily/local-dump
+/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:dump
+</code></p>
+
+<h3>config/database.yml 書き換え</h3>
+
+<p>database.yml で postgresql の方を使うように書き換えます。</p>
+
+<p><code>
+  adapter: postgresql
+  encoding: unicode
+  database: dbname
+  pool: 5
+  username: dbuser
+  password: dbpass
+  host: localhost
+  #port: 5432
+  min_messages: warning
+</code></p>
+
+<h3>データの読み込み</h3>
+
+<p><code>rake db:migrate</code> でマイグレーションを実行した後、
+<code>rake db:data:load</code> でデータを読み込みます。</p>
+
+<p><code>
+/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:migrate
+/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:load
+</code></p>
+
+<h3>メンテナンス解除と確認</h3>
+
+<p>apache2 の設定を戻して、動作確認します。</p>
+
+<h2>まとめ</h2>
+
+<p>Rails のデータベースの移行に yaml_db を使ってみました。</p>
+
+<p>yaml_db の方が taps より昔からあって、
+しばらくメンテナンスが止まっていて、
+taps の方が主流になるかと思っていたら、
+逆に taps の方がメンテナンスがあまりされなくなって、
+yaml_db の方が fork が乱立して、新しい rails に対応したものもでてきて、
+結局今のところデータベースの移行には yaml_db が無難という状況になっているようです。</p>
+
+<p>taps は新しい Ruby に対応できていなかったり、
+以前の記事に書いたようにスキーマの移行が不十分なところがあったりして、
+使われなくなっていくように感じました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第59回 Ruby/Rails勉強会＠関西に参加しました]]></title>
@@ -343,144 +505,6 @@ RubyMotion のバグっぽいという話のようです。</p>
 も試してみましたが、
 <a href="https://gist.github.com/znz/8158061#file-vagrantx-report-txt">同じくクラッシュ</a>
 して起動しませんでした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 6 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-26-rubymotion-mokumoku-osaka.html"/>
-    <updated>2013-12-26T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
-    <content type="html"><![CDATA[<p>第 1 回から第 5 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://connpass.com/event/4211/">第 6 回 RubyMotion もくもく会 in Osaka</a>
-に参加してきました。</p>
-
-<p>次回の
-<a href="http://connpass.com/event/4560/">第 7 回 RubyMotion もくもく会 in Osaka</a>
-は 1/22(水) になりました。</p>
-
-<!--more-->
-
-
-<h2>話に出たもの</h2>
-
-<p>話に出てきたサイトなどのメモです。</p>
-
-<ul>
-<li><a href="http://shin1x1.github.io/vagrantx/">http://shin1x1.github.io/vagrantx/</a>
-
-<ul>
-<li>URL が小文字に変わっていました。</li>
-</ul>
-</li>
-<li><a href="https://www.cocoacontrols.com/">Cocoa Controls</a></li>
-<li><a href="http://getpocket.com/">Pocket</a></li>
-<li><a href="http://71squared.com/ja/particledesigner">Particle Designer</a></li>
-<li>UIMotionEffect で視差効果が簡単に実装できる</li>
-<li>All Cast という Android アプリで Apple TV に AirPlay できる</li>
-</ul>
-
-
-<h2>やっていたこと</h2>
-
-<p>今回は前回作り始めていたデフォルトブラウザを乗っ取って、
-Firefox とか Chrome とか Safari とかに起動し分けられる
-OSX アプリの作成の続きをやっていました。</p>
-
-<p>今回の最後ではスクリーンショットのようになりました。</p>
-
-<p><img src="/images/2013-12-26-hello.png" title="&ldquo;screenshot&rdquo; &ldquo;作成途中のアプリのスクリーンショット&rdquo;" ></p>
-
-<p>適当に作った Hello.app に動作確認用のメソッドを付け足していただけなので、
-まだタイトルは Hello のままになっています。</p>
-
-<h3>URL 受け取り問題</h3>
-
-<p>LimeChat で URL をクリックしたときなどに受け取るのは
-前回調べていた <code>LSSetDefaultHandlerForURLScheme</code> での
-デフォルトブラウザ設定とあわせて、</p>
-
-<p>```ruby</p>
-
-<pre><code>NSAppleEventManager.sharedAppleEventManager.setEventHandler(
-  self,
-  andSelector: :'handleGetURLEvent:withReplyEvent:',
-  forEventClass: KInternetEventClass,
-  andEventID: KAEGetURL)
-</code></pre>
-
-<p>```</p>
-
-<p>でイベントを受け取ると Hello.app 起動中は受け取れたのですが、
-起動していない時の URL クリックのイベントを受け取れない問題は
-結局解決できませんでした。</p>
-
-<p><code>open -a Hello --args URL</code>
-というなら
-<code>NSProcessInfo.processInfo.arguments</code>
-で受け取れるのですが、
-LimeChat などでの URL クリックで起動された時や
-<code>open -a Hello URL</code>
-という起動方法だと受け取り方がわかりませんでした。</p>
-
-<p>他のブラウザの起動も
-<code>open -a 'Google Chrome' http://localhost:4000/ --args -incognito</code>
-のように URL は args ではない方法で渡さないと開けませんでした。</p>
-
-<h3><code>keyDirectObject</code> がない問題と前面に出てこない問題</h3>
-
-<p>URL の受け取り部分は今のところ、以下のようにしています。</p>
-
-<p>```ruby
-  def handleGetURLEvent(event, withReplyEvent: replyEvent)</p>
-
-<pre><code>keyDirectObject = '----'.unpack('L')[0]
-urlStr = event.paramDescriptorForKeyword(keyDirectObject).stringValue
-@text.stringValue = urlStr
-
-Process.spawn("osascript", "-e", &lt;&lt;-SCRIPT)
-</code></pre>
-
-<p>tell Application &ldquo;#{NSBundle.mainBundle.infoDictionary[&lsquo;CFBundleName&rsquo;]}&rdquo;
-  activate
-end tell</p>
-
-<pre><code>SCRIPT
-</code></pre>
-
-<p>  end
-```</p>
-
-<p>最初の問題として、
-<code>keyDirectObject</code> が RubyMotion にはなさそうだったので、
-値を調べて <code>unpack</code> で同等の値を生成するようにしました。
-この部分は前回から今回までの間に調査して作成済みだったので、
-詳しい調査方法は忘れてしまいましたが、
-引数のオブジェクトを調べて見つけたような気がします。</p>
-
-<p>前面に出てこない問題は
-今回のもくもく会の間に対処しました。</p>
-
-<p>前面に持ってくる方法がどういう API を呼べばよいのかわからず、
-AppleScript を使った方法は情報があったので、
-とりあえず <code>osascript</code> を呼び出してしまうことにしました。</p>
-
-<p>最初は <code>spawn</code> ではなく <code>system</code> を使ってしまったら、
-デッドロックしてしまって強制終了するしかなくなってしまったので、
-<code>Process.spawn</code> を使いました。</p>
-
-<h2>まとめ</h2>
-
-<p>今回は作りたいものが決まっていて、しっかりもくもく出来ました。</p>
-
-<p>起動時に URL が受け取れない問題は
-自分が使うだけなら
-URL を 2 回クリックするという方法で
-回避できるのですが、なんとかしたいところです。</p>
-
-<p><code>keyDirectObject</code> と <code>osascript</code> を使っているところは
-他に方法がなければ
-今のままでも実用上は困らないと感じました。</p>
 ]]></content>
   </entry>
   

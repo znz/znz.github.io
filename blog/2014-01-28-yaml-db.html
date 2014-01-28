@@ -5,12 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>@znz blog</title>
+  <title>yaml_dbでMySQLからPostgreSQLに移行した - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="(kansai-emacs #x08) #関西Emacs : ATND
-というイベントに参加してきました。 ">
+  <meta name="description" content="先週 redmine を MySQL から PostgreSQL に移行するときに、最近の ruby では動かなくなっている taps ではなく yaml_db を使ってみました。 その後、自作 Rails アプリでも yaml_db を使って移行しました。 yaml_db 選び yaml_db &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/page/6/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-01-28-yaml-db.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,15 +75,12 @@
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2013-10-26-kansai-emacs.html">第8回 関西Emacs勉強会に参加しました</a></h1>
+      <h1 class="entry-title">yaml_dbでMySQLからPostgreSQLに移行した</h1>
     
     
       <p class="meta">
@@ -100,86 +96,197 @@
   
 
 
-<time datetime="2013-10-26T14:19:00+09:00" pubdate data-updated="true">2013-10-26 (Sat)</time>
+<time datetime="2014-01-28T21:25:00+09:00" pubdate data-updated="true">2014-01-28 (Tue)</time>
         
-           | <a href="/blog/2013-10-26-kansai-emacs.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-10-26-kansai-emacs.html">Comments</a>
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p><a href="http://atnd.org/events/44155">(kansai-emacs #x08) #関西Emacs : ATND</a>
-というイベントに参加してきました。</p>
+<div class="entry-content"><p>先週 redmine を MySQL から PostgreSQL に移行するときに、最近の ruby では動かなくなっている taps ではなく yaml_db を使ってみました。</p>
 
+<p>その後、自作 Rails アプリでも yaml_db を使って移行しました。</p>
+
+<!--more-->
+
+
+<h2>yaml_db 選び</h2>
+
+<p>yaml_db は <code>gem install yaml_db</code> でインストールできるものが新しい rails などに
+対応していないため fork が乱立していて、どれを使えばいいのか悩ましいのですが、
+どこかで見かけた情報を元に
+<code>gem 'yaml_db', github: 'jetthoughts/yaml_db', ref: 'fb4b6bd7e12de3cffa93e0a298a1e5253d7e92ba'</code>
+を使いました。(今だと別の指定の方が良さそうです。後述)</p>
+
+<p>redmine の場合は <code>Gemfile.local</code> に書いて (なければ作成)、
+<code>bundle</code> でインストールすれば使えます。</p>
+
+<h2>データベース移行</h2>
+
+<p>アプリを止めるなどして、データベースの変更が発生しない状態にして移行作業をします。
+YAML の互換性の問題などがあるので、データベースの移行と Ruby や Redmine のバージョンアップは別々にした方が良いです。</p>
+
+<ol>
+<li>まず <code>RAILS_ENV=production bundle exec rake db:data:dump</code> で <code>db/data.yml</code> を作成します。</li>
+<li>つぎに Ruby や Rails や Redmine のバージョンはそのままで <code>config/database.yml</code> を変更します。</li>
+<li>必要に応じて <code>bundle</code> でデータベースアダプターの gem をインストールします。</li>
+<li>データベースの作成をしたり <code>db:migrate</code> をしておきます。</li>
+<li><code>RAILS_ENV=production bundle exec rake db:data:load</code> で読み込みます。</li>
+</ol>
+
+
+<h2>yaml_db の fork の再調査</h2>
+
+<p><a href="https://rubygems.org/gems/yaml_db">yaml_db gem</a> ( <a href="https://github.com/ludicast/yaml_db">ludicast/yaml_db</a> )
+からの fork としては
+<a href="https://rubygems.org/gems/gitlab_yaml_db">gitlab_yaml_db</a> ( <a href="https://github.com/gitlabhq/yaml_db">gitlabhq/yaml_db</a> ? )
+のインストール数が
+多いようですが、これは以前の gitlabhq が依存していたからのようです。 (今は依存していない)</p>
+
+<p>新しい fork として
+<a href="https://rubygems.org/gems/yaml_db_with_schema_tables">yaml_db_with_schema_tables</a>
+( <a href="https://github.com/zweitag/yaml_db">zweitag/yaml_db</a> )
+がありましたが、古い yaml_db からの fork なので、新しい rails への対応が入っていないような気がします。
+他の fork との違いとして <code>schema_info</code> と <code>schema_migrations</code> も dump するようにしているようです。</p>
+
+<p><a href="https://github.com/jetthoughts/yaml_db">jetthoughts/yaml_db</a> という fork は
+rubygems.org にはリリースしていないようですが、
+Rails 4 に対応して、 README の <code>This gem is now Rails 3 only.</code> という記述を削除しているなど、メンテナンスが続いていそうなので、
+次はこの fork を使うのが良さそうだと思いました。
+(古いブログの記事だと <code>gem 'yaml_db', github: 'jetthoughts/yaml_db', branch: 'rails4'</code> で rails4 ブランチを指定している例もあるようですが、 master にマージ済みなので branch 指定は不要です。)</p>
+
+<h2>別 Rails アプリの移行</h2>
+
+<p>続きとして、本日、自作の Rails アプリを <code>jetthoughts/yaml_db</code> を使って移行してみました。</p>
+
+<h3>postgresql のデータベース作成</h3>
+
+<p>データベースの作成は事前に出来るので、
+<code>sudo -u postgres psql</code>
+で作成しておきます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>CREATE ROLE dbuser LOGIN ENCRYPTED PASSWORD 'dbpass' NOINHERIT VALID UNTIL 'infinity';
+</span><span class='line'>CREATE DATABASE dbname WITH ENCODING='UTF8' OWNER=dbuser;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>データベースの作成方法はいつも
+<a href="http://www.redmine.org/projects/redmine/wiki/RedmineInstall">RedmineInstall</a>
+を参考にしています。</p>
+
+<h3>pg gem</h3>
+
+<p>pg gem も忘れずにあらかじめ入れておきます。</p>
+
+<h3>メンテナンス中画面設定</h3>
+
+<p>まず apache2 + passenger の方でメンテナンス中画面を出すようにしました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>&lt;Directory /path/to/app&gt;
+</span><span class='line'>    Options FollowSymLinks
+</span><span class='line'>    AllowOverride None
+</span><span class='line'>    #Order allow,deny
+</span><span class='line'>    #allow from all
+</span><span class='line'>    Order deny,allow
+</span><span class='line'>    deny from all
+</span><span class='line'>&lt;/Directory&gt;
+</span><span class='line'>ErrorDocument 403 "&#x30e1;&#x30f3;&#x30c6;&#x30ca;&#x30f3;&#x30b9;&#x4e2d;&#x3067;&#x3059;&#x3002;&#x20;&#x3057;&#x3070;&#x3089;&#x304f;&#x304a;&#x5f85;&#x3061;&#x304f;&#x3060;&#x3055;&#x3044;&#x3002;"</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>ErrorDocument</code> の埋め込み文字列は <code>Content-Type: text/html;charset=iso-8859-1</code> になってNいたので、
+<code>'メンテナンス中です。 しばらくお待ちください。'.unpack('U*').map{|c| '&amp;#x%x;' % c }.join('')</code>
+のようにして、すべてエスケープして日本語を埋め込みました。</p>
+
+<p>本来は 5xx のステータスにすべきですが、一時的なものなので 403 で妥協しました。
+後日メンテナンスをするときはちゃんと 5xx にしたいと思っています。</p>
+
+<h3>データベースのバックアップとダンプ</h3>
+
+<p>cron で動かしているデータベースのバックアップと yaml_db でのダンプをしました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>/path/to/app$ sudo /etc/cron.daily/local-dump
+</span><span class='line'>/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:dump</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>config/database.yml 書き換え</h3>
+
+<p>database.yml で postgresql の方を使うように書き換えます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  adapter: postgresql
+</span><span class='line'>  encoding: unicode
+</span><span class='line'>  database: dbname
+</span><span class='line'>  pool: 5
+</span><span class='line'>  username: dbuser
+</span><span class='line'>  password: dbpass
+</span><span class='line'>  host: localhost
+</span><span class='line'>  #port: 5432
+</span><span class='line'>  min_messages: warning</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>データの読み込み</h3>
+
+<p><code>rake db:migrate</code> でマイグレーションを実行した後、
+<code>rake db:data:load</code> でデータを読み込みます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:migrate
+</span><span class='line'>/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:load</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>メンテナンス解除と確認</h3>
+
+<p>apache2 の設定を戻して、動作確認します。</p>
+
+<h2>まとめ</h2>
+
+<p>Rails のデータベースの移行に yaml_db を使ってみました。</p>
+
+<p>yaml_db の方が taps より昔からあって、
+しばらくメンテナンスが止まっていて、
+taps の方が主流になるかと思っていたら、
+逆に taps の方がメンテナンスがあまりされなくなって、
+yaml_db の方が fork が乱立して、新しい rails に対応したものもでてきて、
+結局今のところデータベースの移行には yaml_db が無難という状況になっているようです。</p>
+
+<p>taps は新しい Ruby に対応できていなかったり、
+以前の記事に書いたようにスキーマの移行が不十分なところがあったりして、
+使われなくなっていくように感じました。</p>
 </div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-10-26-kansai-emacs.html">続きを読む &rarr;</a>
-    </footer>
-  
 
 
-    </article>
-  
-  
-    <article>
+  <footer>
+    <p class="meta">
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-10-25-ansible.html">Mac OS X で ansible を入れてみた</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
   
 
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
 
-<time datetime="2013-10-25T13:45:00+09:00" pubdate data-updated="true">2013-10-25 (Fri)</time>
-        
-           | <a href="/blog/2013-10-25-ansible.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-10-25-ansible.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Mac OS X 10.8.5 でシステム側の python は使わずに pyenv を使って ansible を入れてみました。</p>
-
-<p>2013-11 追記: 今は homebrew でインストールできるようになっていて <code>brew install ansible</code> だけでインストールできます。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-10-25-ansible.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-10-23-rubymotion-mokumoku-osaka.html">第 4 回 RubyMotion もくもく会 in Osaka に参加した</a></h1>
-    
-    
-      <p class="meta">
-        
 
 
 
@@ -191,408 +298,33 @@
   
 
 
-<time datetime="2013-10-23T19:30:00+09:00" pubdate data-updated="true">2013-10-23 (Wed)</time>
-        
-           | <a href="/blog/2013-10-23-rubymotion-mokumoku-osaka.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-10-23-rubymotion-mokumoku-osaka.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>第 1 回から第 3 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://connpass.com/event/3557/">第 4 回 RubyMotion もくもく会 in Osaka</a>
-に参加してきました。</p>
-
-<p>今回も前回と同じく東京と同時開催でした。
-前回はハングアウトで接続していたのですが、
-今回は接続せずに終わってしまいました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-10-23-rubymotion-mokumoku-osaka.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
+<time datetime="2014-01-28T21:25:00+09:00" pubdate data-updated="true">2014-01-28 (Tue)</time>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-10-20-web-barcode-reader.html">ブラウザのみで使えるバーコードリーダーを作った</a></h1>
-    
-    
-      <p class="meta">
-        
 
-
-
-
-
-
-
-
+<span class="categories">
   
+    <a class='category' href='/blog/categories/mysql/'>mysql</a>, <a class='category' href='/blog/categories/postgresql/'>postgresql</a>, <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
+  
+</span>
 
 
-<time datetime="2013-10-20T19:27:00+09:00" pubdate data-updated="true">2013-10-20 (Sun)</time>
-        
-           | <a href="/blog/2013-10-20-web-barcode-reader.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-10-20-web-barcode-reader.html">Comments</a>
-        
-      </p>
+    </p>
     
-  </header>
-
-
-  <div class="entry-content"><p>最近の HTML5 の getUserMedia API でカメラの画像をブラウザ上で処理できるようになったということで、
-専用のバーコードリーダー機器を買ったり、
-モバイル機器で専用のアプリを入れたりしなくても、
-ノートPCの内蔵のカメラでも使えるバーコードリーダーを作ってみました。</p>
-
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2014-01-28-yaml-db.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2014-01-28-yaml-db.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2014-01-28-yaml-db.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
 </div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-10-20-web-barcode-reader.html">続きを読む &rarr;</a>
-    </footer>
-  
 
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
     
-      <h1 class="entry-title"><a href="/blog/2013-10-20-kernelvm.html">カーネル/VM+K*BUG勉強会@関西 ごかいめ に参加した</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-10-20T19:10:00+09:00" pubdate data-updated="true">2013-10-20 (Sun)</time>
-        
-           | <a href="/blog/2013-10-20-kernelvm.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-10-20-kernelvm.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="http://atnd.org/events/43501">カーネル/VM+K*BUG勉強会@関西 ごかいめ</a>
-というイベントの会場が行きやすい場所の中だったので、
-参加してみました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-10-20-kernelvm.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-10-12-isbn.html">Ruby で ISBN をチェックしたりハイフンを入れたり</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-10-12T14:38:00+09:00" pubdate data-updated="true">2013-10-12 (Sat)</time>
-        
-           | <a href="/blog/2013-10-12-isbn.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-10-12-isbn.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>本には
-<a href="http://ja.wikipedia.org/wiki/ISBN">ISBN</a>
-というものが付いていて、
-末尾のチェックディジットは仕様を参照すれば
-簡単に計算出来そうです。</p>
-
-<p>10 桁のものと新しい 13 桁のものがあったり、
-出版者の部分の桁数が違ったりして
-ちゃんとハイフンを入れるのは面倒そうです。</p>
-
-<p>チェックディジットの方も自分で実装すると
-バグっていたときに面倒なので、
-良さそうな gem がないか探してみました。</p>
-
-<p>最終的にはいくつかの理由から
-<a href="http://rubygems.org/gems/lisbn">lisbn</a>
-という gem を使いました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-10-12-isbn.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-10-10-spring-and-lv.html">spring rails console で PAGER=lv だと /dev/tty: Device not configured</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-10-10T21:28:00+09:00" pubdate data-updated="true">2013-10-10 (Thu)</time>
-        
-           | <a href="/blog/2013-10-10-spring-and-lv.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-10-10-spring-and-lv.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><code>spring rails console</code>
-で
-<code>pry</code>
-を使っていて
-pager
-を起動するような出力をしたときに
-<code>/dev/tty: Device not configured</code>
-になることがあったので原因を調べてみました。
-結論としてはタイトルに書いてありますが、
-<code>spring</code>
-と
-<code>lv</code>
-の組み合わせが原因でした。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-10-10-spring-and-lv.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-10-09-update-octopress-and-conflict-ruby-version.html">octopress をアップデートした (.ruby-version が conflict した) 話</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-10-09T21:21:00+09:00" pubdate data-updated="true">2013-10-09 (Wed)</time>
-        
-           | <a href="/blog/2013-10-09-update-octopress-and-conflict-ruby-version.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-10-09-update-octopress-and-conflict-ruby-version.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>octopress で使う ruby を 1.9.3-p448 から 2.0.0-p247 にあげようと思って、
-そのついでに octopress 自体も master の最新のものに更新したので、
-その手順のメモです。</p>
-
-<p>その時に <code>.ruby-version</code> が conflict したので、
-その話がメインです。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-10-09-update-octopress-and-conflict-ruby-version.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-10-08-rails4-authorization.html">rails 4 対応の認可の gem</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-10-08T23:04:00+09:00" pubdate data-updated="true">2013-10-08 (Tue)</time>
-        
-           | <a href="/blog/2013-10-08-rails4-authorization.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-10-08-rails4-authorization.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>rails 4 に対応している認可のライブラリとして
-<code>cancan</code>
-からの移行先候補を選ぶために
-<code>the_role</code>
-と
-<code>pundit</code>
-という gem を試してみました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-10-08-rails4-authorization.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013-10-08-doorkeeper-api-client.html">doorkeeper gem の API のクライアント</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-10-08T21:06:00+09:00" pubdate data-updated="true">2013-10-08 (Tue)</time>
-        
-           | <a href="/blog/2013-10-08-doorkeeper-api-client.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2013-10-08-doorkeeper-api-client.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="http://rubygems.org/gems/doorkeeper">doorkeeper gem</a>
-で API を作る方は
-<a href="https://github.com/applicake/doorkeeper-provider-app">doorkeeper-provider-app</a>
-というサンプルの
-<code>app/controllers/api/</code>
-以下などをみればすぐにわかったのですが、
-API を呼び出す方は
-<a href="https://github.com/applicake/doorkeeper/wiki/Create-a-OmniAuth-strategy-for-your-provider">OmniAuth の中でユーザーの情報を取り出す</a>
-だけならすぐに出来たのですが、
-コントローラーの中など呼び出す方法は
-<a href="https://github.com/applicake/doorkeeper-devise-client">doorkeeper-devise-client</a>
-を見てもよくわからなかったので、まとめてみました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2013-10-08-doorkeeper-api-client.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  <div class="pagination">
-    
-      <a class="prev" href="/blog/page/7/">&larr; Older</a>
-    
-    <a href="/blog/archives">Blog Archives</a>
-    
-    <a class="next" href="/blog/page/5/">Newer &rarr;</a>
-    
-  </div>
-  <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
 <!-- footer -->
 <ins class="adsbygoogle"
      style="display:inline-block;width:728px;height:90px"
@@ -602,7 +334,23 @@ API を呼び出す方は
 (adsbygoogle = window.adsbygoogle || []).push({});
 </script>
 
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014-01-26-slideshare-cannot-send-mail.html" title="Previous Post: slideshareからのメールが届かなかったのでなんとかした">&laquo; slideshareからのメールが届かなかったのでなんとかした</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+  </section>
+
+</div>
+
 <aside class="sidebar">
   
     <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
@@ -661,7 +409,7 @@ API を呼び出す方は
 <section>
   <h1>GitHub Repos</h1>
   <ul id="gh_repos">
-    <li class="loading">Status updating&#8230;</li>
+    <li class="loading">Status updating...</li>
   </ul>
   
   <a href="https://github.com/znz">@znz</a> on GitHub
@@ -694,6 +442,7 @@ API を呼び出す方は
   
 </aside>
 
+
     </div>
   </div>
   <footer role="contentinfo"><p>
@@ -708,7 +457,10 @@ API を呼び出す方は
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-01-28-yaml-db.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-01-28-yaml-db.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

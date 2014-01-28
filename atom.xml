@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-01-26T22:43:33+09:00</updated>
+  <updated>2014-01-28T21:29:03+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,184 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[yaml_dbでMySQLからPostgreSQLに移行した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-01-28-yaml-db.html"/>
+    <updated>2014-01-28T21:25:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/yaml-db</id>
+    <content type="html"><![CDATA[<p>先週 redmine を MySQL から PostgreSQL に移行するときに、最近の ruby では動かなくなっている taps ではなく yaml_db を使ってみました。</p>
+
+<p>その後、自作 Rails アプリでも yaml_db を使って移行しました。</p>
+
+<!--more-->
+
+
+<h2>yaml_db 選び</h2>
+
+<p>yaml_db は <code>gem install yaml_db</code> でインストールできるものが新しい rails などに
+対応していないため fork が乱立していて、どれを使えばいいのか悩ましいのですが、
+どこかで見かけた情報を元に
+<code>gem 'yaml_db', github: 'jetthoughts/yaml_db', ref: 'fb4b6bd7e12de3cffa93e0a298a1e5253d7e92ba'</code>
+を使いました。(今だと別の指定の方が良さそうです。後述)</p>
+
+<p>redmine の場合は <code>Gemfile.local</code> に書いて (なければ作成)、
+<code>bundle</code> でインストールすれば使えます。</p>
+
+<h2>データベース移行</h2>
+
+<p>アプリを止めるなどして、データベースの変更が発生しない状態にして移行作業をします。
+YAML の互換性の問題などがあるので、データベースの移行と Ruby や Redmine のバージョンアップは別々にした方が良いです。</p>
+
+<ol>
+<li>まず <code>RAILS_ENV=production bundle exec rake db:data:dump</code> で <code>db/data.yml</code> を作成します。</li>
+<li>つぎに Ruby や Rails や Redmine のバージョンはそのままで <code>config/database.yml</code> を変更します。</li>
+<li>必要に応じて <code>bundle</code> でデータベースアダプターの gem をインストールします。</li>
+<li>データベースの作成をしたり <code>db:migrate</code> をしておきます。</li>
+<li><code>RAILS_ENV=production bundle exec rake db:data:load</code> で読み込みます。</li>
+</ol>
+
+
+<h2>yaml_db の fork の再調査</h2>
+
+<p><a href="https://rubygems.org/gems/yaml_db">yaml_db gem</a> ( <a href="https://github.com/ludicast/yaml_db">ludicast/yaml_db</a> )
+からの fork としては
+<a href="https://rubygems.org/gems/gitlab_yaml_db">gitlab_yaml_db</a> ( <a href="https://github.com/gitlabhq/yaml_db">gitlabhq/yaml_db</a> ? )
+のインストール数が
+多いようですが、これは以前の gitlabhq が依存していたからのようです。 (今は依存していない)</p>
+
+<p>新しい fork として
+<a href="https://rubygems.org/gems/yaml_db_with_schema_tables">yaml_db_with_schema_tables</a>
+( <a href="https://github.com/zweitag/yaml_db">zweitag/yaml_db</a> )
+がありましたが、古い yaml_db からの fork なので、新しい rails への対応が入っていないような気がします。
+他の fork との違いとして <code>schema_info</code> と <code>schema_migrations</code> も dump するようにしているようです。</p>
+
+<p><a href="https://github.com/jetthoughts/yaml_db">jetthoughts/yaml_db</a> という fork は
+rubygems.org にはリリースしていないようですが、
+Rails 4 に対応して、 README の <code>This gem is now Rails 3 only.</code> という記述を削除しているなど、メンテナンスが続いていそうなので、
+次はこの fork を使うのが良さそうだと思いました。
+(古いブログの記事だと <code>gem 'yaml_db', github: 'jetthoughts/yaml_db', branch: 'rails4'</code> で rails4 ブランチを指定している例もあるようですが、 master にマージ済みなので branch 指定は不要です。)</p>
+
+<h2>別 Rails アプリの移行</h2>
+
+<p>続きとして、本日、自作の Rails アプリを <code>jetthoughts/yaml_db</code> を使って移行してみました。</p>
+
+<h3>postgresql のデータベース作成</h3>
+
+<p>データベースの作成は事前に出来るので、
+<code>sudo -u postgres psql</code>
+で作成しておきます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>CREATE ROLE dbuser LOGIN ENCRYPTED PASSWORD 'dbpass' NOINHERIT VALID UNTIL 'infinity';
+</span><span class='line'>CREATE DATABASE dbname WITH ENCODING='UTF8' OWNER=dbuser;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>データベースの作成方法はいつも
+<a href="http://www.redmine.org/projects/redmine/wiki/RedmineInstall">RedmineInstall</a>
+を参考にしています。</p>
+
+<h3>pg gem</h3>
+
+<p>pg gem も忘れずにあらかじめ入れておきます。</p>
+
+<h3>メンテナンス中画面設定</h3>
+
+<p>まず apache2 + passenger の方でメンテナンス中画面を出すようにしました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>&lt;Directory /path/to/app&gt;
+</span><span class='line'>    Options FollowSymLinks
+</span><span class='line'>    AllowOverride None
+</span><span class='line'>    #Order allow,deny
+</span><span class='line'>    #allow from all
+</span><span class='line'>    Order deny,allow
+</span><span class='line'>    deny from all
+</span><span class='line'>&lt;/Directory&gt;
+</span><span class='line'>ErrorDocument 403 "&#x30e1;&#x30f3;&#x30c6;&#x30ca;&#x30f3;&#x30b9;&#x4e2d;&#x3067;&#x3059;&#x3002;&#x20;&#x3057;&#x3070;&#x3089;&#x304f;&#x304a;&#x5f85;&#x3061;&#x304f;&#x3060;&#x3055;&#x3044;&#x3002;"</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>ErrorDocument</code> の埋め込み文字列は <code>Content-Type: text/html;charset=iso-8859-1</code> になってNいたので、
+<code>'メンテナンス中です。 しばらくお待ちください。'.unpack('U*').map{|c| '&amp;#x%x;' % c }.join('')</code>
+のようにして、すべてエスケープして日本語を埋め込みました。</p>
+
+<p>本来は 5xx のステータスにすべきですが、一時的なものなので 403 で妥協しました。
+後日メンテナンスをするときはちゃんと 5xx にしたいと思っています。</p>
+
+<h3>データベースのバックアップとダンプ</h3>
+
+<p>cron で動かしているデータベースのバックアップと yaml_db でのダンプをしました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>/path/to/app$ sudo /etc/cron.daily/local-dump
+</span><span class='line'>/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:dump</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>config/database.yml 書き換え</h3>
+
+<p>database.yml で postgresql の方を使うように書き換えます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  adapter: postgresql
+</span><span class='line'>  encoding: unicode
+</span><span class='line'>  database: dbname
+</span><span class='line'>  pool: 5
+</span><span class='line'>  username: dbuser
+</span><span class='line'>  password: dbpass
+</span><span class='line'>  host: localhost
+</span><span class='line'>  #port: 5432
+</span><span class='line'>  min_messages: warning</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>データの読み込み</h3>
+
+<p><code>rake db:migrate</code> でマイグレーションを実行した後、
+<code>rake db:data:load</code> でデータを読み込みます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:migrate
+</span><span class='line'>/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:load</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>メンテナンス解除と確認</h3>
+
+<p>apache2 の設定を戻して、動作確認します。</p>
+
+<h2>まとめ</h2>
+
+<p>Rails のデータベースの移行に yaml_db を使ってみました。</p>
+
+<p>yaml_db の方が taps より昔からあって、
+しばらくメンテナンスが止まっていて、
+taps の方が主流になるかと思っていたら、
+逆に taps の方がメンテナンスがあまりされなくなって、
+yaml_db の方が fork が乱立して、新しい rails に対応したものもでてきて、
+結局今のところデータベースの移行には yaml_db が無難という状況になっているようです。</p>
+
+<p>taps は新しい Ruby に対応できていなかったり、
+以前の記事に書いたようにスキーマの移行が不十分なところがあったりして、
+使われなくなっていくように感じました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[slideshareからのメールが届かなかったのでなんとかした]]></title>
@@ -2763,86 +2941,6 @@ docker のイメージではなく tarball を作成します。
 <p>目的によっては <code>variant</code> を変更したり、
 <code>include</code> でインストールするパッケージを増やしておくだけでも
 便利になると思います。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[zshのPATHの自動重複削除や余計なPATHの削除]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-12-zsh-cleanup-path.html"/>
-    <updated>2013-12-12T00:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/zsh-cleanup-path</id>
-    <content type="html"><![CDATA[<p>シェルの中から <code>exec zsh</code> をしたり、
-GNU screen や tmux を経由して間接的にシェルの中でシェルを開いたりするときに
-何も考えずに <code>PATH</code> を追加していくと
-どんどん長くなっていってしまうと思います。</p>
-
-<p><code>bash</code> などでも使えるように汎用的にしようとすると自前で頑張らないといけないのですが、
-<code>zsh</code> では <code>zsh</code> 自体の機能で簡単に重複を防げます。</p>
-
-<p>また、パスに望ましくないものが入っていた時に削除する方法も紹介します。</p>
-
-<p>この投稿は
-<a href="http://qiita.com/advent-calendar/2013/zsh">zsh Advent Calendar 2013</a>
-の12日目の記事です。</p>
-
-<!--more-->
-
-
-<h2>重複削除</h2>
-
-<p>重複を削除するには</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>typeset -U path PATH</span></code></pre></td></tr></table></div></figure>
-
-
-<p>で <code>path</code> と <code>PATH</code> に unique という属性を付けて、
-重複した値の最初だけ残すようにします。</p>
-
-<p>ちゃんと設定できていれば、パラメーター展開の <code>t</code>
-で調べた時に <code>unique</code> が付いています。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% echo ${(t)path}
-</span><span class='line'>array-unique-special
-</span><span class='line'>% echo ${(t)PATH}
-</span><span class='line'>scalar-export-unique-special</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>望ましくないパスの削除</h2>
-
-<p>ここでは 3 種類のパスを望ましくないものとして
-除外するようにしました。</p>
-
-<ol>
-<li><code>NULL_GLOB</code> の <code>N</code> を使って存在しないディレクトリを除外</li>
-<li><code>-/</code> を使ってシンボリックリンクの場合のリンク先もチェックした上でディレクトリのみ残す</li>
-<li><code>^W</code> で world-writable という実行ファイルのパスとしては危険なパーミッションになっているディレクトリを除外</li>
-</ol>
-
-
-<p>Glob Qualifiers なので <code>PATH</code> ではなく <code>path</code> を使ってフィルタリングしています。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>path=(
-</span><span class='line'>    # allow directories only (-/)
-</span><span class='line'>    # reject world-writable directories (^W)
-</span><span class='line'>    $path(N-/^W)
-</span><span class='line'>)</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>まとめ</h2>
-
-<p>ここでは <code>zsh</code> の機能を活用してコマンド探索パス <code>PATH</code> をきれいにする方法を紹介しました。</p>
-
-<p>これを応用して <code>fpath</code> などにも適用してみると良いかもしれません。</p>
 ]]></content>
   </entry>
   
