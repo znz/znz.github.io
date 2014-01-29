@@ -3,13 +3,18 @@ layout: post
 title: "distnotedの暴走が止まるというCocoa Emacsのinline patch修正版を使ってみた"
 date: 2013-12-27 23:00:00 +0900
 comments: true
-categories: emacs osx
+categories: emacs osx mavericks
 ---
 [launchdでdistnotedを定期的に終了させる](/blog/2013-11-13-killall-distnoted-periodically.html)
 話のコメントで
 [Emacs.appでインラインパッチを当てた時にdistnotedが暴走しなくなる](https://gist.github.com/anonymous/8142555)
 修正を教えてもらったので、
 試してみました。
+
+2014-01-29追記:
+コメントにあるようにまだ問題があったので、続きとして
+[emacsやdistnotedを安定させるパッチをhomebrewで適用した](/blog/2014-01-29-emacs-distnoted-patch.html)
+話を書きました。
 
 <!--more-->
 

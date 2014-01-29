@@ -20,6 +20,11 @@ OS 自体を再起動したりしていました。
 [コメントにあったパッチを試してみた話](/blog/2013-12-27-emacs-inline-patch.html)
 を書きました。
 
+2014-01-29追記:
+さらに続きとして
+[emacsやdistnotedを安定させるパッチをhomebrewで適用した](/blog/2014-01-29-emacs-distnoted-patch.html)
+話を書きました。
+
 <!--more-->
 
 ## distnoted とは?
