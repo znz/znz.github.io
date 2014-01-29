@@ -4,7 +4,7 @@
   <title><![CDATA[Category: mavericks | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/mavericks/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-01-28T21:29:03+09:00</updated>
+  <updated>2014-01-29T23:49:24+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,164 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[emacsやdistnotedを安定させるパッチをhomebrewで適用した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-01-29-emacs-distnoted-patch.html"/>
+    <updated>2014-01-29T15:59:28+09:00</updated>
+    <id>http://blog.n-z.jp/blog/emacs-distnoted-patch</id>
+    <content type="html"><![CDATA[<p>Emacs で distnoted が大変なことになる件で、
+さらにコメントで追加の情報があったので、
+homebrew でのインストール時に
+追加のパッチをあてるようにしました。</p>
+
+<!--more-->
+
+
+<h2>パッチ適用</h2>
+
+<p>適用法としては
+<code>brew edit emacs</code>
+で以下のように変更して、
+<code>brew reinstall emacs</code>
+で再インストールしました。
+その後の <code>brew update</code> で引っかかる原因になるので、
+reinstall したら <code>brew edit emacs</code> で戻しました。</p>
+
+<p>適用されればどこでも良いのですが、最後に追加するようにしてみました。</p>
+
+<p>```diff
+diff &mdash;git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb
+index db7c46c..26ec334 100644
+&mdash;&ndash; a/Library/Formula/emacs.rb
++++ b/Library/Formula/emacs.rb
+@@ -49,6 +49,7 @@ class Emacs &lt; Formula</p>
+
+<pre><code> if build.include? "cocoa" and build.include? "japanese"
+   p[:p0].push("http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583")
+ end
+</code></pre>
+
+<ul>
+<li> p[:p1].push &ldquo;<a href="https://gist.github.com/anonymous/8553178/raw/c0ddb67b6e92da35a815d3465c633e036df1a105/emacs.memory.leak.aka.distnoted.patch.diff">https://gist.github.com/anonymous/8553178/raw/c0ddb67b6e92da35a815d3465c633e036df1a105/emacs.memory.leak.aka.distnoted.patch.diff</a>&rdquo;
+ p
+end unless build.head?</li>
+</ul>
+
+
+<p>```</p>
+
+<h2>しばらく使ってみて</h2>
+
+<p>inline patch をあてたり外したりして試していた時は時々突然 Emacs 自体が落ちていたのですが、このパッチにしてからは起きていないようです。</p>
+
+<h2>japanese パッチ問題</h2>
+
+<p>別の話として、ことえりの日本語入力の確定直後になぜか「英字」入力状態になってしまうことがあって、カーソルを動かさないと直らないという現象が以前から起きています。
+これは inline patch と mavericks の組み合わせで発生しているようなのですが、原因は調べられていません。</p>
+
+<p>文章を入力しにくくなるので、今は</p>
+
+<p><code>
+brew uninstall emacs
+brew install emacs --cocoa --srgb --with-gnutls
+brew linkapps
+</code></p>
+
+<p>という感じで <code>--japanese</code> は外した状態でインストールしています。</p>
+
+<p>homebrew でオプションの追加は <code>brew reinstall emacs --japanese</code> のように <code>reinstall</code> でも出来るのに、
+外す方は <code>reinstall</code> だと出来ないようなので、
+<code>uninstall</code> してから <code>install</code> し直しています。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[distnotedの暴走が止まるというCocoa Emacsのinline patch修正版を使ってみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2013-12-27-emacs-inline-patch.html"/>
+    <updated>2013-12-27T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/emacs-inline-patch</id>
+    <content type="html"><![CDATA[<p><a href="/blog/2013-11-13-killall-distnoted-periodically.html">launchdでdistnotedを定期的に終了させる</a>
+話のコメントで
+<a href="https://gist.github.com/anonymous/8142555">Emacs.appでインラインパッチを当てた時にdistnotedが暴走しなくなる</a>
+修正を教えてもらったので、
+試してみました。</p>
+
+<p>2014-01-29追記:
+コメントにあるようにまだ問題があったので、続きとして
+<a href="/blog/2014-01-29-emacs-distnoted-patch.html">emacsやdistnotedを安定させるパッチをhomebrewで適用した</a>
+話を書きました。</p>
+
+<!--more-->
+
+
+<h2>homebrew で適用するパッチの変更</h2>
+
+<p>適用法としては
+<code>brew edit emacs</code>
+で以下のように変更して、
+<code>brew reinstall emacs</code>
+で再インストールしました。</p>
+
+<p>```diff
+diff &mdash;git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb
+index 712c3d1..5ce4ce2 100644
+&mdash;&ndash; a/Library/Formula/emacs.rb
++++ b/Library/Formula/emacs.rb
+@@ -47,7 +47,7 @@ class Emacs &lt; Formula</p>
+
+<pre><code> # "--japanese" option:
+ # to apply a patch from MacEmacsJP for Japanese input methods
+ if build.include? "cocoa" and build.include? "japanese"
+</code></pre>
+
+<ul>
+<li>   p[:p0].push(&ldquo;<a href="http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583">http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583</a>&rdquo;)</li>
+<li>   p[:p0].push(&ldquo;<a href="https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch">https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch</a>&rdquo;)
+ end
+ p
+end unless build.head?
+```</li>
+</ul>
+
+
+<h2>元のパッチからの変更点</h2>
+
+<p>元の sourceforge.jp のパッチとの差分をとってみると、
+以下のメソッド呼び出しが変わっているだけでした。</p>
+
+<p>```diff
+diff &mdash;git a/emacs-inline.patch.sfjp b/emacs-inline.patch.gist
+index 52f2052..d67ad1d 100644
+&mdash;&ndash; a/emacs-inline.patch.sfjp
++++ b/emacs-inline.patch.gist
+@@ -1015,7 +1015,7 @@ diff -r -N -p ../emacs-24.3.org/src/nsterm.m src/nsterm.m</p>
+
+<pre><code>                                            name: nil object: nil]; */
+</code></pre>
+
+<ul>
+<li> [[NSDistributedNotificationCenter defaultCenter] addObserver: NSApp</li>
+<li><pre><code>            selector: @selector (changeInputMethod:)
+</code></pre>
+
+<p>&ndash;+                         name: @&ldquo;AppleSelectedInputSourcesChangedNotification&rdquo; object: nil];
+++                         name: @&ldquo;AppleSelectedInputSourcesChangedNotification&rdquo; object: nil suspensionBehavior:NSNotificationSuspensionBehaviorDeliverImmediately];</p>
+
+<p>   dpyinfo = xzalloc (sizeof *dpyinfo);</p></li>
+</ul>
+
+
+<p>```</p>
+
+<h2>まとめ</h2>
+
+<p>使ってみて問題がなければ sourceforge.jp の方に取り込んでもらうのが良さそうです。</p>
+
+<p>しばらく使ってみた感じだと distnoted のメモリ使用量が増えていっても、
+一度 Emacs.app を終了すると distnoted のメモリ使用量が一気に減るようになりました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[launchdでdistnotedを定期的に終了させる]]></title>
@@ -32,6 +190,11 @@ OS 自体を再起動したりしていました。</p>
 続きとして
 <a href="/blog/2013-12-27-emacs-inline-patch.html">コメントにあったパッチを試してみた話</a>
 を書きました。</p>
+
+<p>2014-01-29追記:
+さらに続きとして
+<a href="/blog/2014-01-29-emacs-distnoted-patch.html">emacsやdistnotedを安定させるパッチをhomebrewで適用した</a>
+話を書きました。</p>
 
 <!--more-->
 

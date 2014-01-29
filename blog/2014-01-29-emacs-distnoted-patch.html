@@ -5,14 +5,17 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>zshのPATHの自動重複削除や余計なPATHの削除 - @znz blog</title>
+  <title>emacsやdistnotedを安定させるパッチをhomebrewで適用した - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="シェルの中から exec zsh をしたり、
-GNU screen や tmux を経由して間接的にシェルの中でシェルを開いたりするときに
-何も考えずに PATH を追加していくと
-どんどん長くなっていってしまうと思います。 bash &hellip;">
+  <meta name="description" content="Emacs で distnoted が大変なことになる件で、
+さらにコメントで追加の情報があったので、
+homebrew でのインストール時に
+追加のパッチをあてるようにしました。 パッチ適用 適用法としては
+brew edit emacs
+で以下のように変更して、
+brew reinstall &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -21,7 +24,7 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-12-12-zsh-cleanup-path.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-01-29-emacs-distnoted-patch.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -83,7 +86,7 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
   
   <header>
     
-      <h1 class="entry-title">zshのPATHの自動重複削除や余計なPATHの削除</h1>
+      <h1 class="entry-title">emacsやdistnotedを安定させるパッチをhomebrewで適用した</h1>
     
     
       <p class="meta">
@@ -99,7 +102,7 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
   
 
 
-<time datetime="2013-12-12T00:00:00+09:00" pubdate data-updated="true">2013-12-12 (Thu)</time>
+<time datetime="2014-01-29T15:59:28+09:00" pubdate data-updated="true">2014-01-29 (Wed)</time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -109,78 +112,78 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
   </header>
 
 
-<div class="entry-content"><p>シェルの中から <code>exec zsh</code> をしたり、
-GNU screen や tmux を経由して間接的にシェルの中でシェルを開いたりするときに
-何も考えずに <code>PATH</code> を追加していくと
-どんどん長くなっていってしまうと思います。</p>
-
-<p><code>bash</code> などでも使えるように汎用的にしようとすると自前で頑張らないといけないのですが、
-<code>zsh</code> では <code>zsh</code> 自体の機能で簡単に重複を防げます。</p>
-
-<p>また、パスに望ましくないものが入っていた時に削除する方法も紹介します。</p>
-
-<p>この投稿は
-<a href="http://qiita.com/advent-calendar/2013/zsh">zsh Advent Calendar 2013</a>
-の12日目の記事です。</p>
+<div class="entry-content"><p>Emacs で distnoted が大変なことになる件で、
+さらにコメントで追加の情報があったので、
+homebrew でのインストール時に
+追加のパッチをあてるようにしました。</p>
 
 <!--more-->
 
 
-<h2>重複削除</h2>
+<h2>パッチ適用</h2>
 
-<p>重複を削除するには</p>
+<p>適用法としては
+<code>brew edit emacs</code>
+で以下のように変更して、
+<code>brew reinstall emacs</code>
+で再インストールしました。
+その後の <code>brew update</code> で引っかかる原因になるので、
+reinstall したら <code>brew edit emacs</code> で戻しました。</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>typeset -U path PATH</span></code></pre></td></tr></table></div></figure>
+<p>適用されればどこでも良いのですが、最後に追加するようにしてみました。</p>
 
-
-<p>で <code>path</code> と <code>PATH</code> に unique という属性を付けて、
-重複した値の最初だけ残すようにします。</p>
-
-<p>ちゃんと設定できていれば、パラメーター展開の <code>t</code>
-で調べた時に <code>unique</code> が付いています。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% echo ${(t)path}
-</span><span class='line'>array-unique-special
-</span><span class='line'>% echo ${(t)PATH}
-</span><span class='line'>scalar-export-unique-special</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>望ましくないパスの削除</h2>
-
-<p>ここでは 3 種類のパスを望ましくないものとして
-除外するようにしました。</p>
-
-<ol>
-<li><code>NULL_GLOB</code> の <code>N</code> を使って存在しないディレクトリを除外</li>
-<li><code>-/</code> を使ってシンボリックリンクの場合のリンク先もチェックした上でディレクトリのみ残す</li>
-<li><code>^W</code> で world-writable という実行ファイルのパスとしては危険なパーミッションになっているディレクトリを除外</li>
-</ol>
-
-
-<p>Glob Qualifiers なので <code>PATH</code> ではなく <code>path</code> を使ってフィルタリングしています。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
 <span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>path=(
-</span><span class='line'>    # allow directories only (-/)
-</span><span class='line'>    # reject world-writable directories (^W)
-</span><span class='line'>    $path(N-/^W)
-</span><span class='line'>)</span></code></pre></td></tr></table></div></figure>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gh">diff --git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb</span>
+</span><span class='line'><span class="gh">index db7c46c..26ec334 100644</span>
+</span><span class='line'><span class="gd">--- a/Library/Formula/emacs.rb</span>
+</span><span class='line'><span class="gi">+++ b/Library/Formula/emacs.rb</span>
+</span><span class='line'><span class="gu">@@ -49,6 +49,7 @@ class Emacs &lt; Formula</span>
+</span><span class='line'>     if build.include? &quot;cocoa&quot; and build.include? &quot;japanese&quot;
+</span><span class='line'>       p[:p0].push(&quot;http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583&quot;)
+</span><span class='line'>     end
+</span><span class='line'><span class="gi">+    p[:p1].push &quot;https://gist.github.com/anonymous/8553178/raw/c0ddb67b6e92da35a815d3465c633e036df1a105/emacs.memory.leak.aka.distnoted.patch.diff&quot;</span>
+</span><span class='line'>     p
+</span><span class='line'>   end unless build.head?
+</span><span class='line'>
+</span></code></pre></td></tr></table></div></figure>
 
 
-<h2>まとめ</h2>
+<h2>しばらく使ってみて</h2>
 
-<p>ここでは <code>zsh</code> の機能を活用してコマンド探索パス <code>PATH</code> をきれいにする方法を紹介しました。</p>
+<p>inline patch をあてたり外したりして試していた時は時々突然 Emacs 自体が落ちていたのですが、このパッチにしてからは起きていないようです。</p>
 
-<p>これを応用して <code>fpath</code> などにも適用してみると良いかもしれません。</p>
+<h2>japanese パッチ問題</h2>
+
+<p>別の話として、ことえりの日本語入力の確定直後になぜか「英字」入力状態になってしまうことがあって、カーソルを動かさないと直らないという現象が以前から起きています。
+これは inline patch と mavericks の組み合わせで発生しているようなのですが、原因は調べられていません。</p>
+
+<p>文章を入力しにくくなるので、今は</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'>brew uninstall emacs
+</span><span class='line'>brew install emacs --cocoa --srgb --with-gnutls
+</span><span class='line'>brew linkapps
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>という感じで <code>--japanese</code> は外した状態でインストールしています。</p>
+
+<p>homebrew でオプションの追加は <code>brew reinstall emacs --japanese</code> のように <code>reinstall</code> でも出来るのに、
+外す方は <code>reinstall</code> だと出来ないようなので、
+<code>uninstall</code> してから <code>install</code> し直しています。</p>
 </div>
 
 
@@ -203,12 +206,12 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
   
 
 
-<time datetime="2013-12-12T00:00:00+09:00" pubdate data-updated="true">2013-12-12 (Thu)</time>
+<time datetime="2014-01-29T15:59:28+09:00" pubdate data-updated="true">2014-01-29 (Wed)</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/zsh/'>zsh</a>
+    <a class='category' href='/blog/categories/emacs/'>emacs</a>, <a class='category' href='/blog/categories/mavericks/'>mavericks</a>, <a class='category' href='/blog/categories/osx/'>osx</a>
   
 </span>
 
@@ -217,12 +220,12 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2013-12-12-zsh-cleanup-path.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2013-12-12-zsh-cleanup-path.html" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2014-01-29-emacs-distnoted-patch.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2014-01-29-emacs-distnoted-patch.html" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
   
-  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2013-12-12-zsh-cleanup-path.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2014-01-29-emacs-distnoted-patch.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
   
     <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
   
@@ -241,10 +244,8 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-12-11-mailman-strip-dkim-signature.html" title="Previous Post: mailmanでDKIM-Signatureヘッダを削除する">&laquo; mailmanでDKIM-Signatureヘッダを削除する</a>
+        <a class="basic-alignment left" href="/blog/2014-01-28-yaml-db.html" title="Previous Post: yaml_dbでMySQLからPostgreSQLに移行した">&laquo; yaml_dbでMySQLからPostgreSQLに移行した</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-12-13-docker-custom-base-image.html" title="Next Post: dockerのカスタムベースイメージを作成する">dockerのカスタムベースイメージを作成する &raquo;</a>
       
     </p>
   </footer>
@@ -365,8 +366,8 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-12-12-zsh-cleanup-path.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-12-12-zsh-cleanup-path.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-01-29-emacs-distnoted-patch.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-01-29-emacs-distnoted-patch.html';
         var disqus_script = 'embed.js';
       
     (function () {

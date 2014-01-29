@@ -4,7 +4,7 @@
   <title><![CDATA[Category: osx | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/osx/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-01-28T21:29:03+09:00</updated>
+  <updated>2014-01-29T23:49:24+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,77 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[emacsやdistnotedを安定させるパッチをhomebrewで適用した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-01-29-emacs-distnoted-patch.html"/>
+    <updated>2014-01-29T15:59:28+09:00</updated>
+    <id>http://blog.n-z.jp/blog/emacs-distnoted-patch</id>
+    <content type="html"><![CDATA[<p>Emacs で distnoted が大変なことになる件で、
+さらにコメントで追加の情報があったので、
+homebrew でのインストール時に
+追加のパッチをあてるようにしました。</p>
+
+<!--more-->
+
+
+<h2>パッチ適用</h2>
+
+<p>適用法としては
+<code>brew edit emacs</code>
+で以下のように変更して、
+<code>brew reinstall emacs</code>
+で再インストールしました。
+その後の <code>brew update</code> で引っかかる原因になるので、
+reinstall したら <code>brew edit emacs</code> で戻しました。</p>
+
+<p>適用されればどこでも良いのですが、最後に追加するようにしてみました。</p>
+
+<p>```diff
+diff &mdash;git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb
+index db7c46c..26ec334 100644
+&mdash;&ndash; a/Library/Formula/emacs.rb
++++ b/Library/Formula/emacs.rb
+@@ -49,6 +49,7 @@ class Emacs &lt; Formula</p>
+
+<pre><code> if build.include? "cocoa" and build.include? "japanese"
+   p[:p0].push("http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583")
+ end
+</code></pre>
+
+<ul>
+<li> p[:p1].push &ldquo;<a href="https://gist.github.com/anonymous/8553178/raw/c0ddb67b6e92da35a815d3465c633e036df1a105/emacs.memory.leak.aka.distnoted.patch.diff">https://gist.github.com/anonymous/8553178/raw/c0ddb67b6e92da35a815d3465c633e036df1a105/emacs.memory.leak.aka.distnoted.patch.diff</a>&rdquo;
+ p
+end unless build.head?</li>
+</ul>
+
+
+<p>```</p>
+
+<h2>しばらく使ってみて</h2>
+
+<p>inline patch をあてたり外したりして試していた時は時々突然 Emacs 自体が落ちていたのですが、このパッチにしてからは起きていないようです。</p>
+
+<h2>japanese パッチ問題</h2>
+
+<p>別の話として、ことえりの日本語入力の確定直後になぜか「英字」入力状態になってしまうことがあって、カーソルを動かさないと直らないという現象が以前から起きています。
+これは inline patch と mavericks の組み合わせで発生しているようなのですが、原因は調べられていません。</p>
+
+<p>文章を入力しにくくなるので、今は</p>
+
+<p><code>
+brew uninstall emacs
+brew install emacs --cocoa --srgb --with-gnutls
+brew linkapps
+</code></p>
+
+<p>という感じで <code>--japanese</code> は外した状態でインストールしています。</p>
+
+<p>homebrew でオプションの追加は <code>brew reinstall emacs --japanese</code> のように <code>reinstall</code> でも出来るのに、
+外す方は <code>reinstall</code> だと出来ないようなので、
+<code>uninstall</code> してから <code>install</code> し直しています。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 7 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -201,6 +272,11 @@ RubyMotion のバグっぽいという話のようです。</p>
 <a href="https://gist.github.com/anonymous/8142555">Emacs.appでインラインパッチを当てた時にdistnotedが暴走しなくなる</a>
 修正を教えてもらったので、
 試してみました。</p>
+
+<p>2014-01-29追記:
+コメントにあるようにまだ問題があったので、続きとして
+<a href="/blog/2014-01-29-emacs-distnoted-patch.html">emacsやdistnotedを安定させるパッチをhomebrewで適用した</a>
+話を書きました。</p>
 
 <!--more-->
 
@@ -408,152 +484,6 @@ URL を 2 回クリックするという方法で
 <p><code>keyDirectObject</code> と <code>osascript</code> を使っているところは
 他に方法がなければ
 今のままでも実用上は困らないと感じました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 5 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-20-rubymotion-mokumoku-osaka.html"/>
-    <updated>2013-11-20T21:54:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
-    <content type="html"><![CDATA[<p>第 1 回から第 4 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://connpass.com/event/3871/">第 5 回 RubyMotion もくもく会 in Osaka</a>
-に参加してきました。</p>
-
-<p>今回も東京と同時開催でしたが、
-接続などはせずに終わってしまいました。</p>
-
-<p>次回の
-<a href="http://connpass.com/event/4211/">第 6 回 RubyMotion もくもく会 in Osaka</a>
-は 12/26(木) になりました。</p>
-
-<!--more-->
-
-
-<h2>話に出たもの</h2>
-
-<p>話に出てきたサイトなどのメモです。</p>
-
-<ul>
-<li><a href="http://shin1x1.github.io/vagrantx/">http://shin1x1.github.io/vagrantx/</a>
-のサイトのデザインを
-<a href="https://wrapbootstrap.com/">https://wrapbootstrap.com/</a>
-から選ぼうとしたが、結局 github のテンプレートのまま使うことにしたという話</li>
-<li>昔は nib というバイナリだったけど今は xib という XML ファイルになっているという話</li>
-<li><a href="http://www.rainymood.com/">Rainy Mood</a>
-と
-<a href="http://tadaya.net/blog/2012/12/01">多田屋のBGM</a>
-の組み合わせが良いという話</li>
-<li>アドベントカレンダーの話
-
-<ul>
-<li><a href="http://www.adventar.org/">Adventar</a></li>
-<li><a href="http://qiita.com/advent-calendar/2013/rubymotion">RubyMotion Advent Calendar 2013</a></li>
-</ul>
-</li>
-<li><a href="http://www.img2icnsapp.com/">Img2icns</a> の無料の方で OSX アプリのアイコンへの変換が出来そうという話</li>
-<li>クラウドソーシングでアイコンを募集するのはどうかという話
-
-<ul>
-<li><a href="http://www.designclue.co/">designclue（デザインクルー） &ndash; デザインクラウドソーシング</a></li>
-</ul>
-</li>
-</ul>
-
-
-<h2>やっていたこと</h2>
-
-<h3>www.ruby-lang.org</h3>
-
-<p><a href="https://www.ruby-lang.org/ja/news/2013/09/28/design-contest/">www.ruby-lang.org のサイトデザイン募集</a>
-の投票を webmaster でやっていて、締め切りが今日だったということで、
-投票しようかと思っていたら、
-締め切りが 9:00 20 Nov(JST) だったのに気付いて諦めました。
-まだ集計前だったようなので、間に合いそうでしたが、
-無理はしないということにしました。</p>
-
-<p>ちなみに
-<a href="https://github.com/ruby/www.ruby-lang.org/issues?labels=contest">応募は7件</a>
-でした。</p>
-
-<h3>notification</h3>
-
-<p>最初は
-<a href="https://github.com/Watson1978/notification">https://github.com/Watson1978/notification</a>
-という OSX のサンプルをいじってみていました。</p>
-
-<p><code>open ./build/MacOSX-10.8-Development/notification.app</code>
-で開くと右上の通知はそもそも出てきているのかどうかわからない状態で終了してしまって、
-通知センターを開くとちゃんと送れていることが確認できたり、
-引数は <code>-psn_なんとか</code> という
-Emacs.app のカレントディレクトリ問題を調べていた時に見かけたものが渡ってきていたりしたのがわかりました。</p>
-
-<h3>Calc</h3>
-
-<p><a href="https://github.com/HipByte/RubyMotionSamples">RubyMotionSamples</a>
-の osx に Calc というのが追加されていたので、
-それを試していました。</p>
-
-<h2>デフォルトブラウザ設定</h2>
-
-<p>デフォルトブラウザはどこで設定しているんだろうと思って、
-<code>defaults read</code>
-の出力を調べたりしていたら、
-<code>LSSetDefaultHandlerForURLScheme</code>
-と
-<code>LSSetDefaultRoleHandlerForContentType</code>
-で設定できるとわかったので、
-RubyMotion の中から呼び出そうとしたのですが、
-<code>NoMethodError</code>
-になるだけで、
-結局呼び出し方がわかりませんでした。</p>
-
-<p>試したこととしては <code>Calc</code> のボタンと同じように
-ボタンが押された時に呼ばれるメソッドの中で、</p>
-
-<p>```ruby</p>
-
-<pre><code>bundle_id = NSBundle.mainBundle.bundleIdentifier
-LSSetDefaultHandlerForURLScheme("http", bundle_id) #~&gt; NoMethodError
-</code></pre>
-
-<p>```</p>
-
-<p>のように呼び出そうとしたところ、
-<code>LSSetDefaultHandlerForURLScheme</code>
-で
-<code>NoMethodError</code>
-になりました。</p>
-
-<p>それから <code>Rakefile</code> の
-<code>Motion::Project::App.setup do |app|</code>
-のブロックで
-<code>app.frameworks &lt;&lt; 'ApplicationServices'</code>
-のように
-<code>ApplicationServices</code>
-フレームワークを追加というのも試してみたのですが、
-変化はありませんでした。</p>
-
-<p>そんな感じで手詰まっていたら時間が来て終了ということになりました。</p>
-
-<p>確認したバージョンは以下の通りです。</p>
-
-<ul>
-<li>Mac OS X 10.8.5</li>
-<li>Xcode 5.0.2</li>
-<li>RubyMotion 2.14</li>
-</ul>
-
-
-<h3>解決</h3>
-
-<p><code>CoreServices</code> が必要と教えてもらったので、
-<code>app.frameworks &lt;&lt; 'CoreServices'</code>
-も足してみたのですが、
-<code>NoMethodError</code>
-のままで動かず、
-結局
-RubyMotion を 2.15 に上げると直っていました。</p>
 ]]></content>
   </entry>
   
