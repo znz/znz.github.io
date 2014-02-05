@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: zabbix | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/zabbix/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-02-05T11:05:25+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[zabbixでmemcachedのヒット率を記録する]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-04-zabbix-memcached.html"/>
+    <updated>2014-02-04T19:14:01+09:00</updated>
+    <id>http://blog.n-z.jp/blog/zabbix-memcached</id>
+    <content type="html"><![CDATA[<p>rails の dalli_store でキャッシュの保存場所として使っている memcached のキャッシュのヒット率を zabbix で記録して、コードの改善でどのくらい変わるのか調べてみることにしました。</p>
+
+<!--more-->
+
+
+<h2>参考</h2>
+
+<p>memcached からのデータ取得方法は <a href="http://blog.withsin.net/2010/09/06/zabbix%E3%81%A7memcached%E7%9B%A3%E8%A6%96/">zabbixでmemcached監視 at technote</a> を参考にしました。</p>
+
+<h2>前提</h2>
+
+<p>zabbix-server は別サーバーで既に設定済みで動いているものを使いました。
+zabbix-agent は新規インストールしました。
+OS は Ubuntu 12.04.4 LTS です。</p>
+
+<h2>memcached からデータ取得部分</h2>
+
+<p><code>/etc/cron.d/zabbix-memcached</code> に以下の内容で取得部分を作成しました。
+継続的にエラーが出ている時ぐらいは原因を調べられるように、標準エラー出力も最新のものだけファイルに残すようにしました。</p>
+
+<p><code>text /etc/cron.d/zabbix-memcached
+*/5 * * * *   zabbix    test -d /run/zabbix &amp;&amp; { echo stats | nc localhost 11211 &gt; /run/zabbix/memcached.stats 2&gt;/run/zabbix/memcached.stats.err; }
+</code></p>
+
+<h2>zabbix_agentd 設定</h2>
+
+<p>以下の設定を変更しました。</p>
+
+<ul>
+<li>Server=<code>zabbix-serverのIPアドレス</code></li>
+<li>Hostname=<code>zabbix の Web UI のホスト名にあわせる</code></li>
+<li>DisableActive=1 : zabbix-agent 側からの接続ができない環境だったので、 zabbix-server からの接続を待ち受けるだけにしました。</li>
+<li><code>UserParameter=memcached.stats[*],grep $1 /run/zabbix/memcached.stats | cut -d' ' -f3</code> : grep と組み合わせるには awk は重い気がしたので cut に変更しました。</li>
+</ul>
+
+
+<h2>firewall 設定</h2>
+
+<p><code>ufw allow from zabbix-serverのIPアドレス to any port 10050</code> で zabbix-server からのみ許可しました。
+インターネット上を平文で流れてしまうのは、機密データではないということで、許容することにしました。
+暗号化が必要なら別途 openvpn などを使うと思います。</p>
+
+<h2>動作確認</h2>
+
+<ul>
+<li>Server に localhost 以外を指定したので zabbix-agent を動かしているマシン上で <code>nc -v localhost 10050</code> は繋がった後、すぐに切断されます。</li>
+<li>zabbix-server 側で <code>zabbix_get -s 49.212.178.112 -k agent.ping</code> を実行して <code>1</code> と出れば zabbix-agent へ接続できています。</li>
+<li>zabbix の Web UI からテンプレートを作成して、 <code>cmd_get</code> <code>cmd_set</code> <code>cmd_hits</code> を記録するようにしました。
+(キー: <code>memcached.stats[cmd_get]</code> など, 保存時の計算: 差分, 更新間隔: 300 (cronを5分間隔にしているので))</li>
+<li>さらに計算アイテムとして式に <code>100*last("memcached.stats[get_hits]")/last("memcached.stats[cmd_get]")</code> を設定したものを追加しました。</li>
+</ul>
+
+
+<p>差分で記録しているからなのか、データが少ないタイミングだったからか、計算に使うアイテムのタイミングの問題なのかわかりませんが、計算アイテムのヒット率が 100% を超えることがありました。</p>
+]]></content>
+  </entry>
+  
+</feed>

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rails | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rails/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-01-29T23:49:24+09:00</updated>
+  <updated>2014-02-05T11:05:25+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,188 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[rails_best_practices 1.15.0でtryが壊れた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-05-rails-best-practices-1-15-0-broken.html"/>
+    <updated>2014-02-05T10:35:06+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rails-best-practices-1-15-0-broken</id>
+    <content type="html"><![CDATA[<p>今日の <code>bundle update</code> をしてみたところ、開発環境での devise でのログイン時に <code>devise (3.2.2) lib/devise/hooks/csrf_cleaner.rb, line 3</code> で <code>wrong number of arguments (2 for 1)</code> という <code>ArgumentError</code> が発生するようになりました。</p>
+
+<p>その原因調査方法の記録です。</p>
+
+<!--more-->
+
+
+<p>例外が発生した行は以下の内容で、今まで問題なく動いていたし、特に問題はなさそうだったので、他の gem の影響だということがわかりました。</p>
+
+<p>```ruby lib/devise/hooks/csrf_cleaner.rb
+Warden::Manager.after_authentication do |record, warden, options|
+  if Devise.clean_up_csrf_token_on_authentication</p>
+
+<pre><code>warden.request.session.try(:delete, :_csrf_token)
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<p>ソースコードを追いかけるのは難しそうだったので、 better_errors の live shell を使って調査しました。</p>
+
+<p>```console</p>
+
+<blockquote><blockquote><p>env.keys
+=> 略
+env[&ldquo;warden&rdquo;]
+=> Warden::Proxy:70192217236640 @config={:default_scope=>:user, :scope_defaults=>{}, :default_strategies=>{:user=>[:rememberable, :database_authenticatable]}, :intercept_401=>false, :failure_app=>#&lt;Devise::Delegator:0x007fadcc44d438>}
+env[&ldquo;warden&rdquo;].request
+=> #&lt;ActionDispatch::Request:0x007fadd10c4dc0 略>
+env[&ldquo;warden&rdquo;].request.session
+=> {&ldquo;session_id&rdquo;=>&ldquo;略&rdquo;, &ldquo;user_return_to&rdquo;=>&ldquo;/&rdquo;, &ldquo;<em>csrf_token&rdquo;=>&ldquo;略&rdquo;, &ldquo;warden.user.user.key&rdquo;=>[[8], &ldquo;$2a$10$略&rdquo;]}
+env[&ldquo;warden&rdquo;].request.session.try(:delete, :</em>csrf_token)
+!! #&lt;ArgumentError: wrong number of arguments (2 for 1)>
+```</p></blockquote></blockquote>
+
+<p><code>env["warden"]</code> 経由で再現しました。</p>
+
+<p>次に原因を探るために <code>arity</code> を調べました。</p>
+
+<p>```console</p>
+
+<blockquote><blockquote><p>env[&ldquo;warden&rdquo;].request.session.methods.grep /delete/
+=> [:delete, :delete_if]
+env[&ldquo;warden&rdquo;].request.session.method(&ldquo;delete&rdquo;)
+=> #&lt;Method: Rack::Session::Abstract::SessionHash#delete>
+env[&ldquo;warden&rdquo;].request.session.method(&ldquo;delete&rdquo;).arity
+=> 1
+env[&ldquo;warden&rdquo;].request.session.method(&ldquo;try&rdquo;)
+=> #&lt;Method: Rack::Session::Abstract::SessionHash(Object)#try>
+env[&ldquo;warden&rdquo;].request.session.method(&ldquo;try&rdquo;).arity
+=> 1
+env[&ldquo;warden&rdquo;].request.session.method(&ldquo;try&rdquo;).source_location
+=> [&ldquo;略/rails_best_practices-1.15.0/lib/rails_best_practices/core_ext/object.rb&rdquo;, 7]</p>
+
+<p>```</p></blockquote></blockquote>
+
+<p>rails_best_practices 1.15.0 が原因とわかったので issues を確認すると既に同様の現象の報告があったので、<a href="https://github.com/railsbp/rails_best_practices/issues/202#issuecomment-34129010">コメントしておきました</a>。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[bundle updateした記録]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-03-bundle-update.html"/>
+    <updated>2014-02-03T17:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/bundle-update</id>
+    <content type="html"><![CDATA[<p><code>bundle update</code> で更新された gem などのメモを残すことにしました。</p>
+
+<!--more-->
+
+
+<h2>jquery-rails 3.1.0 (was 3.0.4)</h2>
+
+<p>jQuery 1.11.0 にあがったのと jquery-ujs が更新されていました。</p>
+
+<p>```text CHANGELOG.md</p>
+
+<h2>3.1.0 (29 January 2014)</h2>
+
+<ul>
+<li>Updated to jQuery 1.11.0</li>
+<li>Updated to latest jquery-ujs</li>
+<li>Added development rake task for updating jQuery
+```</li>
+</ul>
+
+
+<h2>omniauth-oauth2 1.1.2 (was 1.1.1)</h2>
+
+<p>oauth2 が 0.8.1 から 0.9.3 に一気にあがって驚きましたが、
+omniauth-oauth2 の依存関係が更新されたのが原因でした。</p>
+
+<p>他にもたくさん変更されていました。</p>
+
+<h2>turbolinks 2.2.1 (was 2.2.0)</h2>
+
+<p><a href="https://github.com/rails/turbolinks/blob/master/CHANGELOG.md#turbolinks-221-january-30-2014">https://github.com/rails/turbolinks/blob/master/CHANGELOG.md#turbolinks-221-january-30-2014</a>
+によるとバグ修正のみのようです。</p>
+
+<h2>rails_admin 0.6.1 (was 0.6.0)</h2>
+
+<p>paper_trail gem が 3.0.0 で <code>Version</code> から <code>PaperTrail::Version</code> に変わった
+<a href="https://github.com/airblade/paper_trail/pull/165">#165</a>
+影響を受けて、
+<code>config/initializers/rails_admin.rb</code>
+を以下のように変更する必要がありました。</p>
+
+<p>```diff config/initializers/rails_admin.rb.diff
+&mdash;&ndash; a/config/initializers/rails_admin.rb
++++ b/config/initializers/rails_admin.rb
+@@ -18,7 +18,7 @@ RailsAdmin.config do |config|
+   # config.audit_with :history, &lsquo;User&rsquo;</p>
+
+<p>   # Or with a PaperTrail: (you need to install it first)
+&ndash;  config.audit_with :paper_trail, &lsquo;User&rsquo;
++  config.audit_with :paper_trail, &lsquo;User&rsquo;, &lsquo;PaperTrail::Version&rsquo;</p>
+
+<p>   # Display empty fields in show views:
+   # config.compact_show_view = false
+```</p>
+
+<p>あまりカスタマイズしていないのなら、
+<code>rails g rails_admin:install</code>
+で生成し直して、設定し直した方が良いかもしれません。</p>
+
+<p>最初に rails_admin を更新した rails アプリでは以下のように
+devise と pundit と paper_trail の設定をしただけで、
+actions などはそのままにしています。</p>
+
+<p>```ruby config/initializers/rails_admin.rb
+RailsAdmin.config do |config|</p>
+
+<p>  ### Popular gems integration</p>
+
+<p>  ## == Devise ==
+  config.authenticate_with do</p>
+
+<pre><code>warden.authenticate! scope: :user
+</code></pre>
+
+<p>  end
+  config.current_user_method(&amp;:current_user)</p>
+
+<p>  ## == Cancan ==
+  # config.authorize_with :cancan</p>
+
+<p>  require &lsquo;rails_admin/extensions/pundit&rsquo;
+  config.authorize_with :pundit</p>
+
+<p>  ## == PaperTrail ==
+  config.audit_with :paper_trail, &lsquo;User&rsquo;, &lsquo;PaperTrail::Version&rsquo; # PaperTrail >= 3.0.0</p>
+
+<p>  ### More at <a href="https://github.com/sferik/rails_admin/wiki/Base-configuration">https://github.com/sferik/rails_admin/wiki/Base-configuration</a></p>
+
+<p>  config.actions do</p>
+
+<pre><code>dashboard                     # mandatory
+index                         # mandatory
+new
+export
+bulk_delete
+show
+edit
+delete
+show_in_app
+
+## With an audit adapter, you can add:
+# history_index
+# history_show
+</code></pre>
+
+<p>  end
+end
+```</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[yaml_dbでMySQLからPostgreSQLに移行した]]></title>
@@ -451,213 +633,6 @@ view のファイルが変更したり、
 で説明されている
 <code>rake cache_digests:nested_dependencies</code>
 などを知っておけば良さそうです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Rails 4.0.2のi18nで出るようになったdeprecated警告の対策方法]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-04-rails-i18n-deprecated-warning.html"/>
-    <updated>2013-12-04T10:59:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rails-i18n-deprecated-warning</id>
-    <content type="html"><![CDATA[<p>Ruby on Rails のセキュリティアップデートがあって、
-4.0.2 にあげたら i18n gem も 0.6.5 から 0.6.9 にあがって
-<code>locale</code> の設定変更をしているところで
-<code>[deprecated] I18n.enforce_available_locales will default to true in the future. If you really want to skip validation of your locale you can set I18n.enforce_available_locales = false to avoid this message.</code>
-という警告が出るようになりました。</p>
-
-<!--more-->
-
-
-<h2>警告の出るタイミング</h2>
-
-<p><a href="http://stackoverflow.com/questions/20361428/rails-4-0-2-i18n-validation-deprecation-warning">deprecated &ndash; Rails 4.0.2 I18n validation deprecation warning &ndash; Stack Overflow</a>
-経由で
-<a href="https://github.com/svenfuchs/i18n/commit/3b6e56e06fd70f6e4507996b017238505e66608c9">Add I18n.locale_available? and enforce available locales</a>
-のコミットから入った変更ということで、
-コミットログをみてみると、</p>
-
-<ul>
-<li><code>I18n.config.default_locale=</code></li>
-<li><code>I18n.config.locale=</code></li>
-<li><code>I18n.translate</code></li>
-<li><code>I18n.localize</code></li>
-<li><code>I18n.transliterate</code></li>
-</ul>
-
-
-<p>を呼んだときに影響するようです。
-つまり <code>rails new</code> で作っただけだと <code>config/application.rb</code> の
-<code>config.i18n.default_locale = :de</code> がコメントアウトされていて、
-警告は出ません。</p>
-
-<h2>日本語のみで使う場合</h2>
-
-<p>日本語のみで使うのなら、
-将来のデフォルトの
-<code>I18n.enforce_available_locales = true</code>
-にしてしまってから、
-普通に日本語をデフォルトにする
-<code>config.i18n.default_locale = :ja</code>
-を呼べば良いと思います。</p>
-
-<p>```ruby config/application.rb</p>
-
-<pre><code>I18n.enforce_available_locales = true
-config.i18n.default_locale = :ja
-</code></pre>
-
-<p>```</p>
-
-<p>ただし、先にちゃんと日本語の locale ファイルを作っておかないと
-<code>I18n::InvalidLocale</code>
-という例外が発生して、
-<code>rake</code> などで
-<code>:ja is not a valid locale</code>
-と言われてしまいます。</p>
-
-<h2>今まで通りの挙動にする場合</h2>
-
-<p><code>I18n.enforce_available_locales = false</code>
-にすれば今まで通りの挙動になり、
-存在しない <code>locale</code> を設定しても例外は発生しません。</p>
-
-<h2>今のデフォルト</h2>
-
-<p>今は
-<code>I18n.enforce_available_locales = nil</code>
-がデフォルトになっていて、
-<code>nil</code> だと警告がでる、
-ということのようです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Ruby で ISBN をチェックしたりハイフンを入れたり]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-10-12-isbn.html"/>
-    <updated>2013-10-12T14:38:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/isbn</id>
-    <content type="html"><![CDATA[<p>本には
-<a href="http://ja.wikipedia.org/wiki/ISBN">ISBN</a>
-というものが付いていて、
-末尾のチェックディジットは仕様を参照すれば
-簡単に計算出来そうです。</p>
-
-<p>10 桁のものと新しい 13 桁のものがあったり、
-出版者の部分の桁数が違ったりして
-ちゃんとハイフンを入れるのは面倒そうです。</p>
-
-<p>チェックディジットの方も自分で実装すると
-バグっていたときに面倒なので、
-良さそうな gem がないか探してみました。</p>
-
-<p>最終的にはいくつかの理由から
-<a href="http://rubygems.org/gems/lisbn">lisbn</a>
-という gem を使いました。</p>
-
-<!--more-->
-
-
-<h2>gem の選択</h2>
-
-<p>まず
-<a href="http://rubygems.org/search?utf8=%E2%9C%93&amp;query=isbn">rubygems.org の右上で isbn と検索</a>
-するところから始めました。</p>
-
-<p>インストール数の多い順に見ていくと、</p>
-
-<ul>
-<li><a href="http://rubygems.org/gems/isbn10">isbn10</a>
-
-<ul>
-<li>インストール数は一番多い</li>
-<li>10桁のみ</li>
-<li>古い</li>
-</ul>
-</li>
-<li><a href="https://github.com/ragalie/isbn-tools">isbn-tools</a>
-
-<ul>
-<li>古い</li>
-<li>Not Maintained</li>
-<li>lisbn が後継</li>
-</ul>
-</li>
-<li><a href="https://github.com/entangledstate/isbn">isbn</a>
-
-<ul>
-<li>画像対応とかいろいろ高機能っぽいけど今回は不要</li>
-<li><code>with_dashes</code> というメソッドは桁数決めうちで不適切</li>
-</ul>
-</li>
-<li><a href="https://github.com/zapnap/isbn_validation">isbn_validation</a>
-
-<ul>
-<li>ActiveRecord の validates</li>
-<li>ISBN ではない <a href="http://www.amazon.co.jp/gp/help/customer/display.html?nodeId=747416">ASIN</a> も扱いたかったので今回は不適当</li>
-</ul>
-</li>
-<li><a href="https://github.com/ragalie/lisbn">lisbn</a>
-
-<ul>
-<li>比較的新しい</li>
-<li>10桁と13桁の両対応</li>
-<li>ハイフンを入れるために必要な分解処理がある (後は <code>join('-')</code> すれば良いだけ)</li>
-<li>data/RangeMessage.xml というファイルを持っていて適切にわけてくれる</li>
-</ul>
-</li>
-</ul>
-
-
-<p>という感じでした。</p>
-
-<h2>lisbn の使用例</h2>
-
-<p>データベースに保存するのに統一されていると
-<code>validates :isbn, uniqueness: true</code>
-が使えるので、
-以下のように ISBN13 に統一する処理を入れました。</p>
-
-<p>それ以外の場合は ASIN と見なしてそのまま返しています。</p>
-
-<p>```ruby
-  def isbn_unify(isbn)</p>
-
-<pre><code># Convert JISX0208 alphabet to ASCII.
-isbn = NKF.nkf('-Ww -Z0', isbn).delete("^A-Za-z0-9")
-
-# Convert to isbn13
-lisbn = Lisbn.new(isbn)
-if lisbn.valid?
-  lisbn.isbn13
-else
-  isbn
-end
-</code></pre>
-
-<p>  end
-```</p>
-
-<p>出力する側では
-<code>parts</code>
-は常に ISBN13 のものだけのようなので、
-ISBN10
-に出来るときは
-頭の &lsquo;978&rsquo; を外して
-チェックディジットを付け直すようにしました。</p>
-
-<p>```haml
-&ndash; lisbn = Lisbn.new(isbn_or_asin)
-&ndash; if lisbn.valid?
-  &ndash; parts = lisbn.parts
-  &ndash; if parts[0] == &lsquo;978&rsquo;</p>
-
-<pre><code>%p.isbn10 ISBN10: #{parts[1..-2].join('-')}-#{lisbn.isbn10[-1]}
-</code></pre>
-
-<p>  %p.isbn13 ISBN13: #{lisbn.parts.join(&lsquo;&ndash;&rsquo;)}
-&ndash; else
-  %p.asin ASIN: #{isbn_or_asin}
-```</p>
 ]]></content>
   </entry>
   

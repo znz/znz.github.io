@@ -4,7 +4,7 @@
   <title><![CDATA[Category: gem | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/gem/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-01-29T23:49:24+09:00</updated>
+  <updated>2014-02-05T11:05:25+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,188 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[rails_best_practices 1.15.0でtryが壊れた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-05-rails-best-practices-1-15-0-broken.html"/>
+    <updated>2014-02-05T10:35:06+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rails-best-practices-1-15-0-broken</id>
+    <content type="html"><![CDATA[<p>今日の <code>bundle update</code> をしてみたところ、開発環境での devise でのログイン時に <code>devise (3.2.2) lib/devise/hooks/csrf_cleaner.rb, line 3</code> で <code>wrong number of arguments (2 for 1)</code> という <code>ArgumentError</code> が発生するようになりました。</p>
+
+<p>その原因調査方法の記録です。</p>
+
+<!--more-->
+
+
+<p>例外が発生した行は以下の内容で、今まで問題なく動いていたし、特に問題はなさそうだったので、他の gem の影響だということがわかりました。</p>
+
+<p>```ruby lib/devise/hooks/csrf_cleaner.rb
+Warden::Manager.after_authentication do |record, warden, options|
+  if Devise.clean_up_csrf_token_on_authentication</p>
+
+<pre><code>warden.request.session.try(:delete, :_csrf_token)
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<p>ソースコードを追いかけるのは難しそうだったので、 better_errors の live shell を使って調査しました。</p>
+
+<p>```console</p>
+
+<blockquote><blockquote><p>env.keys
+=> 略
+env[&ldquo;warden&rdquo;]
+=> Warden::Proxy:70192217236640 @config={:default_scope=>:user, :scope_defaults=>{}, :default_strategies=>{:user=>[:rememberable, :database_authenticatable]}, :intercept_401=>false, :failure_app=>#&lt;Devise::Delegator:0x007fadcc44d438>}
+env[&ldquo;warden&rdquo;].request
+=> #&lt;ActionDispatch::Request:0x007fadd10c4dc0 略>
+env[&ldquo;warden&rdquo;].request.session
+=> {&ldquo;session_id&rdquo;=>&ldquo;略&rdquo;, &ldquo;user_return_to&rdquo;=>&ldquo;/&rdquo;, &ldquo;<em>csrf_token&rdquo;=>&ldquo;略&rdquo;, &ldquo;warden.user.user.key&rdquo;=>[[8], &ldquo;$2a$10$略&rdquo;]}
+env[&ldquo;warden&rdquo;].request.session.try(:delete, :</em>csrf_token)
+!! #&lt;ArgumentError: wrong number of arguments (2 for 1)>
+```</p></blockquote></blockquote>
+
+<p><code>env["warden"]</code> 経由で再現しました。</p>
+
+<p>次に原因を探るために <code>arity</code> を調べました。</p>
+
+<p>```console</p>
+
+<blockquote><blockquote><p>env[&ldquo;warden&rdquo;].request.session.methods.grep /delete/
+=> [:delete, :delete_if]
+env[&ldquo;warden&rdquo;].request.session.method(&ldquo;delete&rdquo;)
+=> #&lt;Method: Rack::Session::Abstract::SessionHash#delete>
+env[&ldquo;warden&rdquo;].request.session.method(&ldquo;delete&rdquo;).arity
+=> 1
+env[&ldquo;warden&rdquo;].request.session.method(&ldquo;try&rdquo;)
+=> #&lt;Method: Rack::Session::Abstract::SessionHash(Object)#try>
+env[&ldquo;warden&rdquo;].request.session.method(&ldquo;try&rdquo;).arity
+=> 1
+env[&ldquo;warden&rdquo;].request.session.method(&ldquo;try&rdquo;).source_location
+=> [&ldquo;略/rails_best_practices-1.15.0/lib/rails_best_practices/core_ext/object.rb&rdquo;, 7]</p>
+
+<p>```</p></blockquote></blockquote>
+
+<p>rails_best_practices 1.15.0 が原因とわかったので issues を確認すると既に同様の現象の報告があったので、<a href="https://github.com/railsbp/rails_best_practices/issues/202#issuecomment-34129010">コメントしておきました</a>。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[bundle updateした記録]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-03-bundle-update.html"/>
+    <updated>2014-02-03T17:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/bundle-update</id>
+    <content type="html"><![CDATA[<p><code>bundle update</code> で更新された gem などのメモを残すことにしました。</p>
+
+<!--more-->
+
+
+<h2>jquery-rails 3.1.0 (was 3.0.4)</h2>
+
+<p>jQuery 1.11.0 にあがったのと jquery-ujs が更新されていました。</p>
+
+<p>```text CHANGELOG.md</p>
+
+<h2>3.1.0 (29 January 2014)</h2>
+
+<ul>
+<li>Updated to jQuery 1.11.0</li>
+<li>Updated to latest jquery-ujs</li>
+<li>Added development rake task for updating jQuery
+```</li>
+</ul>
+
+
+<h2>omniauth-oauth2 1.1.2 (was 1.1.1)</h2>
+
+<p>oauth2 が 0.8.1 から 0.9.3 に一気にあがって驚きましたが、
+omniauth-oauth2 の依存関係が更新されたのが原因でした。</p>
+
+<p>他にもたくさん変更されていました。</p>
+
+<h2>turbolinks 2.2.1 (was 2.2.0)</h2>
+
+<p><a href="https://github.com/rails/turbolinks/blob/master/CHANGELOG.md#turbolinks-221-january-30-2014">https://github.com/rails/turbolinks/blob/master/CHANGELOG.md#turbolinks-221-january-30-2014</a>
+によるとバグ修正のみのようです。</p>
+
+<h2>rails_admin 0.6.1 (was 0.6.0)</h2>
+
+<p>paper_trail gem が 3.0.0 で <code>Version</code> から <code>PaperTrail::Version</code> に変わった
+<a href="https://github.com/airblade/paper_trail/pull/165">#165</a>
+影響を受けて、
+<code>config/initializers/rails_admin.rb</code>
+を以下のように変更する必要がありました。</p>
+
+<p>```diff config/initializers/rails_admin.rb.diff
+&mdash;&ndash; a/config/initializers/rails_admin.rb
++++ b/config/initializers/rails_admin.rb
+@@ -18,7 +18,7 @@ RailsAdmin.config do |config|
+   # config.audit_with :history, &lsquo;User&rsquo;</p>
+
+<p>   # Or with a PaperTrail: (you need to install it first)
+&ndash;  config.audit_with :paper_trail, &lsquo;User&rsquo;
++  config.audit_with :paper_trail, &lsquo;User&rsquo;, &lsquo;PaperTrail::Version&rsquo;</p>
+
+<p>   # Display empty fields in show views:
+   # config.compact_show_view = false
+```</p>
+
+<p>あまりカスタマイズしていないのなら、
+<code>rails g rails_admin:install</code>
+で生成し直して、設定し直した方が良いかもしれません。</p>
+
+<p>最初に rails_admin を更新した rails アプリでは以下のように
+devise と pundit と paper_trail の設定をしただけで、
+actions などはそのままにしています。</p>
+
+<p>```ruby config/initializers/rails_admin.rb
+RailsAdmin.config do |config|</p>
+
+<p>  ### Popular gems integration</p>
+
+<p>  ## == Devise ==
+  config.authenticate_with do</p>
+
+<pre><code>warden.authenticate! scope: :user
+</code></pre>
+
+<p>  end
+  config.current_user_method(&amp;:current_user)</p>
+
+<p>  ## == Cancan ==
+  # config.authorize_with :cancan</p>
+
+<p>  require &lsquo;rails_admin/extensions/pundit&rsquo;
+  config.authorize_with :pundit</p>
+
+<p>  ## == PaperTrail ==
+  config.audit_with :paper_trail, &lsquo;User&rsquo;, &lsquo;PaperTrail::Version&rsquo; # PaperTrail >= 3.0.0</p>
+
+<p>  ### More at <a href="https://github.com/sferik/rails_admin/wiki/Base-configuration">https://github.com/sferik/rails_admin/wiki/Base-configuration</a></p>
+
+<p>  config.actions do</p>
+
+<pre><code>dashboard                     # mandatory
+index                         # mandatory
+new
+export
+bulk_delete
+show
+edit
+delete
+show_in_app
+
+## With an audit adapter, you can add:
+# history_index
+# history_show
+</code></pre>
+
+<p>  end
+end
+```</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[rails で assets を gem に入れる時の配置]]></title>
