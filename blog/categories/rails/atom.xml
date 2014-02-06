@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rails | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rails/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-02-05T11:05:25+09:00</updated>
+  <updated>2014-02-06T22:54:44+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,63 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[bootstrap-sass-railsからbootstrap-sassに移行した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-06-bootstrap-sass.html"/>
+    <updated>2014-02-06T14:29:27+09:00</updated>
+    <id>http://blog.n-z.jp/blog/bootstrap-sass</id>
+    <content type="html"><![CDATA[<p>今日の <code>bundle update</code> は bootstrap の sass の gem を bootstrap 公式のものに移行したのが大きな変更点でした。</p>
+
+<!--more-->
+
+
+<h2>bootstrap-sass-rails から bootstrap-sass 3.1.0.2</h2>
+
+<p><a href="http://blog.getbootstrap.com/2014/01/30/bootstrap-3-1-0-released/">bootstrap 3.1.0 がリリース</a>されて少し時間が経ったので、
+bootstrap-sass-rails を確認してみたところ、
+<a href="https://github.com/yabawock/bootstrap-sass-rails#deprecation-notice">DEPRECATION NOTICE</a>
+に公式サポートされた sass の gem があるので、
+そちらに移行を推奨と書かれていたので、移行しました。</p>
+
+<p>bootstrap-sass gem への移行は UPGRADING に書かれているように <code>@import "twitter/bootstrap";</code> を <code>@import "bootstrap";</code> に書き換えるだけでした。</p>
+
+<h2>bootstrap-sass のカスタマイズ</h2>
+
+<p><a href="https://github.com/twbs/bootstrap-sass#usage">Usage</a>
+によると、一番単純な使い方としては <code>@import "bootstrap";</code> だけですが、
+<a href="http://getbootstrap.com/customize/#less-variables">Less variables</a>
+を参考にして以下のようにカスタマイズして使うのが良いようです。</p>
+
+<p>Less では変数の接頭辞は <code>@</code> ですが、 sass では <code>$</code> になることさえわかっていれば、最低限のカスタマイズは出来ると思います。</p>
+
+<p>```
+$navbar-default-bg: #312312;
+$light-orange: #ff8c00;
+$navbar-default-color: $light-orange;</p>
+
+<p>@import &ldquo;bootstrap&rdquo;;
+```</p>
+
+<p>bootstrap-sass-rails からの移行だったので、
+bootstrap-custom.css.scss の内容は以下のようにしました。</p>
+
+<p>```
+$body-bg:               #fff;
+$text-color:            lighten(#000, 20%);</p>
+
+<p>@import &ldquo;bootstrap&rdquo;;
+```</p>
+
+<p>もっと高度なカスタマイズをするなら、
+<code>cp $(bundle show bootstrap-sass)/vendor/assets/stylesheets/bootstrap.scss app/assets/stylesheets/bootstrap-custom.scss</code>
+でコピーしたファイルを
+<code>@import 'bootstrap';</code>
+の代わりに
+<code>@import 'bootstrap-custom';</code>
+で使うことを想定しているようです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[rails_best_practices 1.15.0でtryが壊れた]]></title>
@@ -512,127 +569,6 @@ ALTER TABLE users ALTER lastname SET DEFAULT '';
 <p>最初のデータベース選択は重要で、アプリケーションが両方対応していても、後から変更するのは大変です。</p>
 
 <p>問題が起きそうなデータ型を使っていなければ <code>taps</code> ですんなり移行できるように見えますが、別途クリーンな環境を用意して生成した <code>db/schema.rb</code> と比較するなどのチェックも必要でした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Rail 3.2でcache_digestsを使ってみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-08-cache-digests.html"/>
-    <updated>2013-12-08T00:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/cache-digests</id>
-    <content type="html"><![CDATA[<p>まだ Rails 3.2.16 のままのアプリで <code>cache_digests</code> gem を使って
-fragment cache を導入してみました。</p>
-
-<p>Rails 4.0 では標準になっているはずなので、
-使い方は同じだと思います。</p>
-
-<p>この投稿は
-<a href="http://qiita.com/advent-calendar/2013/ruby-on-rails">Ruby on Rails Advent Calendar 2013</a>
-の8日目の記事です。</p>
-
-<!--more-->
-
-
-<h2>インストール</h2>
-
-<p>まず <code>Gemfile</code> に以下の gem の指定を追加してインストールしました。</p>
-
-<p><code>ruby Gemfile
-gem 'cache_digests'
-gem 'dalli', group: :production
-</code></p>
-
-<h2>環境設定</h2>
-
-<p>キャッシュの影響の確認などのデバッグ用に <code>development</code> 環境でも
-キャッシュを有効にしました。
-ちゃんとキャッシュで来ているかどうかの確認や削除がしやすいように
-保存先はデフォルトの <code>:file_store</code> のままにしています。</p>
-
-<p><code>ruby config/environments/development.rb
-  config.action_controller.perform_caching = true
-</code></p>
-
-<p><code>production</code> 環境では <code>dalli</code> を使って <code>memcached</code> に保存するようにしました。
-<code>dalli</code> の設定はこの記事の本題ではないので、
-<code>memcached</code> の設定などは他のサイトを参考にしてください。</p>
-
-<p><code>ruby config/environments/production.rb
-  config.cache_store = :dalli_store
-</code></p>
-
-<p><code>staging</code> 環境もあったので <code>config/environments/staging.rb</code> にも同様の設定をしました。</p>
-
-<h2>fragment cache</h2>
-
-<p>すでに
-<code>app/views/comments/_comment.html.haml</code> や
-<code>app/views/posts/_post.html.haml</code> のような view を使って
-<code>render @comments</code> や <code>render @posts</code> のように使っていたので、</p>
-
-<p><code>text app/views/comments/_comment.html.haml
-- cache comment do
-  -# 今までの内容
-</code></p>
-
-<p>のように <code>cache comment do ... end</code> で今までの内容をくくるだけでした。
-<code>cache</code> メソッド自体の返り値は <code>=</code> で埋め込んだりせずにそのまま呼ぶだけで大丈夫でした。</p>
-
-<h2>動作確認</h2>
-
-<p><code>log/developement.log</code> などを <code>fragment</code> で検索してみると</p>
-
-<p><code>text log/developement.log
-Write fragment views/comments/29-20130905083500/96f0ec0ce36af8132826f3bfbe0079db 0.5ms
-Read fragment views/comments/30-20130905083518/96f0ec0ce36af8132826f3bfbe0079db 0.4ms
-</code></p>
-
-<p>などと記録されていて、キャッシュが使われていることが確認できました。</p>
-
-<p><code>development</code> 環境では実際のキャッシュファイルは <code>tmp/cache/</code> 以下にありました。</p>
-
-<h2>キャッシュの無効化 (invalidate)</h2>
-
-<p>キャッシュが古くなってもう有効ではないという状態にすることを invalidate というと思いますが、
-内容が更新された時に古いキャッシュが使われると問題があるので、
-その対処をする必要があります。</p>
-
-<p><code>cache</code> メソッドの引数に <code>ActiveRecord</code> のオブジェクトを渡した時の
-キャッシュのキーは先ほどの例だと
-<code>views/comments/:id-:updated_at/:md5</code>
-という感じで <code>comment</code> オブジェクトの <code>id</code> と <code>updated_at</code> と
-<code>app/views/comments/_comment.html.haml</code> の MD5 が使われていて、
-view のファイルが変更したり、
-<code>comment</code> ファイルの <code>updated_at</code> を更新したりした時に
-自動で無効になるようです。</p>
-
-<p>つまり、この view の中で別の partial render を使っていると
-反映されないということなので、
-内側の方でも <code>cache</code> を使うなどの対処が必要そうです。
-実際に <code>_post.html.haml</code> の中で <code>render post.comments</code> のようなことをしました。</p>
-
-<p>さらに以下のように <code>belongs_to</code> に <code>touch: true</code> を付けて、
-コメントが付いた時に <code>post</code> の <code>updated_at</code> も更新されるようにしました。</p>
-
-<p><code>ruby app/models/comment.rb
-  belongs_to :commentable, polymorphic: true, touch: true
-</code></p>
-
-<h2>キャッシュの完全削除</h2>
-
-<p><code>rails console</code> で <code>Rails.cache.clear</code> を実行すれば削除できました。
-他の sass などのキャッシュも <code>tmp/cache/</code> の中にあるので
-一緒に削除されてしまうようです。</p>
-
-<h2>まとめ</h2>
-
-<p>とりあえず使い始めるための最低限の知識をまとめてみました。</p>
-
-<p>後は
-<a href="http://ja.asciicasts.com/episodes/387-cache-digests">ASCIIcasts &ndash; “Episode 387 &ndash; Cache Digests”</a>
-で説明されている
-<code>rake cache_digests:nested_dependencies</code>
-などを知っておけば良さそうです。</p>
 ]]></content>
   </entry>
   

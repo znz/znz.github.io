@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-02-05T11:05:25+09:00</updated>
+  <updated>2014-02-06T22:54:44+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,63 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[bootstrap-sass-railsからbootstrap-sassに移行した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-06-bootstrap-sass.html"/>
+    <updated>2014-02-06T14:29:27+09:00</updated>
+    <id>http://blog.n-z.jp/blog/bootstrap-sass</id>
+    <content type="html"><![CDATA[<p>今日の <code>bundle update</code> は bootstrap の sass の gem を bootstrap 公式のものに移行したのが大きな変更点でした。</p>
+
+<!--more-->
+
+
+<h2>bootstrap-sass-rails から bootstrap-sass 3.1.0.2</h2>
+
+<p><a href="http://blog.getbootstrap.com/2014/01/30/bootstrap-3-1-0-released/">bootstrap 3.1.0 がリリース</a>されて少し時間が経ったので、
+bootstrap-sass-rails を確認してみたところ、
+<a href="https://github.com/yabawock/bootstrap-sass-rails#deprecation-notice">DEPRECATION NOTICE</a>
+に公式サポートされた sass の gem があるので、
+そちらに移行を推奨と書かれていたので、移行しました。</p>
+
+<p>bootstrap-sass gem への移行は UPGRADING に書かれているように <code>@import "twitter/bootstrap";</code> を <code>@import "bootstrap";</code> に書き換えるだけでした。</p>
+
+<h2>bootstrap-sass のカスタマイズ</h2>
+
+<p><a href="https://github.com/twbs/bootstrap-sass#usage">Usage</a>
+によると、一番単純な使い方としては <code>@import "bootstrap";</code> だけですが、
+<a href="http://getbootstrap.com/customize/#less-variables">Less variables</a>
+を参考にして以下のようにカスタマイズして使うのが良いようです。</p>
+
+<p>Less では変数の接頭辞は <code>@</code> ですが、 sass では <code>$</code> になることさえわかっていれば、最低限のカスタマイズは出来ると思います。</p>
+
+<p>```
+$navbar-default-bg: #312312;
+$light-orange: #ff8c00;
+$navbar-default-color: $light-orange;</p>
+
+<p>@import &ldquo;bootstrap&rdquo;;
+```</p>
+
+<p>bootstrap-sass-rails からの移行だったので、
+bootstrap-custom.css.scss の内容は以下のようにしました。</p>
+
+<p>```
+$body-bg:               #fff;
+$text-color:            lighten(#000, 20%);</p>
+
+<p>@import &ldquo;bootstrap&rdquo;;
+```</p>
+
+<p>もっと高度なカスタマイズをするなら、
+<code>cp $(bundle show bootstrap-sass)/vendor/assets/stylesheets/bootstrap.scss app/assets/stylesheets/bootstrap-custom.scss</code>
+でコピーしたファイルを
+<code>@import 'bootstrap';</code>
+の代わりに
+<code>@import 'bootstrap-custom';</code>
+で使うことを想定しているようです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[rails_best_practices 1.15.0でtryが壊れた]]></title>
@@ -443,72 +500,6 @@ yaml_db の方が fork が乱立して、新しい rails に対応したもの�
 NEWS に書いていないなどソース以外に情報がない。</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[heroku で passenger を使うようにした]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-01-24-passenger-ruby-heroku.html"/>
-    <updated>2014-01-24T23:23:25+09:00</updated>
-    <id>http://blog.n-z.jp/blog/passenger-ruby-heroku</id>
-    <content type="html"><![CDATA[<p>今は heroku で動いている <a href="https://bugs.ruby-lang.org/">https://bugs.ruby-lang.org/</a> が thin から passenger に切り替えて安定したという話を IRC で知ったので、自分が heroku で動かしている Rails アプリも passenger に切り替えてみました。
-(ruby-lang.org の方はいろいろ試すために今後他のものに切り替える可能性もあります。)</p>
-
-<!--more-->
-
-
-<h2>概要</h2>
-
-<p><a href="https://github.com/phusion/passenger-ruby-heroku-demo">https://github.com/phusion/passenger-ruby-heroku-demo</a>
-を参考にして Gemfile と Procfile を設定するだけです。</p>
-
-<h2>Gemfile の書き換え</h2>
-
-<p><code>gem "unicorn"</code> や  <code>gem "thin"</code> があればコメントアウトするなり削除するなりして、
-代わりに <code>gem "passenger"</code> を追加します。</p>
-
-<h2>Procfile の設定</h2>
-
-<p>Procfile がなければ新規作成します。
-既存の Procfile があって以下のような行があれば削除します。</p>
-
-<pre><code>web: bundle exec ruby web.rb -p $PORT
-web: bundle exec unicorn -p $PORT
-web: bundle exec thin start -p $PORT
-</code></pre>
-
-<p>Procfile に以下の設定を追加します。</p>
-
-<pre><code>web: bundle exec passenger start -p $PORT --max-pool-size 3
-</code></pre>
-
-<h2>切り替え反映</h2>
-
-<p>以下のように切り替えを反映します。</p>
-
-<pre><code>bundle install
-git commit -a -m "Switch to Phusion Passenger"
-git push heroku master
-</code></pre>
-
-<p>ここまでは
-<a href="https://github.com/phusion/passenger-ruby-heroku-demo">https://github.com/phusion/passenger-ruby-heroku-demo</a>
-の手順そのままです。</p>
-
-<h2>ローカルで使う</h2>
-
-<p><code>gem install foreman</code> で <code>foreman</code> を入れておいて <code>env PORT=3000 foreman start</code> とか、
-<code>bundle exec passenger start -p 3000 --max-pool-size 3</code> とかで
-3000 番ポートで passenger を使えます。</p>
-
-<p>初回起動時は standalone 版 passenger の初期設定が走るので、
-少し時間がかかります。</p>
-
-<h2>まとめ</h2>
-
-<p>あまりアクセスが多くない無料の範囲内で使っている Rails アプリなので、
-違いはあまりわかっていませんが、簡単に切り替えられるので、
-選択肢のひとつとして使われやすくなるのではないかと思います。</p>
 ]]></content>
   </entry>
   
