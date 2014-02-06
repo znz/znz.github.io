@@ -48,7 +48,10 @@ OS は Ubuntu 12.04.4 LTS です。
 - Server に localhost 以外を指定したので zabbix-agent を動かしているマシン上で `nc -v localhost 10050` は繋がった後、すぐに切断されます。
 - zabbix-server 側で `zabbix_get -s 49.212.178.112 -k agent.ping` を実行して `1` と出れば zabbix-agent へ接続できています。
 - zabbix の Web UI からテンプレートを作成して、 `cmd_get` `cmd_set` `cmd_hits` を記録するようにしました。
-  (キー: `memcached.stats[cmd_get]` など, 保存時の計算: 差分, 更新間隔: 300 (cronを5分間隔にしているので))
+  (キー: `memcached.stats[cmd_get]` など, 保存時の計算: なし (2014-02-06: 差分はやめました), 更新間隔: 300 (cronを5分間隔にしているので))
 - さらに計算アイテムとして式に `100*last("memcached.stats[get_hits]")/last("memcached.stats[cmd_get]")` を設定したものを追加しました。
 
 差分で記録しているからなのか、データが少ないタイミングだったからか、計算に使うアイテムのタイミングの問題なのかわかりませんが、計算アイテムのヒット率が 100% を超えることがありました。
+
+2014-02-06 追記:
+差分はやめて、そのまま記録した値を使うようにして、ヒット率の計算が安定するようにしました。
