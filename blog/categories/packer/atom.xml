@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: packer | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/packer/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-02-11T18:04:01+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[packerのtemplateを1から作ってみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-11-packer-template.html"/>
+    <updated>2014-02-11T16:37:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/packer-template</id>
+    <content type="html"><![CDATA[<p>packer.io のドキュメントの例の最初が amazon になっていて、
+気軽に試しにくいと思ったので、
+VirtualBox で最小限の設定を順番に試してみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>homebrew で入れた Packer v0.5.1</li>
+<li>VirtualBox 4.3.6</li>
+</ul>
+
+
+<h2>空ファイルから builders の type 設定まで</h2>
+
+<p>まず最低限必要な設定を <code>packer validate</code> で調べていきます。
+最初は短いのでパイプを使ってコマンドラインのみで試し始めました。</p>
+
+<p>```console
+% packer -v
+Packer v0.5.1
+% echo | packer validate &ndash;
+Failed to parse template: Error in line 2, char -1: unexpected end of JSON input</p>
+
+<p>% echo &lsquo;{}&rsquo; | packer validate &ndash;
+Failed to parse template: 1 error(s) occurred:</p>
+
+<ul>
+<li><p>No builders are defined in the template.
+% echo &lsquo;{&ldquo;builders&rdquo;:[{}]}&rsquo; | packer validate &ndash;
+Failed to parse template: 2 error(s) occurred:</p></li>
+<li><p>builder 1: missing &lsquo;type&rsquo;</p></li>
+<li>No builders are defined in the template.
+% echo &lsquo;{&ldquo;builders&rdquo;:[{&ldquo;type&rdquo;:&ldquo;virtualbox-iso&rdquo;}]}&rsquo; | packer validate &ndash;
+Template validation failed. Errors are shown below.</li>
+</ul>
+
+
+<p>Errors validating build &lsquo;virtualbox-iso&rsquo;. 4 error(s) occurred:</p>
+
+<ul>
+<li>An ssh_username must be specified.</li>
+<li>Due to large file sizes, an iso_checksum is required</li>
+<li>The iso_checksum_type must be specified.</li>
+<li>One of iso_url or iso_urls must be specified.
+```</li>
+</ul>
+
+
+<h2>virtualbox-iso の最低限の設定</h2>
+
+<p>長くなってきたので、ここからファイルを使うことにしました。</p>
+
+<p>```console
+% cat template.json
+{
+  &ldquo;builders&rdquo;: [{</p>
+
+<pre><code>"type": "virtualbox-iso",
+"ssh_username": "packer",
+"iso_checksum": "db79d463072da26b91c14e08b5a77a77bec9476ad1e5b0d2241228e4d59233f12c74477e77d427e407e1f45da4d2414c76367554352f57480fc7c00dde164028",
+"iso_checksum_type": "sha512",
+"iso_urls": [
+  "http://ftp.jaist.ac.jp/debian-cd/7.4.0/amd64/iso-cd/debian-7.4.0-amd64-netinst.iso",
+  "http://cdimage.debian.org/debian-cd/7.4.0/amd64/iso-cd/debian-7.4.0-amd64-netinst.iso"
+]
+</code></pre>
+
+<p>  }]
+}
+% packer validate template.json
+Template validation succeeded, but there were some warnings.
+These are ONLY WARNINGS, and Packer will attempt to build the
+template despite them, but they should be paid attention to.</p>
+
+<p>Warnings for build &lsquo;virtualbox-iso&rsquo;:</p>
+
+<ul>
+<li>A shutdown_command was not specified. Without a shutdown command, Packer
+will forcibly halt the virtual machine, which may result in data loss.
+```</li>
+</ul>
+
+
+<h2>boot_command 設定</h2>
+
+<p>preseed.cfg と組み合わせるための boot_command の最低限の設定は以下のようになりました。
+オプションの部分は追加削除しやすいように行ごとに <code>&lt;wait&gt;</code> を入れてソートしています。</p>
+
+<p>```json</p>
+
+<pre><code>"boot_command": [
+  "&lt;esc&gt;&lt;wait&gt;",
+  "install&lt;wait&gt;",
+  " auto=true&lt;wait&gt;",
+  " netcfg/get_domain=example.jp&lt;wait&gt;",
+  " netcfg/get_hostname=&lt;wait&gt;",
+  " url=http://:/preseed.cfg&lt;wait&gt;",
+  "&lt;enter&gt;&lt;wait&gt;"
+],
+</code></pre>
+
+<p>```</p>
+
+<h3>boot: プロンプト</h3>
+
+<p>Ubuntu の server 用インストーラーだと <code>&lt;esc&gt;&lt;esc&gt;&lt;enter&gt;&lt;wait&gt;</code> になっているようですが、
+Debian の netinst のインストーラーの場合は <code>&lt;esc&gt;&lt;wait&gt;</code> だけで <code>boot:</code> プロンプトになりました。
+余計な <code>&lt;esc&gt;</code> などがあるとメニューに戻ってしまうようなので、
+うまくいかないときは実際に試して確認するのが良さそうです。</p>
+
+<h3>install</h3>
+
+<p><code>Install</code> のところで Tab を押してコマンドラインを確認すると
+<code>/install.amd/vmlinuz vga=788 initrd=/install.amd/initrd.gz -- quiet</code>
+となっていたので、展開して以下の設定でも良いようです。
+<code>--</code> より後ろの部分はインストール後のカーネルの引数にも使われるので、
+<code>quiet</code> を削りたい場合は展開する必要がありそうです。</p>
+
+<p>```json</p>
+
+<pre><code>"boot_command": [
+  "&lt;esc&gt;&lt;wait&gt;",
+  "/install.amd/vmlinuz&lt;wait&gt;",
+  " auto=true&lt;wait&gt;",
+  " netcfg/get_domain=example.jp&lt;wait&gt;",
+  " netcfg/get_hostname=&lt;wait&gt;",
+  " url=http://:/preseed.cfg&lt;wait&gt;",
+  " vga=788&lt;wait&gt;",
+  " initrd=/install.amd/initrd.gz&lt;wait&gt;",
+  " -- quiet&lt;wait&gt;",
+  "&lt;enter&gt;&lt;wait&gt;"
+],
+</code></pre>
+
+<p>```</p>
+
+<h3>自動モード</h3>
+
+<p>言語設定などを preseed.cfg に書くための
+<a href="https://www.debian.org/releases/stable/amd64/apbs02.html.ja#preseed-auto">自動モード</a>
+は
+<a href="http://d.palmtb.net/2013/08/22/the_parameter_of_boot_option__auto__had_been_changed_for_auto_install_of_wheezy.html">The parameter of boot option “auto” had been changed for auto install of wheezy</a>
+に書いてあるように wheezy だと <code>auto</code> ではなく <code>auto=true</code> にする必要がありました。</p>
+
+<p><a href="https://www.debian.org/releases/stable/amd64/apbs02.html.ja#preseed-aliases">preseed で利用できるエイリアス</a>
+は preseed.cfg の中では使えないようです。
+(試した範囲では <code>d-i keymap select jp</code> ではなく <code>d-i keyboard-configuration/xkb-keymap select jp</code> にする必要がありました。)</p>
+
+<h3>preseed.cfg</h3>
+
+<p><code>"http_directory": "http"</code> で指定したディレクトリに <code>preseed.cfg</code> を置いて
+<code>url=http://:/preseed.cfg</code>
+で参照しています。</p>
+
+<p><code>http_directory</code> の指定を忘れると <code></code> が 0 になっているなど、
+ちゃんと見ていればなんか変だと気付けるようです。</p>
+
+<h3>ホスト名、ドメイン名</h3>
+
+<p><code></code> を使えるように boot_command で設定しています。
+固定なら preseed.cfg の中でも良いと思います。</p>
+
+<h2>preseed.cfg</h2>
+
+<p><a href="https://www.debian.org/releases/wheezy/example-preseed.txt">https://www.debian.org/releases/wheezy/example-preseed.txt</a> などを参考にして、
+preseed.cfg を以下のように設定して途中で止まることなくインストールできました。</p>
+
+<p>example-preseed.txt にはなかった設定の
+<code>d-i grub-installer/only_debian boolean true</code>
+を追加すると grub を MBR にインストールするかどうかというところも
+止まらずに進みました。</p>
+
+<p>```text http/preseed.cfg</p>
+
+<h4>Contents of the preconfiguration file (for wheezy)</h4>
+
+<h3>Localization</h3>
+
+<p>d-i debian-installer/locale string ja_JP
+d-i localechooser/supported-locales multiselect en_US.UTF-8, ja_JP.EUC-JP</p>
+
+<h1>d-i keymap select jp</h1>
+
+<p>d-i keyboard-configuration/xkb-keymap select jp</p>
+
+<h3>Network configuration</h3>
+
+<p>d-i netcfg/choose_interface select auto
+d-i netcfg/wireless_wep string</p>
+
+<h3>Mirror settings</h3>
+
+<p>d-i mirror/protocol string http
+d-i mirror/country string manual
+d-i mirror/http/hostname string ftp.jp.debian.org
+d-i mirror/http/directory string /debian
+d-i mirror/http/proxy string
+d-i mirror/suite string wheezy</p>
+
+<h3>Account setup</h3>
+
+<p>d-i passwd/root-login boolean false
+d-i passwd/make-user boolean true
+d-i passwd/user-fullname string Vagrant User
+d-i passwd/username string vagrant
+d-i passwd/user-password password vagrant
+d-i passwd/user-password-again password vagrant</p>
+
+<h3>Clock and time zone setup</h3>
+
+<p>d-i clock-setup/utc boolean true
+d-i time/zone string Japan
+d-i clock-setup/ntp boolean true
+d-i clock-setup/ntp-server string ntp.mfeed.ad.jp</p>
+
+<h3>Partitioning</h3>
+
+<p>d-i partman-auto/method string lvm
+d-i partman-lvm/device_remove_lvm boolean true
+d-i partman-md/device_remove_md boolean true
+d-i partman-lvm/confirm boolean true
+d-i partman-lvm/confirm_nooverwrite boolean true
+d-i partman-auto/choose_recipe select atomic
+d-i partman-partitioning/confirm_write_new_label boolean true
+d-i partman/choose_partition select finish
+d-i partman/confirm boolean true
+d-i partman/confirm_nooverwrite boolean true</p>
+
+<h1>Install the GRUB boot loader to the master boot record?</h1>
+
+<p>d-i grub-installer/only_debian boolean true</p>
+
+<h3>Package selection</h3>
+
+<p>tasksel tasksel/first multiselect minimal
+d-i pkgsel/include string openssh-server build-essential
+d-i pkgsel/upgrade select none
+popularity-contest popularity-contest/participate boolean false</p>
+
+<h3>Finishing up the installation</h3>
+
+<p>d-i finish-install/reboot_in_progress note
+```</p>
+
+<h2>template.json</h2>
+
+<p>最終的に上の <code>preseed.cfg</code> と組み合わせる最低限の template.json は以下のようになりました。</p>
+
+<p>```json template.json
+{
+  &ldquo;builders&rdquo;: [{</p>
+
+<pre><code>"type": "virtualbox-iso",
+"boot_command": [
+  "&lt;esc&gt;&lt;wait&gt;",
+  "install&lt;wait&gt;",
+  " auto=true&lt;wait&gt;",
+  " netcfg/get_domain=example.jp&lt;wait&gt;",
+  " netcfg/get_hostname=&lt;wait&gt;",
+  " url=http://:/preseed.cfg&lt;wait&gt;",
+  "&lt;enter&gt;&lt;wait&gt;"
+],
+"guest_os_type": "Debian_64",
+"http_directory": "http",
+"ssh_username": "vagrant",
+"ssh_password": "vagrant",
+"shutdown_command": "echo vagrant|sudo -S /sbin/shutdown -hP now",
+"iso_checksum": "db79d463072da26b91c14e08b5a77a77bec9476ad1e5b0d2241228e4d59233f12c74477e77d427e407e1f45da4d2414c76367554352f57480fc7c00dde164028",
+"iso_checksum_type": "sha512",
+"iso_urls": [
+  "http://ftp.jaist.ac.jp/debian-cd/7.4.0/amd64/iso-cd/debian-7.4.0-amd64-netinst.iso",
+  "http://cdimage.debian.org/debian-cd/7.4.0/amd64/iso-cd/debian-7.4.0-amd64-netinst.iso"
+]
+</code></pre>
+
+<p>  }]
+}
+```</p>
+
+<h2>まとめ</h2>
+
+<p><code>template.json</code> と <code>http/preseed.cfg</code> を作成して <code>packer build template.json</code> で <code>output-virtualbox-iso/packer-virtualbox-iso-disk1.vmdk</code> と <code>output-virtualbox-iso/packer-virtualbox-iso.ovf</code> が 8 分ぐらいで作成できました。
+(iso は packer_cache/ にダウンロード済みの状態)</p>
+
+<p>この ovf ファイルは VirtualBox にインポートして使えます。</p>
+
+<p>最低限の設定しかしていないので、他の template.json を参考にして provisioners の設定を足していくなどのカスタマイズをしていけば良さそうだと思いました。</p>
+
+<p>```console
+% packer validate template.json
+Template validated successfully.
+% packer build template.json
+virtualbox-iso output will be in this color.</p>
+
+<p>==> virtualbox-iso: Downloading or copying Guest additions checksums</p>
+
+<pre><code>virtualbox-iso: Downloading or copying: http://download.virtualbox.org/virtualbox/4.3.6/SHA256SUMS
+</code></pre>
+
+<p>==> virtualbox-iso: Downloading or copying Guest additions</p>
+
+<pre><code>virtualbox-iso: Downloading or copying: http://download.virtualbox.org/virtualbox/4.3.6/VBoxGuestAdditions_4.3.6.iso
+</code></pre>
+
+<p>==> virtualbox-iso: Downloading or copying ISO</p>
+
+<pre><code>virtualbox-iso: Downloading or copying: http://ftp.jaist.ac.jp/debian-cd/7.4.0/amd64/iso-cd/debian-7.4.0-amd64-netinst.iso
+</code></pre>
+
+<p>==> virtualbox-iso: Starting HTTP server on port 8081
+==> virtualbox-iso: Creating virtual machine&hellip;
+==> virtualbox-iso: Creating hard drive&hellip;
+==> virtualbox-iso: Creating forwarded port mapping for SSH (host port 3213)
+==> virtualbox-iso: Starting the virtual machine&hellip;
+==> virtualbox-iso: Waiting 10s for boot&hellip;
+==> virtualbox-iso: Typing the boot command&hellip;
+==> virtualbox-iso: Waiting for SSH to become available&hellip;
+==> virtualbox-iso: Connected to SSH!
+==> virtualbox-iso: Uploading VirtualBox version info (4.3.6)
+==> virtualbox-iso: Uploading VirtualBox guest additions ISO&hellip;
+==> virtualbox-iso: Gracefully halting virtual machine&hellip;</p>
+
+<pre><code>virtualbox-iso:
+virtualbox-iso: We trust you have received the usual lecture from the local System
+virtualbox-iso: Administrator. It usually boils down to these three things:
+virtualbox-iso:
+virtualbox-iso: #1) Respect the privacy of others.
+virtualbox-iso: #2) Think before you type.
+virtualbox-iso: #3) With great power comes great responsibility.
+virtualbox-iso:
+virtualbox-iso: [sudo] password for vagrant:
+virtualbox-iso: The system is going down for system halt NOW!
+</code></pre>
+
+<p>==> virtualbox-iso: Preparing to export machine&hellip;</p>
+
+<pre><code>virtualbox-iso: Deleting forwarded port mapping for SSH (host port 3213)
+</code></pre>
+
+<p>==> virtualbox-iso: Exporting virtual machine&hellip;
+==> virtualbox-iso: Unregistering and deleting virtual machine&hellip;
+Build &lsquo;virtualbox-iso&rsquo; finished.</p>
+
+<p>==> Builds finished. The artifacts of successful builds are:
+&mdash;> virtualbox-iso: VM files in directory: output-virtualbox-iso
+```</p>
+]]></content>
+  </entry>
+  
+</feed>

@@ -1,0 +1,831 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>packerのtemplateを1から作ってみた - @znz blog</title>
+  <meta name="author" content="Kazuhiro NISHIYAMA">
+
+  
+  <meta name="description" content="packer.io のドキュメントの例の最初が amazon になっていて、
+気軽に試しにくいと思ったので、
+VirtualBox で最小限の設定を順番に試してみました。 動作確認バージョン homebrew で入れた Packer v0.5.1
+VirtualBox 4.3.6 空ファイルから &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-02-11-packer-template.html">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-43859023-1', 'n-z.jp');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">@znz blog</a></h1>
+  
+    <h2>ZnZ の memo のようなもの</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://www.google.co.jp/cse" id="cse-search-box">
+  <div>
+    <input type="hidden" name="cx" value="partner-pub-4711975605457723:5173725094" />
+    <input type="hidden" name="ie" value="UTF-8" />
+    <input type="text" name="q" size="40" />
+    <input type="submit" name="sa" value="検索" />
+  </div>
+</form>
+
+<script type="text/javascript" src="http://www.google.co.jp/coop/cse/brand?form=cse-search-box&amp;lang=ja"></script>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">packerのtemplateを1から作ってみた</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-11T16:37:00+09:00" pubdate data-updated="true">2014-02-11 (Tue)</time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>packer.io のドキュメントの例の最初が amazon になっていて、
+気軽に試しにくいと思ったので、
+VirtualBox で最小限の設定を順番に試してみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>homebrew で入れた Packer v0.5.1</li>
+<li>VirtualBox 4.3.6</li>
+</ul>
+
+
+<h2>空ファイルから builders の type 設定まで</h2>
+
+<p>まず最低限必要な設定を <code>packer validate</code> で調べていきます。
+最初は短いのでパイプを使ってコマンドラインのみで試し始めました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> packer -v
+</span><span class='line'><span class="go">Packer v0.5.1</span>
+</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> | packer validate -
+</span><span class='line'><span class="go">Failed to parse template: Error in line 2, char -1: unexpected end of JSON input</span>
+</span><span class='line'>
+</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="s1">&#39;{}&#39;</span> | packer validate -
+</span><span class='line'><span class="go">Failed to parse template: 1 error(s) occurred:</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">* No builders are defined in the template.</span>
+</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="s1">&#39;{&quot;builders&quot;:[{}]}&#39;</span> | packer validate -
+</span><span class='line'><span class="go">Failed to parse template: 2 error(s) occurred:</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">* builder 1: missing &#39;type&#39;</span>
+</span><span class='line'><span class="go">* No builders are defined in the template.</span>
+</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="s1">&#39;{&quot;builders&quot;:[{&quot;type&quot;:&quot;virtualbox-iso&quot;}]}&#39;</span> | packer validate -
+</span><span class='line'><span class="go">Template validation failed. Errors are shown below.</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">Errors validating build &#39;virtualbox-iso&#39;. 4 error(s) occurred:</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">* An ssh_username must be specified.</span>
+</span><span class='line'><span class="go">* Due to large file sizes, an iso_checksum is required</span>
+</span><span class='line'><span class="go">* The iso_checksum_type must be specified.</span>
+</span><span class='line'><span class="go">* One of iso_url or iso_urls must be specified.</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>virtualbox-iso の最低限の設定</h2>
+
+<p>長くなってきたので、ここからファイルを使うことにしました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> cat template.json
+</span><span class='line'><span class="go">{</span>
+</span><span class='line'><span class="go">  &quot;builders&quot;: [{</span>
+</span><span class='line'><span class="go">    &quot;type&quot;: &quot;virtualbox-iso&quot;,</span>
+</span><span class='line'><span class="go">    &quot;ssh_username&quot;: &quot;packer&quot;,</span>
+</span><span class='line'><span class="go">    &quot;iso_checksum&quot;: &quot;db79d463072da26b91c14e08b5a77a77bec9476ad1e5b0d2241228e4d59233f12c74477e77d427e407e1f45da4d2414c76367554352f57480fc7c00dde164028&quot;,</span>
+</span><span class='line'><span class="go">    &quot;iso_checksum_type&quot;: &quot;sha512&quot;,</span>
+</span><span class='line'><span class="go">    &quot;iso_urls&quot;: [</span>
+</span><span class='line'><span class="go">      &quot;http://ftp.jaist.ac.jp/debian-cd/7.4.0/amd64/iso-cd/debian-7.4.0-amd64-netinst.iso&quot;,</span>
+</span><span class='line'><span class="go">      &quot;http://cdimage.debian.org/debian-cd/7.4.0/amd64/iso-cd/debian-7.4.0-amd64-netinst.iso&quot;</span>
+</span><span class='line'><span class="go">    ]</span>
+</span><span class='line'><span class="go">  }]</span>
+</span><span class='line'><span class="go">}</span>
+</span><span class='line'><span class="gp">%</span> packer validate template.json
+</span><span class='line'><span class="go">Template validation succeeded, but there were some warnings.</span>
+</span><span class='line'><span class="go">These are ONLY WARNINGS, and Packer will attempt to build the</span>
+</span><span class='line'><span class="go">template despite them, but they should be paid attention to.</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">Warnings for build &#39;virtualbox-iso&#39;:</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">* A shutdown_command was not specified. Without a shutdown command, Packer</span>
+</span><span class='line'><span class="go">will forcibly halt the virtual machine, which may result in data loss.</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>boot_command 設定</h2>
+
+<p>preseed.cfg と組み合わせるための boot_command の最低限の設定は以下のようになりました。
+オプションの部分は追加削除しやすいように行ごとに <code>&lt;wait&gt;</code> を入れてソートしています。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="s2">&quot;boot_command&quot;</span><span class="err">:</span> <span class="p">[</span>
+</span><span class='line'>  <span class="s2">&quot;&lt;esc&gt;&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot;install&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot; auto=true&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot; netcfg/get_domain=example.jp&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot; netcfg/get_hostname=&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot; url=http://:/preseed.cfg&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot;&lt;enter&gt;&lt;wait&gt;&quot;</span>
+</span><span class='line'><span class="p">]</span><span class="err">,</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>boot: プロンプト</h3>
+
+<p>Ubuntu の server 用インストーラーだと <code>&lt;esc&gt;&lt;esc&gt;&lt;enter&gt;&lt;wait&gt;</code> になっているようですが、
+Debian の netinst のインストーラーの場合は <code>&lt;esc&gt;&lt;wait&gt;</code> だけで <code>boot:</code> プロンプトになりました。
+余計な <code>&lt;esc&gt;</code> などがあるとメニューに戻ってしまうようなので、
+うまくいかないときは実際に試して確認するのが良さそうです。</p>
+
+<h3>install</h3>
+
+<p><code>Install</code> のところで Tab を押してコマンドラインを確認すると
+<code>/install.amd/vmlinuz vga=788 initrd=/install.amd/initrd.gz -- quiet</code>
+となっていたので、展開して以下の設定でも良いようです。
+<code>--</code> より後ろの部分はインストール後のカーネルの引数にも使われるので、
+<code>quiet</code> を削りたい場合は展開する必要がありそうです。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="s2">&quot;boot_command&quot;</span><span class="err">:</span> <span class="p">[</span>
+</span><span class='line'>  <span class="s2">&quot;&lt;esc&gt;&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot;/install.amd/vmlinuz&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot; auto=true&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot; netcfg/get_domain=example.jp&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot; netcfg/get_hostname=&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot; url=http://:/preseed.cfg&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot; vga=788&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot; initrd=/install.amd/initrd.gz&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot; -- quiet&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="s2">&quot;&lt;enter&gt;&lt;wait&gt;&quot;</span>
+</span><span class='line'><span class="p">]</span><span class="err">,</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>自動モード</h3>
+
+<p>言語設定などを preseed.cfg に書くための
+<a href="https://www.debian.org/releases/stable/amd64/apbs02.html.ja#preseed-auto">自動モード</a>
+は
+<a href="http://d.palmtb.net/2013/08/22/the_parameter_of_boot_option__auto__had_been_changed_for_auto_install_of_wheezy.html">The parameter of boot option “auto” had been changed for auto install of wheezy</a>
+に書いてあるように wheezy だと <code>auto</code> ではなく <code>auto=true</code> にする必要がありました。</p>
+
+<p><a href="https://www.debian.org/releases/stable/amd64/apbs02.html.ja#preseed-aliases">preseed で利用できるエイリアス</a>
+は preseed.cfg の中では使えないようです。
+(試した範囲では <code>d-i keymap select jp</code> ではなく <code>d-i keyboard-configuration/xkb-keymap select jp</code> にする必要がありました。)</p>
+
+<h3>preseed.cfg</h3>
+
+<p><code>"http_directory": "http"</code> で指定したディレクトリに <code>preseed.cfg</code> を置いて
+<code>url=http://:/preseed.cfg</code>
+で参照しています。</p>
+
+<p><code>http_directory</code> の指定を忘れると &#8220; が 0 になっているなど、
+ちゃんと見ていればなんか変だと気付けるようです。</p>
+
+<h3>ホスト名、ドメイン名</h3>
+
+<p>&#8220; を使えるように boot_command で設定しています。
+固定なら preseed.cfg の中でも良いと思います。</p>
+
+<h2>preseed.cfg</h2>
+
+<p><a href="https://www.debian.org/releases/wheezy/example-preseed.txt">https://www.debian.org/releases/wheezy/example-preseed.txt</a> などを参考にして、
+preseed.cfg を以下のように設定して途中で止まることなくインストールできました。</p>
+
+<p>example-preseed.txt にはなかった設定の
+<code>d-i grub-installer/only_debian boolean true</code>
+を追加すると grub を MBR にインストールするかどうかというところも
+止まらずに進みました。</p>
+
+<figure class='code'><figcaption><span>http/preseed.cfg</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>#### Contents of the preconfiguration file (for wheezy)
+</span><span class='line'>### Localization
+</span><span class='line'>d-i debian-installer/locale string ja_JP
+</span><span class='line'>d-i localechooser/supported-locales multiselect en_US.UTF-8, ja_JP.EUC-JP
+</span><span class='line'>#d-i keymap select jp
+</span><span class='line'>d-i keyboard-configuration/xkb-keymap select jp
+</span><span class='line'>
+</span><span class='line'>### Network configuration
+</span><span class='line'>d-i netcfg/choose_interface select auto
+</span><span class='line'>d-i netcfg/wireless_wep string
+</span><span class='line'>
+</span><span class='line'>### Mirror settings
+</span><span class='line'>d-i mirror/protocol string http
+</span><span class='line'>d-i mirror/country string manual
+</span><span class='line'>d-i mirror/http/hostname string ftp.jp.debian.org
+</span><span class='line'>d-i mirror/http/directory string /debian
+</span><span class='line'>d-i mirror/http/proxy string
+</span><span class='line'>d-i mirror/suite string wheezy
+</span><span class='line'>
+</span><span class='line'>### Account setup
+</span><span class='line'>d-i passwd/root-login boolean false
+</span><span class='line'>d-i passwd/make-user boolean true
+</span><span class='line'>d-i passwd/user-fullname string Vagrant User
+</span><span class='line'>d-i passwd/username string vagrant
+</span><span class='line'>d-i passwd/user-password password vagrant
+</span><span class='line'>d-i passwd/user-password-again password vagrant
+</span><span class='line'>
+</span><span class='line'>### Clock and time zone setup
+</span><span class='line'>d-i clock-setup/utc boolean true
+</span><span class='line'>d-i time/zone string Japan
+</span><span class='line'>d-i clock-setup/ntp boolean true
+</span><span class='line'>d-i clock-setup/ntp-server string ntp.mfeed.ad.jp
+</span><span class='line'>
+</span><span class='line'>### Partitioning
+</span><span class='line'>d-i partman-auto/method string lvm
+</span><span class='line'>d-i partman-lvm/device_remove_lvm boolean true
+</span><span class='line'>d-i partman-md/device_remove_md boolean true
+</span><span class='line'>d-i partman-lvm/confirm boolean true
+</span><span class='line'>d-i partman-lvm/confirm_nooverwrite boolean true
+</span><span class='line'>d-i partman-auto/choose_recipe select atomic
+</span><span class='line'>d-i partman-partitioning/confirm_write_new_label boolean true
+</span><span class='line'>d-i partman/choose_partition select finish
+</span><span class='line'>d-i partman/confirm boolean true
+</span><span class='line'>d-i partman/confirm_nooverwrite boolean true
+</span><span class='line'># Install the GRUB boot loader to the master boot record?
+</span><span class='line'>d-i grub-installer/only_debian boolean true
+</span><span class='line'>
+</span><span class='line'>### Package selection
+</span><span class='line'>tasksel tasksel/first multiselect minimal
+</span><span class='line'>d-i pkgsel/include string openssh-server build-essential
+</span><span class='line'>d-i pkgsel/upgrade select none
+</span><span class='line'>popularity-contest popularity-contest/participate boolean false
+</span><span class='line'>
+</span><span class='line'>### Finishing up the installation
+</span><span class='line'>d-i finish-install/reboot_in_progress note
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>template.json</h2>
+
+<p>最終的に上の <code>preseed.cfg</code> と組み合わせる最低限の template.json は以下のようになりました。</p>
+
+<figure class='code'><figcaption><span>template.json</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span>
+</span><span class='line'>  <span class="nt">&quot;builders&quot;</span><span class="p">:</span> <span class="p">[{</span>
+</span><span class='line'>    <span class="nt">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;virtualbox-iso&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="nt">&quot;boot_command&quot;</span><span class="p">:</span> <span class="p">[</span>
+</span><span class='line'>      <span class="s2">&quot;&lt;esc&gt;&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="s2">&quot;install&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="s2">&quot; auto=true&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="s2">&quot; netcfg/get_domain=example.jp&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="s2">&quot; netcfg/get_hostname=&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="s2">&quot; url=http://:/preseed.cfg&lt;wait&gt;&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="s2">&quot;&lt;enter&gt;&lt;wait&gt;&quot;</span>
+</span><span class='line'>    <span class="p">],</span>
+</span><span class='line'>    <span class="nt">&quot;guest_os_type&quot;</span><span class="p">:</span> <span class="s2">&quot;Debian_64&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="nt">&quot;http_directory&quot;</span><span class="p">:</span> <span class="s2">&quot;http&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="nt">&quot;ssh_username&quot;</span><span class="p">:</span> <span class="s2">&quot;vagrant&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="nt">&quot;ssh_password&quot;</span><span class="p">:</span> <span class="s2">&quot;vagrant&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="nt">&quot;shutdown_command&quot;</span><span class="p">:</span> <span class="s2">&quot;echo vagrant|sudo -S /sbin/shutdown -hP now&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="nt">&quot;iso_checksum&quot;</span><span class="p">:</span> <span class="s2">&quot;db79d463072da26b91c14e08b5a77a77bec9476ad1e5b0d2241228e4d59233f12c74477e77d427e407e1f45da4d2414c76367554352f57480fc7c00dde164028&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="nt">&quot;iso_checksum_type&quot;</span><span class="p">:</span> <span class="s2">&quot;sha512&quot;</span><span class="p">,</span>
+</span><span class='line'>    <span class="nt">&quot;iso_urls&quot;</span><span class="p">:</span> <span class="p">[</span>
+</span><span class='line'>      <span class="s2">&quot;http://ftp.jaist.ac.jp/debian-cd/7.4.0/amd64/iso-cd/debian-7.4.0-amd64-netinst.iso&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="s2">&quot;http://cdimage.debian.org/debian-cd/7.4.0/amd64/iso-cd/debian-7.4.0-amd64-netinst.iso&quot;</span>
+</span><span class='line'>    <span class="p">]</span>
+</span><span class='line'>  <span class="p">}]</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p><code>template.json</code> と <code>http/preseed.cfg</code> を作成して <code>packer build template.json</code> で <code>output-virtualbox-iso/packer-virtualbox-iso-disk1.vmdk</code> と <code>output-virtualbox-iso/packer-virtualbox-iso.ovf</code> が 8 分ぐらいで作成できました。
+(iso は packer_cache/ にダウンロード済みの状態)</p>
+
+<p>この ovf ファイルは VirtualBox にインポートして使えます。</p>
+
+<p>最低限の設定しかしていないので、他の template.json を参考にして provisioners の設定を足していくなどのカスタマイズをしていけば良さそうだと思いました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> packer validate template.json
+</span><span class='line'><span class="go">Template validated successfully.</span>
+</span><span class='line'><span class="gp">%</span> packer build template.json
+</span><span class='line'><span class="go">virtualbox-iso output will be in this color.</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Downloading or copying Guest additions checksums</span>
+</span><span class='line'><span class="go">    virtualbox-iso: Downloading or copying: http://download.virtualbox.org/virtualbox/4.3.6/SHA256SUMS</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Downloading or copying Guest additions</span>
+</span><span class='line'><span class="go">    virtualbox-iso: Downloading or copying: http://download.virtualbox.org/virtualbox/4.3.6/VBoxGuestAdditions_4.3.6.iso</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Downloading or copying ISO</span>
+</span><span class='line'><span class="go">    virtualbox-iso: Downloading or copying: http://ftp.jaist.ac.jp/debian-cd/7.4.0/amd64/iso-cd/debian-7.4.0-amd64-netinst.iso</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Starting HTTP server on port 8081</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Creating virtual machine...</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Creating hard drive...</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Creating forwarded port mapping for SSH (host port 3213)</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Starting the virtual machine...</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Waiting 10s for boot...</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Typing the boot command...</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Waiting for SSH to become available...</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Connected to SSH!</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Uploading VirtualBox version info (4.3.6)</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Uploading VirtualBox guest additions ISO...</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Gracefully halting virtual machine...</span>
+</span><span class='line'><span class="go">    virtualbox-iso:</span>
+</span><span class='line'><span class="go">    virtualbox-iso: We trust you have received the usual lecture from the local System</span>
+</span><span class='line'><span class="go">    virtualbox-iso: Administrator. It usually boils down to these three things:</span>
+</span><span class='line'><span class="go">    virtualbox-iso:</span>
+</span><span class='line'><span class="go">    virtualbox-iso: #1) Respect the privacy of others.</span>
+</span><span class='line'><span class="go">    virtualbox-iso: #2) Think before you type.</span>
+</span><span class='line'><span class="go">    virtualbox-iso: #3) With great power comes great responsibility.</span>
+</span><span class='line'><span class="go">    virtualbox-iso:</span>
+</span><span class='line'><span class="go">    virtualbox-iso: [sudo] password for vagrant:</span>
+</span><span class='line'><span class="go">    virtualbox-iso: The system is going down for system halt NOW!</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Preparing to export machine...</span>
+</span><span class='line'><span class="go">    virtualbox-iso: Deleting forwarded port mapping for SSH (host port 3213)</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Exporting virtual machine...</span>
+</span><span class='line'><span class="go">==&gt; virtualbox-iso: Unregistering and deleting virtual machine...</span>
+</span><span class='line'><span class="go">Build &#39;virtualbox-iso&#39; finished.</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">==&gt; Builds finished. The artifacts of successful builds are:</span>
+</span><span class='line'><span class="go">--&gt; virtualbox-iso: VM files in directory: output-virtualbox-iso</span>
+</span></code></pre></td></tr></table></div></figure>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-11T16:37:00+09:00" pubdate data-updated="true">2014-02-11 (Tue)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/packer/'>packer</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2014-02-11-packer-template.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2014-02-11-packer-template.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2014-02-11-packer-template.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014-02-07-pre-commit-hook.html" title="Previous Post: pre-commit hookでmasterへのcommitを禁止した">&laquo; pre-commit hookでmasterへのcommitを禁止した</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- sidebar -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:160px;height:600px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4210402292"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+<section>
+  <h1>About Me</h1>
+  <p><a href="http://rubycommitters.org/">Ruby のコミッター</a>とかやってます。</p>
+<script data-gittip-username="znz"
+        data-gittip-widget="button"
+        src="//gttp.co/v1.js"></script>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014-02-11-packer-template.html">packerのtemplateを1から作ってみた</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-02-07-pre-commit-hook.html">pre-commit hookでmasterへのcommitを禁止した</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-02-06-bootstrap-sass.html">bootstrap-sass-railsからbootstrap-sassに移行した</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-02-05-rails-best-practices-1-15-0-broken.html">rails_best_practices 1.15.0でtryが壊れた</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-02-04-zabbix-memcached.html">zabbixでmemcachedのヒット率を記録する</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>Tag Cloud</h1>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 103.52941176470588%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 105.29411764705883%'>amagasakirb(3)</a> <a href='/blog/categories/ansible' style='font-size: 105.29411764705883%'>ansible(3)</a> <a href='/blog/categories/anyenv' style='font-size: 101.76470588235294%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.76470588235294%'>authorization(1)</a> <a href='/blog/categories/bts' style='font-size: 101.76470588235294%'>bts(1)</a> <a href='/blog/categories/certification' style='font-size: 101.76470588235294%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 101.76470588235294%'>coffeescript(1)</a> <a href='/blog/categories/community' style='font-size: 105.29411764705883%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 119.41176470588235%'>debian(11)</a> <a href='/blog/categories/devise' style='font-size: 103.52941176470588%'>devise(2)</a> <a href='/blog/categories/dkms' style='font-size: 101.76470588235294%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 108.82352941176471%'>docker(5)</a> <a href='/blog/categories/dokku' style='font-size: 101.76470588235294%'>dokku(1)</a> <a href='/blog/categories/doorkeeper' style='font-size: 101.76470588235294%'>doorkeeper(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.76470588235294%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 114.11764705882354%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 131.76470588235293%'>event(18)</a> <a href='/blog/categories/gem' style='font-size: 107.05882352941177%'>gem(4)</a> <a href='/blog/categories/git' style='font-size: 105.29411764705883%'>git(3)</a> <a href='/blog/categories/github' style='font-size: 108.82352941176471%'>github(5)</a> <a href='/blog/categories/heroku' style='font-size: 101.76470588235294%'>heroku(1)</a> <a href='/blog/categories/homebrew' style='font-size: 108.82352941176471%'>homebrew(5)</a> <a href='/blog/categories/html5' style='font-size: 103.52941176470588%'>html5(2)</a> <a href='/blog/categories/ime' style='font-size: 105.29411764705883%'>ime(3)</a> <a href='/blog/categories/irb' style='font-size: 101.76470588235294%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.76470588235294%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 105.29411764705883%'>javascript(3)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 103.52941176470588%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.76470588235294%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 101.76470588235294%'>jus(1)</a> <a href='/blog/categories/k-of' style='font-size: 101.76470588235294%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 105.29411764705883%'>kansaidebian(3)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.76470588235294%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.76470588235294%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 105.29411764705883%'>land-of-lisp(3)</a> <a href='/blog/categories/linux' style='font-size: 107.05882352941177%'>linux(4)</a> <a href='/blog/categories/lxc' style='font-size: 101.76470588235294%'>lxc(1)</a> <a href='/blog/categories/mail' style='font-size: 101.76470588235294%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 103.52941176470588%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 107.05882352941177%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.76470588235294%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.76470588235294%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.76470588235294%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 103.52941176470588%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.76470588235294%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 101.76470588235294%'>oauth2(1)</a> <a href='/blog/categories/octopress' style='font-size: 107.05882352941177%'>octopress(4)</a> <a href='/blog/categories/omniauth' style='font-size: 101.76470588235294%'>omniauth(1)</a> <a href='/blog/categories/osx' style='font-size: 130.0%'>osx(17)</a> <a href='/blog/categories/packer' style='font-size: 101.76470588235294%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.76470588235294%'>passenger(1)</a> <a href='/blog/categories/postfix' style='font-size: 103.52941176470588%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 103.52941176470588%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.76470588235294%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.76470588235294%'>pyenv(1)</a> <a href='/blog/categories/rabbit' style='font-size: 103.52941176470588%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 131.76470588235293%'>rails(18)</a> <a href='/blog/categories/rbenv' style='font-size: 107.05882352941177%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.76470588235294%'>redmine(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.76470588235294%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(34)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.76470588235294%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 101.76470588235294%'>rubykansai(1)</a> <a href='/blog/categories/rubymotion' style='font-size: 112.3529411764706%'>rubymotion(7)</a> <a href='/blog/categories/shell' style='font-size: 101.76470588235294%'>shell(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.76470588235294%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 107.05882352941177%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 119.41176470588235%'>ubuntu(11)</a> <a href='/blog/categories/upstart' style='font-size: 101.76470588235294%'>upstart(1)</a> <a href='/blog/categories/virtualbox' style='font-size: 101.76470588235294%'>virtualbox(1)</a> <a href='/blog/categories/weechat' style='font-size: 101.76470588235294%'>weechat(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.76470588235294%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 107.05882352941177%'>zsh(4)</a> </span>
+</section>
+<section class="clearfix">
+<h1><a href="https://coderwall.com/">coderwall.com</a></h1>
+<link href="http://coderwall.com/stylesheets/jquery.coderwall.css" media="all" rel="stylesheet" type="text/css">
+<script src="http://coderwall.com/javascripts/jquery.coderwall.js"></script>
+<section class="coderwall" data-coderwall-username="znz" data-coderwall-orientation="vertical" style="width:80%"></section>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/znz">@znz</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'znz',
+            count: 3,
+            skip_forks: false,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Kazuhiro NISHIYAMA -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'znzblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-02-11-packer-template.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-02-11-packer-template.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+<script type="text/javascript" src="http://b.st-hatena.com/js/bookmark_button.js" charset="utf-8" async="async"></script>
+
+
+</body>
+</html>
