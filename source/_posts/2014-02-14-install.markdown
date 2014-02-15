@@ -1,0 +1,65 @@
+---
+layout: post
+title: "installコマンドでコマンド数を減らす"
+date: 2014-02-14 23:30:00 +0900
+comments: true
+categories: linux docker
+---
+mkdir とか touch とか chown とか chmod とか個別に実行しなくても
+install コマンドだけでまとめて出来るという話です。
+
+<!--more-->
+
+## 問題例
+
+Dockerfile の RUN などが典型的な例ですが、他でも例えば
+`mkdir -p /home/foo/.ssh; chown foo /home/foo/.ssh; chmod 0700 /home/foo/.ssh`
+のようなことをすることがあると思います。
+
+特に Dockerfile の場合は RUN ごとにイメージがたまっていくこともあって、
+`;` や `&&` でつなげて単独の RUN にまとめて書くことも多いと思います。
+
+## install でディレクトリを作る
+
+たとえば
+
+```
+ mkdir -p /home/foo/.ssh
+ chown foo /home/foo/.ssh
+ chgrp users /home/foo/.ssh
+ chmod 0700 /home/foo/.ssh
+```
+
+なら
+`install -o foo -g users -m 0700 -d /home/foo/.ssh`
+にまとめられます。
+
+`install -o foo -g users -m 0700 -d /home/foo/.ssh /home/foo/tmp`
+のように複数ディレクトリを同時に作成することも出来ます。
+
+## install でファイルをコピーする
+
+たとえば
+
+```
+ cp /path/from/*.txt /path/to/
+ chown foo /path/to/*.txt
+ chgrp users /path/to/*.txt
+ chmod 0644 /path/to/*.txt
+```
+
+なら
+`install -o foo -g users -m 0644 /path/from/*.txt /path/to/`
+にまとめられます。
+
+`install -o foo -g users -m 0644 -t /path/to /path/from/*.txt`
+のようにディレクトリを先に書くことも出来ます。
+
+1ファイルだけなら
+`install -o foo -g users -m 0644  /path/from/foo.txt /path/to/bar.txt`
+のようにコピー先のファイル名を指定することも出来ます。
+
+## まとめ
+
+たくさん `chown` や `chmod` を実行していることがあれば、
+`install` コマンドでまとめられないか検討してみてください。
