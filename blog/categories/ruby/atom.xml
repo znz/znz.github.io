@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-02-16T14:31:04+09:00</updated>
+  <updated>2014-02-19T23:00:39+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,126 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 8 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-19-rubymotion-mokumoku-osaka.html"/>
+    <updated>2014-02-19T19:27:12+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
+    <content type="html"><![CDATA[<p>第 1 回から第 7 回にも参加した RubyMotion もくもく会 in Osaka の
+<a href="http://connpass.com/event/4910/">第 8 回 RubyMotion もくもく会 in Osaka</a>
+に参加してきました。</p>
+
+<p>次回の
+<a href="http://connpass.com/event/5276/">第 9 回 RubyMotion もくもく会 in Osaka</a>
+は 3/19(水) になりました。</p>
+
+<!--more-->
+
+
+<h2>話に出たもの</h2>
+
+<p>話に出てきたサイトなどのメモです。</p>
+
+<ul>
+<li><a href="http://connpass.com/event/5274/">iBeacon 勉強会（入門編）</a></li>
+<li><a href="http://japan.gamesalad.com/">GameSalad</a></li>
+<li><a href="http://www.hirotangame.net/">広探ゲーム</a></li>
+</ul>
+
+
+<h2>もくもく</h2>
+
+<p>ブラウザを開くのに <code>open</code> コマンドを経由から <code>NSWorkspace</code> の <code>openURLs:withAppBundleIdentifier:options:additionalEventParamDescriptor:launchIdentifiers:</code> 経由に変更しました。</p>
+
+<p>```ruby
+  def openBrowser(app, *args)</p>
+
+<pre><code>r, w = IO.pipe
+pid = Process.spawn('open', '-a', app, @text.stringValue, *args, [:out, :err] =&gt; w)
+w.close
+pid, status = Process.waitpid2(pid)
+output = r.read
+r.close
+unless status.success?
+  alert = NSAlert.new
+  alert.messageText = "Failed to open #{app}\n\n#{output}"
+  alert.runModal
+end
+</code></pre>
+
+<p>  end
+```</p>
+
+<p><code>open -b</code> を使っていれば引数は変わらなかったのですが、 <code>open -a</code> を使っていたので、引数がアプリケーション名からバンドル ID に変わりました。</p>
+
+<p><code>open -a 'Google Chrome' http://localhost:4000/ --args -incognito</code> の <code>-incognito</code> のような追加引数の渡し方がわからなかったので、 Chrome のシークレットウインドウを直接開く機能はなくしました。</p>
+
+<p>```ruby
+  NSWorkspaceLaunchAsync = 0x00010000
+  NSWorkspaceLaunchAllowingClassicStartup = 0x00020000
+  NSWorkspaceLaunchDefault = NSWorkspaceLaunchAsync | NSWorkspaceLaunchAllowingClassicStartup</p>
+
+<p>  def openBrowser(app_bundle_id)</p>
+
+<pre><code>url = NSURL.URLWithString @text.stringValue
+ret = NSWorkspace.sharedWorkspace.openURLs([url], withAppBundleIdentifier: app_bundle_id, options: NSWorkspaceLaunchDefault, additionalEventParamDescriptor: nil, launchIdentifiers: nil)
+unless ret
+  alert = NSAlert.new
+  alert.messageText = "Failed to open #{app}"
+  alert.runModal
+end
+</code></pre>
+
+<p>  end
+```</p>
+
+<p><a href="https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/Workspace/Articles/WorkspaceServices.html">Workspace Services Programming Topics: Manipulating Files</a>
+には <code>openURL:</code> しか書いてなかったり、
+<code>additionalEventParamDescriptor</code> には何を渡せばいいのかわかりにくかったりして困りましたが、
+<a href="http://www.lancard.com/blog/2011/05/01/open-url-with-browser-about-mac-app/">http://www.lancard.com/blog/2011/05/01/open-url-with-browser-about-mac-app/</a>
+のように呼び出せばうまくいきました。</p>
+
+<p>最初に <code>rake</code> の REPL で試していたら、以下のエラーになるので、しばらく悩んでいましたが、 <code>app/app_delegate.rb</code> の中に書けば動いたので、 <code>rake</code> でコンパイルされるタイミングでリンクできていないメソッドは呼び出せないということなのかと思いました。</p>
+
+<p>```console
+(main)> url = NSURL.URLWithString(&ldquo;<a href="http://www.apple.com">http://www.apple.com</a>&rdquo;)
+=> #&lt;NSURL:0x7fcbe8e45060>
+(main)> NSWorkspaceLaunchAsync = 0x00010000
+=> 65536
+(main)> NSWorkspaceLaunchAllowingClassicStartup = 0x00020000
+=> 131072
+(main)> NSWorkspaceLaunchDefault = NSWorkspaceLaunchAsync | NSWorkspaceLaunchAllowingClassicStartup
+=> 196608
+(main)> NSWorkspace.sharedWorkspace.openURLs([url], withAppBundleIdentifier: &ldquo;com.google.Chrome&rdquo;, options: NSWorkspaceLaunchDefault, additionalEventParamDescriptor: nil, launchIdentifiers: nil)
+dyld: lazy symbol binding failed: Symbol not found: __ZN9RoxorCore14find_bs_cftypeESs
+  Referenced from: /Library/RubyMotion/data/osx/librubymotion-repl.dylib
+  Expected in: flat namespace</p>
+
+<p>dyld: Symbol not found: __ZN9RoxorCore14find_bs_cftypeESs
+  Referenced from: /Library/RubyMotion/data/osx/librubymotion-repl.dylib
+  Expected in: flat namespace</p>
+
+<p>================================================================================
+The application terminated. A crash report file may have been generated by the
+system, use <code>rake crashlog' to open it. Use</code>rake debug=1' to restart the app</p>
+
+<h1>in the debugger.</h1>
+
+<p>```</p>
+
+<h2>NSDate</h2>
+
+<p>途中 <code>NSDate.distantFuture</code> の返り値がおかしいという話がありました。</p>
+
+<p><code>
+(main)&gt; NSDate.distantFuture
+=&gt; 1677-09-21 09:12:43 +0900
+(main)&gt; NSDate.distantPast
+=&gt; 1677-09-21 09:12:43 +0900
+</code></p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[bootstrap-sass-railsからbootstrap-sassに移行した]]></title>
@@ -411,95 +531,6 @@ yaml_db の方が fork が乱立して、新しい rails に対応したもの�
 <p>taps は新しい Ruby に対応できていなかったり、
 以前の記事に書いたようにスキーマの移行が不十分なところがあったりして、
 使われなくなっていくように感じました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第59回 Ruby/Rails勉強会＠関西に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-01-25-kansaiworkshop059.html"/>
-    <updated>2014-01-25T13:36:50+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansaiworkshop059</id>
-    <content type="html"><![CDATA[<p><a href="https://github.com/rubykansai/workshops/wiki/Kansaiworkshop059">第59回 Ruby/Rails勉強会＠関西</a> に参加しました。</p>
-
-<p>一部メモを書いていたので公開しておきます。</p>
-
-<!--more-->
-
-
-<h2>IT関係の同人誌などの話</h2>
-
-<h3>質疑応答</h3>
-
-<ul>
-<li>Q ReVIEW の本は?</li>
-<li><p>A 存在を知ったのが後だったので、電子書籍で買っただけ。</p></li>
-<li><p>Q いくらぐらい?</p></li>
-<li>A コピー本などで無料のものもありますが、たとえば500円とか1200円とか。印刷代などの関係で決まります。</li>
-</ul>
-
-
-<h2>gitlab</h2>
-
-<h3>メモ</h3>
-
-<ul>
-<li><a href="http://atnd.org/events/47159">C++テンプレート完全ガイド勉強会 vol.1大阪 : ATND</a></li>
-<li><a href="http://qwik.jp/minamirb/">Minami.rb</a></li>
-<li><a href="https://wiki.debian.org/KansaiDebianMeeting">関西Debian勉強会</a></li>
-<li><a href="http://www.slideshare.net/takafumionaka/is-there-anynecessityofusinggithubenterprise">Gitlab は貧者の github enterprise</a></li>
-<li><a href="https://gitorious.org/">Gitorious</a></li>
-<li><a href="http://gitblit.com/">Gitblit</a></li>
-<li>chef とか puppet とか ansible とかが何か知っている人は会場には少なかった。</li>
-<li><a href="https://twitter.com/koichiroo/status/425454305944952832/photo/1">レガシー依存の悪循環こわい</a></li>
-<li><a href="http://mrk1869.com/blog/gitlab_installation/">GitLab 6.0をインストールする &ndash; Markovnikov Laboratory</a></li>
-<li>「6.2で転けて、6.1で転けて、ここまで設定するのに3日かかった…」と書いてあって大変そうなので、 ansible playbook を使ったという話</li>
-<li><a href="http://d.hatena.ne.jp/akishin999/20130819/1376868748">20分(くらい)で GitLab をインストールする方法 &ndash; akishin999の日記</a></li>
-<li>svn からの移行には GUI がある方が良い</li>
-</ul>
-
-
-<h2>LT1 ダジャレ</h2>
-
-<ul>
-<li>わたしを創ったもの R・C・フェラン 年刊ＳＦ傑作選１</li>
-<li>mecab で分解して置き換えてダジャレ生成</li>
-<li>変なのもたくさん出てくる</li>
-<li>評価関数</li>
-</ul>
-
-
-<h2>Ruby 関西 10 周年</h2>
-
-<ul>
-<li><a href="https://k-of.jp/2004/">関西オープンソース 2004</a></li>
-<li>2004年11月27日 第0回 Ruby勉強会</li>
-<li>大前研一: 人間が変わる方法は3つしかない。 １番目は「時間配分を変える。」 ２番目は「住む場所 を変える。」 ３番目は「つきあう人を変える。」 この３つの要素でしか人間は変わらない。 最も無意味なのは「決意を新たにする」ことだ。</li>
-<li>助け合いの力</li>
-<li>グラミン銀行</li>
-<li>Jim Rohn の名言 : あなたは、あなたのまわりの5人の平均です。</li>
-<li><a href="http://thewriteway.com/2011/01/learning-by-doing-revisited/">http://thewriteway.com/2011/01/learning-by-doing-revisited/</a></li>
-<li>多様性は善</li>
-<li>ハブとしてのRuby関西</li>
-</ul>
-
-
-<h2>Ruby初級者向けレッスン</h2>
-
-<ul>
-<li><code>codepoints</code> とは Unicode のだったり、それぞれの encoding のだったり。</li>
-<li><code>"Ruby関西".chars.each{|c| puts c}</code> の <code>.each</code> はなくても動くが <code>$VERBOSE=true</code> のときに <code>warning: passing a block to String#chars is deprecated</code> という警告がでる。</li>
-<li><a href="https://gist.github.com/higaki/8147246">https://gist.github.com/higaki/8147246</a></li>
-<li><a href="https://github.com/higaki/learn_ruby_kansai_59">https://github.com/higaki/learn_ruby_kansai_59</a></li>
-</ul>
-
-
-<h2>帰り際の話</h2>
-
-<ul>
-<li>Windows 版の Ruby で 2.0.0 からエスケープシーケンスに対応しているのが、
-NEWS に書いていないなどソース以外に情報がない。</li>
-</ul>
-
 ]]></content>
   </entry>
   
