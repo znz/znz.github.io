@@ -1,0 +1,707 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>boot2dockerでdockerを試す - @znz blog</title>
+  <meta name="author" content="Kazuhiro NISHIYAMA">
+
+  
+  <meta name="description" content="boot2docker で最新の docker を試してみました。
+他ではあまり書いていないアンインストール方法も書いているので、
+不要になった時や何か変になった時の削除方法も参考になると思います。 対象バージョン Mac OS X 10.9.1 で試しましたが Linux でも同様に動くはずです &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-02-23-boot2docker.html">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-43859023-1', 'n-z.jp');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">@znz blog</a></h1>
+  
+    <h2>ZnZ の memo のようなもの</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://www.google.co.jp/cse" id="cse-search-box">
+  <div>
+    <input type="hidden" name="cx" value="partner-pub-4711975605457723:5173725094" />
+    <input type="hidden" name="ie" value="UTF-8" />
+    <input type="text" name="q" size="40" />
+    <input type="submit" name="sa" value="検索" />
+  </div>
+</form>
+
+<script type="text/javascript" src="http://www.google.co.jp/coop/cse/brand?form=cse-search-box&amp;lang=ja"></script>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">boot2dockerでdockerを試す</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-23T00:47:22+09:00" pubdate data-updated="true">2014-02-23 (Sun)</time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>boot2docker で最新の docker を試してみました。
+他ではあまり書いていないアンインストール方法も書いているので、
+不要になった時や何か変になった時の削除方法も参考になると思います。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Mac OS X 10.9.1 で試しましたが Linux でも同様に動くはずです</li>
+<li>VirtualBox 4.3.6</li>
+<li>boot2docker 0.6.0</li>
+<li>docker 0.8.1</li>
+</ul>
+
+
+<h2>VirtualBox</h2>
+
+<p>あらかじめ VirtualBox をインストールしておきます。</p>
+
+<h2>boot2docker</h2>
+
+<p><a href="http://docs.docker.io/en/latest/installation/mac/">http://docs.docker.io/en/latest/installation/mac/</a> の手順に従って
+<code>boot2docker</code> を入れてみます。</p>
+
+<h3>インストール</h3>
+
+<p>適当なディレクトリに <code>boot2docker</code> をダウンロードして実行可能にします。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> mkdir -p ~/boot2docker
+</span><span class='line'> cd ~/boot2docker
+</span><span class='line'> curl https://raw.github.com/boot2docker/boot2docker/master/boot2docker &gt; boot2docker
+</span><span class='line'> chmod +x boot2docker</span></code></pre></td></tr></table></div></figure>
+
+
+<p>この段階でのアンインストールは <code>boot2docker</code> を削除するだけです。</p>
+
+<h3>VM イメージの作成</h3>
+
+<p>初回は <code>./boot2docker init</code> を実行して iso のダウンロードと VM の作成をします。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% ./boot2docker init
+</span><span class='line'>[2014-02-22 23:43:36] Creating VM boot2docker-vm
+</span><span class='line'>Virtual machine 'boot2docker-vm' is created and registered.
+</span><span class='line'>UUID: 61e0ec36-fc80-4b70-ac11-899f6526a57e
+</span><span class='line'>Settings file: '/Users/kazu/VirtualBox VMs/boot2docker-vm/boot2docker-vm.vbox'
+</span><span class='line'>[2014-02-22 23:43:36] Setting VM settings
+</span><span class='line'>[2014-02-22 23:43:36] Setting VM networking
+</span><span class='line'>[2014-02-22 23:43:36] boot2docker.iso not found.
+</span><span class='line'>[2014-02-22 23:43:38] Latest version is v0.6.0, downloading...
+</span><span class='line'>  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+</span><span class='line'>                                 Dload  Upload   Total   Spent    Left  Speed
+</span><span class='line'>100   346  100   346    0     0    319      0  0:00:01  0:00:01 --:--:--   319
+</span><span class='line'>100 24.0M  100 24.0M    0     0   295k      0  0:01:23  0:01:23 --:--:--  498k
+</span><span class='line'>[2014-02-22 23:45:02] Done
+</span><span class='line'>[2014-02-22 23:45:02] Setting VM disks
+</span><span class='line'>[2014-02-22 23:45:02] Creating 40000 Meg hard drive...
+</span><span class='line'>Converting from raw image file="stdin" to file="/Users/kazu/.boot2docker/boot2docker-vm.vmdk"...
+</span><span class='line'>Creating dynamic image with size 41943040000 bytes (40000MB)...
+</span><span class='line'>[2014-02-22 23:45:02] Done.
+</span><span class='line'>[2014-02-22 23:45:02] You can now type boot2docker up and wait for the VM to start.</span></code></pre></td></tr></table></div></figure>
+
+
+<p>この段階のやり直しは VM が起動していれば <code>./boot2docker stop</code> で止めて、
+<code>./boot2docker delete</code> で VM を削除するだけではダメで、
+<code>~/.boot2docker</code> も削除する必要があります。</p>
+
+<p>パスは <code>boot2docker</code> の中の <code>BOOT2DOCKER_CFG_DIR</code> に書かれていて、
+以下の設定は <code>$HOME/.boot2docker/profile</code> で設定変更できます。</p>
+
+<ul>
+<li><code>VM_NAME</code> : VirtualBox での VM の名前 (デフォルト: <code>boot2docker-vm</code>)</li>
+<li><code>DOCKER_PORT</code> : ホスト側で docker 用に使うポート (デフォルト: <code>4243</code>)</li>
+<li><code>SSH_HOST_PORT</code> : ホスト側で ssh サーバー用に使うポート (デフォルト: <code>2022</code>)</li>
+<li><code>VM_DISK</code> : vmdk ファイルのパス (デフォルト: <code>${BOOT2DOCKER_CFG_DIR}/${VM_NAME}.vmdk</code>)</li>
+<li><code>VM_DISK_SIZE</code> : vmdk の容量 (デフォルト: <code>40000</code> メガバイト)</li>
+<li><code>VM_MEM</code> : メモリ (デフォルト: <code>1024</code>)</li>
+<li><code>BOOT2DOCKER_ISO</code> : ISO ファイルのパス (デフォルト: <code>${BOOT2DOCKER_CFG_DIR}/boot2docker.iso</code>)</li>
+</ul>
+
+
+<p>VM を作り直すだけなら <code>./boot2docker delete</code> して <code>./boot2docker init</code> すれば
+ISO はダウンロードし直さずに VM だけ作り直せます。</p>
+
+<p>間違えて先に <code>~/.boot2docker</code> を削除してしまうと VirtualBox の状態が不整合になるので、
+VirtualBox の GUI の方の仮想メディアマネージャーで存在しなくっているファイルを除去するなどの対処をして直します。</p>
+
+<h3>VM の起動</h3>
+
+<p>docker デーモンの VM を <code>./boot2docker up</code> で起動します。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% ./boot2docker up
+</span><span class='line'>[2014-02-22 23:50:43] Starting boot2docker-vm...
+</span><span class='line'>[2014-02-22 23:51:03] Started.
+</span><span class='line'>
+</span><span class='line'>To connect the docker client to the Docker daemon, please set:
+</span><span class='line'>export DOCKER_HOST=tcp://localhost:4243
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>止めるのは <code>./boot2docker stop</code> です。</p>
+
+<h3>ssh で中に入る</h3>
+
+<p><code>vagrant</code> と似た感じで <code>./boot2docker ssh</code> で中に入れます。
+ユーザーは <code>docker</code> でパスワードは <code>tcuser</code> です。
+Tiny Core Linux ベースなので、こういうパスワードになっているのだと思います。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% ./boot2docker ssh
+</span><span class='line'>docker@localhost's password:
+</span><span class='line'>                        ##        .
+</span><span class='line'>                  ## ## ##       ==
+</span><span class='line'>               ## ## ## ##      ===
+</span><span class='line'>           /""""""""""""""""\___/ ===
+</span><span class='line'>      ~~~ {~~ ~~~~ ~~~ ~~~~ ~~ ~ /  ===- ~~~
+</span><span class='line'>           \______ o          __/
+</span><span class='line'>             \    \        __/
+</span><span class='line'>              \____\______/
+</span><span class='line'> _                 _   ____     _            _
+</span><span class='line'>| |__   ___   ___ | |_|___ \ __| | ___   ___| | _____ _ __
+</span><span class='line'>| '_ \ / _ \ / _ \| __| __) / _` |/ _ \ / __| |/ / _ \ '__|
+</span><span class='line'>| |_) | (_) | (_) | |_ / __/ (_| | (_) | (__|   &lt;  __/ |
+</span><span class='line'>|_.__/ \___/ \___/ \__|_____\__,_|\___/ \___|_|\_\___|_|
+</span><span class='line'>boot2docker: 0.6.0
+</span><span class='line'>docker@boot2docker:~$</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>docker を使ってみる</h2>
+
+<p>ホスト OS 側に docker コマンドをインストールして、そこから使っても良いのですが、
+Homebrew でインストールできたバージョンが 0.8.0 で少し古かったので、
+主に VM の中の docker コマンドを使いました。</p>
+
+<p>ドキュメントでは <code>sudo docker</code> で実行していますが、
+TCP 接続だったり、ローカルの unix socket の場合でもグループのアクセス権限で許可されている場合などは
+<code>sudo</code> なしの <code>docker</code> コマンドだけで大丈夫です。</p>
+
+<p><code>boot2docker</code> の VM の場合は <code>/var/run/docker.sock</code> が <code>docker</code> グループに読み書きが許可されていて、
+<code>docker</code> ユーザーが <code>docker</code> グループに属しているため、 <code>sudo</code> が不要になっています。</p>
+
+<h3>バージョンなどの情報確認</h3>
+
+<p><code>docker version</code> や <code>docker info</code> で情報を確認します。</p>
+
+<p><code>boot2docker</code> の場合は問題ないと思いますが、
+docker のサーバーとの接続がうまくいかない場合はここでエラーなどになるので、
+環境変数 <code>DOCKER_HOST</code> やポートフォワーディングや firewall などの設定を確認します。</p>
+
+<p>まず VM の外の Homebrew でインストールした docker コマンドから確認しました。
+ここでバージョンが古かったので、後は ssh で入った VM の中で docker コマンドを使うことにしました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% export DOCKER_HOST=tcp://127.0.0.1:4243
+</span><span class='line'>% docker version
+</span><span class='line'>Client version: 0.8.0
+</span><span class='line'>Go version (client): go1.2
+</span><span class='line'>Git commit (client): cc3a8c8d8ec57e15b7b7316797132d770408ab1a
+</span><span class='line'>
+</span><span class='line'>Server version: 0.8.1
+</span><span class='line'>Git commit (server): a1598d1
+</span><span class='line'>Go version (server): go1.2
+</span><span class='line'>Last stable version: 0.8.1, please update docker</span></code></pre></td></tr></table></div></figure>
+
+
+<p>VM の中では Server と Client のバージョンが最新版で一致しています。
+ついでに <code>docker info</code> も確認しました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>docker@boot2docker:~$ docker version
+</span><span class='line'>Client version: 0.8.1
+</span><span class='line'>Go version (client): go1.2
+</span><span class='line'>Git commit (client): a1598d1
+</span><span class='line'>Server version: 0.8.1
+</span><span class='line'>Git commit (server): a1598d1
+</span><span class='line'>Go version (server): go1.2
+</span><span class='line'>Last stable version: 0.8.1
+</span><span class='line'>docker@boot2docker:~$ docker info
+</span><span class='line'>Containers: 0
+</span><span class='line'>Images: 0
+</span><span class='line'>Driver: aufs
+</span><span class='line'> Root Dir: /mnt/sda1/var/lib/docker/aufs
+</span><span class='line'> Dirs: 0
+</span><span class='line'>Debug mode (server): true
+</span><span class='line'>Debug mode (client): false
+</span><span class='line'>Fds: 10
+</span><span class='line'>Goroutines: 13
+</span><span class='line'>Execution Driver: lxc-0.8.0
+</span><span class='line'>EventsListeners: 0
+</span><span class='line'>Kernel Version: 3.13.3-tinycore64
+</span><span class='line'>Init Path: /usr/local/bin/docker
+</span><span class='line'>docker@boot2docker:~$</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>docker を試してみる</h3>
+
+<p><code>docker pull ubuntu</code> であらかじめダウンロードしてから <code>docker run</code> を実行しても良いのですが、
+いきなり <code>docker run -i -t ubuntu /bin/bash</code> を実行しても、
+自動的にダウンロードしてから実行されます。</p>
+
+<p>ダウンロードはサーバー側が遅いのか、時間がかかることがあるようなので、
+ゆっくり待った方が良さそうです。</p>
+
+<p>引数に指定した <code>/bin/bash</code> がコンテナの中の唯一のプロセスとして起動するので、
+自由に試してみて、 <code>exit</code> などで <code>/bin/bash</code> が終了すればコンテナも終了します。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>docker@boot2docker:~$ docker run -i -t ubuntu /bin/bash
+</span><span class='line'>Unable to find image 'ubuntu' locally
+</span><span class='line'>Pulling repository ubuntu
+</span><span class='line'>9cd978db300e: Download complete
+</span><span class='line'>eb601b8965b8: Download complete
+</span><span class='line'>5ac751e8d623: Download complete
+</span><span class='line'>9cc9ea5ea540: Download complete
+</span><span class='line'>9f676bd305a4: Download complete
+</span><span class='line'>511136ea3c5a: Download complete
+</span><span class='line'>f323cf34fd77: Download complete
+</span><span class='line'>6170bb7b0ad1: Download complete
+</span><span class='line'>1c7f181e78b9: Download complete
+</span><span class='line'>7a4f87241845: Download complete
+</span><span class='line'>321f7f4200f4: Download complete
+</span><span class='line'>root@a64cca91db41:/# ps -ef
+</span><span class='line'>UID        PID  PPID  C STIME TTY          TIME CMD
+</span><span class='line'>root         1     0  0 15:32 ?        00:00:00 /bin/bash
+</span><span class='line'>root         9     1  0 15:33 ?        00:00:00 ps -ef
+</span><span class='line'>root@a64cca91db41:/# exit
+</span><span class='line'>exit
+</span><span class='line'>docker@boot2docker:~$</span></code></pre></td></tr></table></div></figure>
+
+
+<p><a href="http://blog.n-z.jp/blog/2013-12-24-docker-rm.html">Dockerで不要になったコンテナやイメージを削除する</a>
+に書いたようにコンテナが溜まっていくので、削除しておきます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>docker@boot2docker:~$ docker ps -a -q
+</span><span class='line'>a64cca91db41
+</span><span class='line'>docker@boot2docker:~$ docker rm `docker ps -a -q`
+</span><span class='line'>a64cca91db41
+</span><span class='line'>docker@boot2docker:~$</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ちょっと試すだけなら <code>-rm</code> オプションを付けて自動削除するのが良さそうです。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>docker@boot2docker:~$ docker run -i -t -rm ubuntu /bin/bash
+</span><span class='line'>root@f810cbccf394:/# exit
+</span><span class='line'>exit
+</span><span class='line'>docker@boot2docker:~$ docker ps -a -q
+</span><span class='line'>docker@boot2docker:~$</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>つづく</h2>
+
+<p><code>docker pull</code> に時間がかかって、すぐにはいろいろ試せないようなので、別の記事に続きます。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-23T00:47:22+09:00" pubdate data-updated="true">2014-02-23 (Sun)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/boot2docker/'>boot2docker</a>, <a class='category' href='/blog/categories/docker/'>docker</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2014-02-23-boot2docker.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2014-02-23-boot2docker.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2014-02-23-boot2docker.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014-02-22-reading-land-of-lisp.html" title="Previous Post: Land of Lisp 読書会 最終回（第5回）(兵庫県)に参加してきた">&laquo; Land of Lisp 読書会 最終回（第5回）(兵庫県)に参加してきた</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- sidebar -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:160px;height:600px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4210402292"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+<section>
+  <h1>About Me</h1>
+  <img src="/favicon.png" style="float:right">
+  <p>
+    <a href="http://rubycommitters.org/">Ruby のコミッター</a>とかやってます。
+    フルスタックエンジニアかもしれません。
+  </p>
+<script data-gittip-username="znz"
+        data-gittip-widget="button"
+        src="//gttp.co/v1.js"></script>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014-02-23-boot2docker.html">boot2dockerでdockerを試す</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-02-22-reading-land-of-lisp.html">Land of Lisp 読書会 最終回（第5回）(兵庫県)に参加してきた</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-02-19-rubymotion-mokumoku-osaka.html">第 8 回 RubyMotion もくもく会 in Osaka に参加した</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-02-14-install.html">installコマンドでコマンド数を減らす</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-02-11-packer-template.html">packerのtemplateを1から作ってみた</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>Tag Cloud</h1>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 103.42857142857143%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 106.85714285714286%'>amagasakirb(4)</a> <a href='/blog/categories/ansible' style='font-size: 105.14285714285714%'>ansible(3)</a> <a href='/blog/categories/anyenv' style='font-size: 101.71428571428571%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.71428571428571%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 101.71428571428571%'>boot2docker(1)</a> <a href='/blog/categories/bts' style='font-size: 101.71428571428571%'>bts(1)</a> <a href='/blog/categories/certification' style='font-size: 101.71428571428571%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 101.71428571428571%'>coffeescript(1)</a> <a href='/blog/categories/community' style='font-size: 105.14285714285714%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 118.85714285714286%'>debian(11)</a> <a href='/blog/categories/devise' style='font-size: 103.42857142857143%'>devise(2)</a> <a href='/blog/categories/dkms' style='font-size: 101.71428571428571%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 112.0%'>docker(7)</a> <a href='/blog/categories/dokku' style='font-size: 101.71428571428571%'>dokku(1)</a> <a href='/blog/categories/doorkeeper' style='font-size: 101.71428571428571%'>doorkeeper(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.71428571428571%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 113.71428571428571%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 134.28571428571428%'>event(20)</a> <a href='/blog/categories/gem' style='font-size: 106.85714285714286%'>gem(4)</a> <a href='/blog/categories/git' style='font-size: 105.14285714285714%'>git(3)</a> <a href='/blog/categories/github' style='font-size: 108.57142857142857%'>github(5)</a> <a href='/blog/categories/heroku' style='font-size: 101.71428571428571%'>heroku(1)</a> <a href='/blog/categories/homebrew' style='font-size: 108.57142857142857%'>homebrew(5)</a> <a href='/blog/categories/html5' style='font-size: 103.42857142857143%'>html5(2)</a> <a href='/blog/categories/ime' style='font-size: 105.14285714285714%'>ime(3)</a> <a href='/blog/categories/irb' style='font-size: 101.71428571428571%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.71428571428571%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 105.14285714285714%'>javascript(3)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 103.42857142857143%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.71428571428571%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 101.71428571428571%'>jus(1)</a> <a href='/blog/categories/k-of' style='font-size: 101.71428571428571%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 105.14285714285714%'>kansaidebian(3)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.71428571428571%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.71428571428571%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 106.85714285714286%'>land-of-lisp(4)</a> <a href='/blog/categories/linux' style='font-size: 108.57142857142857%'>linux(5)</a> <a href='/blog/categories/lxc' style='font-size: 101.71428571428571%'>lxc(1)</a> <a href='/blog/categories/mail' style='font-size: 101.71428571428571%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 103.42857142857143%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 106.85714285714286%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.71428571428571%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.71428571428571%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.71428571428571%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 103.42857142857143%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.71428571428571%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 101.71428571428571%'>oauth2(1)</a> <a href='/blog/categories/octopress' style='font-size: 106.85714285714286%'>octopress(4)</a> <a href='/blog/categories/omniauth' style='font-size: 101.71428571428571%'>omniauth(1)</a> <a href='/blog/categories/osx' style='font-size: 130.85714285714286%'>osx(18)</a> <a href='/blog/categories/packer' style='font-size: 101.71428571428571%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.71428571428571%'>passenger(1)</a> <a href='/blog/categories/postfix' style='font-size: 103.42857142857143%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 103.42857142857143%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.71428571428571%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.71428571428571%'>pyenv(1)</a> <a href='/blog/categories/rabbit' style='font-size: 103.42857142857143%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 130.85714285714286%'>rails(18)</a> <a href='/blog/categories/rbenv' style='font-size: 106.85714285714286%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.71428571428571%'>redmine(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.71428571428571%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(35)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.71428571428571%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 101.71428571428571%'>rubykansai(1)</a> <a href='/blog/categories/rubymotion' style='font-size: 113.71428571428571%'>rubymotion(8)</a> <a href='/blog/categories/shell' style='font-size: 101.71428571428571%'>shell(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.71428571428571%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 106.85714285714286%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 118.85714285714286%'>ubuntu(11)</a> <a href='/blog/categories/upstart' style='font-size: 101.71428571428571%'>upstart(1)</a> <a href='/blog/categories/virtualbox' style='font-size: 101.71428571428571%'>virtualbox(1)</a> <a href='/blog/categories/weechat' style='font-size: 101.71428571428571%'>weechat(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.71428571428571%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 106.85714285714286%'>zsh(4)</a> </span>
+</section>
+<section class="clearfix">
+<h1><a href="https://coderwall.com/">coderwall.com</a></h1>
+<link href="http://coderwall.com/stylesheets/jquery.coderwall.css" media="all" rel="stylesheet" type="text/css">
+<script src="http://coderwall.com/javascripts/jquery.coderwall.js"></script>
+<section class="coderwall" data-coderwall-username="znz" data-coderwall-orientation="vertical" style="width:80%"></section>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/znz">@znz</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'znz',
+            count: 3,
+            skip_forks: false,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Kazuhiro NISHIYAMA -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'znzblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-02-23-boot2docker.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-02-23-boot2docker.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+<script type="text/javascript" src="http://b.st-hatena.com/js/bookmark_button.js" charset="utf-8" async="async"></script>
+
+
+</body>
+</html>

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: docker | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/docker/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-02-22T23:04:56+09:00</updated>
+  <updated>2014-02-23T01:16:11+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,279 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[boot2dockerでdockerを試す]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-23-boot2docker.html"/>
+    <updated>2014-02-23T00:47:22+09:00</updated>
+    <id>http://blog.n-z.jp/blog/boot2docker</id>
+    <content type="html"><![CDATA[<p>boot2docker で最新の docker を試してみました。
+他ではあまり書いていないアンインストール方法も書いているので、
+不要になった時や何か変になった時の削除方法も参考になると思います。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Mac OS X 10.9.1 で試しましたが Linux でも同様に動くはずです</li>
+<li>VirtualBox 4.3.6</li>
+<li>boot2docker 0.6.0</li>
+<li>docker 0.8.1</li>
+</ul>
+
+
+<h2>VirtualBox</h2>
+
+<p>あらかじめ VirtualBox をインストールしておきます。</p>
+
+<h2>boot2docker</h2>
+
+<p><a href="http://docs.docker.io/en/latest/installation/mac/">http://docs.docker.io/en/latest/installation/mac/</a> の手順に従って
+<code>boot2docker</code> を入れてみます。</p>
+
+<h3>インストール</h3>
+
+<p>適当なディレクトリに <code>boot2docker</code> をダウンロードして実行可能にします。</p>
+
+<p><code>
+ mkdir -p ~/boot2docker
+ cd ~/boot2docker
+ curl https://raw.github.com/boot2docker/boot2docker/master/boot2docker &gt; boot2docker
+ chmod +x boot2docker
+</code></p>
+
+<p>この段階でのアンインストールは <code>boot2docker</code> を削除するだけです。</p>
+
+<h3>VM イメージの作成</h3>
+
+<p>初回は <code>./boot2docker init</code> を実行して iso のダウンロードと VM の作成をします。</p>
+
+<p>```
+% ./boot2docker init
+[2014-02-22 23:43:36] Creating VM boot2docker-vm
+Virtual machine &lsquo;boot2docker-vm&rsquo; is created and registered.
+UUID: 61e0ec36-fc80-4b70-ac11-899f6526a57e
+Settings file: &lsquo;/Users/kazu/VirtualBox VMs/boot2docker-vm/boot2docker-vm.vbox&rsquo;
+[2014-02-22 23:43:36] Setting VM settings
+[2014-02-22 23:43:36] Setting VM networking
+[2014-02-22 23:43:36] boot2docker.iso not found.
+[2014-02-22 23:43:38] Latest version is v0.6.0, downloading&hellip;
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current</p>
+
+<pre><code>                             Dload  Upload   Total   Spent    Left  Speed
+</code></pre>
+
+<p>100   346  100   346    0     0    319      0  0:00:01  0:00:01 &mdash;:&mdash;:&mdash;   319
+100 24.0M  100 24.0M    0     0   295k      0  0:01:23  0:01:23 &mdash;:&mdash;:&mdash;  498k
+[2014-02-22 23:45:02] Done
+[2014-02-22 23:45:02] Setting VM disks
+[2014-02-22 23:45:02] Creating 40000 Meg hard drive&hellip;
+Converting from raw image file=&ldquo;stdin&rdquo; to file=&ldquo;/Users/kazu/.boot2docker/boot2docker-vm.vmdk&rdquo;&hellip;
+Creating dynamic image with size 41943040000 bytes (40000MB)&hellip;
+[2014-02-22 23:45:02] Done.
+[2014-02-22 23:45:02] You can now type boot2docker up and wait for the VM to start.
+```</p>
+
+<p>この段階のやり直しは VM が起動していれば <code>./boot2docker stop</code> で止めて、
+<code>./boot2docker delete</code> で VM を削除するだけではダメで、
+<code>~/.boot2docker</code> も削除する必要があります。</p>
+
+<p>パスは <code>boot2docker</code> の中の <code>BOOT2DOCKER_CFG_DIR</code> に書かれていて、
+以下の設定は <code>$HOME/.boot2docker/profile</code> で設定変更できます。</p>
+
+<ul>
+<li><code>VM_NAME</code> : VirtualBox での VM の名前 (デフォルト: <code>boot2docker-vm</code>)</li>
+<li><code>DOCKER_PORT</code> : ホスト側で docker 用に使うポート (デフォルト: <code>4243</code>)</li>
+<li><code>SSH_HOST_PORT</code> : ホスト側で ssh サーバー用に使うポート (デフォルト: <code>2022</code>)</li>
+<li><code>VM_DISK</code> : vmdk ファイルのパス (デフォルト: <code>${BOOT2DOCKER_CFG_DIR}/${VM_NAME}.vmdk</code>)</li>
+<li><code>VM_DISK_SIZE</code> : vmdk の容量 (デフォルト: <code>40000</code> メガバイト)</li>
+<li><code>VM_MEM</code> : メモリ (デフォルト: <code>1024</code>)</li>
+<li><code>BOOT2DOCKER_ISO</code> : ISO ファイルのパス (デフォルト: <code>${BOOT2DOCKER_CFG_DIR}/boot2docker.iso</code>)</li>
+</ul>
+
+
+<p>VM を作り直すだけなら <code>./boot2docker delete</code> して <code>./boot2docker init</code> すれば
+ISO はダウンロードし直さずに VM だけ作り直せます。</p>
+
+<p>間違えて先に <code>~/.boot2docker</code> を削除してしまうと VirtualBox の状態が不整合になるので、
+VirtualBox の GUI の方の仮想メディアマネージャーで存在しなくっているファイルを除去するなどの対処をして直します。</p>
+
+<h3>VM の起動</h3>
+
+<p>docker デーモンの VM を <code>./boot2docker up</code> で起動します。</p>
+
+<p>```
+% ./boot2docker up
+[2014-02-22 23:50:43] Starting boot2docker-vm&hellip;
+[2014-02-22 23:51:03] Started.</p>
+
+<p>To connect the docker client to the Docker daemon, please set:
+export DOCKER_HOST=tcp://localhost:4243</p>
+
+<p>```</p>
+
+<p>止めるのは <code>./boot2docker stop</code> です。</p>
+
+<h3>ssh で中に入る</h3>
+
+<p><code>vagrant</code> と似た感じで <code>./boot2docker ssh</code> で中に入れます。
+ユーザーは <code>docker</code> でパスワードは <code>tcuser</code> です。
+Tiny Core Linux ベースなので、こういうパスワードになっているのだと思います。</p>
+
+<p>```
+% ./boot2docker ssh
+docker@localhost&rsquo;s password:</p>
+
+<pre><code>                    ##        .
+              ## ## ##       ==
+           ## ## ## ##      ===
+       /""""""""""""""""\___/ ===
+  ~~~ {~~ ~~~~ ~~~ ~~~~ ~~ ~ /  ===- ~~~
+       \______ o          __/
+         \    \        __/
+          \____\______/
+</code></pre>
+
+<hr />
+
+<p>| |<strong>   </strong><em>   </em><strong> | |<em>|</em></strong> \ <strong>| | </strong><em>   </em><strong>| | </strong><em><strong> _ </strong>
+| &lsquo;</em> \ / _ \ / _ \| <strong>| </strong>) / <em>` |/ _ \ / <strong>| |/ / _ \ &rsquo;</strong>|
+| |</em>) | (<em>) | (</em>) | |<em> / __/ (</em>| | (<em>) | (<strong>|   &lt;  </strong>/ |
+|</em>.<strong>/ _</strong>/ _<strong>/ _<em>|</em></strong><strong>_<em>,</em>|_</strong>/ _<strong>|_|__</strong>|_|
+boot2docker: 0.6.0
+docker@boot2docker:~$
+```</p>
+
+<h2>docker を使ってみる</h2>
+
+<p>ホスト OS 側に docker コマンドをインストールして、そこから使っても良いのですが、
+Homebrew でインストールできたバージョンが 0.8.0 で少し古かったので、
+主に VM の中の docker コマンドを使いました。</p>
+
+<p>ドキュメントでは <code>sudo docker</code> で実行していますが、
+TCP 接続だったり、ローカルの unix socket の場合でもグループのアクセス権限で許可されている場合などは
+<code>sudo</code> なしの <code>docker</code> コマンドだけで大丈夫です。</p>
+
+<p><code>boot2docker</code> の VM の場合は <code>/var/run/docker.sock</code> が <code>docker</code> グループに読み書きが許可されていて、
+<code>docker</code> ユーザーが <code>docker</code> グループに属しているため、 <code>sudo</code> が不要になっています。</p>
+
+<h3>バージョンなどの情報確認</h3>
+
+<p><code>docker version</code> や <code>docker info</code> で情報を確認します。</p>
+
+<p><code>boot2docker</code> の場合は問題ないと思いますが、
+docker のサーバーとの接続がうまくいかない場合はここでエラーなどになるので、
+環境変数 <code>DOCKER_HOST</code> やポートフォワーディングや firewall などの設定を確認します。</p>
+
+<p>まず VM の外の Homebrew でインストールした docker コマンドから確認しました。
+ここでバージョンが古かったので、後は ssh で入った VM の中で docker コマンドを使うことにしました。</p>
+
+<p>```
+% export DOCKER_HOST=tcp://127.0.0.1:4243
+% docker version
+Client version: 0.8.0
+Go version (client): go1.2
+Git commit (client): cc3a8c8d8ec57e15b7b7316797132d770408ab1a</p>
+
+<p>Server version: 0.8.1
+Git commit (server): a1598d1
+Go version (server): go1.2
+Last stable version: 0.8.1, please update docker
+```</p>
+
+<p>VM の中では Server と Client のバージョンが最新版で一致しています。
+ついでに <code>docker info</code> も確認しました。</p>
+
+<p><code>
+docker@boot2docker:~$ docker version
+Client version: 0.8.1
+Go version (client): go1.2
+Git commit (client): a1598d1
+Server version: 0.8.1
+Git commit (server): a1598d1
+Go version (server): go1.2
+Last stable version: 0.8.1
+docker@boot2docker:~$ docker info
+Containers: 0
+Images: 0
+Driver: aufs
+ Root Dir: /mnt/sda1/var/lib/docker/aufs
+ Dirs: 0
+Debug mode (server): true
+Debug mode (client): false
+Fds: 10
+Goroutines: 13
+Execution Driver: lxc-0.8.0
+EventsListeners: 0
+Kernel Version: 3.13.3-tinycore64
+Init Path: /usr/local/bin/docker
+docker@boot2docker:~$
+</code></p>
+
+<h3>docker を試してみる</h3>
+
+<p><code>docker pull ubuntu</code> であらかじめダウンロードしてから <code>docker run</code> を実行しても良いのですが、
+いきなり <code>docker run -i -t ubuntu /bin/bash</code> を実行しても、
+自動的にダウンロードしてから実行されます。</p>
+
+<p>ダウンロードはサーバー側が遅いのか、時間がかかることがあるようなので、
+ゆっくり待った方が良さそうです。</p>
+
+<p>引数に指定した <code>/bin/bash</code> がコンテナの中の唯一のプロセスとして起動するので、
+自由に試してみて、 <code>exit</code> などで <code>/bin/bash</code> が終了すればコンテナも終了します。</p>
+
+<p><code>
+docker@boot2docker:~$ docker run -i -t ubuntu /bin/bash
+Unable to find image 'ubuntu' locally
+Pulling repository ubuntu
+9cd978db300e: Download complete
+eb601b8965b8: Download complete
+5ac751e8d623: Download complete
+9cc9ea5ea540: Download complete
+9f676bd305a4: Download complete
+511136ea3c5a: Download complete
+f323cf34fd77: Download complete
+6170bb7b0ad1: Download complete
+1c7f181e78b9: Download complete
+7a4f87241845: Download complete
+321f7f4200f4: Download complete
+root@a64cca91db41:/# ps -ef
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  0 15:32 ?        00:00:00 /bin/bash
+root         9     1  0 15:33 ?        00:00:00 ps -ef
+root@a64cca91db41:/# exit
+exit
+docker@boot2docker:~$
+</code></p>
+
+<p><a href="http://blog.n-z.jp/blog/2013-12-24-docker-rm.html">Dockerで不要になったコンテナやイメージを削除する</a>
+に書いたようにコンテナが溜まっていくので、削除しておきます。</p>
+
+<p><code>
+docker@boot2docker:~$ docker ps -a -q
+a64cca91db41
+docker@boot2docker:~$ docker rm `docker ps -a -q`
+a64cca91db41
+docker@boot2docker:~$
+</code></p>
+
+<p>ちょっと試すだけなら <code>-rm</code> オプションを付けて自動削除するのが良さそうです。</p>
+
+<p><code>
+docker@boot2docker:~$ docker run -i -t -rm ubuntu /bin/bash
+root@f810cbccf394:/# exit
+exit
+docker@boot2docker:~$ docker ps -a -q
+docker@boot2docker:~$
+</code></p>
+
+<h2>つづく</h2>
+
+<p><code>docker pull</code> に時間がかかって、すぐにはいろいろ試せないようなので、別の記事に続きます。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[installコマンドでコマンド数を減らす]]></title>
@@ -683,326 +956,6 @@ docker の設定に <code>-api-enable-cors</code> が必要と書いていたり
 <p><code>Dockland</code> は <code>docker images -viz</code> を使っているというアイデアは
 良さそうに感じたので、ぜひ他の Web UI でも採用されると便利そうだと
 思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[dockerのカスタムベースイメージを作成する]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-13-docker-custom-base-image.html"/>
-    <updated>2013-12-13T18:49:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/docker-custom-base-image</id>
-    <content type="html"><![CDATA[<p>例などにある ubuntu の base image は
-apt-line が archive.ubuntu.com になっていて、
-apt-get install などが遅いです。</p>
-
-<p>日本で使うのなら日本のミラーを使った方が良いので、
-そういう base image を作ります。</p>
-
-<p>base image はあまりカスタマイズせずに、
-派生するイメージにDockerfile などを使って
-カスタマイズをした方が望ましいのですが、
-ほぼ必須のものを毎回インストールするのは無駄なので、
-ついでに日本語 locale を入れるというカスタマイズもしておきます。</p>
-
-<!--more-->
-
-
-<h2>docker 向けのポイント</h2>
-
-<p>最初に docker 向けのポイントをまとめておきます。</p>
-
-<ul>
-<li>最小限にするなら <code>--variant=minbase</code></li>
-<li><code>--include=iproute</code> などで <code>iproute</code> パッケージを入れておかないとネットワークにつながらない</li>
-<li><code>policy-rc.d</code> とか <code>initctl</code> を対処しておかないとパッケージのインストール時に変なことになるかも</li>
-<li><code>dpkg</code> に <code>force-unsafe-io</code> を設定すると <code>apt</code> を高速化できる</li>
-<li><a href="https://github.com/dotcloud/docker/blob/master/contrib/mkimage-debootstrap.sh">mkimage-debootstrap.sh</a> をそのまま使う場合も日本のミラーを指定する方が良い</li>
-</ul>
-
-
-<h2>base image の作り方</h2>
-
-<p>公式ドキュメントの
-<a href="http://docs.docker.io/en/latest/use/baseimages/">Base Image Creation</a>
-を参考にして、基本は
-<a href="https://github.com/dotcloud/docker/blob/master/contrib/mkimage-debootstrap.sh">mkimage-debootstrap.sh</a>
-の手順を使います。</p>
-
-<p>カスタマイズのため、手順を追いかけるだけで直接は使いません。</p>
-
-<h2>debootstrap の実行</h2>
-
-<p>最初は以下のように <code>/tmp/wheezy64</code> などの適当な場所に
-<code>debootstrap</code> で <code>chroot</code> 環境を作成します。
-proxy 環境なら <code>sudo http_proxy=$http_proxy debootstrap ...</code>
-のように指定すれば良いようです。</p>
-
-<p>Debian での例:
-<code>
- sudo debootstrap --verbose --variant=minbase --include=iproute --arch=amd64 wheezy /tmp/wheezy64 http://cdn.debian.or.jp/debian
-</code></p>
-
-<p>Ubuntu での例:
-<code>
- sudo debootstrap --verbose --variant=minbase --arch=amd64 precise /tmp/precise64 http://ftp.jaist.ac.jp/pub/Linux/ubuntu/
-</code></p>
-
-<h3>variant</h3>
-
-<p><code>variant</code> で <code>minbase</code> を指定するとインストールされるパッケージが減って、
-本当に最小限の環境になります。
-具体的には <code>Essential: yes</code> のパッケージ
-( <code>aptitude search '~E'</code> または <code>aptitude search '?essential'</code> で一覧)
-と <code>apt</code> がインストールされます。</p>
-
-<p><code>buildd</code> という <code>variant</code> もあって <code>minbase</code> に加えて
-<code>build-essential</code> が追加でインストールされるようなので、
-CI 環境用などの base image なら <code>--variant=buildd</code> の方が
-良いかもしれません。</p>
-
-<p>デフォルトだと <code>Priority</code> が <code>imporant</code> のパッケージ
-( <code>aptitude search '~pimportant</code> または <code>aptitude search '?priority(important)' で一覧)
-がインストールされるようです。
-インストールされるパッケージの差分は
-</code>aptitude search &lsquo;~pimportant!~E`
-で調べられます。</p>
-
-<h3>include</h3>
-
-<p>元の <code>mkimage-debootstrap.sh</code> では <code>iproute,iputils-ping</code> と指定してますが、
-<code>iputils-ping</code> は必須ではないのでここでは省略しています。</p>
-
-<p><code>iproute</code> は docker 環境では必須です。
-このパッケージに含まれる <code>ip</code> コマンドが入っていないとネットワークにつながりません。</p>
-
-<p><code>iproute</code> パッケージは <code>Priority</code> が <code>optional</code> なので
-普通に <code>debootstrap</code> を実行しても入らないので、
-注意が必要です。</p>
-
-<h3>その他の引数</h3>
-
-<p>arch の指定とか suite の指定とか生成先ディレクトリの指定とか、
-ミラーの指定とかは見てわかる通りです。</p>
-
-<h2>docker 向けのカスタマイズ</h2>
-
-<p>次に生成されたディレクトリの中で
-<code>mkimage-debootstrap.sh</code>
-にデフォルト (<code>-d</code> オプションが指定されなかったとき) の処理をしていきます。</p>
-
-<h3>policy-rc.d</h3>
-
-<p>ファイルの作成方法は何でも良いのですが、
-exit status で 101 を返す <code>usr/sbin/policy-rc.d</code> を作成して、
-パッケージのインストールやアップデートなどで init スクリプトが
-実行されないようにします。</p>
-
-<p>ちなみに
-<code>$'...'</code> は bash に <code>\n</code> を解釈させるための書き方なので、
-<code>'...'</code> や <code>"..."</code> の間違いではありません。</p>
-
-<p><code>
- echo $'#!/bin/sh\nexit 101' | sudo tee usr/sbin/policy-rc.d &gt; /dev/null
- sudo chmod +x usr/sbin/policy-rc.d
-</code></p>
-
-<p><code>policy-rc.d</code> については <code>invoke-rc.d</code> の man を参照してください。</p>
-
-<h3>sbin/initctl</h3>
-
-<p>initctl を実行してしまう upstart スクリプトがあるらしく、
-その対処もします。</p>
-
-<p>policy-rc.d は存在しなかったので、作成するだけでしたが、
-<code>sbin/initctl</code> はパッケージ管理のファイルとして存在するので
-<code>dpkg-divert</code> でパッケージの更新などで上書きされないようにしています。</p>
-
-<p><code>
- sudo chroot . dpkg-divert --local --rename --add /sbin/initctl
- sudo ln -sf /bin/true sbin/initctl
-</code></p>
-
-<h3>パッケージのキャッシュの削除</h3>
-
-<p><code>
- sudo chroot . apt-get clean
-</code></p>
-
-<p>を実行して不要な deb ファイルなどを削除して、
-イメージのサイズを削減しています。</p>
-
-<p>後で独自カスタマイズのところでパッケージをインストールして、
-その後でまた実行するので、その場合はここでは実行しなくてもかまいません。</p>
-
-<h3>apt の高速化など</h3>
-
-<p><code>mkimage-debootstrap.sh</code> のコメントには
-<code>dpkg</code> がパッケージの展開後に <code>sync()</code> を呼んでいるのが
-原因で無駄に遅くなっているので、
-強制的に <code>sync()</code> を呼ばなくさせると書いています。</p>
-
-<p><code>
- echo 'force-unsafe-io' | sudo tee etc/dpkg/dpkg.cfg.d/02apt-speedup &gt; /dev/null
-</code></p>
-
-<p>それから、 deb ファイルを残さないようにして image ファイルが大きくならないようにしています。</p>
-
-<p><code>
- echo 'DPkg::Post-Invoke {"/bin/rm -f /var/cache/apt/archives/*.deb || true";};' | sudo tee etc/apt/apt.conf.d/no-cache &gt; /dev/null
-</code></p>
-
-<h3>元に戻す方法</h3>
-
-<p><code>mkimage-debootstrap.sh</code> のコメントに
-元に戻す方法も書いてありました。
-<code>dpkg-divert</code> 以外はファイルを消すだけです。</p>
-
-<p><code>
- rm /usr/sbin/policy-rc.d
- rm /sbin/initctl; dpkg-divert --rename --remove /sbin/initctl
- rm /etc/dpkg/dpkg.cfg.d/02apt-speedup
- rm /etc/apt/apt.conf.d/no-cache
-</code></p>
-
-<h3>apt-line の変更</h3>
-
-<p><code>etc/apt/sources.list</code> をみると</p>
-
-<p><code>
- deb http://cdn.debian.or.jp/debian wheezy main
-</code></p>
-
-<p>だけになっているので、 <code>updates</code> と <code>security</code> を追加します。</p>
-
-<p><code>mkimage-debootstrap.sh</code> もデフォルト
-(<code>-d</code> も <code>-s</code> も指定されていないとき)
-の動作では追加します。</p>
-
-<p>この例では以下のようにしました。</p>
-
-<p>debian での例:
-<code>
- deb http://cdn.debian.or.jp/debian wheezy main
- deb http://cdn.debian.or.jp/debian wheezy-updates main
- deb http://security.debian.org/ wheezy/updates main
-</code></p>
-
-<p>ubuntu での例:
-<code>
- deb http://ftp.jaist.ac.jp/pub/Linux/ubuntu precise main universe
- deb http://ftp.jaist.ac.jp/pub/Linux/ubuntu precise-updates main universe
- deb http://ftp.jaist.ac.jp/pub/Linux/ubuntu precise-security main universe
-</code></p>
-
-<p>main 以外を追加したい場合はここで追加しておくと良さそうです。
-<code>mkimage-debootstrap.sh</code> でも ubuntu の場合は <code>universe</code> が追加されていました。</p>
-
-<h2>独自カスタマイズ</h2>
-
-<p>ここから独自カスタマイズになります。</p>
-
-<h3>アップデート実行</h3>
-
-<p>base image にセキュリティアップデートも入れておきたいなら、
-更新しておきます。</p>
-
-<p><code>
- sudo chroot . apt-get update
- sudo chroot . apt-get dist-upgrade
-</code></p>
-
-<h3>日本語 locale 追加</h3>
-
-<p>debian の場合は
-別環境で <code>debconf-get-selections</code> で調べておいた設定を使って、
-<code>debconf-set-selections</code> で設定を入れておいて
-<code>DEBIAN_FRONTEND=noninteractive</code> でインストールします。</p>
-
-<p><code>
- echo locales locales/locales_to_be_generated multiselect ja_JP.EUC-JP EUC-JP, ja_JP.UTF-8 UTF-8 | sudo chroot . debconf-set-selections
- echo locales locales/default_environment_locale select ja_JP.UTF-8 | sudo chroot . debconf-set-selections
- sudo chroot . env DEBIAN_FRONTEND=noninteractive apt-get install locales
-</code></p>
-
-<p>ubuntu の場合は
-<code>language-pack-ja</code> パッケージを入れても良いのですが、
-不要なパッケージを入れるのが嫌なら <code>locale-gen</code> コマンドで
-生成しても良いです。</p>
-
-<p><code>
- sudo chroot . locale-gen ja_JP.UTF-8
- sudo chroot . locale-gen ja_JP.EUC-JP
-</code></p>
-
-<h3>パッケージのキャッシュの削除</h3>
-
-<p>カスタマイズが終わったら clean を実行しておきます。
-<code>etc/apt/apt.conf.d/no-cache</code> を作成していれば不要かもしれません。</p>
-
-<p><code>
- sudo chroot . apt-get clean
-</code></p>
-
-<h2>イメージ作成と取り込み</h2>
-
-<h3>tarball 作成</h3>
-
-<p><code>mkimage-debootstrap.sh</code> は <code>-t</code> オプションが指定されたときに
-docker のイメージではなく tarball を作成します。
-直接取り込むならこの手順は不要です。</p>
-
-<p>作成方法としては
-最初に <code>touch</code> で一般ユーザー権限のファイルになるようにしておいて、
-中身は <code>root</code> 権限で入れるようにしています。</p>
-
-<p><code>
- touch /tmp/wheezy64.tar.xz
- sudo tar --numeric-owner -caf /tmp/wheezy64.tar.xz .
-</code></p>
-
-<h3>イメージ取り込み</h3>
-
-<p><code>sudo docker</code> は root 権限が不要な設定にいていれば <code>docker</code> だけでかまいません。</p>
-
-<p><code>mkimage-debootstrap.sh</code> は安定版や LTS に <code>latest</code> タグを設定したり、
-<code>etc/debian_version</code> や <code>etc/lsb-release</code> をみて
-タグを設定しているので、必要に応じて設定しておきます。</p>
-
-<p>イメージ名としては「ユーザー名/レポジトリ名」という形式が推奨されていますが、
-ここでは例として「ユーザー名」の部分は「local」にしておきます。
-そして「レポジトリ名」としては日本語 locale を入れたということで
-<code>-ja</code> を付けました。
-日本のミラーを使っているということで <code>-ja-jp</code> にしても良かったのですが、
-長かったので、 <code>-ja</code> だけにしました。</p>
-
-<p>Debian での例:
-<code>
- sudo tar --numeric-owner -c . | sudo docker import - local/debian-ja:wheezy
- sudo docker tag local/debian-ja:wheezy local/debian-ja:latest
- sudo docker tag local/debian-ja:wheezy local/debian-ja:7.2
-</code></p>
-
-<p>Ubuntu での例:
-<code>
- sudo tar --numeric-owner -c . | sudo docker import - local/ubuntu-ja:precise
- sudo docker tag local/ubuntu-ja:precise local/ubuntu-ja:latest
- sudo docker tag local/ubuntu-ja:precise local/ubuntu-ja:12.04
-</code></p>
-
-<h2>まとめ</h2>
-
-<p><a href="https://github.com/dotcloud/docker/blob/master/contrib/mkimage-debootstrap.sh">mkimage-debootstrap.sh</a>
-で何をやっているのか、
-同じことを手動でやるのはどうするのかということを説明しました。</p>
-
-<p>最初のポイントにも書きましたが
-<code>mkimage-debootstrap.sh</code>
-を直接使うのも良いですが、
-最低限ミラーを指定するのがおすすめです。</p>
-
-<p>目的によっては <code>variant</code> を変更したり、
-<code>include</code> でインストールするパッケージを増やしておくだけでも
-便利になると思います。</p>
 ]]></content>
   </entry>
   

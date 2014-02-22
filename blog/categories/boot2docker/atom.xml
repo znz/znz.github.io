@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: boot2docker | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/boot2docker/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-02-23T01:16:11+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[boot2dockerでdockerを試す]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-23-boot2docker.html"/>
+    <updated>2014-02-23T00:47:22+09:00</updated>
+    <id>http://blog.n-z.jp/blog/boot2docker</id>
+    <content type="html"><![CDATA[<p>boot2docker で最新の docker を試してみました。
+他ではあまり書いていないアンインストール方法も書いているので、
+不要になった時や何か変になった時の削除方法も参考になると思います。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Mac OS X 10.9.1 で試しましたが Linux でも同様に動くはずです</li>
+<li>VirtualBox 4.3.6</li>
+<li>boot2docker 0.6.0</li>
+<li>docker 0.8.1</li>
+</ul>
+
+
+<h2>VirtualBox</h2>
+
+<p>あらかじめ VirtualBox をインストールしておきます。</p>
+
+<h2>boot2docker</h2>
+
+<p><a href="http://docs.docker.io/en/latest/installation/mac/">http://docs.docker.io/en/latest/installation/mac/</a> の手順に従って
+<code>boot2docker</code> を入れてみます。</p>
+
+<h3>インストール</h3>
+
+<p>適当なディレクトリに <code>boot2docker</code> をダウンロードして実行可能にします。</p>
+
+<p><code>
+ mkdir -p ~/boot2docker
+ cd ~/boot2docker
+ curl https://raw.github.com/boot2docker/boot2docker/master/boot2docker &gt; boot2docker
+ chmod +x boot2docker
+</code></p>
+
+<p>この段階でのアンインストールは <code>boot2docker</code> を削除するだけです。</p>
+
+<h3>VM イメージの作成</h3>
+
+<p>初回は <code>./boot2docker init</code> を実行して iso のダウンロードと VM の作成をします。</p>
+
+<p>```
+% ./boot2docker init
+[2014-02-22 23:43:36] Creating VM boot2docker-vm
+Virtual machine &lsquo;boot2docker-vm&rsquo; is created and registered.
+UUID: 61e0ec36-fc80-4b70-ac11-899f6526a57e
+Settings file: &lsquo;/Users/kazu/VirtualBox VMs/boot2docker-vm/boot2docker-vm.vbox&rsquo;
+[2014-02-22 23:43:36] Setting VM settings
+[2014-02-22 23:43:36] Setting VM networking
+[2014-02-22 23:43:36] boot2docker.iso not found.
+[2014-02-22 23:43:38] Latest version is v0.6.0, downloading&hellip;
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current</p>
+
+<pre><code>                             Dload  Upload   Total   Spent    Left  Speed
+</code></pre>
+
+<p>100   346  100   346    0     0    319      0  0:00:01  0:00:01 &mdash;:&mdash;:&mdash;   319
+100 24.0M  100 24.0M    0     0   295k      0  0:01:23  0:01:23 &mdash;:&mdash;:&mdash;  498k
+[2014-02-22 23:45:02] Done
+[2014-02-22 23:45:02] Setting VM disks
+[2014-02-22 23:45:02] Creating 40000 Meg hard drive&hellip;
+Converting from raw image file=&ldquo;stdin&rdquo; to file=&ldquo;/Users/kazu/.boot2docker/boot2docker-vm.vmdk&rdquo;&hellip;
+Creating dynamic image with size 41943040000 bytes (40000MB)&hellip;
+[2014-02-22 23:45:02] Done.
+[2014-02-22 23:45:02] You can now type boot2docker up and wait for the VM to start.
+```</p>
+
+<p>この段階のやり直しは VM が起動していれば <code>./boot2docker stop</code> で止めて、
+<code>./boot2docker delete</code> で VM を削除するだけではダメで、
+<code>~/.boot2docker</code> も削除する必要があります。</p>
+
+<p>パスは <code>boot2docker</code> の中の <code>BOOT2DOCKER_CFG_DIR</code> に書かれていて、
+以下の設定は <code>$HOME/.boot2docker/profile</code> で設定変更できます。</p>
+
+<ul>
+<li><code>VM_NAME</code> : VirtualBox での VM の名前 (デフォルト: <code>boot2docker-vm</code>)</li>
+<li><code>DOCKER_PORT</code> : ホスト側で docker 用に使うポート (デフォルト: <code>4243</code>)</li>
+<li><code>SSH_HOST_PORT</code> : ホスト側で ssh サーバー用に使うポート (デフォルト: <code>2022</code>)</li>
+<li><code>VM_DISK</code> : vmdk ファイルのパス (デフォルト: <code>${BOOT2DOCKER_CFG_DIR}/${VM_NAME}.vmdk</code>)</li>
+<li><code>VM_DISK_SIZE</code> : vmdk の容量 (デフォルト: <code>40000</code> メガバイト)</li>
+<li><code>VM_MEM</code> : メモリ (デフォルト: <code>1024</code>)</li>
+<li><code>BOOT2DOCKER_ISO</code> : ISO ファイルのパス (デフォルト: <code>${BOOT2DOCKER_CFG_DIR}/boot2docker.iso</code>)</li>
+</ul>
+
+
+<p>VM を作り直すだけなら <code>./boot2docker delete</code> して <code>./boot2docker init</code> すれば
+ISO はダウンロードし直さずに VM だけ作り直せます。</p>
+
+<p>間違えて先に <code>~/.boot2docker</code> を削除してしまうと VirtualBox の状態が不整合になるので、
+VirtualBox の GUI の方の仮想メディアマネージャーで存在しなくっているファイルを除去するなどの対処をして直します。</p>
+
+<h3>VM の起動</h3>
+
+<p>docker デーモンの VM を <code>./boot2docker up</code> で起動します。</p>
+
+<p>```
+% ./boot2docker up
+[2014-02-22 23:50:43] Starting boot2docker-vm&hellip;
+[2014-02-22 23:51:03] Started.</p>
+
+<p>To connect the docker client to the Docker daemon, please set:
+export DOCKER_HOST=tcp://localhost:4243</p>
+
+<p>```</p>
+
+<p>止めるのは <code>./boot2docker stop</code> です。</p>
+
+<h3>ssh で中に入る</h3>
+
+<p><code>vagrant</code> と似た感じで <code>./boot2docker ssh</code> で中に入れます。
+ユーザーは <code>docker</code> でパスワードは <code>tcuser</code> です。
+Tiny Core Linux ベースなので、こういうパスワードになっているのだと思います。</p>
+
+<p>```
+% ./boot2docker ssh
+docker@localhost&rsquo;s password:</p>
+
+<pre><code>                    ##        .
+              ## ## ##       ==
+           ## ## ## ##      ===
+       /""""""""""""""""\___/ ===
+  ~~~ {~~ ~~~~ ~~~ ~~~~ ~~ ~ /  ===- ~~~
+       \______ o          __/
+         \    \        __/
+          \____\______/
+</code></pre>
+
+<hr />
+
+<p>| |<strong>   </strong><em>   </em><strong> | |<em>|</em></strong> \ <strong>| | </strong><em>   </em><strong>| | </strong><em><strong> _ </strong>
+| &lsquo;</em> \ / _ \ / _ \| <strong>| </strong>) / <em>` |/ _ \ / <strong>| |/ / _ \ &rsquo;</strong>|
+| |</em>) | (<em>) | (</em>) | |<em> / __/ (</em>| | (<em>) | (<strong>|   &lt;  </strong>/ |
+|</em>.<strong>/ _</strong>/ _<strong>/ _<em>|</em></strong><strong>_<em>,</em>|_</strong>/ _<strong>|_|__</strong>|_|
+boot2docker: 0.6.0
+docker@boot2docker:~$
+```</p>
+
+<h2>docker を使ってみる</h2>
+
+<p>ホスト OS 側に docker コマンドをインストールして、そこから使っても良いのですが、
+Homebrew でインストールできたバージョンが 0.8.0 で少し古かったので、
+主に VM の中の docker コマンドを使いました。</p>
+
+<p>ドキュメントでは <code>sudo docker</code> で実行していますが、
+TCP 接続だったり、ローカルの unix socket の場合でもグループのアクセス権限で許可されている場合などは
+<code>sudo</code> なしの <code>docker</code> コマンドだけで大丈夫です。</p>
+
+<p><code>boot2docker</code> の VM の場合は <code>/var/run/docker.sock</code> が <code>docker</code> グループに読み書きが許可されていて、
+<code>docker</code> ユーザーが <code>docker</code> グループに属しているため、 <code>sudo</code> が不要になっています。</p>
+
+<h3>バージョンなどの情報確認</h3>
+
+<p><code>docker version</code> や <code>docker info</code> で情報を確認します。</p>
+
+<p><code>boot2docker</code> の場合は問題ないと思いますが、
+docker のサーバーとの接続がうまくいかない場合はここでエラーなどになるので、
+環境変数 <code>DOCKER_HOST</code> やポートフォワーディングや firewall などの設定を確認します。</p>
+
+<p>まず VM の外の Homebrew でインストールした docker コマンドから確認しました。
+ここでバージョンが古かったので、後は ssh で入った VM の中で docker コマンドを使うことにしました。</p>
+
+<p>```
+% export DOCKER_HOST=tcp://127.0.0.1:4243
+% docker version
+Client version: 0.8.0
+Go version (client): go1.2
+Git commit (client): cc3a8c8d8ec57e15b7b7316797132d770408ab1a</p>
+
+<p>Server version: 0.8.1
+Git commit (server): a1598d1
+Go version (server): go1.2
+Last stable version: 0.8.1, please update docker
+```</p>
+
+<p>VM の中では Server と Client のバージョンが最新版で一致しています。
+ついでに <code>docker info</code> も確認しました。</p>
+
+<p><code>
+docker@boot2docker:~$ docker version
+Client version: 0.8.1
+Go version (client): go1.2
+Git commit (client): a1598d1
+Server version: 0.8.1
+Git commit (server): a1598d1
+Go version (server): go1.2
+Last stable version: 0.8.1
+docker@boot2docker:~$ docker info
+Containers: 0
+Images: 0
+Driver: aufs
+ Root Dir: /mnt/sda1/var/lib/docker/aufs
+ Dirs: 0
+Debug mode (server): true
+Debug mode (client): false
+Fds: 10
+Goroutines: 13
+Execution Driver: lxc-0.8.0
+EventsListeners: 0
+Kernel Version: 3.13.3-tinycore64
+Init Path: /usr/local/bin/docker
+docker@boot2docker:~$
+</code></p>
+
+<h3>docker を試してみる</h3>
+
+<p><code>docker pull ubuntu</code> であらかじめダウンロードしてから <code>docker run</code> を実行しても良いのですが、
+いきなり <code>docker run -i -t ubuntu /bin/bash</code> を実行しても、
+自動的にダウンロードしてから実行されます。</p>
+
+<p>ダウンロードはサーバー側が遅いのか、時間がかかることがあるようなので、
+ゆっくり待った方が良さそうです。</p>
+
+<p>引数に指定した <code>/bin/bash</code> がコンテナの中の唯一のプロセスとして起動するので、
+自由に試してみて、 <code>exit</code> などで <code>/bin/bash</code> が終了すればコンテナも終了します。</p>
+
+<p><code>
+docker@boot2docker:~$ docker run -i -t ubuntu /bin/bash
+Unable to find image 'ubuntu' locally
+Pulling repository ubuntu
+9cd978db300e: Download complete
+eb601b8965b8: Download complete
+5ac751e8d623: Download complete
+9cc9ea5ea540: Download complete
+9f676bd305a4: Download complete
+511136ea3c5a: Download complete
+f323cf34fd77: Download complete
+6170bb7b0ad1: Download complete
+1c7f181e78b9: Download complete
+7a4f87241845: Download complete
+321f7f4200f4: Download complete
+root@a64cca91db41:/# ps -ef
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  0 15:32 ?        00:00:00 /bin/bash
+root         9     1  0 15:33 ?        00:00:00 ps -ef
+root@a64cca91db41:/# exit
+exit
+docker@boot2docker:~$
+</code></p>
+
+<p><a href="http://blog.n-z.jp/blog/2013-12-24-docker-rm.html">Dockerで不要になったコンテナやイメージを削除する</a>
+に書いたようにコンテナが溜まっていくので、削除しておきます。</p>
+
+<p><code>
+docker@boot2docker:~$ docker ps -a -q
+a64cca91db41
+docker@boot2docker:~$ docker rm `docker ps -a -q`
+a64cca91db41
+docker@boot2docker:~$
+</code></p>
+
+<p>ちょっと試すだけなら <code>-rm</code> オプションを付けて自動削除するのが良さそうです。</p>
+
+<p><code>
+docker@boot2docker:~$ docker run -i -t -rm ubuntu /bin/bash
+root@f810cbccf394:/# exit
+exit
+docker@boot2docker:~$ docker ps -a -q
+docker@boot2docker:~$
+</code></p>
+
+<h2>つづく</h2>
+
+<p><code>docker pull</code> に時間がかかって、すぐにはいろいろ試せないようなので、別の記事に続きます。</p>
+]]></content>
+  </entry>
+  
+</feed>
