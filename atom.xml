@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-02-23T01:16:11+09:00</updated>
+  <updated>2014-02-24T00:10:50+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,182 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 81 回 関西 Debian 勉強会に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-23-kansai-debian-meeting.html"/>
+    <updated>2014-02-23T14:02:06+09:00</updated>
+    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
+    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20140223">第 81 回 関西 Debian 勉強会</a>
+に参加してきました。</p>
+
+<!--more-->
+
+
+<h2>もくもくの会</h2>
+
+<p>今回ももくもくの会がありました。</p>
+
+<p>前回のもくもくの会の時に作っていた
+<a href="https://github.com/znz/rd2markdown-app">rd2markdown</a>
+を使って
+<a href="https://bugs.ruby-lang.org/projects/ruby/wiki">ruby-lang.org の Wiki</a>
+で RD 記法のままになっていたページの変換を試しつつ、
+うまく変換できなかった部分を修正して、
+ほぼすべてのページを変換していきました。
+最終的には家に帰ってから、
+このブログ記事を書く前に残りを変換しました。</p>
+
+<p>成果発表などの時にも変換作業をしていたので、
+他の人の話はあまり聞けなかったのですが、
+<a href="http://i3wm.org/">http://i3wm.org/</a>
+や
+<a href="https://github.com/sn0w75/MikuMikuPenguin">https://github.com/sn0w75/MikuMikuPenguin</a>
+の話などがありました。</p>
+
+<h2>LT</h2>
+
+<p><a href="http://blog.n-z.jp/blog/2014-02-23-upstart-has-missing-features.html">upstartに不足している機能</a>
+の話と
+<a href="http://blog.n-z.jp/blog/2014-02-23-boot2docker.html">boot2docker</a>
+でインストールした docker 環境でのデモをしました。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[upstartに不足している機能]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-23-upstart-has-missing-features.html"/>
+    <updated>2014-02-23T11:15:27+09:00</updated>
+    <id>http://blog.n-z.jp/blog/upstart-has-missing-features</id>
+    <content type="html"><![CDATA[<p>Ubuntu の標準の init の upstart で機能不足を感じた話です。</p>
+
+<!--more-->
+
+
+<h2>workaround-upstart-snafu</h2>
+
+<p>2012年6月の頃の Ubuntu で起きた話です。
+昔の話でバージョンなどもちゃんとメモしていなかったのですが、
+当時サポート対象だったバージョンのどれかです。</p>
+
+<p>現象としては自作の <code>/etc/init/hoge.conf</code> を作成するために
+<code>expect</code> stanza を試行錯誤していたら、
+設定が間違っていたらしく、
+プロセスの終了をちゃんと認識できなくて、
+もう存在しないプロセス ID を終了したジョブのプロセス ID として認識したまま
+<code>start</code> も <code>stop</code> もきかなくなってしまった、
+ということがありました。</p>
+
+<p>ここまでは自分が書いた設定が間違いということで、
+別に良いのですが、
+その状態を解消する方法が upstart 自体には存在していなくて、
+<a href="http://irclogs.ubuntu.com/2011/01/31/%23upstart.html">http://irclogs.ubuntu.com/2011/01/31/%23upstart.html</a>
+で紹介されていた
+<a href="https://github.com/ion1/workaround-upstart-snafu">workaround-upstart-snafu</a>
+を使うしかありませんでした。</p>
+
+<p>このスクリプトは指定したプロセス ID になるまで fork してすぐに終了するのを繰り返して
+upstart に該当するプロセス ID のプロセス終了を認識させる、という仕組みのようです。</p>
+
+<p>このような無理矢理な方法ではなく upstart 自体にプロセスがまだ存在しているかどうかチェックし直す機能が存在するべきだと思いました。</p>
+
+<h2>Should-Start</h2>
+
+<p><code>/etc/init.d/</code> に置かれる
+<a href="https://wiki.debian.org/LSBInitScripts">LSB の Init スクリプト</a>
+には、起動時の順番 (依存関係) を指定するためのヘッダーを書くようになっています。</p>
+
+<p>この指定の中には <code>Should-Start</code> というインストールされていれば先に起動する必要があり、
+インストールされていなければ影響しない、ということが出来ます。</p>
+
+<p>たとえば、
+デーモンが依存しているデータベースが同じマシンに入っていれば
+先に起動している必要があるけれど、
+別のマシンのデータベースを使っているかもしれないので、
+インストールされていなくても良い、
+という用途が想定されているようです。</p>
+
+<p>具体的な例としては
+Ubuntu 13.10 の
+<code>zabbix-server-pgsql</code> 2.0.6+dfsg-1ubuntu2
+の
+<code>/etc/init.d/zabbix-server</code>
+では</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>### BEGIN INIT INFO
+</span><span class='line'># Provides:          zabbix-server
+</span><span class='line'># Required-Start:    $remote_fs $network
+</span><span class='line'># Required-Stop:     $remote_fs
+</span><span class='line'># Default-Start:     2 3 4 5
+</span><span class='line'># Default-Stop:      0 1 6
+</span><span class='line'># Should-Start:      postgresql
+</span><span class='line'># Should-Stop:       postgresql
+</span><span class='line'># Short-Description: Start zabbix-server daemon
+</span><span class='line'># Description: Start zabbix-server daemon (PostgreSQL)
+</span><span class='line'>### END INIT INFO</span></code></pre></td></tr></table></div></figure>
+
+
+<p>となっていて、
+<code>postgresql</code> より後に起動するようになっているのに、</p>
+
+<p><code>/etc/init/zabbix-server.conf</code>
+では</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>start on (filesystem and net-device-up IFACE=lo)
+</span><span class='line'>stop on runlevel [!2345]</span></code></pre></td></tr></table></div></figure>
+
+
+<p>となっていて、起動順序の関係が不足しています。</p>
+
+<p>その結果、
+<code>zabbix-server</code> の方が <code>postgresql</code> より早く起動してしまって、
+データベースに接続できなくて起動に失敗する、
+ということが起きることがありました。
+(以前の Ubuntu で起きていた現象で Ubuntu 13.10 だと別の現象になっているかもしれないので、
+再度検証が必要そうです。)</p>
+
+<p>対策として
+<code>/etc/cron.d/local</code>
+に</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'># zabbix-server may fail to start before postgresql
+</span><span class='line'>@reboot root /usr/sbin/service zabbix-server start</span></code></pre></td></tr></table></div></figure>
+
+
+<p>という設定を置いていて、
+<code>cron</code> の <code>@reboot</code> が実行されるタイミングで起動し直すようにしています。</p>
+
+<h2>まとめ</h2>
+
+<p>起動時の処理ということで、
+実運用環境では検証しづらく、
+問題が起きてもマシンの再起動時に注意していれば良いだけなので、
+優先度が低くて、
+検証環境を用意してまで調査するという手間をかけるまでは出来ていないのですが、
+upstart はいろいろと sysvinit (insserv) に比べて劣化している部分があるようなので、
+困ります。</p>
+
+<p>主流が systemd に変わりつつあるという話もあるようなので、
+どうなっていくのかわかりませんが、
+init は OS の根幹に関わる部分なので、
+もっと安定して信頼性のあるものになってほしいと思いました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[boot2dockerでdockerを試す]]></title>
@@ -2445,468 +2621,6 @@ URL を受け取っても見せる window がなくなっているので
 <li>OpenType とかのフォントには色情報は入らないはずなので別途どこかに持っている?</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[tapsでMySQLからPostgreSQLに移行した後に起きたトラブル事例]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-01-12-taps-trouble.html"/>
-    <updated>2014-01-12T14:15:41+09:00</updated>
-    <id>http://blog.n-z.jp/blog/taps-trouble</id>
-    <content type="html"><![CDATA[<p>2013年7月ごろに <a href="http://rubygems.org/gems/taps">taps</a> を使って redmine のデータベースを MySQL から PostgreSQL に移行しました。</p>
-
-<p>その時に移行が不十分で問題が少し起きていたので、その原因を調べて修正しました。</p>
-
-<!--more-->
-
-
-<h2>taps での移行</h2>
-
-<p>taps の使い方については既に情報がたくさんあるので、簡単に書いておくだけにします。
-昨年7月時点の情報なので、今だとさらにバージョン指定を増やさないとダメかもしれません。</p>
-
-<p>まず、 Ruby 1.9.1 以降に対応できていないようなので、 Ruby 1.8.7 を使いました。
-rack も新しいバージョンに対応できていないので、以下のような Gemfile でバージョンを指定して<code>bundle install --path vendor/bundle</code> して使いました。</p>
-
-<figure class='code'><figcaption><span>Gemfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">source</span> <span class="s2">&quot;https://rubygems.org&quot;</span>
-</span><span class='line'>  <span class="n">gem</span> <span class="s2">&quot;taps&quot;</span>
-</span><span class='line'>  <span class="n">gem</span> <span class="s2">&quot;sqlite3&quot;</span>
-</span><span class='line'>  <span class="n">gem</span> <span class="s2">&quot;mysql&quot;</span>
-</span><span class='line'>  <span class="n">gem</span> <span class="s2">&quot;pg&quot;</span>
-</span><span class='line'>  <span class="n">gem</span> <span class="s2">&quot;rack&quot;</span><span class="p">,</span> <span class="s2">&quot;1.0.1&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>元の <code>config/database.yml</code> の設定が</p>
-
-<figure class='code'><figcaption><span>config/database.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="l-Scalar-Plain">production</span><span class="p-Indicator">:</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">adapter</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">mysql2</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">database</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">redmine_db</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">host</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">localhost</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">username</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">redminemyuser</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">password</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">my_password</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">encoding</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">utf8</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>という感じなら、 MySQL を動かしている方で
-<code>bundle exec taps server mysql://redminemyuser:my_password@localhost/redmine_db tapsuser tapspass</code>
-と起動します。</p>
-
-<p>PostgreSQL の方では</p>
-
-<figure class='code'><figcaption><span>sudo -u postgres psql</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">CREATE ROLE redminepguser LOGIN ENCRYPTED PASSWORD &#39;pg_password&#39; NOINHERIT VALID UNTIL &#39;infinity&#39;;</span>
-</span><span class='line'><span class="go">CREATE DATABASE redmine_db WITH ENCODING=&#39;UTF8&#39; OWNER=redminepguser;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>という感じでデータベースを作っておいて、
-<code>bundle exec taps pull postgres://redminepguser:pg_password@localhost/redmine_db http://tapsuser:tapspass@localhost:5000</code>
-という感じでデータを移行しました。</p>
-
-<p>同じサーバーで移行したので taps の http も localhost にしていますが、別サーバーなら ssh のポートフォワーディングなどを使ってつなげば良いと思います。</p>
-
-<h2>redmine でのトラブル</h2>
-
-<p>管理者権限でログインして、管理からグループを追加 (/groups/new) しようとするとエラーになって、 log/production.log を確認すると
-<code>ActiveRecord::StatementInvalid (PG::NotNullViolation: ERROR:  null value in column "mail_notification" violates not-null constraint</code>
-または
-<code>(ActiveRecord::StatementInvalid (PG::NotNullViolation: ERROR:  列"mail_notification"内のNULL値はNOT NULL制約違反です</code>
-というエラーが出ていました。</p>
-
-<h2>トラブルの原因</h2>
-
-<p>いろいろ調べてみると <code>db/schema.rb</code> でいうと <code>mail_notification</code> に default がないのが問題だとわかりました。
-後で追加調査したところ、 default が <code>""</code> (空文字列) のときにうまく移行できていないことがあるようでした。</p>
-
-<h2>原因修正</h2>
-
-<p><code>rails dbconsole</code> で
-<code>ALTER TABLE users ALTER mail_notification SET DEFAULT '';</code>
-で設定して、
-<code>rake db:migrate</code> で <code>db/schema.rb</code> にも反映して
-redmine を再起動すると直りました。</p>
-
-<h2>その他の DEFAULT の修正</h2>
-
-<p>別途 PostgreSQL の環境を用意して redmine を新規インストールして <code>rake db:migrate</code> で生成した <code>db/schema.rb</code> と比較して全体としては以下の修正をしました。</p>
-
-<figure class='code'><figcaption><span>rails dbconsole</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-<span class='line-number'>51</span>
-</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">attachments</span> <span class="k">ALTER</span> <span class="n">filename</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">attachments</span> <span class="k">ALTER</span> <span class="n">disk_filename</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">attachments</span> <span class="k">ALTER</span> <span class="n">content_type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">attachments</span> <span class="k">ALTER</span> <span class="n">digest</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">auth_sources</span> <span class="k">ALTER</span> <span class="k">type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">auth_sources</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">auth_sources</span> <span class="k">ALTER</span> <span class="n">account_password</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">boards</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">changes</span> <span class="k">ALTER</span> <span class="n">action</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">comments</span> <span class="k">ALTER</span> <span class="n">commented_type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">custom_fields</span> <span class="k">ALTER</span> <span class="k">type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">custom_fields</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">custom_fields</span> <span class="k">ALTER</span> <span class="n">field_format</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">custom_fields</span> <span class="k">ALTER</span> <span class="n">regexp</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">custom_values</span> <span class="k">ALTER</span> <span class="n">customized_type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">documents</span> <span class="k">ALTER</span> <span class="n">title</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">enumerations</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">wiki_contents</span> <span class="k">ALTER</span> <span class="n">comments</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">issue_categories</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">issue_relations</span> <span class="k">ALTER</span> <span class="n">relation_type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">issue_statuses</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">issues</span> <span class="k">ALTER</span> <span class="n">subject</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">journal_details</span> <span class="k">ALTER</span> <span class="n">property</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">journal_details</span> <span class="k">ALTER</span> <span class="n">prop_key</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">journals</span> <span class="k">ALTER</span> <span class="n">journalized_type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">messages</span> <span class="k">ALTER</span> <span class="n">subject</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">news</span> <span class="k">ALTER</span> <span class="n">title</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">news</span> <span class="k">ALTER</span> <span class="n">summary</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">projects</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">projects</span> <span class="k">ALTER</span> <span class="n">homepage</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">queries</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">repositories</span> <span class="k">ALTER</span> <span class="n">url</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">repositories</span> <span class="k">ALTER</span> <span class="n">login</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">repositories</span> <span class="k">ALTER</span> <span class="n">password</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">repositories</span> <span class="k">ALTER</span> <span class="n">root_url</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">roles</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">settings</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">tokens</span> <span class="k">ALTER</span> <span class="n">action</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">tokens</span> <span class="k">ALTER</span> <span class="n">value</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">trackers</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="n">hashed_password</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="n">firstname</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="n">mail</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="k">language</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">versions</span> <span class="k">ALTER</span> <span class="n">name</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">versions</span> <span class="k">ALTER</span> <span class="n">description</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">watchers</span> <span class="k">ALTER</span> <span class="n">watchable_type</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">wiki_content_versions</span> <span class="k">ALTER</span> <span class="n">compression</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">wiki_content_versions</span> <span class="k">ALTER</span> <span class="n">comments</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="n">mail_notification</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="n">lastname</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><figcaption><span>rails dbconsole</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="n">mail_notification</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>はすでに実行済みで、</p>
-
-<figure class='code'><figcaption><span>rails dbconsole</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="k">ALTER</span> <span class="k">TABLE</span> <span class="n">users</span> <span class="k">ALTER</span> <span class="n">lastname</span> <span class="k">SET</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>は既に default が <code>""</code> になっていたので不要でしたが、
-重複して実行しても問題が起きないようなので、上の SQL にも入れています。</p>
-
-<h2>まとめ</h2>
-
-<p>最初のデータベース選択は重要で、アプリケーションが両方対応していても、後から変更するのは大変です。</p>
-
-<p>問題が起きそうなデータ型を使っていなければ <code>taps</code> ですんなり移行できるように見えますが、別途クリーンな環境を用意して生成した <code>db/schema.rb</code> と比較するなどのチェックも必要でした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[virtualboxでdkmsによるモジュールのリビルドが動いていなかったので対処した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-01-04-virtualbox-dkms.html"/>
-    <updated>2014-01-04T23:47:41+09:00</updated>
-    <id>http://blog.n-z.jp/blog/virtualbox-dkms</id>
-    <content type="html"><![CDATA[<p>Ubuntu 12.04.3 LTS の環境で
-virtualbox.org から入れた VirtualBox を
-virtualbox-4.2 (4.2.20-90983~Ubuntu~precise)
-から
-virtualbox-4.3 (4.3.6-91406~Ubuntu~precise)
-にあげても dkms によるモジュールのリビルドがちゃんと動かないままだったので、
-直し方を調べて対処してみました。</p>
-
-<!--more-->
-
-
-<h2>状況</h2>
-
-<p>カーネルを linux-image-3.8.0-34-generic から
-linux-image-3.8.0-35-generic にあげるときに
-virtualbox-4.2 (4.2.20-90983~Ubuntu~precise)
-から
-virtualbox-4.3 (4.3.6-91406~Ubuntu~precise)
-にあげました。</p>
-
-<p>以下の作業は linux-image-3.8.0-34-generic で起動中に
-再起動後に使われる linux-image-3.8.0-35-generic 用の
-VirtualBox のカーネルモジュールをビルドしようとしています。</p>
-
-<h2>エラーの状況</h2>
-
-<p><code>dkms status</code> で調べると以下のエラーメッセージが出る状態でした。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">  $ sudo dkms status</span>
-</span><span class='line'><span class="go">  Error! Could not locate dkms.conf file.</span>
-</span><span class='line'><span class="go">  File:  does not exist.</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>対処その1</h2>
-
-<p><code>/var/lib/dkms/vboxhost</code> を退避して
-<code>dpkg-reconfigure</code> しなおせば良いという情報があったので
-試してみました。</p>
-
-<p>この段階での <code>dkms status</code> は調べ忘れていたのですが、
-後の状況からすると
-今起動中のカーネルのモジュールだけビルドされたようです。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">  $ sudo mv /var/lib/dkms/vboxhost /tmp/</span>
-</span><span class='line'><span class="go">  $ sudo dpkg-reconfigure virtualbox-4.3</span>
-</span><span class='line'><span class="go">  Stopping VirtualBox kernel modules ...done.</span>
-</span><span class='line'><span class="go">  addgroup: グループ `vboxusers&#39; はシステムグループとしてすでに存在しています。終了します。</span>
-</span><span class='line'><span class="go">  Unknown media type in type &#39;all/all&#39;</span>
-</span><span class='line'><span class="go">  Unknown media type in type &#39;all/allfiles&#39;</span>
-</span><span class='line'><span class="go">  Unknown media type in type &#39;uri/mms&#39;</span>
-</span><span class='line'><span class="go">  Unknown media type in type &#39;uri/mmst&#39;</span>
-</span><span class='line'><span class="go">  Unknown media type in type &#39;uri/mmsu&#39;</span>
-</span><span class='line'><span class="go">  Unknown media type in type &#39;uri/pnm&#39;</span>
-</span><span class='line'><span class="go">  Unknown media type in type &#39;uri/rtspt&#39;</span>
-</span><span class='line'><span class="go">  Unknown media type in type &#39;uri/rtspu&#39;</span>
-</span><span class='line'><span class="go">  Stopping VirtualBox kernel modules ...done.</span>
-</span><span class='line'><span class="go">  Uninstalling old VirtualBox DKMS kernel modules ...done.</span>
-</span><span class='line'><span class="go">  Removing old VirtualBox pci kernel module ...done.</span>
-</span><span class='line'><span class="go">  Removing old VirtualBox netadp kernel module ...done.</span>
-</span><span class='line'><span class="go">  Removing old VirtualBox netflt kernel module ...done.</span>
-</span><span class='line'><span class="go">  Removing old VirtualBox kernel module ...done.</span>
-</span><span class='line'><span class="go">  Trying to register the VirtualBox kernel modules using DKMS ...done.</span>
-</span><span class='line'><span class="go">  Starting VirtualBox kernel modules ...done.</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>対処その2</h2>
-
-<p>purge した古いカーネルのモジュールが残っていたので、
-削除しました。
-安全のため <code>/tmp</code> への移動にしていますが、
-いきなり <code>rm -rf</code> で削除しても良いと思います。
-他の古いバージョンも残っていれば削除してしまっても
-大丈夫だと思います。</p>
-
-<p>ねんのため
-<code>/etc/init.d/vboxdrv setup</code>
-を実行してみましたが、
-<code>dpkg-reconfigure</code>
-で既に実行済みだったので関係なかったようです。</p>
-
-<p>この段階で <code>dkms status</code> を確認してみると
-起動中のカーネルのモジュールだけビルドされていることがわかります。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">  $ sudo mv /lib/modules/3.8.0-33-generic/ /tmp/</span>
-</span><span class='line'><span class="go">  $ sudo /etc/init.d/vboxdrv setup</span>
-</span><span class='line'><span class="go">  Stopping VirtualBox kernel modules ...done.</span>
-</span><span class='line'><span class="go">  Uninstalling old VirtualBox DKMS kernel modules ...done.</span>
-</span><span class='line'><span class="go">  Trying to register the VirtualBox kernel modules using DKMS ...done.</span>
-</span><span class='line'><span class="go">  Starting VirtualBox kernel modules ...done.</span>
-</span><span class='line'><span class="go">  $ sudo dkms status</span>
-</span><span class='line'><span class="go">  vboxhost, 4.3.6, 3.8.0-34-generic, x86_64: installed</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>対処その3</h2>
-
-<p>dkms でのモジュールのビルドは
-<code>/etc/kernel/postinst.d/dkms</code>
-で実行されているので、
-カーネルを再インストールすれば確実ということで、
-カーネルを <code>aptitude reinstall</code> しました。</p>
-
-<p>その結果、正常にビルドされていることが確認できたので、
-再起動して VirtualBox の動作確認をしました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">  $ sudo aptitude reinstall linux-image-3.8.0-35-generic</span>
-</span><span class='line'><span class="go">  以下のパッケージが再インストールされます:</span>
-</span><span class='line'><span class="go">    linux-image-3.8.0-35-generic</span>
-</span><span class='line'><span class="go">  0 個のパッケージを更新、 0 個を新たにインストール、 再インストール: 1 個、 0 個を削除予定 、0 個が更新されていない。</span>
-</span><span class='line'><span class="go">  アーカイブ 48.2 M バイト中 0  バイトを取得する必要があります。 展開後に 0  バイトのディス ク領域が新たに消費されます。</span>
-</span><span class='line'><span class="go">  (データベースを読み込んでいます ... 現在 117478 個のファイルとディレクトリがインストールされています。)</span>
-</span><span class='line'><span class="go">  linux-image-3.8.0-35-generic 3.8.0-35.50~precise1 を (.../linux-image-3.8.0-35-generic_3.8.0-35.50~precise1_amd64.deb で) 置換するための準備をしています ...</span>
-</span><span class='line'><span class="go">  Done.</span>
-</span><span class='line'><span class="go">  linux-image-3.8.0-35-generic を展開し、置換しています...</span>
-</span><span class='line'><span class="go">  Examining /etc/kernel/postrm.d .</span>
-</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postrm.d/initramfs-tools 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
-</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postrm.d/zz-update-grub 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
-</span><span class='line'><span class="go">  linux-image-3.8.0-35-generic (3.8.0-35.50~precise1) を設定しています ...</span>
-</span><span class='line'><span class="go">  Running depmod.</span>
-</span><span class='line'><span class="go">  update-initramfs: deferring update (hook will be called later)</span>
-</span><span class='line'><span class="go">  Not updating initrd symbolic links since we are being updated/reinstalled</span>
-</span><span class='line'><span class="go">  (3.8.0-35.50~precise1 was configured last, according to dpkg)</span>
-</span><span class='line'><span class="go">  Not updating image symbolic links since we are being updated/reinstalled</span>
-</span><span class='line'><span class="go">  (3.8.0-35.50~precise1 was configured last, according to dpkg)</span>
-</span><span class='line'><span class="go">  Examining /etc/kernel/postinst.d.</span>
-</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postinst.d/apt-auto-removal 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
-</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postinst.d/dkms 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
-</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postinst.d/initramfs-tools 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
-</span><span class='line'><span class="go">  update-initramfs: Generating /boot/initrd.img-3.8.0-35-generic</span>
-</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postinst.d/pm-utils 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
-</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postinst.d/update-notifier 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
-</span><span class='line'><span class="go">  run-parts: executing /etc/kernel/postinst.d/zz-update-grub 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic</span>
-</span><span class='line'><span class="go">  Generating grub.cfg ...</span>
-</span><span class='line'><span class="go">  Found linux image: /boot/vmlinuz-3.8.0-35-generic</span>
-</span><span class='line'><span class="go">  Found initrd image: /boot/initrd.img-3.8.0-35-generic</span>
-</span><span class='line'><span class="go">  Found linux image: /boot/vmlinuz-3.8.0-34-generic</span>
-</span><span class='line'><span class="go">  Found initrd image: /boot/initrd.img-3.8.0-34-generic</span>
-</span><span class='line'><span class="go">  Found memtest86+ image: /memtest86+.bin</span>
-</span><span class='line'><span class="go">  done</span>
-</span><span class='line'><span class="go">  $ sudo dkms status</span>
-</span><span class='line'><span class="go">  vboxhost, 4.3.6, 3.8.0-34-generic, x86_64: installed</span>
-</span><span class='line'><span class="go">  vboxhost, 4.3.6, 3.8.0-35-generic, x86_64: installed</span>
-</span><span class='line'><span class="go">  $</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>まとめ</h2>
-
-<p>古いバージョンは再起動で消えてしまって確認できないのですが、
-多分古い VirtualBox では
-<code>/var/lib/dkms/vboxhost/*/source/dkms.conf</code>
-が存在していなくて、
-バージョンを上げても古いバージョンの <code>source</code> が残ったままだと
-同じエラーが出続けるようなので、
-クリーンインストールやそれに近い状態にすると直るということのようです。</p>
 ]]></content>
   </entry>
   

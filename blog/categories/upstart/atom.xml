@@ -4,7 +4,7 @@
   <title><![CDATA[Category: upstart | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/upstart/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-02-23T01:16:11+09:00</updated>
+  <updated>2014-02-24T00:10:50+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,143 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[upstartに不足している機能]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-23-upstart-has-missing-features.html"/>
+    <updated>2014-02-23T11:15:27+09:00</updated>
+    <id>http://blog.n-z.jp/blog/upstart-has-missing-features</id>
+    <content type="html"><![CDATA[<p>Ubuntu の標準の init の upstart で機能不足を感じた話です。</p>
+
+<!--more-->
+
+
+<h2>workaround-upstart-snafu</h2>
+
+<p>2012年6月の頃の Ubuntu で起きた話です。
+昔の話でバージョンなどもちゃんとメモしていなかったのですが、
+当時サポート対象だったバージョンのどれかです。</p>
+
+<p>現象としては自作の <code>/etc/init/hoge.conf</code> を作成するために
+<code>expect</code> stanza を試行錯誤していたら、
+設定が間違っていたらしく、
+プロセスの終了をちゃんと認識できなくて、
+もう存在しないプロセス ID を終了したジョブのプロセス ID として認識したまま
+<code>start</code> も <code>stop</code> もきかなくなってしまった、
+ということがありました。</p>
+
+<p>ここまでは自分が書いた設定が間違いということで、
+別に良いのですが、
+その状態を解消する方法が upstart 自体には存在していなくて、
+<a href="http://irclogs.ubuntu.com/2011/01/31/%23upstart.html">http://irclogs.ubuntu.com/2011/01/31/%23upstart.html</a>
+で紹介されていた
+<a href="https://github.com/ion1/workaround-upstart-snafu">workaround-upstart-snafu</a>
+を使うしかありませんでした。</p>
+
+<p>このスクリプトは指定したプロセス ID になるまで fork してすぐに終了するのを繰り返して
+upstart に該当するプロセス ID のプロセス終了を認識させる、という仕組みのようです。</p>
+
+<p>このような無理矢理な方法ではなく upstart 自体にプロセスがまだ存在しているかどうかチェックし直す機能が存在するべきだと思いました。</p>
+
+<h2>Should-Start</h2>
+
+<p><code>/etc/init.d/</code> に置かれる
+<a href="https://wiki.debian.org/LSBInitScripts">LSB の Init スクリプト</a>
+には、起動時の順番 (依存関係) を指定するためのヘッダーを書くようになっています。</p>
+
+<p>この指定の中には <code>Should-Start</code> というインストールされていれば先に起動する必要があり、
+インストールされていなければ影響しない、ということが出来ます。</p>
+
+<p>たとえば、
+デーモンが依存しているデータベースが同じマシンに入っていれば
+先に起動している必要があるけれど、
+別のマシンのデータベースを使っているかもしれないので、
+インストールされていなくても良い、
+という用途が想定されているようです。</p>
+
+<p>具体的な例としては
+Ubuntu 13.10 の
+<code>zabbix-server-pgsql</code> 2.0.6+dfsg-1ubuntu2
+の
+<code>/etc/init.d/zabbix-server</code>
+では</p>
+
+<p>```</p>
+
+<h3>BEGIN INIT INFO</h3>
+
+<h1>Provides:          zabbix-server</h1>
+
+<h1>Required-Start:    $remote_fs $network</h1>
+
+<h1>Required-Stop:     $remote_fs</h1>
+
+<h1>Default-Start:     2 3 4 5</h1>
+
+<h1>Default-Stop:      0 1 6</h1>
+
+<h1>Should-Start:      postgresql</h1>
+
+<h1>Should-Stop:       postgresql</h1>
+
+<h1>Short-Description: Start zabbix-server daemon</h1>
+
+<h1>Description: Start zabbix-server daemon (PostgreSQL)</h1>
+
+<h3>END INIT INFO</h3>
+
+<p>```</p>
+
+<p>となっていて、
+<code>postgresql</code> より後に起動するようになっているのに、</p>
+
+<p><code>/etc/init/zabbix-server.conf</code>
+では</p>
+
+<p><code>
+start on (filesystem and net-device-up IFACE=lo)
+stop on runlevel [!2345]
+</code></p>
+
+<p>となっていて、起動順序の関係が不足しています。</p>
+
+<p>その結果、
+<code>zabbix-server</code> の方が <code>postgresql</code> より早く起動してしまって、
+データベースに接続できなくて起動に失敗する、
+ということが起きることがありました。
+(以前の Ubuntu で起きていた現象で Ubuntu 13.10 だと別の現象になっているかもしれないので、
+再度検証が必要そうです。)</p>
+
+<p>対策として
+<code>/etc/cron.d/local</code>
+に</p>
+
+<p>```</p>
+
+<h1>zabbix-server may fail to start before postgresql</h1>
+
+<p>@reboot root /usr/sbin/service zabbix-server start
+```</p>
+
+<p>という設定を置いていて、
+<code>cron</code> の <code>@reboot</code> が実行されるタイミングで起動し直すようにしています。</p>
+
+<h2>まとめ</h2>
+
+<p>起動時の処理ということで、
+実運用環境では検証しづらく、
+問題が起きてもマシンの再起動時に注意していれば良いだけなので、
+優先度が低くて、
+検証環境を用意してまで調査するという手間をかけるまでは出来ていないのですが、
+upstart はいろいろと sysvinit (insserv) に比べて劣化している部分があるようなので、
+困ります。</p>
+
+<p>主流が systemd に変わりつつあるという話もあるようなので、
+どうなっていくのかわかりませんが、
+init は OS の根幹に関わる部分なので、
+もっと安定して信頼性のあるものになってほしいと思いました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[upstart-socket-bridgeとrubyを組み合わせる]]></title>
