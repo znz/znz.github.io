@@ -5,7 +5,7 @@ date: 2013-11-28 22:22
 comments: true
 categories: git github
 ---
-要約すると `url.<base>.inteadOf` や `url.<base>.pushInsteadOf`
+要約すると `url.<base>.insteadOf` や `url.<base>.pushInsteadOf`
 を使えば良いという話です。
 github 以外でも使えます。
 
