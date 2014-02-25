@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-02-24T00:10:50+09:00</updated>
+  <updated>2014-02-25T20:43:46+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,245 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[autopagerizeのような動作をkaminariとransackを使った環境で実装した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-25-autopagerize-kaminari-ransack.html"/>
+    <updated>2014-02-25T18:58:39+09:00</updated>
+    <id>http://blog.n-z.jp/blog/autopagerize-kaminari-ransack</id>
+    <content type="html"><![CDATA[<p>autopagerize のような動作をするときに id 重複問題があるので、
+<a href="http://qa.atmarkit.co.jp/q/3513">QA@IT で質問</a>
+してみたところ、
+今のページに表示されている最後の id で対処するしかなさそうだとわかったので、
+そういう方針で実装してみました。</p>
+
+<!--more-->
+
+
+<h2>スクリプト部分</h2>
+
+<p>コア部分は以前に実装したものをそのまま使いました。
+i18n 対応などが出来ていませんが、冒頭に書いてある id や class が関連要素になります。</p>
+
+<figure class='code'><figcaption><span>app/assets/javascripts/autonext.js.coffee</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+</pre></td><td class='code'><pre><code class='coffeescript'><span class='line'><span class="nx">jQuery</span> <span class="nf">-&gt;</span>
+</span><span class='line'>  <span class="nv">timerId = </span><span class="kc">null</span>
+</span><span class='line'>  <span class="nv">loadingId = </span><span class="s">&#39;#autopager_loading&#39;</span>
+</span><span class='line'>  <span class="nv">nextId = </span><span class="s">&#39;#next_for_pager&#39;</span>
+</span><span class='line'>  <span class="nv">pageElement = </span><span class="s">&#39;.page_element&#39;</span>
+</span><span class='line'>  <span class="nv">lastContent = </span><span class="s">&#39;.page_content:last&#39;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nv">loadNext = </span><span class="nf">-&gt;</span>
+</span><span class='line'>    <span class="nv">nextLink = </span><span class="nx">$</span><span class="p">(</span><span class="nx">nextId</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</span><span class='line'>    <span class="k">if</span> <span class="nx">nextLink</span>
+</span><span class='line'>      <span class="nx">$</span><span class="p">(</span><span class="nx">loadingId</span><span class="p">).</span><span class="nx">show</span><span class="p">()</span>
+</span><span class='line'>      <span class="nx">$</span><span class="p">(</span><span class="nx">nextId</span><span class="p">).</span><span class="nx">remove</span><span class="p">()</span>
+</span><span class='line'>      <span class="nv">request = </span><span class="nx">$</span><span class="p">.</span><span class="nx">get</span> <span class="nx">nextLink</span><span class="p">.</span><span class="nx">href</span><span class="p">,</span> <span class="nf">(data) -&gt;</span>
+</span><span class='line'>        <span class="nx">$</span><span class="p">(</span><span class="nx">loadingId</span><span class="p">).</span><span class="nx">before</span><span class="p">(</span><span class="nx">$</span><span class="p">(</span><span class="nx">data</span><span class="p">).</span><span class="nx">find</span><span class="p">(</span><span class="nx">pageElement</span><span class="p">)).</span><span class="nx">hide</span><span class="p">()</span>
+</span><span class='line'>        <span class="c1"># 必要なら turbolinks の `page:change` のような DOM 変更通知をする</span>
+</span><span class='line'>      <span class="nx">request</span><span class="p">.</span><span class="nx">error</span> <span class="nf">(xhr, status, error) -&gt;</span>
+</span><span class='line'>        <span class="k">if</span> <span class="nx">error</span> <span class="o">==</span> <span class="s">&quot;Unauthorized&quot;</span>
+</span><span class='line'>          <span class="nx">alert</span><span class="p">(</span><span class="s">&quot;認証の期限切れです。再読み込みしてください。&quot;</span><span class="p">)</span>
+</span><span class='line'>        <span class="k">else</span>
+</span><span class='line'>          <span class="nx">alert</span><span class="p">(</span><span class="s">&quot;何かエラーです。少し待ってから、再読み込みしてください。&quot;</span><span class="p">)</span>
+</span><span class='line'>        <span class="nx">$</span><span class="p">(</span><span class="nx">loadingId</span><span class="p">).</span><span class="nx">html</span><span class="p">(</span><span class="s">&quot;&lt;a href=&#39;javascript:location.reload()&#39; class=&#39;btn btn-block btn-primary&#39;&gt;再読み込み&lt;/a&gt;&quot;</span><span class="p">)</span>
+</span><span class='line'>  <span class="nv">autoNext = </span><span class="nf">-&gt;</span>
+</span><span class='line'>    <span class="nv">content = </span><span class="nx">$</span><span class="p">(</span><span class="nx">lastContent</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">if</span> <span class="nx">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&amp;&amp;</span> <span class="nx">content</span><span class="p">.</span><span class="nx">offset</span><span class="p">().</span><span class="nx">top</span> <span class="o">&lt;</span> <span class="nx">$</span><span class="p">(</span><span class="nb">document</span><span class="p">).</span><span class="nx">scrollTop</span><span class="p">()</span> <span class="o">+</span> <span class="nx">$</span><span class="p">(</span><span class="nb">window</span><span class="p">).</span><span class="nx">height</span><span class="p">()</span>
+</span><span class='line'>      <span class="k">if</span> <span class="nx">$</span><span class="p">(</span><span class="nx">loadingId</span><span class="p">).</span><span class="nx">css</span><span class="p">(</span><span class="s">&#39;display&#39;</span><span class="p">)</span> <span class="o">is</span> <span class="s">&#39;none&#39;</span>
+</span><span class='line'>        <span class="nx">loadNext</span><span class="p">()</span>
+</span><span class='line'>    <span class="nv">timerId = </span><span class="kc">null</span>
+</span><span class='line'>    <span class="nx">$</span><span class="p">(</span><span class="nb">window</span><span class="p">).</span><span class="nx">on</span> <span class="s">&#39;scroll.autoNext&#39;</span><span class="p">,</span> <span class="nx">autoNextDefer</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nv">autoNextDefer = </span><span class="nf">-&gt;</span>
+</span><span class='line'>    <span class="nx">$</span><span class="p">(</span><span class="nb">window</span><span class="p">).</span><span class="nx">off</span> <span class="s">&#39;scroll.autoNext&#39;</span>
+</span><span class='line'>    <span class="nv">timerId = </span><span class="nx">setTimeout</span> <span class="nx">autoNext</span><span class="p">,</span> <span class="mi">1000</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nx">$</span><span class="p">(</span><span class="nb">window</span><span class="p">).</span><span class="nx">on</span> <span class="s">&#39;scroll.autoNext&#39;</span><span class="p">,</span> <span class="nx">autoNextDefer</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>views</h2>
+
+<p>view は次のような感じにしました。
+<code>page_entries_info</code> を <code>.page_element</code> の中にするか、外にするかは悩ましいところです。</p>
+
+<figure class='code'><figcaption><span>app/views/posts/index.html.haml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="nc">.page_element</span>
+</span><span class='line'>  <span class="nt">%small</span><span class="nc">.page-entries-info</span><span class="p">=</span> <span class="n">page_entries_info</span> <span class="vi">@posts</span>
+</span><span class='line'>  <span class="p">=</span> <span class="n">render</span> <span class="vi">@posts</span>
+</span><span class='line'>  <span class="p">=</span> <span class="n">link_to_auto_next_page_with_ransack</span> <span class="vi">@q</span><span class="p">,</span> <span class="vi">@posts</span><span class="p">,</span> <span class="n">t</span><span class="p">(</span><span class="s1">&#39;views.pagination.next&#39;</span><span class="p">),</span> <span class="ss">class</span><span class="p">:</span> <span class="s2">&quot;btn btn-large btn-block btn-success&quot;</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="s2">&quot;next_for_pager&quot;</span><span class="p">,</span> <span class="ss">params</span><span class="p">:</span> <span class="n">params</span>
+</span><span class='line'><span class="nf">#autopager_loading</span>(<span class="na">style=</span><span class="s">&quot;display:none&quot;</span>)
+</span><span class='line'>  <span class="p">=</span> <span class="n">fa_icon</span> <span class="s2">&quot;spinner spin&quot;</span>
+</span><span class='line'>  <span class="p">=</span> <span class="n">t</span><span class="p">(</span><span class="s2">&quot;loading&quot;</span><span class="p">,</span> <span class="ss">default</span><span class="p">:</span> <span class="s2">&quot;Loading...&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>kaminari</code> の <code>link_to_next_page</code> を使っている時に問題になったのですが、
+<code>params</code> をちゃんと渡さないと <code>paginate @posts</code> で生成されるリンクと違って
+パラメーター不足になってしまうようです。
+そのため自作の <code>link_to_auto_next_page_with_ransack</code> でも渡すようにしています。</p>
+
+<h2>helper</h2>
+
+<p>ここがリンク生成の肝になります。
+ソートのキーのうち、今表示されている最後のものを使って、
+<code>updated_at desc</code> でソートされているなら、
+<code>updated_at_lt</code> で指定する、ということをしています。
+仕組みの都合上、同じ値が複数入ると表示されずに抜け落ちてしまうので、
+<code>id</code> やタイムスタンプなどのようなカラムに限定する必要がありそうです。</p>
+
+<p>時刻は標準の <code>to_s</code> だと開発環境の一気に入力したデータで問題が起きたので、
+<code>strftime</code> を使って <code>%N</code> (ナノ秒) まで入れるようにしました。</p>
+
+<figure class='code'><figcaption><span>app/helpers/link_to_helper.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">link_to_auto_next_page_with_ransack</span><span class="p">(</span><span class="n">search</span><span class="p">,</span> <span class="n">scope</span><span class="p">,</span> <span class="nb">name</span><span class="p">,</span> <span class="n">options</span> <span class="o">=</span> <span class="p">{},</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">return</span> <span class="k">if</span> <span class="n">scope</span><span class="o">.</span><span class="n">last_page?</span>
+</span><span class='line'>    <span class="n">params</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="ss">:params</span><span class="p">)</span> <span class="o">||</span> <span class="p">{}</span>
+</span><span class='line'>    <span class="n">sorts</span> <span class="o">=</span> <span class="n">search</span><span class="o">.</span><span class="n">sorts</span>
+</span><span class='line'>    <span class="k">if</span> <span class="n">sorts</span><span class="o">.</span><span class="n">empty?</span>
+</span><span class='line'>      <span class="k">raise</span> <span class="s2">&quot;You must set sorts to ransack (e.g. `@q.sorts = &#39;updated_at desc&#39; if @q.sorts.empty?`)&quot;</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>    <span class="n">order</span> <span class="o">=</span> <span class="n">sorts</span><span class="o">.</span><span class="n">first</span>
+</span><span class='line'>    <span class="n">column</span> <span class="o">=</span> <span class="n">order</span><span class="o">.</span><span class="n">name</span>
+</span><span class='line'>    <span class="n">dir</span> <span class="o">=</span> <span class="n">order</span><span class="o">.</span><span class="n">dir</span> <span class="o">==</span> <span class="s2">&quot;desc&quot;</span> <span class="p">?</span> <span class="s2">&quot;lt&quot;</span> <span class="p">:</span> <span class="s2">&quot;gt&quot;</span>
+</span><span class='line'>    <span class="n">value</span> <span class="o">=</span> <span class="n">scope</span><span class="o">.</span><span class="n">last</span><span class="o">[</span><span class="n">column</span><span class="o">]</span>
+</span><span class='line'>    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">respond_to?</span><span class="p">(</span><span class="ss">:strftime</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="n">value</span><span class="o">.</span><span class="n">respond_to?</span><span class="p">(</span><span class="ss">:hour</span><span class="p">)</span>
+</span><span class='line'>      <span class="c1"># expect Time, DateTime, ActiveSupport::TimeWithZone</span>
+</span><span class='line'>      <span class="c1"># and not Date</span>
+</span><span class='line'>      <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-%d %H:%M:%S.%N %Z&quot;</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>    <span class="n">q</span> <span class="o">=</span> <span class="n">params</span><span class="o">[</span><span class="ss">:q</span><span class="o">]</span> <span class="o">||</span> <span class="p">{}</span>
+</span><span class='line'>    <span class="n">q</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">#{</span><span class="n">column</span><span class="si">}</span><span class="s2">_</span><span class="si">#{</span><span class="n">dir</span><span class="si">}</span><span class="s2">&quot;</span> <span class="o">=&gt;</span> <span class="n">value</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">params</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">search</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">search_key</span> <span class="o">=&gt;</span> <span class="n">q</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">link_to</span> <span class="nb">name</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">options</span><span class="o">.</span><span class="n">reverse_merge</span><span class="p">(</span><span class="ss">:rel</span> <span class="o">=&gt;</span> <span class="s1">&#39;next&#39;</span><span class="p">),</span> <span class="o">&amp;</span><span class="n">block</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>controller</h2>
+
+<p>コントローラーは <code>kaminari</code> や <code>ransack</code> を普通に使っているだけです。
+<code>@posts = Post</code> の行は <code>cancan</code> の <code>load_and_authorize_resource</code> を使っている場合には不要なので、
+別の行にしています。</p>
+
+<figure class='code'><figcaption><span>app/controllers/posts_controller.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">index</span>
+</span><span class='line'>    <span class="vi">@posts</span> <span class="o">=</span> <span class="no">Post</span>
+</span><span class='line'>    <span class="vi">@q</span> <span class="o">=</span> <span class="vi">@posts</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:q</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@q</span><span class="o">.</span><span class="n">sorts</span> <span class="o">=</span> <span class="s1">&#39;updated_at desc&#39;</span> <span class="k">if</span> <span class="vi">@q</span><span class="o">.</span><span class="n">sorts</span><span class="o">.</span><span class="n">empty?</span>
+</span><span class='line'>    <span class="vi">@posts</span> <span class="o">=</span> <span class="vi">@q</span><span class="o">.</span><span class="n">result</span><span class="p">(</span><span class="ss">distinct</span><span class="p">:</span> <span class="kp">true</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@posts</span> <span class="o">=</span> <span class="vi">@posts</span><span class="o">.</span><span class="n">page</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:page</span><span class="o">]</span><span class="p">)</span><span class="o">.</span><span class="n">per</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>スタイルシート</h2>
+
+<p>読み込み中の部分のスタイルは以下のようにして、画面の最下部の横幅いっぱいに出るようにしています。
+エラーの時はこの中身が再読み込みボタンに変わります。
+開発環境だと <code>rails server</code> を停止した状態で自動読み込みさせれば、すぐに確認できます。</p>
+
+<figure class='code'><figcaption><span>app/assets/stylesheets/application.css.scss</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="nf">#autopager_loading</span> <span class="p">{</span>
+</span><span class='line'>  <span class="k">background-color</span><span class="o">:</span> <span class="m">#000</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">bottom</span><span class="o">:</span> <span class="m">0px</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">color</span><span class="o">:</span> <span class="m">#fff</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">font-size</span><span class="o">:</span> <span class="m">12px</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">height</span><span class="o">:</span> <span class="m">25px</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">left</span><span class="o">:</span> <span class="m">0px</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">opacity</span><span class="o">:</span> <span class="m">0</span><span class="o">.</span><span class="m">8</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">position</span><span class="o">:</span> <span class="k">fixed</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">text-align</span><span class="o">:</span> <span class="k">center</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">width</span><span class="o">:</span> <span class="m">100</span><span class="o">%</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">z-index</span><span class="o">:</span> <span class="m">1000</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p>autopagerize のような自動読み込みを <code>kaminari</code> と <code>ransack</code> を使った rails アプリに組み込んだ実装例を紹介しました。
+部品だけで全体を示せていないので、もしかしたら書き忘れている部分もあるかもしれませんが、重要な部分は載せていると思いますので、参考にしてみてください。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 81 回 関西 Debian 勉強会に参加した]]></title>
@@ -2545,82 +2784,6 @@ URL を受け取っても見せる window がなくなっているので
 
 <p>今回はみんなもくもくとそれぞれの作業が進んだという感じで、
 成果発表もすぐに終わった感じでした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Land of Lisp 読書会 第4回(兵庫県)に参加してきた]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-01-18-readling-land-of-lisp.html"/>
-    <updated>2014-01-18T23:45:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/readling-land-of-lisp</id>
-    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/main/tag/amagasakirb">amagasakirb</a>
-の
-<a href="http://kokucheese.com/event/index/129358/">1月18日 Land of Lisp 読書会 第４回(兵庫県)</a>
-に参加してきました。
-今回は「第IV部 LISPは科学なり」の最初の方の14章と15章でした。</p>
-
-<p>次回は2月22日ということでした。</p>
-
-<!--more-->
-
-
-
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4873115876" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-<p>今回は15章の前半が難しくて、あまり進みませんでした。</p>
-
-<p>以下はメモです。</p>
-
-<ul>
-<li>p.295 の <code>(when list ...)</code> から <code>(car nil)</code> と <code>(cdr nil)</code> がエラー (例外) ではなく <code>nil</code></li>
-<li>データ構造がわかりにくい</li>
-<li>よくわからない挿絵よりもデータ構造の図がほしい</li>
-<li><code>defstruct</code> を使えば良いのに</li>
-<li>C言語やC++で <code>.</code> に比べて <code>-&gt;</code> の入力コストが高い</li>
-<li>なぜ hex (六角形) なのか</li>
-<li>由来はボードゲームなどで距離の計算がしやすいかららしい</li>
-<li>ダイヤモンドゲームは三角形だが、辺と頂点の見方を変えれば六角形</li>
-<li><a href="http://ja.wikipedia.org/wiki/%E3%82%B8%E3%82%AA%E3%83%8F%E3%83%83%E3%82%B7%E3%83%A5">Geohash</a> とか <a href="http://d.hatena.ne.jp/nayutaya/20110826/1314382637">GeoDelta</a> とか</li>
-<li>loop や format がわかりにくい</li>
-<li><code>~a</code> とか printf の <code>%</code> と全く違う</li>
-<li>「、。」と「，．」(全角)と「,.」(半角) という感じで全角半角も意見が割れた</li>
-<li>yen sign (<code>¥</code>) と backslash (<code>\</code>) の話</li>
-<li>p.320 選択肢にある 2 &ndash;> 3 の 2 とか 3 とかの説明がない</li>
-<li>choose your move: が選択肢の前にあって入力するときは行頭なのが変</li>
-<li>p.320 announce-winner関数のアイコンなどは <a href="http://practical-scheme.net/wiliki/wiliki.cgi/Shiro:LandOfLisp">正誤表</a> に載っていた</li>
-<li>PDF (第3刷) では直っていた</li>
-<li>Ruby の末尾最適化の話
-
-<ul>
-<li><code>RubyVM::InstructionSequence.compile_option = { :tailcall_optimization =&gt; true }</code> で変更できる</li>
-<li>例: <a href="http://d.hatena.ne.jp/yarb/20121029/p1">CRubyで末尾最適化を使った再帰 &ndash; yarbの日記</a></li>
-</ul>
-</li>
-<li>p.333 スタックトレースが問題になる</li>
-</ul>
-
-
-<p>懇親会での話の一部のメモです。</p>
-
-<ul>
-<li>最近は朝とか移動中にオーディオブックを聞いているという話</li>
-<li><a href="http://qiita.com/cuzic/items/86f012bba8c17cc98aea">4倍速にしている</a>話</li>
-<li>コンテナ物語という本の話 <div style="float:right"><iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4822245640" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe></div></li>
-<li>ソードアート・オンラインは1巻だけでも良いのでオススメという話 <div style="float:right"><iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4048677608" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe></div></li>
-<li>なれる!SE は1巻には1と付いていないという話 <div style="float:right"><iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4048686054" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe></div></li>
-<li><a href="http://ascii.jp/elem/000/000/760/760389/">ASCII.jp：なれる！ＳＥ 間違いだらけの？ＩＴ用語辞典（中二版）</a></li>
-<li><a href="http://qiita.com/advent-calendar/2013/ruby-on-rails">Ruby on Rails Advent Calendar 2013</a> のときから qiita に書くようになって、最近は<a href="http://qiita.com/cuzic">いろいろ書いている</a>という話</li>
-<li>Ruby の id3 のライブラリが SJIS を latin-1 と解釈して UTF-8 に変換してしまって化けていたという話</li>
-<li><a href="http://en.wikipedia.org/wiki/ID3#cite_ref-5">ID3タグの文字コードは latin-1 か Unicode</a> ということになっているのでライブラリとしては仕様通りの挙動だが日本語圏では latin-1 として実体は SJIS を入れていることが多いため問題が生じる</li>
-<li><a href="http://homepage1.nifty.com/nomenclator/unicode/normalization.htm">Unicode正規化</a> の話</li>
-<li>Unicode 絵文字の色情報はどこからきているのかわからないという話</li>
-<li>OpenType とかのフォントには色情報は入らないはずなので別途どこかに持っている?</li>
-</ul>
-
 ]]></content>
   </entry>
   

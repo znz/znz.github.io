@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rails | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rails/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-02-24T00:10:50+09:00</updated>
+  <updated>2014-02-25T20:43:46+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,181 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[autopagerizeのような動作をkaminariとransackを使った環境で実装した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-02-25-autopagerize-kaminari-ransack.html"/>
+    <updated>2014-02-25T18:58:39+09:00</updated>
+    <id>http://blog.n-z.jp/blog/autopagerize-kaminari-ransack</id>
+    <content type="html"><![CDATA[<p>autopagerize のような動作をするときに id 重複問題があるので、
+<a href="http://qa.atmarkit.co.jp/q/3513">QA@IT で質問</a>
+してみたところ、
+今のページに表示されている最後の id で対処するしかなさそうだとわかったので、
+そういう方針で実装してみました。</p>
+
+<!--more-->
+
+
+<h2>スクリプト部分</h2>
+
+<p>コア部分は以前に実装したものをそのまま使いました。
+i18n 対応などが出来ていませんが、冒頭に書いてある id や class が関連要素になります。</p>
+
+<p>```coffeescript app/assets/javascripts/autonext.js.coffee
+jQuery &ndash;>
+  timerId = null
+  loadingId = &lsquo;#autopager_loading&rsquo;
+  nextId = &lsquo;#next_for_pager&rsquo;
+  pageElement = &lsquo;.page_element&rsquo;
+  lastContent = &lsquo;.page_content:last&rsquo;</p>
+
+<p>  loadNext = &ndash;></p>
+
+<pre><code>nextLink = $(nextId)[0]
+if nextLink
+  $(loadingId).show()
+  $(nextId).remove()
+  request = $.get nextLink.href, (data) -&gt;
+    $(loadingId).before($(data).find(pageElement)).hide()
+    # 必要なら turbolinks の `page:change` のような DOM 変更通知をする
+  request.error (xhr, status, error) -&gt;
+    if error == "Unauthorized"
+      alert("認証の期限切れです。再読み込みしてください。")
+    else
+      alert("何かエラーです。少し待ってから、再読み込みしてください。")
+    $(loadingId).html("&lt;a href='javascript:location.reload()' class='btn btn-block btn-primary'&gt;再読み込み&lt;/a&gt;")
+</code></pre>
+
+<p>  autoNext = &ndash;></p>
+
+<pre><code>content = $(lastContent)
+if content[0] &amp;&amp; content.offset().top &lt; $(document).scrollTop() + $(window).height()
+  if $(loadingId).css('display') is 'none'
+    loadNext()
+timerId = null
+$(window).on 'scroll.autoNext', autoNextDefer
+</code></pre>
+
+<p>  autoNextDefer = &ndash;></p>
+
+<pre><code>$(window).off 'scroll.autoNext'
+timerId = setTimeout autoNext, 1000
+</code></pre>
+
+<p>  $(window).on &lsquo;scroll.autoNext&rsquo;, autoNextDefer
+```</p>
+
+<h2>views</h2>
+
+<p>view は次のような感じにしました。
+<code>page_entries_info</code> を <code>.page_element</code> の中にするか、外にするかは悩ましいところです。</p>
+
+<p>```haml app/views/posts/index.html.haml</p>
+
+<pre><code>.page_element
+  %small.page-entries-info= page_entries_info @posts
+  = render @posts
+  = link_to_auto_next_page_with_ransack @q, @posts, t('views.pagination.next'), class: "btn btn-large btn-block btn-success", id: "next_for_pager", params: params
+#autopager_loading(style="display:none")
+  = fa_icon "spinner spin"
+  = t("loading", default: "Loading...")
+</code></pre>
+
+<p>```</p>
+
+<p><code>kaminari</code> の <code>link_to_next_page</code> を使っている時に問題になったのですが、
+<code>params</code> をちゃんと渡さないと <code>paginate @posts</code> で生成されるリンクと違って
+パラメーター不足になってしまうようです。
+そのため自作の <code>link_to_auto_next_page_with_ransack</code> でも渡すようにしています。</p>
+
+<h2>helper</h2>
+
+<p>ここがリンク生成の肝になります。
+ソートのキーのうち、今表示されている最後のものを使って、
+<code>updated_at desc</code> でソートされているなら、
+<code>updated_at_lt</code> で指定する、ということをしています。
+仕組みの都合上、同じ値が複数入ると表示されずに抜け落ちてしまうので、
+<code>id</code> やタイムスタンプなどのようなカラムに限定する必要がありそうです。</p>
+
+<p>時刻は標準の <code>to_s</code> だと開発環境の一気に入力したデータで問題が起きたので、
+<code>strftime</code> を使って <code>%N</code> (ナノ秒) まで入れるようにしました。</p>
+
+<p>```ruby app/helpers/link_to_helper.rb
+  def link_to_auto_next_page_with_ransack(search, scope, name, options = {}, &amp;block)</p>
+
+<pre><code>return if scope.last_page?
+params = options.delete(:params) || {}
+sorts = search.sorts
+if sorts.empty?
+  raise "You must set sorts to ransack (e.g. `@q.sorts = 'updated_at desc' if @q.sorts.empty?`)"
+end
+order = sorts.first
+column = order.name
+dir = order.dir == "desc" ? "lt" : "gt"
+value = scope.last[column]
+if value.respond_to?(:strftime) &amp;&amp; value.respond_to?(:hour)
+  # expect Time, DateTime, ActiveSupport::TimeWithZone
+  # and not Date
+  value = value.strftime("%Y-%m-%d %H:%M:%S.%N %Z")
+end
+q = params[:q] || {}
+q = q.merge("#{column}_#{dir}" =&gt; value)
+params = params.merge(search.context.search_key =&gt; q)
+link_to name, params, options.reverse_merge(:rel =&gt; 'next'), &amp;block
+</code></pre>
+
+<p>  end
+```</p>
+
+<h2>controller</h2>
+
+<p>コントローラーは <code>kaminari</code> や <code>ransack</code> を普通に使っているだけです。
+<code>@posts = Post</code> の行は <code>cancan</code> の <code>load_and_authorize_resource</code> を使っている場合には不要なので、
+別の行にしています。</p>
+
+<p>```ruby app/controllers/posts_controller.rb
+  def index</p>
+
+<pre><code>@posts = Post
+@q = @posts.search(params[:q])
+@q.sorts = 'updated_at desc' if @q.sorts.empty?
+@posts = @q.result(distinct: true)
+@posts = @posts.page(params[:page]).per(5)
+</code></pre>
+
+<p>  end
+```</p>
+
+<h2>スタイルシート</h2>
+
+<p>読み込み中の部分のスタイルは以下のようにして、画面の最下部の横幅いっぱいに出るようにしています。
+エラーの時はこの中身が再読み込みボタンに変わります。
+開発環境だと <code>rails server</code> を停止した状態で自動読み込みさせれば、すぐに確認できます。</p>
+
+<p>```css app/assets/stylesheets/application.css.scss</p>
+
+<h1>autopager_loading {</h1>
+
+<p>  background-color: #000;
+  bottom: 0px;
+  color: #fff;
+  font-size: 12px;
+  height: 25px;
+  left: 0px;
+  opacity: 0.8;
+  position: fixed;
+  text-align: center;
+  width: 100%;
+  z-index: 1000;
+}
+```</p>
+
+<h2>まとめ</h2>
+
+<p>autopagerize のような自動読み込みを <code>kaminari</code> と <code>ransack</code> を使った rails アプリに組み込んだ実装例を紹介しました。
+部品だけで全体を示せていないので、もしかしたら書き忘れている部分もあるかもしれませんが、重要な部分は載せていると思いますので、参考にしてみてください。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[bootstrap-sass-railsからbootstrap-sassに移行した]]></title>
@@ -411,164 +586,6 @@ yaml_db の方が fork が乱立して、新しい rails に対応したもの�
 <p>taps は新しい Ruby に対応できていなかったり、
 以前の記事に書いたようにスキーマの移行が不十分なところがあったりして、
 使われなくなっていくように感じました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[tapsでMySQLからPostgreSQLに移行した後に起きたトラブル事例]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-01-12-taps-trouble.html"/>
-    <updated>2014-01-12T14:15:41+09:00</updated>
-    <id>http://blog.n-z.jp/blog/taps-trouble</id>
-    <content type="html"><![CDATA[<p>2013年7月ごろに <a href="http://rubygems.org/gems/taps">taps</a> を使って redmine のデータベースを MySQL から PostgreSQL に移行しました。</p>
-
-<p>その時に移行が不十分で問題が少し起きていたので、その原因を調べて修正しました。</p>
-
-<!--more-->
-
-
-<h2>taps での移行</h2>
-
-<p>taps の使い方については既に情報がたくさんあるので、簡単に書いておくだけにします。
-昨年7月時点の情報なので、今だとさらにバージョン指定を増やさないとダメかもしれません。</p>
-
-<p>まず、 Ruby 1.9.1 以降に対応できていないようなので、 Ruby 1.8.7 を使いました。
-rack も新しいバージョンに対応できていないので、以下のような Gemfile でバージョンを指定して<code>bundle install --path vendor/bundle</code> して使いました。</p>
-
-<p><code>ruby Gemfile
-  source "https://rubygems.org"
-  gem "taps"
-  gem "sqlite3"
-  gem "mysql"
-  gem "pg"
-  gem "rack", "1.0.1"
-</code></p>
-
-<p>元の <code>config/database.yml</code> の設定が</p>
-
-<p><code>yaml config/database.yml
-production:
-  adapter: mysql2
-  database: redmine_db
-  host: localhost
-  username: redminemyuser
-  password: my_password
-  encoding: utf8
-</code></p>
-
-<p>という感じなら、 MySQL を動かしている方で
-<code>bundle exec taps server mysql://redminemyuser:my_password@localhost/redmine_db tapsuser tapspass</code>
-と起動します。</p>
-
-<p>PostgreSQL の方では</p>
-
-<p><code>console sudo -u postgres psql
-CREATE ROLE redminepguser LOGIN ENCRYPTED PASSWORD 'pg_password' NOINHERIT VALID UNTIL 'infinity';
-CREATE DATABASE redmine_db WITH ENCODING='UTF8' OWNER=redminepguser;
-</code></p>
-
-<p>という感じでデータベースを作っておいて、
-<code>bundle exec taps pull postgres://redminepguser:pg_password@localhost/redmine_db http://tapsuser:tapspass@localhost:5000</code>
-という感じでデータを移行しました。</p>
-
-<p>同じサーバーで移行したので taps の http も localhost にしていますが、別サーバーなら ssh のポートフォワーディングなどを使ってつなげば良いと思います。</p>
-
-<h2>redmine でのトラブル</h2>
-
-<p>管理者権限でログインして、管理からグループを追加 (/groups/new) しようとするとエラーになって、 log/production.log を確認すると
-<code>ActiveRecord::StatementInvalid (PG::NotNullViolation: ERROR:  null value in column "mail_notification" violates not-null constraint</code>
-または
-<code>(ActiveRecord::StatementInvalid (PG::NotNullViolation: ERROR:  列"mail_notification"内のNULL値はNOT NULL制約違反です</code>
-というエラーが出ていました。</p>
-
-<h2>トラブルの原因</h2>
-
-<p>いろいろ調べてみると <code>db/schema.rb</code> でいうと <code>mail_notification</code> に default がないのが問題だとわかりました。
-後で追加調査したところ、 default が <code>""</code> (空文字列) のときにうまく移行できていないことがあるようでした。</p>
-
-<h2>原因修正</h2>
-
-<p><code>rails dbconsole</code> で
-<code>ALTER TABLE users ALTER mail_notification SET DEFAULT '';</code>
-で設定して、
-<code>rake db:migrate</code> で <code>db/schema.rb</code> にも反映して
-redmine を再起動すると直りました。</p>
-
-<h2>その他の DEFAULT の修正</h2>
-
-<p>別途 PostgreSQL の環境を用意して redmine を新規インストールして <code>rake db:migrate</code> で生成した <code>db/schema.rb</code> と比較して全体としては以下の修正をしました。</p>
-
-<p><code>sql rails dbconsole
-ALTER TABLE attachments ALTER filename SET DEFAULT '';
-ALTER TABLE attachments ALTER disk_filename SET DEFAULT '';
-ALTER TABLE attachments ALTER content_type SET DEFAULT '';
-ALTER TABLE attachments ALTER digest SET DEFAULT '';
-ALTER TABLE auth_sources ALTER type SET DEFAULT '';
-ALTER TABLE auth_sources ALTER name SET DEFAULT '';
-ALTER TABLE auth_sources ALTER account_password SET DEFAULT '';
-ALTER TABLE boards ALTER name SET DEFAULT '';
-ALTER TABLE changes ALTER action SET DEFAULT '';
-ALTER TABLE comments ALTER commented_type SET DEFAULT '';
-ALTER TABLE custom_fields ALTER type SET DEFAULT '';
-ALTER TABLE custom_fields ALTER name SET DEFAULT '';
-ALTER TABLE custom_fields ALTER field_format SET DEFAULT '';
-ALTER TABLE custom_fields ALTER regexp SET DEFAULT '';
-ALTER TABLE custom_values ALTER customized_type SET DEFAULT '';
-ALTER TABLE documents ALTER title SET DEFAULT '';
-ALTER TABLE enumerations ALTER name SET DEFAULT '';
-ALTER TABLE wiki_contents ALTER comments SET DEFAULT '';
-ALTER TABLE issue_categories ALTER name SET DEFAULT '';
-ALTER TABLE issue_relations ALTER relation_type SET DEFAULT '';
-ALTER TABLE issue_statuses ALTER name SET DEFAULT '';
-ALTER TABLE issues ALTER subject SET DEFAULT '';
-ALTER TABLE journal_details ALTER property SET DEFAULT '';
-ALTER TABLE journal_details ALTER prop_key SET DEFAULT '';
-ALTER TABLE journals ALTER journalized_type SET DEFAULT '';
-ALTER TABLE messages ALTER subject SET DEFAULT '';
-ALTER TABLE news ALTER title SET DEFAULT '';
-ALTER TABLE news ALTER summary SET DEFAULT '';
-ALTER TABLE projects ALTER name SET DEFAULT '';
-ALTER TABLE projects ALTER homepage SET DEFAULT '';
-ALTER TABLE queries ALTER name SET DEFAULT '';
-ALTER TABLE repositories ALTER url SET DEFAULT '';
-ALTER TABLE repositories ALTER login SET DEFAULT '';
-ALTER TABLE repositories ALTER password SET DEFAULT '';
-ALTER TABLE repositories ALTER root_url SET DEFAULT '';
-ALTER TABLE roles ALTER name SET DEFAULT '';
-ALTER TABLE settings ALTER name SET DEFAULT '';
-ALTER TABLE tokens ALTER action SET DEFAULT '';
-ALTER TABLE tokens ALTER value SET DEFAULT '';
-ALTER TABLE trackers ALTER name SET DEFAULT '';
-ALTER TABLE users ALTER hashed_password SET DEFAULT '';
-ALTER TABLE users ALTER firstname SET DEFAULT '';
-ALTER TABLE users ALTER mail SET DEFAULT '';
-ALTER TABLE users ALTER language SET DEFAULT '';
-ALTER TABLE versions ALTER name SET DEFAULT '';
-ALTER TABLE versions ALTER description SET DEFAULT '';
-ALTER TABLE watchers ALTER watchable_type SET DEFAULT '';
-ALTER TABLE wiki_content_versions ALTER compression SET DEFAULT '';
-ALTER TABLE wiki_content_versions ALTER comments SET DEFAULT '';
-ALTER TABLE users ALTER mail_notification SET DEFAULT '';
-ALTER TABLE users ALTER lastname SET DEFAULT '';
-</code></p>
-
-<p><code>sql rails dbconsole
-ALTER TABLE users ALTER mail_notification SET DEFAULT '';
-</code></p>
-
-<p>はすでに実行済みで、</p>
-
-<p><code>sql rails dbconsole
-ALTER TABLE users ALTER lastname SET DEFAULT '';
-</code></p>
-
-<p>は既に default が <code>""</code> になっていたので不要でしたが、
-重複して実行しても問題が起きないようなので、上の SQL にも入れています。</p>
-
-<h2>まとめ</h2>
-
-<p>最初のデータベース選択は重要で、アプリケーションが両方対応していても、後から変更するのは大変です。</p>
-
-<p>問題が起きそうなデータ型を使っていなければ <code>taps</code> ですんなり移行できるように見えますが、別途クリーンな環境を用意して生成した <code>db/schema.rb</code> と比較するなどのチェックも必要でした。</p>
 ]]></content>
   </entry>
   

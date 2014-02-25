@@ -1,0 +1,580 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>autopagerizeのような動作をkaminariとransackを使った環境で実装した - @znz blog</title>
+  <meta name="author" content="Kazuhiro NISHIYAMA">
+
+  
+  <meta name="description" content="autopagerize のような動作をするときに id 重複問題があるので、
+QA@IT で質問
+してみたところ、
+今のページに表示されている最後の id で対処するしかなさそうだとわかったので、
+そういう方針で実装してみました。 スクリプト部分 コア部分は以前に実装したものをそのまま使いました &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-02-25-autopagerize-kaminari-ransack.html">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-43859023-1', 'n-z.jp');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">@znz blog</a></h1>
+  
+    <h2>ZnZ の memo のようなもの</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://www.google.co.jp/cse" id="cse-search-box">
+  <div>
+    <input type="hidden" name="cx" value="partner-pub-4711975605457723:5173725094" />
+    <input type="hidden" name="ie" value="UTF-8" />
+    <input type="text" name="q" size="40" />
+    <input type="submit" name="sa" value="検索" />
+  </div>
+</form>
+
+<script type="text/javascript" src="http://www.google.co.jp/coop/cse/brand?form=cse-search-box&amp;lang=ja"></script>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">autopagerizeのような動作をkaminariとransackを使った環境で実装した</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-25T18:58:39+09:00" pubdate data-updated="true">2014-02-25 (Tue)</time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>autopagerize のような動作をするときに id 重複問題があるので、
+<a href="http://qa.atmarkit.co.jp/q/3513">QA@IT で質問</a>
+してみたところ、
+今のページに表示されている最後の id で対処するしかなさそうだとわかったので、
+そういう方針で実装してみました。</p>
+
+<!--more-->
+
+
+<h2>スクリプト部分</h2>
+
+<p>コア部分は以前に実装したものをそのまま使いました。
+i18n 対応などが出来ていませんが、冒頭に書いてある id や class が関連要素になります。</p>
+
+<figure class='code'><figcaption><span>app/assets/javascripts/autonext.js.coffee</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+</pre></td><td class='code'><pre><code class='coffeescript'><span class='line'><span class="nx">jQuery</span> <span class="nf">-&gt;</span>
+</span><span class='line'>  <span class="nv">timerId = </span><span class="kc">null</span>
+</span><span class='line'>  <span class="nv">loadingId = </span><span class="s">&#39;#autopager_loading&#39;</span>
+</span><span class='line'>  <span class="nv">nextId = </span><span class="s">&#39;#next_for_pager&#39;</span>
+</span><span class='line'>  <span class="nv">pageElement = </span><span class="s">&#39;.page_element&#39;</span>
+</span><span class='line'>  <span class="nv">lastContent = </span><span class="s">&#39;.page_content:last&#39;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nv">loadNext = </span><span class="nf">-&gt;</span>
+</span><span class='line'>    <span class="nv">nextLink = </span><span class="nx">$</span><span class="p">(</span><span class="nx">nextId</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</span><span class='line'>    <span class="k">if</span> <span class="nx">nextLink</span>
+</span><span class='line'>      <span class="nx">$</span><span class="p">(</span><span class="nx">loadingId</span><span class="p">).</span><span class="nx">show</span><span class="p">()</span>
+</span><span class='line'>      <span class="nx">$</span><span class="p">(</span><span class="nx">nextId</span><span class="p">).</span><span class="nx">remove</span><span class="p">()</span>
+</span><span class='line'>      <span class="nv">request = </span><span class="nx">$</span><span class="p">.</span><span class="nx">get</span> <span class="nx">nextLink</span><span class="p">.</span><span class="nx">href</span><span class="p">,</span> <span class="nf">(data) -&gt;</span>
+</span><span class='line'>        <span class="nx">$</span><span class="p">(</span><span class="nx">loadingId</span><span class="p">).</span><span class="nx">before</span><span class="p">(</span><span class="nx">$</span><span class="p">(</span><span class="nx">data</span><span class="p">).</span><span class="nx">find</span><span class="p">(</span><span class="nx">pageElement</span><span class="p">)).</span><span class="nx">hide</span><span class="p">()</span>
+</span><span class='line'>        <span class="c1"># 必要なら turbolinks の `page:change` のような DOM 変更通知をする</span>
+</span><span class='line'>      <span class="nx">request</span><span class="p">.</span><span class="nx">error</span> <span class="nf">(xhr, status, error) -&gt;</span>
+</span><span class='line'>        <span class="k">if</span> <span class="nx">error</span> <span class="o">==</span> <span class="s">&quot;Unauthorized&quot;</span>
+</span><span class='line'>          <span class="nx">alert</span><span class="p">(</span><span class="s">&quot;認証の期限切れです。再読み込みしてください。&quot;</span><span class="p">)</span>
+</span><span class='line'>        <span class="k">else</span>
+</span><span class='line'>          <span class="nx">alert</span><span class="p">(</span><span class="s">&quot;何かエラーです。少し待ってから、再読み込みしてください。&quot;</span><span class="p">)</span>
+</span><span class='line'>        <span class="nx">$</span><span class="p">(</span><span class="nx">loadingId</span><span class="p">).</span><span class="nx">html</span><span class="p">(</span><span class="s">&quot;&lt;a href=&#39;javascript:location.reload()&#39; class=&#39;btn btn-block btn-primary&#39;&gt;再読み込み&lt;/a&gt;&quot;</span><span class="p">)</span>
+</span><span class='line'>  <span class="nv">autoNext = </span><span class="nf">-&gt;</span>
+</span><span class='line'>    <span class="nv">content = </span><span class="nx">$</span><span class="p">(</span><span class="nx">lastContent</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">if</span> <span class="nx">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&amp;&amp;</span> <span class="nx">content</span><span class="p">.</span><span class="nx">offset</span><span class="p">().</span><span class="nx">top</span> <span class="o">&lt;</span> <span class="nx">$</span><span class="p">(</span><span class="nb">document</span><span class="p">).</span><span class="nx">scrollTop</span><span class="p">()</span> <span class="o">+</span> <span class="nx">$</span><span class="p">(</span><span class="nb">window</span><span class="p">).</span><span class="nx">height</span><span class="p">()</span>
+</span><span class='line'>      <span class="k">if</span> <span class="nx">$</span><span class="p">(</span><span class="nx">loadingId</span><span class="p">).</span><span class="nx">css</span><span class="p">(</span><span class="s">&#39;display&#39;</span><span class="p">)</span> <span class="o">is</span> <span class="s">&#39;none&#39;</span>
+</span><span class='line'>        <span class="nx">loadNext</span><span class="p">()</span>
+</span><span class='line'>    <span class="nv">timerId = </span><span class="kc">null</span>
+</span><span class='line'>    <span class="nx">$</span><span class="p">(</span><span class="nb">window</span><span class="p">).</span><span class="nx">on</span> <span class="s">&#39;scroll.autoNext&#39;</span><span class="p">,</span> <span class="nx">autoNextDefer</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nv">autoNextDefer = </span><span class="nf">-&gt;</span>
+</span><span class='line'>    <span class="nx">$</span><span class="p">(</span><span class="nb">window</span><span class="p">).</span><span class="nx">off</span> <span class="s">&#39;scroll.autoNext&#39;</span>
+</span><span class='line'>    <span class="nv">timerId = </span><span class="nx">setTimeout</span> <span class="nx">autoNext</span><span class="p">,</span> <span class="mi">1000</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nx">$</span><span class="p">(</span><span class="nb">window</span><span class="p">).</span><span class="nx">on</span> <span class="s">&#39;scroll.autoNext&#39;</span><span class="p">,</span> <span class="nx">autoNextDefer</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>views</h2>
+
+<p>view は次のような感じにしました。
+<code>page_entries_info</code> を <code>.page_element</code> の中にするか、外にするかは悩ましいところです。</p>
+
+<figure class='code'><figcaption><span>app/views/posts/index.html.haml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="nc">.page_element</span>
+</span><span class='line'>  <span class="nt">%small</span><span class="nc">.page-entries-info</span><span class="p">=</span> <span class="n">page_entries_info</span> <span class="vi">@posts</span>
+</span><span class='line'>  <span class="p">=</span> <span class="n">render</span> <span class="vi">@posts</span>
+</span><span class='line'>  <span class="p">=</span> <span class="n">link_to_auto_next_page_with_ransack</span> <span class="vi">@q</span><span class="p">,</span> <span class="vi">@posts</span><span class="p">,</span> <span class="n">t</span><span class="p">(</span><span class="s1">&#39;views.pagination.next&#39;</span><span class="p">),</span> <span class="ss">class</span><span class="p">:</span> <span class="s2">&quot;btn btn-large btn-block btn-success&quot;</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="s2">&quot;next_for_pager&quot;</span><span class="p">,</span> <span class="ss">params</span><span class="p">:</span> <span class="n">params</span>
+</span><span class='line'><span class="nf">#autopager_loading</span>(<span class="na">style=</span><span class="s">&quot;display:none&quot;</span>)
+</span><span class='line'>  <span class="p">=</span> <span class="n">fa_icon</span> <span class="s2">&quot;spinner spin&quot;</span>
+</span><span class='line'>  <span class="p">=</span> <span class="n">t</span><span class="p">(</span><span class="s2">&quot;loading&quot;</span><span class="p">,</span> <span class="ss">default</span><span class="p">:</span> <span class="s2">&quot;Loading...&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>kaminari</code> の <code>link_to_next_page</code> を使っている時に問題になったのですが、
+<code>params</code> をちゃんと渡さないと <code>paginate @posts</code> で生成されるリンクと違って
+パラメーター不足になってしまうようです。
+そのため自作の <code>link_to_auto_next_page_with_ransack</code> でも渡すようにしています。</p>
+
+<h2>helper</h2>
+
+<p>ここがリンク生成の肝になります。
+ソートのキーのうち、今表示されている最後のものを使って、
+<code>updated_at desc</code> でソートされているなら、
+<code>updated_at_lt</code> で指定する、ということをしています。
+仕組みの都合上、同じ値が複数入ると表示されずに抜け落ちてしまうので、
+<code>id</code> やタイムスタンプなどのようなカラムに限定する必要がありそうです。</p>
+
+<p>時刻は標準の <code>to_s</code> だと開発環境の一気に入力したデータで問題が起きたので、
+<code>strftime</code> を使って <code>%N</code> (ナノ秒) まで入れるようにしました。</p>
+
+<figure class='code'><figcaption><span>app/helpers/link_to_helper.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">link_to_auto_next_page_with_ransack</span><span class="p">(</span><span class="n">search</span><span class="p">,</span> <span class="n">scope</span><span class="p">,</span> <span class="nb">name</span><span class="p">,</span> <span class="n">options</span> <span class="o">=</span> <span class="p">{},</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">return</span> <span class="k">if</span> <span class="n">scope</span><span class="o">.</span><span class="n">last_page?</span>
+</span><span class='line'>    <span class="n">params</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="ss">:params</span><span class="p">)</span> <span class="o">||</span> <span class="p">{}</span>
+</span><span class='line'>    <span class="n">sorts</span> <span class="o">=</span> <span class="n">search</span><span class="o">.</span><span class="n">sorts</span>
+</span><span class='line'>    <span class="k">if</span> <span class="n">sorts</span><span class="o">.</span><span class="n">empty?</span>
+</span><span class='line'>      <span class="k">raise</span> <span class="s2">&quot;You must set sorts to ransack (e.g. `@q.sorts = &#39;updated_at desc&#39; if @q.sorts.empty?`)&quot;</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>    <span class="n">order</span> <span class="o">=</span> <span class="n">sorts</span><span class="o">.</span><span class="n">first</span>
+</span><span class='line'>    <span class="n">column</span> <span class="o">=</span> <span class="n">order</span><span class="o">.</span><span class="n">name</span>
+</span><span class='line'>    <span class="n">dir</span> <span class="o">=</span> <span class="n">order</span><span class="o">.</span><span class="n">dir</span> <span class="o">==</span> <span class="s2">&quot;desc&quot;</span> <span class="p">?</span> <span class="s2">&quot;lt&quot;</span> <span class="p">:</span> <span class="s2">&quot;gt&quot;</span>
+</span><span class='line'>    <span class="n">value</span> <span class="o">=</span> <span class="n">scope</span><span class="o">.</span><span class="n">last</span><span class="o">[</span><span class="n">column</span><span class="o">]</span>
+</span><span class='line'>    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">respond_to?</span><span class="p">(</span><span class="ss">:strftime</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="n">value</span><span class="o">.</span><span class="n">respond_to?</span><span class="p">(</span><span class="ss">:hour</span><span class="p">)</span>
+</span><span class='line'>      <span class="c1"># expect Time, DateTime, ActiveSupport::TimeWithZone</span>
+</span><span class='line'>      <span class="c1"># and not Date</span>
+</span><span class='line'>      <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-%d %H:%M:%S.%N %Z&quot;</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>    <span class="n">q</span> <span class="o">=</span> <span class="n">params</span><span class="o">[</span><span class="ss">:q</span><span class="o">]</span> <span class="o">||</span> <span class="p">{}</span>
+</span><span class='line'>    <span class="n">q</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">#{</span><span class="n">column</span><span class="si">}</span><span class="s2">_</span><span class="si">#{</span><span class="n">dir</span><span class="si">}</span><span class="s2">&quot;</span> <span class="o">=&gt;</span> <span class="n">value</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">params</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">search</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">search_key</span> <span class="o">=&gt;</span> <span class="n">q</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">link_to</span> <span class="nb">name</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">options</span><span class="o">.</span><span class="n">reverse_merge</span><span class="p">(</span><span class="ss">:rel</span> <span class="o">=&gt;</span> <span class="s1">&#39;next&#39;</span><span class="p">),</span> <span class="o">&amp;</span><span class="n">block</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>controller</h2>
+
+<p>コントローラーは <code>kaminari</code> や <code>ransack</code> を普通に使っているだけです。
+<code>@posts = Post</code> の行は <code>cancan</code> の <code>load_and_authorize_resource</code> を使っている場合には不要なので、
+別の行にしています。</p>
+
+<figure class='code'><figcaption><span>app/controllers/posts_controller.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">index</span>
+</span><span class='line'>    <span class="vi">@posts</span> <span class="o">=</span> <span class="no">Post</span>
+</span><span class='line'>    <span class="vi">@q</span> <span class="o">=</span> <span class="vi">@posts</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:q</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@q</span><span class="o">.</span><span class="n">sorts</span> <span class="o">=</span> <span class="s1">&#39;updated_at desc&#39;</span> <span class="k">if</span> <span class="vi">@q</span><span class="o">.</span><span class="n">sorts</span><span class="o">.</span><span class="n">empty?</span>
+</span><span class='line'>    <span class="vi">@posts</span> <span class="o">=</span> <span class="vi">@q</span><span class="o">.</span><span class="n">result</span><span class="p">(</span><span class="ss">distinct</span><span class="p">:</span> <span class="kp">true</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@posts</span> <span class="o">=</span> <span class="vi">@posts</span><span class="o">.</span><span class="n">page</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:page</span><span class="o">]</span><span class="p">)</span><span class="o">.</span><span class="n">per</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>スタイルシート</h2>
+
+<p>読み込み中の部分のスタイルは以下のようにして、画面の最下部の横幅いっぱいに出るようにしています。
+エラーの時はこの中身が再読み込みボタンに変わります。
+開発環境だと <code>rails server</code> を停止した状態で自動読み込みさせれば、すぐに確認できます。</p>
+
+<figure class='code'><figcaption><span>app/assets/stylesheets/application.css.scss</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="nf">#autopager_loading</span> <span class="p">{</span>
+</span><span class='line'>  <span class="k">background-color</span><span class="o">:</span> <span class="m">#000</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">bottom</span><span class="o">:</span> <span class="m">0px</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">color</span><span class="o">:</span> <span class="m">#fff</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">font-size</span><span class="o">:</span> <span class="m">12px</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">height</span><span class="o">:</span> <span class="m">25px</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">left</span><span class="o">:</span> <span class="m">0px</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">opacity</span><span class="o">:</span> <span class="m">0</span><span class="o">.</span><span class="m">8</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">position</span><span class="o">:</span> <span class="k">fixed</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">text-align</span><span class="o">:</span> <span class="k">center</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">width</span><span class="o">:</span> <span class="m">100</span><span class="o">%</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">z-index</span><span class="o">:</span> <span class="m">1000</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p>autopagerize のような自動読み込みを <code>kaminari</code> と <code>ransack</code> を使った rails アプリに組み込んだ実装例を紹介しました。
+部品だけで全体を示せていないので、もしかしたら書き忘れている部分もあるかもしれませんが、重要な部分は載せていると思いますので、参考にしてみてください。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-25T18:58:39+09:00" pubdate data-updated="true">2014-02-25 (Tue)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/ransack/'>ransack</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2014-02-25-autopagerize-kaminari-ransack.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2014-02-25-autopagerize-kaminari-ransack.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2014-02-25-autopagerize-kaminari-ransack.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014-02-23-kansai-debian-meeting.html" title="Previous Post: 第 81 回 関西 Debian 勉強会に参加した">&laquo; 第 81 回 関西 Debian 勉強会に参加した</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- sidebar -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:160px;height:600px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4210402292"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+<section>
+  <h1>About Me</h1>
+  <img src="/favicon.png" style="float:right">
+  <p>
+    <a href="http://rubycommitters.org/">Ruby のコミッター</a>とかやってます。
+    フルスタックエンジニアかもしれません。
+  </p>
+<script data-gittip-username="znz"
+        data-gittip-widget="button"
+        src="//gttp.co/v1.js"></script>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014-02-25-autopagerize-kaminari-ransack.html">autopagerizeのような動作をkaminariとransackを使った環境で実装した</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-02-23-kansai-debian-meeting.html">第 81 回 関西 Debian 勉強会に参加した</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-02-23-upstart-has-missing-features.html">upstartに不足している機能</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-02-23-boot2docker.html">boot2dockerでdockerを試す</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-02-22-reading-land-of-lisp.html">Land of Lisp 読書会 最終回（第5回）(兵庫県)に参加してきた</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>Tag Cloud</h1>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 103.42857142857143%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 106.85714285714286%'>amagasakirb(4)</a> <a href='/blog/categories/ansible' style='font-size: 105.14285714285714%'>ansible(3)</a> <a href='/blog/categories/anyenv' style='font-size: 101.71428571428571%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.71428571428571%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 101.71428571428571%'>boot2docker(1)</a> <a href='/blog/categories/bts' style='font-size: 101.71428571428571%'>bts(1)</a> <a href='/blog/categories/certification' style='font-size: 101.71428571428571%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 101.71428571428571%'>coffeescript(1)</a> <a href='/blog/categories/community' style='font-size: 105.14285714285714%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 120.57142857142857%'>debian(12)</a> <a href='/blog/categories/devise' style='font-size: 103.42857142857143%'>devise(2)</a> <a href='/blog/categories/dkms' style='font-size: 101.71428571428571%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 112.0%'>docker(7)</a> <a href='/blog/categories/dokku' style='font-size: 101.71428571428571%'>dokku(1)</a> <a href='/blog/categories/doorkeeper' style='font-size: 101.71428571428571%'>doorkeeper(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.71428571428571%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 113.71428571428571%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 136.0%'>event(21)</a> <a href='/blog/categories/gem' style='font-size: 106.85714285714286%'>gem(4)</a> <a href='/blog/categories/git' style='font-size: 105.14285714285714%'>git(3)</a> <a href='/blog/categories/github' style='font-size: 108.57142857142857%'>github(5)</a> <a href='/blog/categories/heroku' style='font-size: 101.71428571428571%'>heroku(1)</a> <a href='/blog/categories/homebrew' style='font-size: 108.57142857142857%'>homebrew(5)</a> <a href='/blog/categories/html5' style='font-size: 103.42857142857143%'>html5(2)</a> <a href='/blog/categories/ime' style='font-size: 105.14285714285714%'>ime(3)</a> <a href='/blog/categories/irb' style='font-size: 101.71428571428571%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.71428571428571%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 105.14285714285714%'>javascript(3)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 103.42857142857143%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.71428571428571%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 101.71428571428571%'>jus(1)</a> <a href='/blog/categories/k-of' style='font-size: 101.71428571428571%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 106.85714285714286%'>kansaidebian(4)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.71428571428571%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.71428571428571%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 106.85714285714286%'>land-of-lisp(4)</a> <a href='/blog/categories/linux' style='font-size: 108.57142857142857%'>linux(5)</a> <a href='/blog/categories/lxc' style='font-size: 101.71428571428571%'>lxc(1)</a> <a href='/blog/categories/mail' style='font-size: 101.71428571428571%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 103.42857142857143%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 106.85714285714286%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.71428571428571%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.71428571428571%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.71428571428571%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 103.42857142857143%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.71428571428571%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 101.71428571428571%'>oauth2(1)</a> <a href='/blog/categories/octopress' style='font-size: 106.85714285714286%'>octopress(4)</a> <a href='/blog/categories/omniauth' style='font-size: 101.71428571428571%'>omniauth(1)</a> <a href='/blog/categories/osx' style='font-size: 130.85714285714286%'>osx(18)</a> <a href='/blog/categories/packer' style='font-size: 101.71428571428571%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.71428571428571%'>passenger(1)</a> <a href='/blog/categories/postfix' style='font-size: 103.42857142857143%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 103.42857142857143%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.71428571428571%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.71428571428571%'>pyenv(1)</a> <a href='/blog/categories/rabbit' style='font-size: 103.42857142857143%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 132.57142857142856%'>rails(19)</a> <a href='/blog/categories/ransack' style='font-size: 101.71428571428571%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 106.85714285714286%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.71428571428571%'>redmine(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.71428571428571%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(35)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.71428571428571%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 101.71428571428571%'>rubykansai(1)</a> <a href='/blog/categories/rubymotion' style='font-size: 113.71428571428571%'>rubymotion(8)</a> <a href='/blog/categories/shell' style='font-size: 101.71428571428571%'>shell(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.71428571428571%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 106.85714285714286%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 118.85714285714286%'>ubuntu(11)</a> <a href='/blog/categories/upstart' style='font-size: 103.42857142857143%'>upstart(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 101.71428571428571%'>virtualbox(1)</a> <a href='/blog/categories/weechat' style='font-size: 101.71428571428571%'>weechat(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.71428571428571%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 106.85714285714286%'>zsh(4)</a> </span>
+</section>
+<section class="clearfix">
+<h1><a href="https://coderwall.com/">coderwall.com</a></h1>
+<link href="http://coderwall.com/stylesheets/jquery.coderwall.css" media="all" rel="stylesheet" type="text/css">
+<script src="http://coderwall.com/javascripts/jquery.coderwall.js"></script>
+<section class="coderwall" data-coderwall-username="znz" data-coderwall-orientation="vertical" style="width:80%"></section>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/znz">@znz</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'znz',
+            count: 3,
+            skip_forks: false,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Kazuhiro NISHIYAMA -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'znzblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-02-25-autopagerize-kaminari-ransack.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-02-25-autopagerize-kaminari-ransack.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+<script type="text/javascript" src="http://b.st-hatena.com/js/bookmark_button.js" charset="utf-8" async="async"></script>
+
+
+</body>
+</html>
