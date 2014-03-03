@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-02-25T20:43:46+09:00</updated>
+  <updated>2014-03-03T23:53:21+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,114 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ページの切り替わりごとに背景の自動変更]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-03-03-auto-change-background.html"/>
+    <updated>2014-03-03T23:25:01+09:00</updated>
+    <id>http://blog.n-z.jp/blog/auto-change-background</id>
+    <content type="html"><![CDATA[<p>ある Rails アプリでページの切り替わりごとに背景を自動で変更するようにしていたのですが、
+デザイン変更で使わなくなったので、どういうことをやっていたのか、メモとして残しておくことにします。</p>
+
+<!--more-->
+
+
+<h2>HTML</h2>
+
+<p>まず CSS 用のクラスとして自動変更する目印の <code>background</code> と初期状態の <code>background-0</code> を <code>body</code> に設定しました。</p>
+
+<figure class='code'><figcaption><span>app/views/layouts/application.html.haml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='haml'><span class='line'>  <span class="nt">%body</span><span class="nc">.background.background-0</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>スクリプト</h2>
+
+<p><code>sessionStorage</code> を使ってタブごとに状態を保存するようにしました。
+今回は画像として <code>app/assets/images/background-0.jpg</code> と <code>app/assets/images/background-1.jpg</code> の 2 枚だけだったので、
+<code>background_num = 2</code> にしています。</p>
+
+<p>以下のコードを書いた時には知らなかったので対処が入っていないのですが、
+Safari のプライベートブラウズでは <code>sessionStorage</code> があるのに使えないという厄介なことになっているので、必要ならそのあたりのエラー処理も入れた方が良いです。</p>
+
+<figure class='code'><figcaption><span>app/assets/javascripts/background.js.coffee</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='coffeescript'><span class='line'><span class="nx">jQuery</span> <span class="nf">-&gt;</span>
+</span><span class='line'>  <span class="k">if</span> <span class="k">typeof</span> <span class="nx">sessionStorage</span> <span class="o">!=</span> <span class="s">&#39;undefined&#39;</span>
+</span><span class='line'>    <span class="nv">background_num = </span><span class="mi">2</span>
+</span><span class='line'>    <span class="nv">change_background = </span><span class="nf">-&gt;</span>
+</span><span class='line'>      <span class="nv">body = </span><span class="nx">$</span><span class="p">(</span><span class="s">&quot;body&quot;</span><span class="p">)</span>
+</span><span class='line'>      <span class="k">if</span> <span class="o">!</span><span class="nx">body</span><span class="p">.</span><span class="nx">hasClass</span><span class="p">(</span><span class="s">&quot;background&quot;</span><span class="p">)</span>
+</span><span class='line'>        <span class="k">return</span>
+</span><span class='line'>      <span class="nv">background = </span><span class="nx">sessionStorage</span><span class="p">.</span><span class="nx">getItem</span><span class="p">(</span><span class="s">&quot;background&quot;</span><span class="p">)</span>
+</span><span class='line'>      <span class="k">if</span> <span class="nx">background</span>
+</span><span class='line'>        <span class="nv">background = </span><span class="nb">parseInt</span><span class="p">(</span><span class="nx">background</span><span class="p">)</span>
+</span><span class='line'>        <span class="nx">$</span><span class="p">(</span><span class="s">&quot;body&quot;</span><span class="p">).</span><span class="nx">removeClass</span><span class="p">(</span><span class="s">&quot;background-&quot;</span> <span class="o">+</span> <span class="nx">background</span><span class="p">)</span>
+</span><span class='line'>        <span class="nv">background = </span><span class="p">(</span><span class="nx">background</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nx">background_num</span>
+</span><span class='line'>        <span class="nx">$</span><span class="p">(</span><span class="s">&quot;body&quot;</span><span class="p">).</span><span class="nx">addClass</span><span class="p">(</span><span class="s">&quot;background-&quot;</span> <span class="o">+</span> <span class="nx">background</span><span class="p">)</span>
+</span><span class='line'>      <span class="k">else</span>
+</span><span class='line'>        <span class="nv">background = </span><span class="mi">0</span>
+</span><span class='line'>      <span class="nx">sessionStorage</span><span class="p">.</span><span class="nx">setItem</span><span class="p">(</span><span class="s">&quot;background&quot;</span><span class="p">,</span> <span class="nx">background</span><span class="p">)</span>
+</span><span class='line'>    <span class="nx">$</span><span class="p">(</span><span class="nb">document</span><span class="p">).</span><span class="nx">on</span> <span class="s">&#39;ajax:success.background&#39;</span><span class="p">,</span> <span class="nx">change_background</span>
+</span><span class='line'>    <span class="nx">change_background</span><span class="p">()</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>スタイルシート</h2>
+
+<p>rails 4.0.3, sass-rails 4.0.1, sprockets 2.11.0, sprockets-rails 2.0.1
+で確認したところ、
+<code>depend_on_asset</code> ではなく <code>depend_on</code> を使って拡張子付きのファイル名で
+ファイルの先頭に <code>depend_on</code> を並べれば画像ファイルを変更したときに
+<code>rake assets:precompile</code> で <code>css</code> も再生成されるように見えました。</p>
+
+<p>つまり <code>//= depend_on "background-1.jpg"</code> を <code>.background-1</code> の直前に持っていくと反映されませんでした。</p>
+
+<p><code>depend_on_asset</code> だと全く反映されませんでした。</p>
+
+<p>ファイルの指定は <code>//= depend_on "../images/background-0.jpg"</code> や <code>//= depend_on "../images/background-1.jpg"</code> のように相対パスでも、ファイル名のみでも大丈夫でした。</p>
+
+<p><code>image-url</code> で参照しているのだから、そこで自動的に依存関係に入ってほしいところですが、そういう仕組みにはなっていないようです。
+ちゃんと読んでいないのですが、
+<a href="https://github.com/sstephenson/sprockets/issues/488">Dependent assets might not be recompiled</a>
+のあたりにすでに話が出ているので、仕様なのかもしれません。</p>
+
+<figure class='code'><figcaption><span>app/assets/stylesheets/background.css.scss</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="o">//=</span> <span class="nt">depend_on</span> <span class="s2">&quot;background-0.jpg&quot;</span>
+</span><span class='line'><span class="o">//=</span> <span class="nt">depend_on</span> <span class="s2">&quot;background-1.jpg&quot;</span>
+</span><span class='line'><span class="nc">.background-0</span> <span class="p">{</span>
+</span><span class='line'>  <span class="k">background-image</span><span class="o">:</span> <span class="n">image</span><span class="o">-</span><span class="sx">url(&quot;background-0.jpg&quot;)</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'><span class="nc">.background-1</span> <span class="p">{</span>
+</span><span class='line'>  <span class="k">background-image</span><span class="o">:</span> <span class="n">image</span><span class="o">-</span><span class="sx">url(&quot;background-1.jpg&quot;)</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[autopagerizeのような動作をkaminariとransackを使った環境で実装した]]></title>
@@ -2693,97 +2801,6 @@ git push heroku master
 <p>あまりアクセスが多くない無料の範囲内で使っている Rails アプリなので、
 違いはあまりわかっていませんが、簡単に切り替えられるので、
 選択肢のひとつとして使われやすくなるのではないかと思います。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 7 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-01-22-rubymotion-mokumoku-osaka.html"/>
-    <updated>2014-01-22T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
-    <content type="html"><![CDATA[<p>第 1 回から第 6 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://connpass.com/event/4560/">第 7 回 RubyMotion もくもく会 in Osaka</a>
-に参加してきました。</p>
-
-<p>次回の
-<a href="http://connpass.com/event/4910/">第 8 回 RubyMotion もくもく会 in Osaka</a>
-は 2/19(水) になりました。</p>
-
-<!--more-->
-
-
-<h2>もくもく</h2>
-
-<p>今回は初参加の人がいました。</p>
-
-<p>途中は少し質問の話があったり、リリースしたものの話があったりした以外は
-基本的にみんなもくもくしていました。</p>
-
-<h2>話に出たもの</h2>
-
-<p>話に出てきたサイトなどのメモです。</p>
-
-<ul>
-<li><a href="https://parse.com/">https://parse.com/</a></li>
-<li><a href="http://shin1x1.github.io/vagrantx/">http://shin1x1.github.io/vagrantx/</a></li>
-<li><a href="https://twitter.com/ametalk">https://twitter.com/ametalk</a></li>
-<li><a href="http://orekike.com/history/orekike7">http://orekike.com/history/orekike7</a></li>
-<li><a href="http://www.paintcodeapp.com/">http://www.paintcodeapp.com/</a></li>
-</ul>
-
-
-<h2>やっていたこと</h2>
-
-<ul>
-<li>ちゃんと名前をつけて <code>motion create</code> からやり直しました。</li>
-<li>いらないメニュー項目がほとんどなので、 <code>buildMenu</code> をコメントアウトしてみたら、
-Command+q での終了も出来なくなって不便になったので、戻しました。</li>
-<li><code>open</code> コマンドでエラーになったときに <code>NSAlert</code> でエラーメッセージを出すようにしました。</li>
-</ul>
-
-
-<h2>引き続き不明な点</h2>
-
-<p>細かいものはいろいろありますが、大きなものは以下の2点です。</p>
-
-<h3>URL の受け取り方</h3>
-
-<p>起動中に <code>open http://localhost:3000</code> のように URL を開いた場合は</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">NSAppleEventManager</span><span class="o">.</span><span class="n">sharedAppleEventManager</span><span class="o">.</span><span class="n">setEventHandler</span><span class="p">(</span>
-</span><span class='line'>  <span class="nb">self</span><span class="p">,</span>
-</span><span class='line'>  <span class="ss">andSelector</span><span class="p">:</span> <span class="ss">:&#39;handleGetURLEvent:withReplyEvent:&#39;</span><span class="p">,</span>
-</span><span class='line'>  <span class="ss">forEventClass</span><span class="p">:</span> <span class="no">KInternetEventClass</span><span class="p">,</span>
-</span><span class='line'>  <span class="ss">andEventID</span><span class="p">:</span> <span class="no">KAEGetURL</span><span class="p">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>で登録しておけば受け取れていますが、
-起動していない時に開かれた URL を受け取る方法がわからないままです。</p>
-
-<p><code>open -a Hello --args http://localhost:3000</code> のように起動すれば
-<code>NSProcessInfo.processInfo.arguments</code> で取り出せますが、
-他のアプリケーションから URL を開いた時に受け取れないので
-意味がないです。</p>
-
-<h3>window が閉じられた時の処理</h3>
-
-<p>今のままだと Command+w などで閉じられてしまうと
-URL を受け取っても見せる window がなくなっているので
-何も出来ないです。</p>
-
-<p>window を閉じられたら終了するか、
-閉じられても URL を開いたらまた出てくるようにしたいです。</p>
-
-<h2>まとめ</h2>
-
-<p>今回はみんなもくもくとそれぞれの作業が進んだという感じで、
-成果発表もすぐに終わった感じでした。</p>
 ]]></content>
   </entry>
   

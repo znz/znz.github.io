@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rails | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rails/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-02-25T20:43:46+09:00</updated>
+  <updated>2014-03-03T23:53:21+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,90 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ページの切り替わりごとに背景の自動変更]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-03-03-auto-change-background.html"/>
+    <updated>2014-03-03T23:25:01+09:00</updated>
+    <id>http://blog.n-z.jp/blog/auto-change-background</id>
+    <content type="html"><![CDATA[<p>ある Rails アプリでページの切り替わりごとに背景を自動で変更するようにしていたのですが、
+デザイン変更で使わなくなったので、どういうことをやっていたのか、メモとして残しておくことにします。</p>
+
+<!--more-->
+
+
+<h2>HTML</h2>
+
+<p>まず CSS 用のクラスとして自動変更する目印の <code>background</code> と初期状態の <code>background-0</code> を <code>body</code> に設定しました。</p>
+
+<p><code>haml app/views/layouts/application.html.haml
+  %body.background.background-0
+</code></p>
+
+<h2>スクリプト</h2>
+
+<p><code>sessionStorage</code> を使ってタブごとに状態を保存するようにしました。
+今回は画像として <code>app/assets/images/background-0.jpg</code> と <code>app/assets/images/background-1.jpg</code> の 2 枚だけだったので、
+<code>background_num = 2</code> にしています。</p>
+
+<p>以下のコードを書いた時には知らなかったので対処が入っていないのですが、
+Safari のプライベートブラウズでは <code>sessionStorage</code> があるのに使えないという厄介なことになっているので、必要ならそのあたりのエラー処理も入れた方が良いです。</p>
+
+<p>```coffeescript app/assets/javascripts/background.js.coffee
+jQuery &ndash;>
+  if typeof sessionStorage != &lsquo;undefined&rsquo;</p>
+
+<pre><code>background_num = 2
+change_background = -&gt;
+  body = $("body")
+  if !body.hasClass("background")
+    return
+  background = sessionStorage.getItem("background")
+  if background
+    background = parseInt(background)
+    $("body").removeClass("background-" + background)
+    background = (background + 1) % background_num
+    $("body").addClass("background-" + background)
+  else
+    background = 0
+  sessionStorage.setItem("background", background)
+$(document).on 'ajax:success.background', change_background
+change_background()
+</code></pre>
+
+<p>```</p>
+
+<h2>スタイルシート</h2>
+
+<p>rails 4.0.3, sass-rails 4.0.1, sprockets 2.11.0, sprockets-rails 2.0.1
+で確認したところ、
+<code>depend_on_asset</code> ではなく <code>depend_on</code> を使って拡張子付きのファイル名で
+ファイルの先頭に <code>depend_on</code> を並べれば画像ファイルを変更したときに
+<code>rake assets:precompile</code> で <code>css</code> も再生成されるように見えました。</p>
+
+<p>つまり <code>//= depend_on "background-1.jpg"</code> を <code>.background-1</code> の直前に持っていくと反映されませんでした。</p>
+
+<p><code>depend_on_asset</code> だと全く反映されませんでした。</p>
+
+<p>ファイルの指定は <code>//= depend_on "../images/background-0.jpg"</code> や <code>//= depend_on "../images/background-1.jpg"</code> のように相対パスでも、ファイル名のみでも大丈夫でした。</p>
+
+<p><code>image-url</code> で参照しているのだから、そこで自動的に依存関係に入ってほしいところですが、そういう仕組みにはなっていないようです。
+ちゃんと読んでいないのですが、
+<a href="https://github.com/sstephenson/sprockets/issues/488">Dependent assets might not be recompiled</a>
+のあたりにすでに話が出ているので、仕様なのかもしれません。</p>
+
+<p><code>css app/assets/stylesheets/background.css.scss
+//= depend_on "background-0.jpg"
+//= depend_on "background-1.jpg"
+.background-0 {
+  background-image: image-url("background-0.jpg");
+}
+.background-1 {
+  background-image: image-url("background-1.jpg");
+}
+</code></p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[autopagerizeのような動作をkaminariとransackを使った環境で実装した]]></title>
@@ -424,168 +508,6 @@ show_in_app
 <p>  end
 end
 ```</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[yaml_dbでMySQLからPostgreSQLに移行した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-01-28-yaml-db.html"/>
-    <updated>2014-01-28T21:25:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/yaml-db</id>
-    <content type="html"><![CDATA[<p>先週 redmine を MySQL から PostgreSQL に移行するときに、最近の ruby では動かなくなっている taps ではなく yaml_db を使ってみました。</p>
-
-<p>その後、自作 Rails アプリでも yaml_db を使って移行しました。</p>
-
-<!--more-->
-
-
-<h2>yaml_db 選び</h2>
-
-<p>yaml_db は <code>gem install yaml_db</code> でインストールできるものが新しい rails などに
-対応していないため fork が乱立していて、どれを使えばいいのか悩ましいのですが、
-どこかで見かけた情報を元に
-<code>gem 'yaml_db', github: 'jetthoughts/yaml_db', ref: 'fb4b6bd7e12de3cffa93e0a298a1e5253d7e92ba'</code>
-を使いました。(今だと別の指定の方が良さそうです。後述)</p>
-
-<p>redmine の場合は <code>Gemfile.local</code> に書いて (なければ作成)、
-<code>bundle</code> でインストールすれば使えます。</p>
-
-<h2>データベース移行</h2>
-
-<p>アプリを止めるなどして、データベースの変更が発生しない状態にして移行作業をします。
-YAML の互換性の問題などがあるので、データベースの移行と Ruby や Redmine のバージョンアップは別々にした方が良いです。</p>
-
-<ol>
-<li>まず <code>RAILS_ENV=production bundle exec rake db:data:dump</code> で <code>db/data.yml</code> を作成します。</li>
-<li>つぎに Ruby や Rails や Redmine のバージョンはそのままで <code>config/database.yml</code> を変更します。</li>
-<li>必要に応じて <code>bundle</code> でデータベースアダプターの gem をインストールします。</li>
-<li>データベースの作成をしたり <code>db:migrate</code> をしておきます。</li>
-<li><code>RAILS_ENV=production bundle exec rake db:data:load</code> で読み込みます。</li>
-</ol>
-
-
-<h2>yaml_db の fork の再調査</h2>
-
-<p><a href="https://rubygems.org/gems/yaml_db">yaml_db gem</a> ( <a href="https://github.com/ludicast/yaml_db">ludicast/yaml_db</a> )
-からの fork としては
-<a href="https://rubygems.org/gems/gitlab_yaml_db">gitlab_yaml_db</a> ( <a href="https://github.com/gitlabhq/yaml_db">gitlabhq/yaml_db</a> ? )
-のインストール数が
-多いようですが、これは以前の gitlabhq が依存していたからのようです。 (今は依存していない)</p>
-
-<p>新しい fork として
-<a href="https://rubygems.org/gems/yaml_db_with_schema_tables">yaml_db_with_schema_tables</a>
-( <a href="https://github.com/zweitag/yaml_db">zweitag/yaml_db</a> )
-がありましたが、古い yaml_db からの fork なので、新しい rails への対応が入っていないような気がします。
-他の fork との違いとして <code>schema_info</code> と <code>schema_migrations</code> も dump するようにしているようです。</p>
-
-<p><a href="https://github.com/jetthoughts/yaml_db">jetthoughts/yaml_db</a> という fork は
-rubygems.org にはリリースしていないようですが、
-Rails 4 に対応して、 README の <code>This gem is now Rails 3 only.</code> という記述を削除しているなど、メンテナンスが続いていそうなので、
-次はこの fork を使うのが良さそうだと思いました。
-(古いブログの記事だと <code>gem 'yaml_db', github: 'jetthoughts/yaml_db', branch: 'rails4'</code> で rails4 ブランチを指定している例もあるようですが、 master にマージ済みなので branch 指定は不要です。)</p>
-
-<h2>別 Rails アプリの移行</h2>
-
-<p>続きとして、本日、自作の Rails アプリを <code>jetthoughts/yaml_db</code> を使って移行してみました。</p>
-
-<h3>postgresql のデータベース作成</h3>
-
-<p>データベースの作成は事前に出来るので、
-<code>sudo -u postgres psql</code>
-で作成しておきます。</p>
-
-<p><code>
-CREATE ROLE dbuser LOGIN ENCRYPTED PASSWORD 'dbpass' NOINHERIT VALID UNTIL 'infinity';
-CREATE DATABASE dbname WITH ENCODING='UTF8' OWNER=dbuser;
-</code></p>
-
-<p>データベースの作成方法はいつも
-<a href="http://www.redmine.org/projects/redmine/wiki/RedmineInstall">RedmineInstall</a>
-を参考にしています。</p>
-
-<h3>pg gem</h3>
-
-<p>pg gem も忘れずにあらかじめ入れておきます。</p>
-
-<h3>メンテナンス中画面設定</h3>
-
-<p>まず apache2 + passenger の方でメンテナンス中画面を出すようにしました。</p>
-
-<p>```</p>
-
-<pre><code>&lt;Directory /path/to/app&gt;
-    Options FollowSymLinks
-    AllowOverride None
-    #Order allow,deny
-    #allow from all
-    Order deny,allow
-    deny from all
-&lt;/Directory&gt;
-ErrorDocument 403 "&amp;#x30e1;&amp;#x30f3;&amp;#x30c6;&amp;#x30ca;&amp;#x30f3;&amp;#x30b9;&amp;#x4e2d;&amp;#x3067;&amp;#x3059;&amp;#x3002;&amp;#x20;&amp;#x3057;&amp;#x3070;&amp;#x3089;&amp;#x304f;&amp;#x304a;&amp;#x5f85;&amp;#x3061;&amp;#x304f;&amp;#x3060;&amp;#x3055;&amp;#x3044;&amp;#x3002;"
-</code></pre>
-
-<p>```</p>
-
-<p><code>ErrorDocument</code> の埋め込み文字列は <code>Content-Type: text/html;charset=iso-8859-1</code> になってNいたので、
-<code>'メンテナンス中です。 しばらくお待ちください。'.unpack('U*').map{|c| '&amp;#x%x;' % c }.join('')</code>
-のようにして、すべてエスケープして日本語を埋め込みました。</p>
-
-<p>本来は 5xx のステータスにすべきですが、一時的なものなので 403 で妥協しました。
-後日メンテナンスをするときはちゃんと 5xx にしたいと思っています。</p>
-
-<h3>データベースのバックアップとダンプ</h3>
-
-<p>cron で動かしているデータベースのバックアップと yaml_db でのダンプをしました。</p>
-
-<p><code>
-/path/to/app$ sudo /etc/cron.daily/local-dump
-/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:dump
-</code></p>
-
-<h3>config/database.yml 書き換え</h3>
-
-<p>database.yml で postgresql の方を使うように書き換えます。</p>
-
-<p><code>
-  adapter: postgresql
-  encoding: unicode
-  database: dbname
-  pool: 5
-  username: dbuser
-  password: dbpass
-  host: localhost
-  #port: 5432
-  min_messages: warning
-</code></p>
-
-<h3>データの読み込み</h3>
-
-<p><code>rake db:migrate</code> でマイグレーションを実行した後、
-<code>rake db:data:load</code> でデータを読み込みます。</p>
-
-<p><code>
-/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:migrate
-/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:load
-</code></p>
-
-<h3>メンテナンス解除と確認</h3>
-
-<p>apache2 の設定を戻して、動作確認します。</p>
-
-<h2>まとめ</h2>
-
-<p>Rails のデータベースの移行に yaml_db を使ってみました。</p>
-
-<p>yaml_db の方が taps より昔からあって、
-しばらくメンテナンスが止まっていて、
-taps の方が主流になるかと思っていたら、
-逆に taps の方がメンテナンスがあまりされなくなって、
-yaml_db の方が fork が乱立して、新しい rails に対応したものもでてきて、
-結局今のところデータベースの移行には yaml_db が無難という状況になっているようです。</p>
-
-<p>taps は新しい Ruby に対応できていなかったり、
-以前の記事に書いたようにスキーマの移行が不十分なところがあったりして、
-使われなくなっていくように感じました。</p>
 ]]></content>
   </entry>
   

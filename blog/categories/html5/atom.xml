@@ -4,7 +4,7 @@
   <title><![CDATA[Category: html5 | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/html5/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-02-25T20:43:46+09:00</updated>
+  <updated>2014-03-03T23:53:21+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,90 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ページの切り替わりごとに背景の自動変更]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-03-03-auto-change-background.html"/>
+    <updated>2014-03-03T23:25:01+09:00</updated>
+    <id>http://blog.n-z.jp/blog/auto-change-background</id>
+    <content type="html"><![CDATA[<p>ある Rails アプリでページの切り替わりごとに背景を自動で変更するようにしていたのですが、
+デザイン変更で使わなくなったので、どういうことをやっていたのか、メモとして残しておくことにします。</p>
+
+<!--more-->
+
+
+<h2>HTML</h2>
+
+<p>まず CSS 用のクラスとして自動変更する目印の <code>background</code> と初期状態の <code>background-0</code> を <code>body</code> に設定しました。</p>
+
+<p><code>haml app/views/layouts/application.html.haml
+  %body.background.background-0
+</code></p>
+
+<h2>スクリプト</h2>
+
+<p><code>sessionStorage</code> を使ってタブごとに状態を保存するようにしました。
+今回は画像として <code>app/assets/images/background-0.jpg</code> と <code>app/assets/images/background-1.jpg</code> の 2 枚だけだったので、
+<code>background_num = 2</code> にしています。</p>
+
+<p>以下のコードを書いた時には知らなかったので対処が入っていないのですが、
+Safari のプライベートブラウズでは <code>sessionStorage</code> があるのに使えないという厄介なことになっているので、必要ならそのあたりのエラー処理も入れた方が良いです。</p>
+
+<p>```coffeescript app/assets/javascripts/background.js.coffee
+jQuery &ndash;>
+  if typeof sessionStorage != &lsquo;undefined&rsquo;</p>
+
+<pre><code>background_num = 2
+change_background = -&gt;
+  body = $("body")
+  if !body.hasClass("background")
+    return
+  background = sessionStorage.getItem("background")
+  if background
+    background = parseInt(background)
+    $("body").removeClass("background-" + background)
+    background = (background + 1) % background_num
+    $("body").addClass("background-" + background)
+  else
+    background = 0
+  sessionStorage.setItem("background", background)
+$(document).on 'ajax:success.background', change_background
+change_background()
+</code></pre>
+
+<p>```</p>
+
+<h2>スタイルシート</h2>
+
+<p>rails 4.0.3, sass-rails 4.0.1, sprockets 2.11.0, sprockets-rails 2.0.1
+で確認したところ、
+<code>depend_on_asset</code> ではなく <code>depend_on</code> を使って拡張子付きのファイル名で
+ファイルの先頭に <code>depend_on</code> を並べれば画像ファイルを変更したときに
+<code>rake assets:precompile</code> で <code>css</code> も再生成されるように見えました。</p>
+
+<p>つまり <code>//= depend_on "background-1.jpg"</code> を <code>.background-1</code> の直前に持っていくと反映されませんでした。</p>
+
+<p><code>depend_on_asset</code> だと全く反映されませんでした。</p>
+
+<p>ファイルの指定は <code>//= depend_on "../images/background-0.jpg"</code> や <code>//= depend_on "../images/background-1.jpg"</code> のように相対パスでも、ファイル名のみでも大丈夫でした。</p>
+
+<p><code>image-url</code> で参照しているのだから、そこで自動的に依存関係に入ってほしいところですが、そういう仕組みにはなっていないようです。
+ちゃんと読んでいないのですが、
+<a href="https://github.com/sstephenson/sprockets/issues/488">Dependent assets might not be recompiled</a>
+のあたりにすでに話が出ているので、仕様なのかもしれません。</p>
+
+<p><code>css app/assets/stylesheets/background.css.scss
+//= depend_on "background-0.jpg"
+//= depend_on "background-1.jpg"
+.background-0 {
+  background-image: image-url("background-0.jpg");
+}
+.background-1 {
+  background-image: image-url("background-1.jpg");
+}
+</code></p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ブラウザのみで使えるバーコードリーダーを作った]]></title>
