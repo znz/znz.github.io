@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Ruby 2.1.1のhash#rejectの不具合対策"
+title: "Ruby 2.1.1のHash#rejectの不具合対策"
 date: 2014-03-11 14:22:28 +0900
 comments: true
 categories: ruby rails
