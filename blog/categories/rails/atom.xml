@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rails | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rails/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-03-03T23:53:21+09:00</updated>
+  <updated>2014-03-11T14:40:37+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,80 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Ruby 2.1.1のhash#rejectの不具合対策]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-03-11-hash-reject.html"/>
+    <updated>2014-03-11T14:22:28+09:00</updated>
+    <id>http://blog.n-z.jp/blog/hash-reject</id>
+    <content type="html"><![CDATA[<p><a href="https://www.ruby-lang.org/ja/news/2014/03/10/regression-of-hash-reject-in-ruby-2-1-1/">Ruby 2.1.1 に含まれる Hash#reject の不具合について</a>
+という話があって、
+自分で書くコードでは普通は Hash を継承することはない (is-a にせずに has-a にすることが多い) ので影響はないのですが、
+Rails の中の ActiveSupport が影響を受けるということで対処を入れました。</p>
+
+<p>他にもバックポート漏れのコミットをあてた独自ビルドを使うとか、
+Ruby 2.1.0 を使う、という対処もあるようです。</p>
+
+<!--more-->
+
+
+<p><a href="https://github.com/rails/rails/issues/14188">Rails の Issue #14188</a>
+で話があるようにセキュリティ修正ではないため、
+Rails 3.2 系にこの修正は入らないので、
+モンキーパッチを入れることにしました。</p>
+
+<p>bugs.ruby-lang.org では
+<a href="https://github.com/ruby/bugs.ruby-lang.org/blob/ro-2-5/lib/redmine/core_ext.rb">https://github.com/ruby/bugs.ruby-lang.org/blob/ro-2-5/lib/redmine/core_ext.rb</a>
+のように対処していたのを参考にして、
+以下のようなコードを
+<code>config/initializers/hash_reject.rb</code>
+に置いて対処することにしました。</p>
+
+<p>```ruby config/initializers/hash_reject.rb</p>
+
+<h1>monkey patch for regression of Hash#reject in Ruby 2.1.1</h1>
+
+<h1>see <a href="https://www.ruby-lang.org/ja/news/2014/03/10/regression-of-hash-reject-in-ruby-2-1-1/">https://www.ruby-lang.org/ja/news/2014/03/10/regression-of-hash-reject-in-ruby-2-1-1/</a></h1>
+
+<h1>or <a href="https://www.ruby-lang.org/en/news/2014/03/10/regression-of-hash-reject-in-ruby-2-1-1/">https://www.ruby-lang.org/en/news/2014/03/10/regression-of-hash-reject-in-ruby-2-1-1/</a></h1>
+
+<p>require &lsquo;active_support/hash_with_indifferent_access&rsquo;
+require &lsquo;active_support/ordered_hash&rsquo;</p>
+
+<p>module ActiveSupport
+  class HashWithIndifferentAccess</p>
+
+<pre><code>def select(*args, &amp;block)
+  dup.tap { |hash| hash.select!(*args, &amp;block) }
+end
+
+def reject(*args, &amp;block)
+  dup.tap { |hash| hash.reject!(*args, &amp;block) }
+end
+</code></pre>
+
+<p>  end</p>
+
+<p>  class OrderedHash</p>
+
+<pre><code>def select(*args, &amp;block)
+  dup.tap { |hash| hash.select!(*args, &amp;block) }
+end
+
+def reject(*args, &amp;block)
+  dup.tap { |hash| hash.reject!(*args, &amp;block) }
+end
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<p>ここのコードが実行される前に読み込まれていれば問題ないのですが、
+ここでクラス定義してしまうと元々の定義が autoload されなくなるので、
+念のため require しています。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ページの切り替わりごとに背景の自動変更]]></title>
@@ -392,122 +466,6 @@ env[&ldquo;warden&rdquo;].request.session.method(&ldquo;try&rdquo;).source_locat
 <p>```</p></blockquote></blockquote>
 
 <p>rails_best_practices 1.15.0 が原因とわかったので issues を確認すると既に同様の現象の報告があったので、<a href="https://github.com/railsbp/rails_best_practices/issues/202#issuecomment-34129010">コメントしておきました</a>。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[bundle updateした記録]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-02-03-bundle-update.html"/>
-    <updated>2014-02-03T17:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/bundle-update</id>
-    <content type="html"><![CDATA[<p><code>bundle update</code> で更新された gem などのメモを残すことにしました。</p>
-
-<!--more-->
-
-
-<h2>jquery-rails 3.1.0 (was 3.0.4)</h2>
-
-<p>jQuery 1.11.0 にあがったのと jquery-ujs が更新されていました。</p>
-
-<p>```text CHANGELOG.md</p>
-
-<h2>3.1.0 (29 January 2014)</h2>
-
-<ul>
-<li>Updated to jQuery 1.11.0</li>
-<li>Updated to latest jquery-ujs</li>
-<li>Added development rake task for updating jQuery
-```</li>
-</ul>
-
-
-<h2>omniauth-oauth2 1.1.2 (was 1.1.1)</h2>
-
-<p>oauth2 が 0.8.1 から 0.9.3 に一気にあがって驚きましたが、
-omniauth-oauth2 の依存関係が更新されたのが原因でした。</p>
-
-<p>他にもたくさん変更されていました。</p>
-
-<h2>turbolinks 2.2.1 (was 2.2.0)</h2>
-
-<p><a href="https://github.com/rails/turbolinks/blob/master/CHANGELOG.md#turbolinks-221-january-30-2014">https://github.com/rails/turbolinks/blob/master/CHANGELOG.md#turbolinks-221-january-30-2014</a>
-によるとバグ修正のみのようです。</p>
-
-<h2>rails_admin 0.6.1 (was 0.6.0)</h2>
-
-<p>paper_trail gem が 3.0.0 で <code>Version</code> から <code>PaperTrail::Version</code> に変わった
-<a href="https://github.com/airblade/paper_trail/pull/165">#165</a>
-影響を受けて、
-<code>config/initializers/rails_admin.rb</code>
-を以下のように変更する必要がありました。</p>
-
-<p>```diff config/initializers/rails_admin.rb.diff
-&mdash;&ndash; a/config/initializers/rails_admin.rb
-+++ b/config/initializers/rails_admin.rb
-@@ -18,7 +18,7 @@ RailsAdmin.config do |config|
-   # config.audit_with :history, &lsquo;User&rsquo;</p>
-
-<p>   # Or with a PaperTrail: (you need to install it first)
-&ndash;  config.audit_with :paper_trail, &lsquo;User&rsquo;
-+  config.audit_with :paper_trail, &lsquo;User&rsquo;, &lsquo;PaperTrail::Version&rsquo;</p>
-
-<p>   # Display empty fields in show views:
-   # config.compact_show_view = false
-```</p>
-
-<p>あまりカスタマイズしていないのなら、
-<code>rails g rails_admin:install</code>
-で生成し直して、設定し直した方が良いかもしれません。</p>
-
-<p>最初に rails_admin を更新した rails アプリでは以下のように
-devise と pundit と paper_trail の設定をしただけで、
-actions などはそのままにしています。</p>
-
-<p>```ruby config/initializers/rails_admin.rb
-RailsAdmin.config do |config|</p>
-
-<p>  ### Popular gems integration</p>
-
-<p>  ## == Devise ==
-  config.authenticate_with do</p>
-
-<pre><code>warden.authenticate! scope: :user
-</code></pre>
-
-<p>  end
-  config.current_user_method(&amp;:current_user)</p>
-
-<p>  ## == Cancan ==
-  # config.authorize_with :cancan</p>
-
-<p>  require &lsquo;rails_admin/extensions/pundit&rsquo;
-  config.authorize_with :pundit</p>
-
-<p>  ## == PaperTrail ==
-  config.audit_with :paper_trail, &lsquo;User&rsquo;, &lsquo;PaperTrail::Version&rsquo; # PaperTrail >= 3.0.0</p>
-
-<p>  ### More at <a href="https://github.com/sferik/rails_admin/wiki/Base-configuration">https://github.com/sferik/rails_admin/wiki/Base-configuration</a></p>
-
-<p>  config.actions do</p>
-
-<pre><code>dashboard                     # mandatory
-index                         # mandatory
-new
-export
-bulk_delete
-show
-edit
-delete
-show_in_app
-
-## With an audit adapter, you can add:
-# history_index
-# history_show
-</code></pre>
-
-<p>  end
-end
-```</p>
 ]]></content>
   </entry>
   

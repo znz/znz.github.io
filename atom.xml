@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-03-03T23:53:21+09:00</updated>
+  <updated>2014-03-11T14:40:37+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,97 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Ruby 2.1.1のhash#rejectの不具合対策]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-03-11-hash-reject.html"/>
+    <updated>2014-03-11T14:22:28+09:00</updated>
+    <id>http://blog.n-z.jp/blog/hash-reject</id>
+    <content type="html"><![CDATA[<p><a href="https://www.ruby-lang.org/ja/news/2014/03/10/regression-of-hash-reject-in-ruby-2-1-1/">Ruby 2.1.1 に含まれる Hash#reject の不具合について</a>
+という話があって、
+自分で書くコードでは普通は Hash を継承することはない (is-a にせずに has-a にすることが多い) ので影響はないのですが、
+Rails の中の ActiveSupport が影響を受けるということで対処を入れました。</p>
+
+<p>他にもバックポート漏れのコミットをあてた独自ビルドを使うとか、
+Ruby 2.1.0 を使う、という対処もあるようです。</p>
+
+<!--more-->
+
+
+<p><a href="https://github.com/rails/rails/issues/14188">Rails の Issue #14188</a>
+で話があるようにセキュリティ修正ではないため、
+Rails 3.2 系にこの修正は入らないので、
+モンキーパッチを入れることにしました。</p>
+
+<p>bugs.ruby-lang.org では
+<a href="https://github.com/ruby/bugs.ruby-lang.org/blob/ro-2-5/lib/redmine/core_ext.rb">https://github.com/ruby/bugs.ruby-lang.org/blob/ro-2-5/lib/redmine/core_ext.rb</a>
+のように対処していたのを参考にして、
+以下のようなコードを
+<code>config/initializers/hash_reject.rb</code>
+に置いて対処することにしました。</p>
+
+<figure class='code'><figcaption><span>config/initializers/hash_reject.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># monkey patch for regression of Hash#reject in Ruby 2.1.1</span>
+</span><span class='line'><span class="c1"># see https://www.ruby-lang.org/ja/news/2014/03/10/regression-of-hash-reject-in-ruby-2-1-1/</span>
+</span><span class='line'><span class="c1"># or https://www.ruby-lang.org/en/news/2014/03/10/regression-of-hash-reject-in-ruby-2-1-1/</span>
+</span><span class='line'><span class="nb">require</span> <span class="s1">&#39;active_support/hash_with_indifferent_access&#39;</span>
+</span><span class='line'><span class="nb">require</span> <span class="s1">&#39;active_support/ordered_hash&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">module</span> <span class="nn">ActiveSupport</span>
+</span><span class='line'>  <span class="k">class</span> <span class="nc">HashWithIndifferentAccess</span>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">select</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
+</span><span class='line'>      <span class="nb">dup</span><span class="o">.</span><span class="n">tap</span> <span class="p">{</span> <span class="o">|</span><span class="nb">hash</span><span class="o">|</span> <span class="nb">hash</span><span class="o">.</span><span class="n">select!</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">reject</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
+</span><span class='line'>      <span class="nb">dup</span><span class="o">.</span><span class="n">tap</span> <span class="p">{</span> <span class="o">|</span><span class="nb">hash</span><span class="o">|</span> <span class="nb">hash</span><span class="o">.</span><span class="n">reject!</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">class</span> <span class="nc">OrderedHash</span>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">select</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
+</span><span class='line'>      <span class="nb">dup</span><span class="o">.</span><span class="n">tap</span> <span class="p">{</span> <span class="o">|</span><span class="nb">hash</span><span class="o">|</span> <span class="nb">hash</span><span class="o">.</span><span class="n">select!</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">reject</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
+</span><span class='line'>      <span class="nb">dup</span><span class="o">.</span><span class="n">tap</span> <span class="p">{</span> <span class="o">|</span><span class="nb">hash</span><span class="o">|</span> <span class="nb">hash</span><span class="o">.</span><span class="n">reject!</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span> <span class="p">}</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ここのコードが実行される前に読み込まれていれば問題ないのですが、
+ここでクラス定義してしまうと元々の定義が autoload されなくなるので、
+念のため require しています。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ページの切り替わりごとに背景の自動変更]]></title>
@@ -2735,72 +2826,6 @@ Gmail のように利用者が多いところだと送信側が気付きやす�
 NEWS に書いていないなどソース以外に情報がない。</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[heroku で passenger を使うようにした]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-01-24-passenger-ruby-heroku.html"/>
-    <updated>2014-01-24T23:23:25+09:00</updated>
-    <id>http://blog.n-z.jp/blog/passenger-ruby-heroku</id>
-    <content type="html"><![CDATA[<p>今は heroku で動いている <a href="https://bugs.ruby-lang.org/">https://bugs.ruby-lang.org/</a> が thin から passenger に切り替えて安定したという話を IRC で知ったので、自分が heroku で動かしている Rails アプリも passenger に切り替えてみました。
-(ruby-lang.org の方はいろいろ試すために今後他のものに切り替える可能性もあります。)</p>
-
-<!--more-->
-
-
-<h2>概要</h2>
-
-<p><a href="https://github.com/phusion/passenger-ruby-heroku-demo">https://github.com/phusion/passenger-ruby-heroku-demo</a>
-を参考にして Gemfile と Procfile を設定するだけです。</p>
-
-<h2>Gemfile の書き換え</h2>
-
-<p><code>gem "unicorn"</code> や  <code>gem "thin"</code> があればコメントアウトするなり削除するなりして、
-代わりに <code>gem "passenger"</code> を追加します。</p>
-
-<h2>Procfile の設定</h2>
-
-<p>Procfile がなければ新規作成します。
-既存の Procfile があって以下のような行があれば削除します。</p>
-
-<pre><code>web: bundle exec ruby web.rb -p $PORT
-web: bundle exec unicorn -p $PORT
-web: bundle exec thin start -p $PORT
-</code></pre>
-
-<p>Procfile に以下の設定を追加します。</p>
-
-<pre><code>web: bundle exec passenger start -p $PORT --max-pool-size 3
-</code></pre>
-
-<h2>切り替え反映</h2>
-
-<p>以下のように切り替えを反映します。</p>
-
-<pre><code>bundle install
-git commit -a -m "Switch to Phusion Passenger"
-git push heroku master
-</code></pre>
-
-<p>ここまでは
-<a href="https://github.com/phusion/passenger-ruby-heroku-demo">https://github.com/phusion/passenger-ruby-heroku-demo</a>
-の手順そのままです。</p>
-
-<h2>ローカルで使う</h2>
-
-<p><code>gem install foreman</code> で <code>foreman</code> を入れておいて <code>env PORT=3000 foreman start</code> とか、
-<code>bundle exec passenger start -p 3000 --max-pool-size 3</code> とかで
-3000 番ポートで passenger を使えます。</p>
-
-<p>初回起動時は standalone 版 passenger の初期設定が走るので、
-少し時間がかかります。</p>
-
-<h2>まとめ</h2>
-
-<p>あまりアクセスが多くない無料の範囲内で使っている Rails アプリなので、
-違いはあまりわかっていませんが、簡単に切り替えられるので、
-選択肢のひとつとして使われやすくなるのではないかと思います。</p>
 ]]></content>
   </entry>
   
