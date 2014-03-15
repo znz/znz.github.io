@@ -1,0 +1,664 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>bootstrap 2.3.2 から bootstrap 3.1.1 への移行 - @znz blog</title>
+  <meta name="author" content="Kazuhiro NISHIYAMA">
+
+  
+  <meta name="description" content="Rails 3.2.17 を使っている rails アプリで
+bootstrap 2.3.2 から bootstrap 3.1.1 に移行している途中なのですが、
+どういうところに対処が必要だったのか、
+メモをまとめてみました。 Gemfile 変更 bootstrap 2 系のときは &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-03-14-bootstrap-2-to-3.html">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-43859023-1', 'n-z.jp');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">@znz blog</a></h1>
+  
+    <h2>ZnZ の memo のようなもの</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://www.google.co.jp/cse" id="cse-search-box">
+  <div>
+    <input type="hidden" name="cx" value="partner-pub-4711975605457723:5173725094" />
+    <input type="hidden" name="ie" value="UTF-8" />
+    <input type="text" name="q" size="40" />
+    <input type="submit" name="sa" value="検索" />
+  </div>
+</form>
+
+<script type="text/javascript" src="http://www.google.co.jp/coop/cse/brand?form=cse-search-box&amp;lang=ja"></script>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">bootstrap 2.3.2 から bootstrap 3.1.1 への移行</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-14T23:00:00+09:00" pubdate data-updated="true">2014-03-14 (Fri)</time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Rails 3.2.17 を使っている rails アプリで
+bootstrap 2.3.2 から bootstrap 3.1.1 に移行している途中なのですが、
+どういうところに対処が必要だったのか、
+メモをまとめてみました。</p>
+
+<!--more-->
+
+
+<h2>Gemfile 変更</h2>
+
+<p>bootstrap 2 系のときは twitter-bootstrap-rails gem を使っていたのですが、
+bootstrap 3 系対応がリリースされていないこともあって、
+bootstrap 側から公式にリリースされている bootstrap-sass gem に移行しました。</p>
+
+<p>bootstrap-sass は rails_admin gem で使われていて、
+バージョンが rails_admin によって制限されてしまうので、
+公式の less の gem があれば良かったのですが、
+見つけられなかったので、
+自分しか使っていない rails_admin を rails 4 に上げるまでの間、
+一時的に rails_admin を外して、
+新しい bootstrap-sass を rails 3.2.17 と一緒に使いました。</p>
+
+<figure class='code'><figcaption><span>Gemfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">gem</span> <span class="s1">&#39;less-rails&#39;</span>
+</span><span class='line'><span class="n">gem</span> <span class="s1">&#39;twitter-bootstrap-rails&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>を <a href="https://github.com/twbs/bootstrap-sass">https://github.com/twbs/bootstrap-sass</a> に書いてあるバージョン指定付きで</p>
+
+<figure class='code'><figcaption><span>Gemfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">gem</span> <span class="s1">&#39;sass-rails&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;= 3.2&#39;</span>
+</span><span class='line'><span class="n">gem</span> <span class="s1">&#39;bootstrap-sass&#39;</span><span class="p">,</span> <span class="s1">&#39;~&gt; 3.1.1&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>に書き換えて、 <code>bundle update</code> で反映しました。</p>
+
+<h2>twitter-bootstrap-rails のヘルパーメソッド削除</h2>
+
+<p>twitter-bootstrap-rails で定義されているヘルパーメソッドを使っていたら、
+削除するなり代替メソッドを定義して置き換えるなり、
+一時的にコメントアウトするなりしてエラーにならないようにしておきます。</p>
+
+<p>今回は <code>glyph</code> と <code>add_breadcrumb</code> がひっかかりました。</p>
+
+<h2>bootstrap_and_overrides.css.less 削除</h2>
+
+<p>app/assets/stylesheets/bootstrap_and_overrides.css.less を削除して、
+app/assets/stylesheets/app.css.scss のようなファイルに移行しました。</p>
+
+<figure class='code'><figcaption><span>app.css.scss</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="k">@import</span> <span class="s2">&quot;bootstrap&quot;</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">//</span> <span class="err">その他の</span> <span class="nt">bootstrap_and_overrides</span><span class="nc">.css.less</span> <span class="err">から移行した内容</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>キャッシュ削除</h2>
+
+<p>less を消したはずなのにエラーにならなくておかしいと思っていたら、
+キャッシュの影響だったので、
+development 環境でもキャッシュを有効にしている場合は削除します。</p>
+
+<p><code>bundle exec rake tmp:clear</code> で消したり、
+<code>rake</code> 経由だと遅いと思ったら
+<code>rm -rf tmp/cache</code> のようにばっさり削除したりすると良いと思います。</p>
+
+<h2>.navbar</h2>
+
+<p>bootstrap 2 を使っていた頃は
+<code>.navbar</code> と <code>.nav</code> の違いがよくわかっていなかったのですが、
+<code>.navbar</code> は上 (または下) のバーのことで、
+<code>.nav</code> はその中にある <code>ul</code> のリンクのことでした。</p>
+
+<p><code>.nav</code> は他にも <code>.nav-tabs</code> のような使い方もするというのを先に知っていれば
+迷わなかったと思います。</p>
+
+<p><a href="http://getbootstrap.com/components/#nav">http://getbootstrap.com/components/#nav</a>
+(古い方: <a href="http://getbootstrap.com/2.3.2/components.html#navs">http://getbootstrap.com/2.3.2/components.html#navs</a> )
+の説明では navbar の上なのですが、
+サイトの作成順として画面の上から作っていっていたので、
+迷ってしまっていたようです。</p>
+
+<p><code>.navbar</code> の中の <code>.nav</code> は <code>.navbar-nav</code> に変わっている、
+<code>.navbar-inner</code> は <code>.container</code> か <code>.container-fluid</code> に置き換えなど、
+変更点が多いので、
+<code>.navbar</code> の中身は全面的に見直すのが良さそうです。</p>
+
+<h2>.brand から .navbar-brand</h2>
+
+<p><code>.brand</code> から <code>.navbar-brand</code> に変わっていました。</p>
+
+<p>中に画像を入れているとずれてしまうので、
+scss に以下のように書いて調整しました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="nc">.navbar-brand</span> <span class="p">{</span>
+</span><span class='line'>  <span class="k">padding-top</span><span class="o">:</span> <span class="m">8px</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">img</span> <span class="err">{</span>
+</span><span class='line'>    <span class="k">height</span><span class="o">:</span> <span class="m">34px</span><span class="p">;</span>
+</span><span class='line'>    <span class="k">width</span><span class="o">:</span> <span class="m">34px</span><span class="p">;</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'><span class="err">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>8 + 34 + 8 ということで高さ 50px の <code>.navbar</code> の真ん中になることを期待しています。</p>
+
+<h2>.container (固定幅) か .container-fluid (横幅いっぱい)</h2>
+
+<p>grid system の配置を使うなら <code>.row</code> は <code>.container</code> か <code>.container-fluid</code> の中に置く必要があります。</p>
+
+<p>違いは実際に window の横幅を変えてみればわかるのですが、
+<code>.container</code> だと
+<a href="http://getbootstrap.com/css/#grid">http://getbootstrap.com/css/#grid</a>
+のように 768px 992px 1200px のところで急に配置が変わって、
+その間は左右の余白が増減するだけのようです。</p>
+
+<p><code>.container-fluid</code> だと普通のサイトと同じように出来るだけ横幅いっぱいになるように中身の横幅が変わります。</p>
+
+<p>bootstrap 2 ではレスポンシブにしたいときは <code>.container-fluid</code> で固定幅の時は <code>.container</code> だったので、
+<code>.container-fluid</code> しか使っていなかったのですが、
+今はレスポンシブな中で使い分けが出来るようになっているようです。</p>
+
+<p><a href="http://getbootstrap.com/examples/navbar-fixed-top/">http://getbootstrap.com/examples/navbar-fixed-top/</a>
+の例で <code>Project name</code> が左端によっていないのも <code>.container</code> を使っているからです。
+ブラウザーのデベロッパーツールで <code>.container-fluid</code> に変えて横幅を変えてみれば
+違いがわかると思います。</p>
+
+<h2><code>.row-fluid .span*</code> から <code>.row .col-xs-*</code></h2>
+
+<p><code>.row</code> と <code>.row-fluid</code> の区別はなくなって、
+<code>.row</code> に統一されています。</p>
+
+<p><code>.span*</code> の置き換えは <code>.col-md-*</code> と説明されていることが多いようですが、
+<code>.col-md-</code> が <code>@media (min-width: 992px)</code> になっているなど、
+小さい画面サイズ用のスタイルを大きい画面用のスタイルで上書きするようになっているので、
+画面サイズに関わらず同じ分割をしたいのなら <code>.col-xs-</code> だけ指定すれば良さそうです。</p>
+
+<h2>btn</h2>
+
+<p><code>btn</code> だけでは色や枠 (border) が変わらなくなったので、
+<code>btn-default</code> を足す必要がありました。</p>
+
+<p>サイズ変更の <code>btn-mini</code> などがなくなって <code>btn-xs</code> などに変更する必要がありました。</p>
+
+<h2>list-unstyled</h2>
+
+<p><code>ul.unstyled</code> は <code>ul.list-unstyled</code> に変更する必要がありました。</p>
+
+<h2>font-awesome-sass</h2>
+
+<p>アイコンは glyphicons ではなく font-awesome を使っていたので、
+<a href="https://github.com/FortAwesome/font-awesome-sass">font-awesome-sass</a>
+に乗り換えました。</p>
+
+<p>mixin や variables などがなければ関係なさそうですが、
+<a href="https://github.com/twbs/bootstrap-sass#usage">bootstrap-sass の Usage</a>
+では <code>//= require</code> より <code>@import</code> が推奨されていたので、</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="k">@import</span> <span class="s2">&quot;bootstrap&quot;</span><span class="p">;</span>
+</span><span class='line'><span class="k">@import</span> <span class="s2">&quot;font-awesome&quot;</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のように <code>@import</code> にしてみました。</p>
+
+<p><code>&lt;i class="icon-sort"&gt;&lt;/i&gt;</code> が
+<code>&lt;i class="fa fa-sort"&gt;&lt;/i&gt;</code> に変わるような感じで、
+<code>icon-</code> を <code>fa-</code> に置き換えるだけではなく、
+<code>fa</code> の追加が必要でした。</p>
+
+<p><code>glyph</code> ヘルパーメソッドを使っていた場合は、
+<code>icon</code> ヘルパーメソッドに書き換えると良いのですが、
+複数引数の扱いが違うのと、
+<code>_</code> を <code>-</code> に置き換える処理がなくなっているのに注意が必要です。</p>
+
+<p>たとえば <code>glyph(:sort_up)</code> は <code>icon('sort-up')</code> のように書き換えました。</p>
+
+<p><code>glyph(:lock, :white)</code> のような複数指定には対応していないようなので、</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="p">=</span> <span class="n">icon</span><span class="p">(</span><span class="s1">&#39;spinner fa-spin&#39;</span><span class="o">.</span><span class="n">freeze</span><span class="p">)</span>
+</span><span class='line'><span class="cp">-# or</span>
+</span><span class='line'><span class="p">=</span> <span class="n">icon</span><span class="p">(</span><span class="ss">:spinner</span><span class="p">,</span> <span class="kp">nil</span><span class="p">,</span> <span class="ss">class</span><span class="p">:</span> <span class="s1">&#39;fa-spin&#39;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のように 2 個目以降は無理矢理埋め込むしかなさそうです。</p>
+
+<p>それぞれのヘルパーメソッドのソースは以下のようになっています。</p>
+
+<ul>
+<li><a href="https://github.com/seyhunak/twitter-bootstrap-rails/blob/40afc477f6a3813ef82cf5821602c9cf2422efc2/app/helpers/glyph_helper.rb">glyph</a></li>
+<li><a href="https://github.com/FortAwesome/font-awesome-sass/blob/23ca05e75e85ec84afecca9f62e7f01d1fb9628b/lib/font_awesome/sass/rails/helpers.rb">icon</a></li>
+</ul>
+
+
+<p><code>icon</code> は第2引数に文字列を指定すると間にスペースを入れてくれるので、
+今までは</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="nt">i</span><span class="o">[</span><span class="nt">class</span><span class="o">^=</span><span class="s2">&quot;icon-&quot;</span><span class="o">]</span><span class="nd">:after</span> <span class="p">{</span>
+</span><span class='line'>  <span class="k">content</span><span class="o">:</span> <span class="s2">&quot; &quot;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のようにスタイルシートで空白を足していたのですが、</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">icon</span><span class="p">(</span><span class="ss">:pencil</span><span class="p">,</span> <span class="n">t</span><span class="p">(</span><span class="s1">&#39;.edit&#39;</span><span class="p">,</span> <span class="ss">default</span><span class="p">:</span> <span class="ss">:&#39;helpers.links.edit&#39;</span><span class="p">))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のように使うのも良さそうです。</p>
+
+<p>今回は書き換えの手間を減らすため、以下のように今までと同じようにスタイルシートで空白を入れるようにしました。
+何のスタイルが影響しているのか調べていないのですが、半角スペースだとうまくいかなかったので、 NBSP を直接埋め込みました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="nt">i</span><span class="nc">.fa</span><span class="nd">:after</span> <span class="p">{</span>
+</span><span class='line'>  <span class="k">content</span><span class="o">:</span> <span class="s2">&quot; &quot;</span><span class="p">;</span> <span class="o">//</span> <span class="n">nbsp</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>いくつかのアイコンの名前は変更が必要でした。
+使っていて影響があったのは以下のアイコンでした。</p>
+
+<ul>
+<li>変更前 変更後</li>
+<li>comment-alt comment-o</li>
+<li>folder_close folder</li>
+<li>picture picture-o</li>
+<li>remove times</li>
+<li>signin sign-in</li>
+<li>signout sign-out</li>
+<li>star-empty star-o</li>
+<li>trash trash-o</li>
+</ul>
+
+
+<h2>pagination</h2>
+
+<p>kaminari を使っているので、
+<code>app/views/kaminari/_paginator.html.*</code>
+の
+<code>nav.pagination ul</code>
+という構造になっている部分を
+<code>ul.pagination</code>
+に書き換えるだけでした。</p>
+
+<h2>label</h2>
+
+<p><code>btn</code> と同様に <code>label</code> 単独ではなく <code>label-default</code> と組み合わせるようになりました。</p>
+
+<p>選択されているものに <code>label-inverse</code> を使っていたのになくなってしまったので、
+<code>label-primary</code> に変えました。</p>
+
+<p>意味的には <code>.nav</code> に変えた方が良さそうなので、
+一通り一時的な対処をした後にちゃんと変更しようと思っています。</p>
+
+<h2>muted</h2>
+
+<p><code>.muted</code> は <code>.text-muted</code> に変更しました。</p>
+
+<h2>参考サイト: Bootstrap3移行ガイド</h2>
+
+<p>基本的に本家のドキュメントを参照していたのですが、
+ここまで変更してから 2 から 3 への移行のドキュメントを探して、
+<a href="http://bootstrap.s1.adexd.net/">Bootstrap3移行ガイド</a>
+をみつけて見てみたのですが、全体としては非常に参考になるのですが、
+所々気になる点がありました。
+連絡先が見つけられなかったので、ここにメモしておきます。</p>
+
+<p><a href="http://bootstrap.s1.adexd.net/css.php#grid">グリッドシステム（Grid system）</a>
+の【Bootstrap2.xとの変更箇所】の説明で <code>.row</code> と使い分けると書いているのは
+間違いだと思います。</p>
+
+<p>スクリーンリーダー用のクラスを
+<a href="http://bootstrap.s1.adexd.net/css.php#screen-reader">すべての要素の表示を隠す</a>
+と説明しているなど、たまに間違いがあるようです。</p>
+
+<h2>現状まとめ</h2>
+
+<p>layouts といくつかのコントローラーに対応する views を変更すれば
+ある程度自分のアプリで使っているものは網羅できるので、
+そこからは移行に必要な変更点はわかってきて速くなっていく感じでした。</p>
+
+<p>先日書いた haml から slim への移行も同時にやっていて、
+views 全体を見直す良い機会になっています。</p>
+
+<p>一部で jquery-ui を使っていて、
+機能的には問題ないのですが、
+見た目が bootstrap 3 となじまないので、
+後で対処が必要そうでした。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-14T23:00:00+09:00" pubdate data-updated="true">2014-03-14 (Fri)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/bootstrap/'>bootstrap</a>, <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2014-03-14-bootstrap-2-to-3.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2014-03-14-bootstrap-2-to-3.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2014-03-14-bootstrap-2-to-3.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014-03-11-haml-to-slim.html" title="Previous Post: hamlからslimへの移行でひっかかったこと">&laquo; hamlからslimへの移行でひっかかったこと</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- sidebar -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:160px;height:600px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4210402292"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+<section>
+  <h1>About Me</h1>
+  <img src="/favicon.png" style="float:right">
+  <p>
+    <a href="http://rubycommitters.org/">Ruby のコミッター</a>とかやってます。
+    フルスタックエンジニアかもしれません。
+  </p>
+<script data-gittip-username="znz"
+        data-gittip-widget="button"
+        src="//gttp.co/v1.js"></script>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014-03-14-bootstrap-2-to-3.html">bootstrap 2.3.2 から bootstrap 3.1.1 への移行</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-03-11-haml-to-slim.html">hamlからslimへの移行でひっかかったこと</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-03-11-hash-reject.html">Ruby 2.1.1のHash#rejectの不具合対策</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-03-03-auto-change-background.html">ページの切り替わりごとに背景の自動変更</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-02-25-autopagerize-kaminari-ransack.html">autopagerizeのような動作をkaminariとransackを使った環境で実装した</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>Tag Cloud</h1>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 103.15789473684211%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 106.3157894736842%'>amagasakirb(4)</a> <a href='/blog/categories/ansible' style='font-size: 104.73684210526315%'>ansible(3)</a> <a href='/blog/categories/anyenv' style='font-size: 101.57894736842105%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.57894736842105%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 101.57894736842105%'>boot2docker(1)</a> <a href='/blog/categories/bootstrap' style='font-size: 101.57894736842105%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 101.57894736842105%'>bts(1)</a> <a href='/blog/categories/certification' style='font-size: 101.57894736842105%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 103.15789473684211%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 104.73684210526315%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 118.94736842105263%'>debian(12)</a> <a href='/blog/categories/devise' style='font-size: 103.15789473684211%'>devise(2)</a> <a href='/blog/categories/dkms' style='font-size: 101.57894736842105%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 111.05263157894737%'>docker(7)</a> <a href='/blog/categories/dokku' style='font-size: 101.57894736842105%'>dokku(1)</a> <a href='/blog/categories/doorkeeper' style='font-size: 101.57894736842105%'>doorkeeper(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.57894736842105%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 112.63157894736842%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 133.1578947368421%'>event(21)</a> <a href='/blog/categories/gem' style='font-size: 106.3157894736842%'>gem(4)</a> <a href='/blog/categories/git' style='font-size: 104.73684210526315%'>git(3)</a> <a href='/blog/categories/github' style='font-size: 107.89473684210526%'>github(5)</a> <a href='/blog/categories/haml' style='font-size: 101.57894736842105%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 101.57894736842105%'>heroku(1)</a> <a href='/blog/categories/homebrew' style='font-size: 107.89473684210526%'>homebrew(5)</a> <a href='/blog/categories/html5' style='font-size: 104.73684210526315%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 104.73684210526315%'>ime(3)</a> <a href='/blog/categories/irb' style='font-size: 101.57894736842105%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.57894736842105%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 106.3157894736842%'>javascript(4)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 103.15789473684211%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.57894736842105%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 101.57894736842105%'>jus(1)</a> <a href='/blog/categories/k-of' style='font-size: 101.57894736842105%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 106.3157894736842%'>kansaidebian(4)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.57894736842105%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.57894736842105%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 106.3157894736842%'>land-of-lisp(4)</a> <a href='/blog/categories/linux' style='font-size: 107.89473684210526%'>linux(5)</a> <a href='/blog/categories/lxc' style='font-size: 101.57894736842105%'>lxc(1)</a> <a href='/blog/categories/mail' style='font-size: 101.57894736842105%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 103.15789473684211%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 106.3157894736842%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.57894736842105%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.57894736842105%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.57894736842105%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 103.15789473684211%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.57894736842105%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 101.57894736842105%'>oauth2(1)</a> <a href='/blog/categories/octopress' style='font-size: 106.3157894736842%'>octopress(4)</a> <a href='/blog/categories/omniauth' style='font-size: 101.57894736842105%'>omniauth(1)</a> <a href='/blog/categories/osx' style='font-size: 128.42105263157896%'>osx(18)</a> <a href='/blog/categories/packer' style='font-size: 101.57894736842105%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.57894736842105%'>passenger(1)</a> <a href='/blog/categories/postfix' style='font-size: 103.15789473684211%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 103.15789473684211%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.57894736842105%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.57894736842105%'>pyenv(1)</a> <a href='/blog/categories/rabbit' style='font-size: 103.15789473684211%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 136.31578947368422%'>rails(23)</a> <a href='/blog/categories/ransack' style='font-size: 101.57894736842105%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 106.3157894736842%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.57894736842105%'>redmine(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.57894736842105%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(38)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.57894736842105%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 101.57894736842105%'>rubykansai(1)</a> <a href='/blog/categories/rubymotion' style='font-size: 112.63157894736842%'>rubymotion(8)</a> <a href='/blog/categories/shell' style='font-size: 101.57894736842105%'>shell(1)</a> <a href='/blog/categories/slim' style='font-size: 101.57894736842105%'>slim(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.57894736842105%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 106.3157894736842%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 117.36842105263158%'>ubuntu(11)</a> <a href='/blog/categories/upstart' style='font-size: 103.15789473684211%'>upstart(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 101.57894736842105%'>virtualbox(1)</a> <a href='/blog/categories/weechat' style='font-size: 101.57894736842105%'>weechat(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.57894736842105%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 107.89473684210526%'>zsh(5)</a> </span>
+</section>
+<section class="clearfix">
+<h1><a href="https://coderwall.com/">coderwall.com</a></h1>
+<link href="http://coderwall.com/stylesheets/jquery.coderwall.css" media="all" rel="stylesheet" type="text/css">
+<script src="http://coderwall.com/javascripts/jquery.coderwall.js"></script>
+<section class="coderwall" data-coderwall-username="znz" data-coderwall-orientation="vertical" style="width:80%"></section>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/znz">@znz</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'znz',
+            count: 3,
+            skip_forks: false,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Kazuhiro NISHIYAMA -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'znzblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-03-14-bootstrap-2-to-3.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-03-14-bootstrap-2-to-3.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+<script type="text/javascript" src="http://b.st-hatena.com/js/bookmark_button.js" charset="utf-8" async="async"></script>
+
+
+</body>
+</html>
