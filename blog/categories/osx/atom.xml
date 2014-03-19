@@ -4,7 +4,7 @@
   <title><![CDATA[Category: osx | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/osx/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-03-15T16:21:24+09:00</updated>
+  <updated>2014-03-20T00:04:19+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,73 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 9 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-03-19-rubymotion-mokumoku-osaka.html"/>
+    <updated>2014-03-19T19:32:08+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
+    <content type="html"><![CDATA[<p>第 1 回から第 8 回にも参加した RubyMotion もくもく会 in Osaka の
+<a href="http://connpass.com/event/5276/">第 9 回 RubyMotion もくもく会 in Osaka</a>
+に参加してきました。</p>
+
+<p>次回の
+<a href="http://connpass.com/event/5674/">第 10 回 RubyMotion もくもく会 in Osaka</a>
+は 4/23(水) になりました。</p>
+
+<!--more-->
+
+
+<h2>メモ</h2>
+
+<ul>
+<li><a href="https://github.com/shin1x1/vagrantx/issues/1">VagrantX のロゴ</a></li>
+<li><a href="http://www.jetbrains.com/ruby/">RubyMine</a></li>
+<li><a href="http://testflightapp.com/">TestFlight</a> の代わりに今は <a href="https://deploygate.com/">DeployGate</a> が良いという話</li>
+</ul>
+
+
+<h2>やったこと</h2>
+
+<p>RubyMine をインストールして使い始めてみました。
+試用期間は次回のもくもく会には切れているので、
+それまでに他でも使っておかないとあっという間に試用期間が終わってしまいそうです。</p>
+
+<p><a href="http://stackoverflow.com/questions/9289613/handlegeturlevent-doesnt-get-called">イベントハンドラの設定を init でやれば良い</a>というような話があったので、
+init メソッドを定義してみたところ、呼ばれていなかったので、
+initialize にしてみたら、
+呼ばれていることは確認できても、
+やっぱり起動時の URL は受け取れないままでした。</p>
+
+<p>内部的な変更としては
+REPL で確認した時に
+<code>KeyDirectObject</code> が存在しなかったので、
+<code>keyDirectObject = '----'.unpack('L')[0]</code>
+のように作っていたのを
+<code>KeyDirectObject</code>
+を使うように変えました。</p>
+
+<p>以前のもくもく会の時に気付いたように
+<code>rake</code>
+でのコンパイル時に参照していない定数は REPL でも存在しないというだけでした。</p>
+
+<p>他にはいろいろ調べている時に
+<a href="http://vivacocoa.jp/objective-c3e/chapter5c.html">ウィンドウのクローズとアプリケーションの終了を同期させる</a>
+というのを知ったので、
+以下のメソッド定義を追加して
+window を閉じた時に終了するようにしました。
+これを追加するまでは閉じたら開き直す手段がなくて何も出来なくなっていました。</p>
+
+<p>```ruby app/app_delegate.rb
+  def applicationShouldTerminateAfterLastWindowClosed(application)</p>
+
+<pre><code>true
+</code></pre>
+
+<p>  end
+```</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 8 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -379,93 +446,6 @@ RubyMotion のバグっぽいという話のようです。</p>
 も試してみましたが、
 <a href="https://gist.github.com/znz/8158061#file-vagrantx-report-txt">同じくクラッシュ</a>
 して起動しませんでした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[distnotedの暴走が止まるというCocoa Emacsのinline patch修正版を使ってみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-27-emacs-inline-patch.html"/>
-    <updated>2013-12-27T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/emacs-inline-patch</id>
-    <content type="html"><![CDATA[<p><a href="/blog/2013-11-13-killall-distnoted-periodically.html">launchdでdistnotedを定期的に終了させる</a>
-話のコメントで
-<a href="https://gist.github.com/anonymous/8142555">Emacs.appでインラインパッチを当てた時にdistnotedが暴走しなくなる</a>
-修正を教えてもらったので、
-試してみました。</p>
-
-<p>2014-01-29追記:
-コメントにあるようにまだ問題があったので、続きとして
-<a href="/blog/2014-01-29-emacs-distnoted-patch.html">emacsやdistnotedを安定させるパッチをhomebrewで適用した</a>
-話を書きました。</p>
-
-<!--more-->
-
-
-<h2>homebrew で適用するパッチの変更</h2>
-
-<p>適用法としては
-<code>brew edit emacs</code>
-で以下のように変更して、
-<code>brew reinstall emacs</code>
-で再インストールしました。</p>
-
-<p>```diff
-diff &mdash;git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb
-index 712c3d1..5ce4ce2 100644
-&mdash;&ndash; a/Library/Formula/emacs.rb
-+++ b/Library/Formula/emacs.rb
-@@ -47,7 +47,7 @@ class Emacs &lt; Formula</p>
-
-<pre><code> # "--japanese" option:
- # to apply a patch from MacEmacsJP for Japanese input methods
- if build.include? "cocoa" and build.include? "japanese"
-</code></pre>
-
-<ul>
-<li>   p[:p0].push(&ldquo;<a href="http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583">http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583</a>&rdquo;)</li>
-<li>   p[:p0].push(&ldquo;<a href="https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch">https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch</a>&rdquo;)
- end
- p
-end unless build.head?
-```</li>
-</ul>
-
-
-<h2>元のパッチからの変更点</h2>
-
-<p>元の sourceforge.jp のパッチとの差分をとってみると、
-以下のメソッド呼び出しが変わっているだけでした。</p>
-
-<p>```diff
-diff &mdash;git a/emacs-inline.patch.sfjp b/emacs-inline.patch.gist
-index 52f2052..d67ad1d 100644
-&mdash;&ndash; a/emacs-inline.patch.sfjp
-+++ b/emacs-inline.patch.gist
-@@ -1015,7 +1015,7 @@ diff -r -N -p ../emacs-24.3.org/src/nsterm.m src/nsterm.m</p>
-
-<pre><code>                                            name: nil object: nil]; */
-</code></pre>
-
-<ul>
-<li> [[NSDistributedNotificationCenter defaultCenter] addObserver: NSApp</li>
-<li><pre><code>            selector: @selector (changeInputMethod:)
-</code></pre>
-
-<p>&ndash;+                         name: @&ldquo;AppleSelectedInputSourcesChangedNotification&rdquo; object: nil];
-++                         name: @&ldquo;AppleSelectedInputSourcesChangedNotification&rdquo; object: nil suspensionBehavior:NSNotificationSuspensionBehaviorDeliverImmediately];</p>
-
-<p>   dpyinfo = xzalloc (sizeof *dpyinfo);</p></li>
-</ul>
-
-
-<p>```</p>
-
-<h2>まとめ</h2>
-
-<p>使ってみて問題がなければ sourceforge.jp の方に取り込んでもらうのが良さそうです。</p>
-
-<p>しばらく使ってみた感じだと distnoted のメモリ使用量が増えていっても、
-一度 Emacs.app を終了すると distnoted のメモリ使用量が一気に減るようになりました。</p>
 ]]></content>
   </entry>
   

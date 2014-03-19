@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-03-15T16:21:24+09:00</updated>
+  <updated>2014-03-20T00:04:19+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,73 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 9 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-03-19-rubymotion-mokumoku-osaka.html"/>
+    <updated>2014-03-19T19:32:08+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
+    <content type="html"><![CDATA[<p>第 1 回から第 8 回にも参加した RubyMotion もくもく会 in Osaka の
+<a href="http://connpass.com/event/5276/">第 9 回 RubyMotion もくもく会 in Osaka</a>
+に参加してきました。</p>
+
+<p>次回の
+<a href="http://connpass.com/event/5674/">第 10 回 RubyMotion もくもく会 in Osaka</a>
+は 4/23(水) になりました。</p>
+
+<!--more-->
+
+
+<h2>メモ</h2>
+
+<ul>
+<li><a href="https://github.com/shin1x1/vagrantx/issues/1">VagrantX のロゴ</a></li>
+<li><a href="http://www.jetbrains.com/ruby/">RubyMine</a></li>
+<li><a href="http://testflightapp.com/">TestFlight</a> の代わりに今は <a href="https://deploygate.com/">DeployGate</a> が良いという話</li>
+</ul>
+
+
+<h2>やったこと</h2>
+
+<p>RubyMine をインストールして使い始めてみました。
+試用期間は次回のもくもく会には切れているので、
+それまでに他でも使っておかないとあっという間に試用期間が終わってしまいそうです。</p>
+
+<p><a href="http://stackoverflow.com/questions/9289613/handlegeturlevent-doesnt-get-called">イベントハンドラの設定を init でやれば良い</a>というような話があったので、
+init メソッドを定義してみたところ、呼ばれていなかったので、
+initialize にしてみたら、
+呼ばれていることは確認できても、
+やっぱり起動時の URL は受け取れないままでした。</p>
+
+<p>内部的な変更としては
+REPL で確認した時に
+<code>KeyDirectObject</code> が存在しなかったので、
+<code>keyDirectObject = '----'.unpack('L')[0]</code>
+のように作っていたのを
+<code>KeyDirectObject</code>
+を使うように変えました。</p>
+
+<p>以前のもくもく会の時に気付いたように
+<code>rake</code>
+でのコンパイル時に参照していない定数は REPL でも存在しないというだけでした。</p>
+
+<p>他にはいろいろ調べている時に
+<a href="http://vivacocoa.jp/objective-c3e/chapter5c.html">ウィンドウのクローズとアプリケーションの終了を同期させる</a>
+というのを知ったので、
+以下のメソッド定義を追加して
+window を閉じた時に終了するようにしました。
+これを追加するまでは閉じたら開き直す手段がなくて何も出来なくなっていました。</p>
+
+<p>```ruby app/app_delegate.rb
+  def applicationShouldTerminateAfterLastWindowClosed(application)</p>
+
+<pre><code>true
+</code></pre>
+
+<p>  end
+```</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[bootstrap 2.3.2 から bootstrap 3.1.1 への移行]]></title>
@@ -790,63 +857,6 @@ system, use <code>rake crashlog' to open it. Use</code>rake debug=1' to restart 
 (main)&gt; NSDate.distantPast
 =&gt; 1677-09-21 09:12:43 +0900
 </code></p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[bootstrap-sass-railsからbootstrap-sassに移行した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-02-06-bootstrap-sass.html"/>
-    <updated>2014-02-06T14:29:27+09:00</updated>
-    <id>http://blog.n-z.jp/blog/bootstrap-sass</id>
-    <content type="html"><![CDATA[<p>今日の <code>bundle update</code> は bootstrap の sass の gem を bootstrap 公式のものに移行したのが大きな変更点でした。</p>
-
-<!--more-->
-
-
-<h2>bootstrap-sass-rails から bootstrap-sass 3.1.0.2</h2>
-
-<p><a href="http://blog.getbootstrap.com/2014/01/30/bootstrap-3-1-0-released/">bootstrap 3.1.0 がリリース</a>されて少し時間が経ったので、
-bootstrap-sass-rails を確認してみたところ、
-<a href="https://github.com/yabawock/bootstrap-sass-rails#deprecation-notice">DEPRECATION NOTICE</a>
-に公式サポートされた sass の gem があるので、
-そちらに移行を推奨と書かれていたので、移行しました。</p>
-
-<p>bootstrap-sass gem への移行は UPGRADING に書かれているように <code>@import "twitter/bootstrap";</code> を <code>@import "bootstrap";</code> に書き換えるだけでした。</p>
-
-<h2>bootstrap-sass のカスタマイズ</h2>
-
-<p><a href="https://github.com/twbs/bootstrap-sass#usage">Usage</a>
-によると、一番単純な使い方としては <code>@import "bootstrap";</code> だけですが、
-<a href="http://getbootstrap.com/customize/#less-variables">Less variables</a>
-を参考にして以下のようにカスタマイズして使うのが良いようです。</p>
-
-<p>Less では変数の接頭辞は <code>@</code> ですが、 sass では <code>$</code> になることさえわかっていれば、最低限のカスタマイズは出来ると思います。</p>
-
-<p>```
-$navbar-default-bg: #312312;
-$light-orange: #ff8c00;
-$navbar-default-color: $light-orange;</p>
-
-<p>@import &ldquo;bootstrap&rdquo;;
-```</p>
-
-<p>bootstrap-sass-rails からの移行だったので、
-bootstrap-custom.css.scss の内容は以下のようにしました。</p>
-
-<p>```
-$body-bg:               #fff;
-$text-color:            lighten(#000, 20%);</p>
-
-<p>@import &ldquo;bootstrap&rdquo;;
-```</p>
-
-<p>もっと高度なカスタマイズをするなら、
-<code>cp $(bundle show bootstrap-sass)/vendor/assets/stylesheets/bootstrap.scss app/assets/stylesheets/bootstrap-custom.scss</code>
-でコピーしたファイルを
-<code>@import 'bootstrap';</code>
-の代わりに
-<code>@import 'bootstrap-custom';</code>
-で使うことを想定しているようです。</p>
 ]]></content>
   </entry>
   

@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-03-15T16:21:24+09:00</updated>
+  <updated>2014-03-20T00:04:19+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,73 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 9 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-03-19-rubymotion-mokumoku-osaka.html"/>
+    <updated>2014-03-19T19:32:08+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
+    <content type="html"><![CDATA[<p>第 1 回から第 8 回にも参加した RubyMotion もくもく会 in Osaka の
+<a href="http://connpass.com/event/5276/">第 9 回 RubyMotion もくもく会 in Osaka</a>
+に参加してきました。</p>
+
+<p>次回の
+<a href="http://connpass.com/event/5674/">第 10 回 RubyMotion もくもく会 in Osaka</a>
+は 4/23(水) になりました。</p>
+
+<!--more-->
+
+
+<h2>メモ</h2>
+
+<ul>
+<li><a href="https://github.com/shin1x1/vagrantx/issues/1">VagrantX のロゴ</a></li>
+<li><a href="http://www.jetbrains.com/ruby/">RubyMine</a></li>
+<li><a href="http://testflightapp.com/">TestFlight</a> の代わりに今は <a href="https://deploygate.com/">DeployGate</a> が良いという話</li>
+</ul>
+
+
+<h2>やったこと</h2>
+
+<p>RubyMine をインストールして使い始めてみました。
+試用期間は次回のもくもく会には切れているので、
+それまでに他でも使っておかないとあっという間に試用期間が終わってしまいそうです。</p>
+
+<p><a href="http://stackoverflow.com/questions/9289613/handlegeturlevent-doesnt-get-called">イベントハンドラの設定を init でやれば良い</a>というような話があったので、
+init メソッドを定義してみたところ、呼ばれていなかったので、
+initialize にしてみたら、
+呼ばれていることは確認できても、
+やっぱり起動時の URL は受け取れないままでした。</p>
+
+<p>内部的な変更としては
+REPL で確認した時に
+<code>KeyDirectObject</code> が存在しなかったので、
+<code>keyDirectObject = '----'.unpack('L')[0]</code>
+のように作っていたのを
+<code>KeyDirectObject</code>
+を使うように変えました。</p>
+
+<p>以前のもくもく会の時に気付いたように
+<code>rake</code>
+でのコンパイル時に参照していない定数は REPL でも存在しないというだけでした。</p>
+
+<p>他にはいろいろ調べている時に
+<a href="http://vivacocoa.jp/objective-c3e/chapter5c.html">ウィンドウのクローズとアプリケーションの終了を同期させる</a>
+というのを知ったので、
+以下のメソッド定義を追加して
+window を閉じた時に終了するようにしました。
+これを追加するまでは閉じたら開き直す手段がなくて何も出来なくなっていました。</p>
+
+<figure class='code'><figcaption><span>app/app_delegate.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">applicationShouldTerminateAfterLastWindowClosed</span><span class="p">(</span><span class="n">application</span><span class="p">)</span>
+</span><span class='line'>    <span class="kp">true</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[bootstrap 2.3.2 から bootstrap 3.1.1 への移行]]></title>
@@ -3269,47 +3336,6 @@ yaml_db の方が fork が乱立して、新しい rails に対応したもの�
 <p>taps は新しい Ruby に対応できていなかったり、
 以前の記事に書いたようにスキーマの移行が不十分なところがあったりして、
 使われなくなっていくように感じました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[slideshareからのメールが届かなかったのでなんとかした]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-01-26-slideshare-cannot-send-mail.html"/>
-    <updated>2014-01-26T22:07:01+09:00</updated>
-    <id>http://blog.n-z.jp/blog/slideshare-cannot-send-mail</id>
-    <content type="html"><![CDATA[<p>spam 対策にひっかかって <code>slideshare.net</code> からのメールが届いていなかったので、回避策をとって受け取れるようになったという話です。</p>
-
-<!--more-->
-
-
-<h2>背景</h2>
-
-<p>spam 対策の手段のひとつとして、メールアドレスのドメインに MX レコードだけ設定して A レコードは設定しないという方法があります。</p>
-
-<p>この方法はまともな MTA を使っている送信元なら MX レコードを見てくれるので問題は起きないはずです。</p>
-
-<p>そして、まともでない MTA だと A レコードがみつからないということで送信できずに諦めているのではないかと思います。
-その場合はこちらには全くログが残らないので、本当はどういう状況なのかはわからないので、推測しかできません。</p>
-
-<p>メールサーバーのログを <code>tail -F /var/log/mail.log</code> で確認しながら <code>slideshare.net</code> の確認メールの再送を何度押してもログに出なかったので、もしかしてこの spam 対策にひっかかっているのではないかと推測しました。</p>
-
-<h2>対処</h2>
-
-<p>MX レコードの他に A レコードを追加するという設定はしたくなかったので、
-<code>/etc/postfix/main.cf</code> の <code>mydestination</code> に設定していて
-A レコードが存在するサブドメインをメールアドレスのドメインとして
-<code>slideshare.net</code> のメールアドレスに設定しました。</p>
-
-<p>その結果、確認メールをやっと受け取ることができました。</p>
-
-<h2>まとめ</h2>
-
-<p>世界中で使われているようなサービスでも、まともにメール送信できないようなところが存在するようです。</p>
-
-<p>受信側としては Gmail のように IPv6 でも逆引き必須にしているような特殊な設定をしているところもありますが、
-Gmail のように利用者が多いところだと送信側が気付きやすいので、対応していることが多いような気がします。</p>
-
-<p>困った時は Gmail などの利用者が多いドメインのメールアドレスを使って送信側の問題かどうか切り分けるというのも有効だと思います。</p>
 ]]></content>
   </entry>
   

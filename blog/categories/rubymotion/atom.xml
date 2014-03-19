@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rubymotion | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rubymotion/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-03-15T16:21:24+09:00</updated>
+  <updated>2014-03-20T00:04:19+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,73 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 9 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-03-19-rubymotion-mokumoku-osaka.html"/>
+    <updated>2014-03-19T19:32:08+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
+    <content type="html"><![CDATA[<p>第 1 回から第 8 回にも参加した RubyMotion もくもく会 in Osaka の
+<a href="http://connpass.com/event/5276/">第 9 回 RubyMotion もくもく会 in Osaka</a>
+に参加してきました。</p>
+
+<p>次回の
+<a href="http://connpass.com/event/5674/">第 10 回 RubyMotion もくもく会 in Osaka</a>
+は 4/23(水) になりました。</p>
+
+<!--more-->
+
+
+<h2>メモ</h2>
+
+<ul>
+<li><a href="https://github.com/shin1x1/vagrantx/issues/1">VagrantX のロゴ</a></li>
+<li><a href="http://www.jetbrains.com/ruby/">RubyMine</a></li>
+<li><a href="http://testflightapp.com/">TestFlight</a> の代わりに今は <a href="https://deploygate.com/">DeployGate</a> が良いという話</li>
+</ul>
+
+
+<h2>やったこと</h2>
+
+<p>RubyMine をインストールして使い始めてみました。
+試用期間は次回のもくもく会には切れているので、
+それまでに他でも使っておかないとあっという間に試用期間が終わってしまいそうです。</p>
+
+<p><a href="http://stackoverflow.com/questions/9289613/handlegeturlevent-doesnt-get-called">イベントハンドラの設定を init でやれば良い</a>というような話があったので、
+init メソッドを定義してみたところ、呼ばれていなかったので、
+initialize にしてみたら、
+呼ばれていることは確認できても、
+やっぱり起動時の URL は受け取れないままでした。</p>
+
+<p>内部的な変更としては
+REPL で確認した時に
+<code>KeyDirectObject</code> が存在しなかったので、
+<code>keyDirectObject = '----'.unpack('L')[0]</code>
+のように作っていたのを
+<code>KeyDirectObject</code>
+を使うように変えました。</p>
+
+<p>以前のもくもく会の時に気付いたように
+<code>rake</code>
+でのコンパイル時に参照していない定数は REPL でも存在しないというだけでした。</p>
+
+<p>他にはいろいろ調べている時に
+<a href="http://vivacocoa.jp/objective-c3e/chapter5c.html">ウィンドウのクローズとアプリケーションの終了を同期させる</a>
+というのを知ったので、
+以下のメソッド定義を追加して
+window を閉じた時に終了するようにしました。
+これを追加するまでは閉じたら開き直す手段がなくて何も出来なくなっていました。</p>
+
+<p>```ruby app/app_delegate.rb
+  def applicationShouldTerminateAfterLastWindowClosed(application)</p>
+
+<pre><code>true
+</code></pre>
+
+<p>  end
+```</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 8 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -446,70 +513,6 @@ URL を 2 回クリックするという方法で
 <p><code>keyDirectObject</code> と <code>osascript</code> を使っているところは
 他に方法がなければ
 今のままでも実用上は困らないと感じました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[RubyMotionとRubyのバージョン]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-15-rubymotion-ruby-version.html"/>
-    <updated>2013-12-15T14:49:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-ruby-version</id>
-    <content type="html"><![CDATA[<p>今のところ RubyMotion は毎月のもくもく会以外ではほとんど触れていないので、
-RubyMotion と Ruby のバージョンの関係と言う小ネタです。</p>
-
-<p>この投稿は
-<a href="http://qiita.com/advent-calendar/2013/rubymotion">RubyMotion Advent Calendar 2013</a>
-の12日目の記事です。</p>
-
-<!--more-->
-
-
-<h2>RUBY_DESCRIPTION 確認</h2>
-
-<p>まず <code>Rakefile</code> の先頭で <code>RUBY_DESCRIPTION</code> を入れて、
-普通の <code>ruby</code> コマンドのバージョンを表示して、
-次に開発環境のプロンプトでも確認してみました。</p>
-
-<p>```console
-% head -n2 Rakefile</p>
-
-<h1>&ndash;<em>&ndash; coding: utf-8 &ndash;</em>&ndash;</h1>
-
-<p>p RUBY_DESCRIPTION
-% rake
-&ldquo;ruby 2.0.0p353 (2013-11-22 revision 43784) [x86_64-darwin12.5.0]&rdquo;</p>
-
-<pre><code> Build ./build/MacOSX-10.8-Development
-</code></pre>
-
-<p>   Compile ./app/app_delegate.rb
-   Compile ./app/menu.rb</p>
-
-<pre><code>Create ./build/MacOSX-10.8-Development/Hello.app/Contents
-Create ./build/MacOSX-10.8-Development/Hello.app/Contents/MacOS
-  Link ./build/MacOSX-10.8-Development/Hello.app/Contents/MacOS/Hello
-Create ./build/MacOSX-10.8-Development/Hello.app/Contents/PkgInfo
-Create ./build/MacOSX-10.8-Development/Hello.app/Contents/Info.plist
-  Copy ./resources/Credits.rtf
-Create ./build/MacOSX-10.8-Development/Hello.dSYM
-   Run ./build/MacOSX-10.8-Development/Hello.app/Contents/MacOS/Hello
-</code></pre>
-
-<p>(main)> RUBY_DESCRIPTION
-=> &ldquo;RubyMotion (ruby 1.9.2) [universal-darwin13.0, x86_64]&rdquo;
-(main)> exit
-```</p>
-
-<p>外側は 2.0.0 なのに RubyMotion の方は 1.9.2 でした。</p>
-
-<h2>まとめ</h2>
-
-<p>調べたきっかけはデバッグ用に <code>File.write</code>
-(<a href="http://docs.ruby-lang.org/ja/2.0.0/class/IO.html#S_WRITE">IO.write</a>)
-が使えなかったからでした。
-それは結局普通に <code>File.open</code> して書き込むことにしましたが、
-開発環境側の Ruby のバージョンを変えても生成されるアプリ側の
-Ruby のバージョンには影響しないという話でした。</p>
 ]]></content>
   </entry>
   
