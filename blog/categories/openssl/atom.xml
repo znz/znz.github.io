@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: openssl | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/openssl/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-04-08T14:36:50+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[CVE-2014-0160 の OpenSSL の脆弱性対応]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-08-cve-2014-0160.html"/>
+    <updated>2014-04-08T13:22:28+09:00</updated>
+    <id>http://blog.n-z.jp/blog/cve-2014-0160</id>
+    <content type="html"><![CDATA[<p><a href="http://heartbleed.com/">Heartbleed</a>
+によると今回の OpenSSL の脆弱性は影響が大きそうなので、
+OpenSSL の更新をして再起動だけでも早めにした方が良さそうです。</p>
+
+<p>再起動が必要なものは Debian なら
+<a href="http://blog.n-z.jp/blog/2013-12-06-checkrestart.html">debian-goodiesのcheckrestartで再起動が必要なプロセスを調べる</a>
+のがオススメです。
+Ubuntu なら libssl の更新は OS 自体を再起動した方が良いと思います。</p>
+
+<p>秘密鍵を再生成した方が良いという話もあるようですが、
+そこまでの対処は続報を待ってからでも良いかもしれません。</p>
+
+<!--more-->
+
+
+<h2>影響を受ける OpenSSL のバージョン</h2>
+
+<p>Heartbleed の <code>What versions of the OpenSSL are affected?</code>
+によると、影響を受けるのは OpenSSL 1.0.1 から 1.0.1f で、
+OpenSSL 1.0.0 系や OpenSSL 0.9.8 系という古いバージョンは
+影響がないようです。</p>
+
+<h2>Debian や Ubuntu への影響</h2>
+
+<p>他の OS も含めた情報は
+Heartbleed の <code>How about operating systems?</code>
+にまとまっているので、
+Debian と Ubuntu に付いてもう少し調べてみました。</p>
+
+<p>Heartbleed にも書いてありますが、
+<a href="https://www.debian.org/security/2014/dsa-2896">Debian &mdash; Security Information &mdash; DSA-2896-1 openssl</a>
+によると Debian は oldstable (squeeze) は影響がなくて、
+stable (wheezy) だと影響があるようです。
+つまりまだ wheezy に上げていないサーバーは大丈夫でした。</p>
+
+<p><a href="http://www.ubuntu.com/usn/usn-2165-1/">USN-2165-1: OpenSSL vulnerabilities | Ubuntu</a>
+によると Ubuntu は</p>
+
+<ul>
+<li>Ubuntu 13.10 (saucy)</li>
+<li>Ubuntu 12.10 (quantal)</li>
+<li>Ubuntu 12.04 LTS (precise)</li>
+</ul>
+
+
+<p>にセキュリティアップデートが出ているようです。
+10.04 LTS lucid は openssl が古いので影響がなくて、
+13.04 (raring) は
+<a href="http://www.ubuntu.com/info/release-end-of-life">サポート終了</a>
+しているので、セキュリティアップデートは出ていないようです。
+ついでに
+<a href="http://distrowatch.com/table.php?distribution=ubuntu">DistroWatch.com: Ubuntu</a>
+でもう少し調べてみると 1.0.1 になったのが 12.04 からなので、
+11.10 以前は影響がないようです。</p>
+
+<h2>攻撃を受けたかどうかの確認はできない</h2>
+
+<p>Heartbleed に
+<code>Can I detect if someone has exploited this against me?</code>
+<code>Exploitation of this bug leaves no traces of anything abnormal happening to the logs.</code>
+と書いてあって、
+「このバグを突かれても何か変なことがあったというログは残らない」
+ということのようなので、
+普通は攻撃を受けたかどうか確認できないということのようです。</p>
+
+<h2>秘密鍵は再生成するべき</h2>
+
+<p>というわけで、
+<a href="https://www.debian.org/security/2014/dsa-2896">DSA-2896</a>
+に
+<code>to the currently available information, private keys should be considered as compromised and regenerated as soon as possible.</code>
+と書いてあるように、
+秘密鍵は出来るだけ早く再生成した方が良いようです。</p>
+
+<h2>openssh-server の鍵の再生成</h2>
+
+<p>サーバー側では <code>/etc/ssh/ssh_host_*</code> を削除して <code>dpkg-reconfigure openssh-server</code> で再生成するのが良さそうです。</p>
+
+<p><code>
+% sudo rm /etc/ssh/ssh_host_*
+% sudo dpkg-reconfigure openssh-server
+Creating SSH2 RSA key; this may take some time ...
+Creating SSH2 DSA key; this may take some time ...
+Creating SSH2 ECDSA key; this may take some time ...
+ssh stop/waiting
+ssh start/running, process 7230
+% sudo service ssh restart
+ssh stop/waiting
+ssh start/running, process 7339
+</code></p>
+
+<p>クライアント側では、
+<code>HashKnownHosts no</code>
+を設定していれば
+<code>~/.ssh/known_hosts</code>
+ファイルを直接編集しても良いのですが、
+設定していないと、どの行がどのホストかわからないので、
+<code>ssh-keygen -R foo.example.jp</code>
+のように削除すると良さそうです。</p>
+
+<p>場合によっては
+<code>ssh-keygen -R 192.168.1.2</code>
+のように IP アドレス側の削除や
+<code>ssh-keygen -R '[foo.example.jp]:3843'</code>
+のようにポート番号付きでの指定が必要かもしれません。</p>
+
+<p><code>UserKnownHostsFile</code> で <code>known_hosts</code> ファイルを分割しているときは
+<code>ssh-keygen -R foo.example.jp -f ~/.ssh/foo.known_hosts</code> のように
+<code>UserKnownHostsFile</code> を指定する必要があります。</p>
+
+<h2>その他のサーバーの鍵の再生成</h2>
+
+<p>apache2 とかの Web サーバーなら
+初回の設定と同様に再生成すれば良さそうですが、
+証明書の再発行も必要なので、
+気軽には出来ないということで、
+しばらく様子見中です。</p>
+
+<p>OpenVPN はサーバーの鍵は再生成した方が良さそうですが、
+CA まで再生成する必要があるのかどうかがわからないので
+様子見中です。</p>
+
+<p>以前の Debian での修正ミスで脆弱な鍵しか生成できなくなっていた問題の修正のときの
+<a href="https://www.debian.org/security/key-rollover/">Debian &mdash; 鍵のロールオーバー</a>
+が参考になるかもしれませんが、
+今回はサーバー外からでも鍵が抜き出せてしまうという問題のようなので、
+LAN 内のサーバーなど、そのサーバーにアクセスできる環境に攻撃者が入れる時点で問題がある環境なら、
+アップデートを適用して再起動して今後鍵を抜き取られる可能性をなくしてから、
+ゆっくり続報を待ってから対処を考えるということでも良いと思います。</p>
+]]></content>
+  </entry>
+  
+</feed>

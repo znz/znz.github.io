@@ -4,7 +4,7 @@
   <title><![CDATA[Category: debian | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/debian/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-05T23:38:49+09:00</updated>
+  <updated>2014-04-08T14:36:50+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,143 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[CVE-2014-0160 の OpenSSL の脆弱性対応]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-08-cve-2014-0160.html"/>
+    <updated>2014-04-08T13:22:28+09:00</updated>
+    <id>http://blog.n-z.jp/blog/cve-2014-0160</id>
+    <content type="html"><![CDATA[<p><a href="http://heartbleed.com/">Heartbleed</a>
+によると今回の OpenSSL の脆弱性は影響が大きそうなので、
+OpenSSL の更新をして再起動だけでも早めにした方が良さそうです。</p>
+
+<p>再起動が必要なものは Debian なら
+<a href="http://blog.n-z.jp/blog/2013-12-06-checkrestart.html">debian-goodiesのcheckrestartで再起動が必要なプロセスを調べる</a>
+のがオススメです。
+Ubuntu なら libssl の更新は OS 自体を再起動した方が良いと思います。</p>
+
+<p>秘密鍵を再生成した方が良いという話もあるようですが、
+そこまでの対処は続報を待ってからでも良いかもしれません。</p>
+
+<!--more-->
+
+
+<h2>影響を受ける OpenSSL のバージョン</h2>
+
+<p>Heartbleed の <code>What versions of the OpenSSL are affected?</code>
+によると、影響を受けるのは OpenSSL 1.0.1 から 1.0.1f で、
+OpenSSL 1.0.0 系や OpenSSL 0.9.8 系という古いバージョンは
+影響がないようです。</p>
+
+<h2>Debian や Ubuntu への影響</h2>
+
+<p>他の OS も含めた情報は
+Heartbleed の <code>How about operating systems?</code>
+にまとまっているので、
+Debian と Ubuntu に付いてもう少し調べてみました。</p>
+
+<p>Heartbleed にも書いてありますが、
+<a href="https://www.debian.org/security/2014/dsa-2896">Debian &mdash; Security Information &mdash; DSA-2896-1 openssl</a>
+によると Debian は oldstable (squeeze) は影響がなくて、
+stable (wheezy) だと影響があるようです。
+つまりまだ wheezy に上げていないサーバーは大丈夫でした。</p>
+
+<p><a href="http://www.ubuntu.com/usn/usn-2165-1/">USN-2165-1: OpenSSL vulnerabilities | Ubuntu</a>
+によると Ubuntu は</p>
+
+<ul>
+<li>Ubuntu 13.10 (saucy)</li>
+<li>Ubuntu 12.10 (quantal)</li>
+<li>Ubuntu 12.04 LTS (precise)</li>
+</ul>
+
+
+<p>にセキュリティアップデートが出ているようです。
+10.04 LTS lucid は openssl が古いので影響がなくて、
+13.04 (raring) は
+<a href="http://www.ubuntu.com/info/release-end-of-life">サポート終了</a>
+しているので、セキュリティアップデートは出ていないようです。
+ついでに
+<a href="http://distrowatch.com/table.php?distribution=ubuntu">DistroWatch.com: Ubuntu</a>
+でもう少し調べてみると 1.0.1 になったのが 12.04 からなので、
+11.10 以前は影響がないようです。</p>
+
+<h2>攻撃を受けたかどうかの確認はできない</h2>
+
+<p>Heartbleed に
+<code>Can I detect if someone has exploited this against me?</code>
+<code>Exploitation of this bug leaves no traces of anything abnormal happening to the logs.</code>
+と書いてあって、
+「このバグを突かれても何か変なことがあったというログは残らない」
+ということのようなので、
+普通は攻撃を受けたかどうか確認できないということのようです。</p>
+
+<h2>秘密鍵は再生成するべき</h2>
+
+<p>というわけで、
+<a href="https://www.debian.org/security/2014/dsa-2896">DSA-2896</a>
+に
+<code>to the currently available information, private keys should be considered as compromised and regenerated as soon as possible.</code>
+と書いてあるように、
+秘密鍵は出来るだけ早く再生成した方が良いようです。</p>
+
+<h2>openssh-server の鍵の再生成</h2>
+
+<p>サーバー側では <code>/etc/ssh/ssh_host_*</code> を削除して <code>dpkg-reconfigure openssh-server</code> で再生成するのが良さそうです。</p>
+
+<p><code>
+% sudo rm /etc/ssh/ssh_host_*
+% sudo dpkg-reconfigure openssh-server
+Creating SSH2 RSA key; this may take some time ...
+Creating SSH2 DSA key; this may take some time ...
+Creating SSH2 ECDSA key; this may take some time ...
+ssh stop/waiting
+ssh start/running, process 7230
+% sudo service ssh restart
+ssh stop/waiting
+ssh start/running, process 7339
+</code></p>
+
+<p>クライアント側では、
+<code>HashKnownHosts no</code>
+を設定していれば
+<code>~/.ssh/known_hosts</code>
+ファイルを直接編集しても良いのですが、
+設定していないと、どの行がどのホストかわからないので、
+<code>ssh-keygen -R foo.example.jp</code>
+のように削除すると良さそうです。</p>
+
+<p>場合によっては
+<code>ssh-keygen -R 192.168.1.2</code>
+のように IP アドレス側の削除や
+<code>ssh-keygen -R '[foo.example.jp]:3843'</code>
+のようにポート番号付きでの指定が必要かもしれません。</p>
+
+<p><code>UserKnownHostsFile</code> で <code>known_hosts</code> ファイルを分割しているときは
+<code>ssh-keygen -R foo.example.jp -f ~/.ssh/foo.known_hosts</code> のように
+<code>UserKnownHostsFile</code> を指定する必要があります。</p>
+
+<h2>その他のサーバーの鍵の再生成</h2>
+
+<p>apache2 とかの Web サーバーなら
+初回の設定と同様に再生成すれば良さそうですが、
+証明書の再発行も必要なので、
+気軽には出来ないということで、
+しばらく様子見中です。</p>
+
+<p>OpenVPN はサーバーの鍵は再生成した方が良さそうですが、
+CA まで再生成する必要があるのかどうかがわからないので
+様子見中です。</p>
+
+<p>以前の Debian での修正ミスで脆弱な鍵しか生成できなくなっていた問題の修正のときの
+<a href="https://www.debian.org/security/key-rollover/">Debian &mdash; 鍵のロールオーバー</a>
+が参考になるかもしれませんが、
+今回はサーバー外からでも鍵が抜き出せてしまうという問題のようなので、
+LAN 内のサーバーなど、そのサーバーにアクセスできる環境に攻撃者が入れる時点で問題がある環境なら、
+アップデートを適用して再起動して今後鍵を抜き取られる可能性をなくしてから、
+ゆっくり続報を待ってから対処を考えるということでも良いと思います。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 81 回 関西 Debian 勉強会に参加した]]></title>
@@ -483,104 +620,6 @@ mailman 全体の設定になるようです。</p>
 <code>/usr/lib/mailman/Mailman/Defaults.py</code>
 にあります。
 このファイルを良く見ていれば、もっと早くこの設定項目に気付けたのかもしれません。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[debian-goodiesのcheckrestartで再起動が必要なプロセスを調べる]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-06-checkrestart.html"/>
-    <updated>2013-12-06T14:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/checkrestart</id>
-    <content type="html"><![CDATA[<p><a href="http://qiita.com/advent-calendar/2013/distro-pm">ディストリビューション/パッケージマネージャー Advent Calendar 2013</a> の 12/6 のところが空いていたので、後から書いています。</p>
-
-<p>この投稿は
-<a href="http://qiita.com/advent-calendar/2013/distro-pm">ディストリビューション/パッケージマネージャー Advent Calendar 2013</a>
-の6日目の記事です。</p>
-
-<!--more-->
-
-
-<h2>debian-goodies パッケージ</h2>
-
-<p><a href="http://packages.qa.debian.org/d/debian-goodies.html">debian-goodies パッケージ</a>
-には <code>/usr/bin/</code> に複数のコマンドと <code>/usr/sbin/checkrestart</code> が入っています。</p>
-
-<p><code>/usr/bin/</code> のコマンドについては
-<a href="http://uwabami.junkhub.org/log/20131204.html#p01">uwabami さんの記事</a>
-を参照してください。</p>
-
-<p>ここでは <code>checkrestart</code> を紹介します。</p>
-
-<h2>checkrestart</h2>
-
-<p>ライブラリのパッケージが更新されたときに、
-特にセキュリティアップデートだと
-そのライブラリを使っているデーモンなども再起動したいと
-思うことが多いと思います。</p>
-
-<p>そういうときに <code>checkrestart</code> コマンドを使うと
-どのプロセスが置き換えられたライブラリを使っているか
-調べることが出来ます。</p>
-
-<h2>使用例 1</h2>
-
-<p>例えば init スクリプトから起動している <code>whoopsie</code>
-の再起動が必要なときは以下のようなメッセージが出てくるので、
-<code>sudo /etc/init.d/whoopsie restart</code> とか
-<code>sudo service whoopsie restart</code> とかで再起動すれば良いと思います。</p>
-
-<p>```
-$ sudo checkrestart
-Found 1 processes using old versions of upgraded files
-(1 distinct program)
-(1 distinct packages)</p>
-
-<p>Of these, 1 seem to contain init scripts which can be used to restart them:
-The following packages seem to have init scripts that could be used
-to restart them:
-whoopsie:</p>
-
-<pre><code>    953     /usr/bin/whoopsie
-</code></pre>
-
-<p>These are the init scripts:
-/etc/init.d/whoopsie restart
-```</p>
-
-<h2>使用例 2</h2>
-
-<p>デーモン以外などで起動しているプロセスが使っているファイルが置き換えられた場合、以下のように対応する init script がわからないというメッセージが出てきます。</p>
-
-<p>```
-$ sudo checkrestart
-Found 1 processes using old versions of upgraded files
-(1 distinct program)
-(1 distinct packages)
-These processes do not seem to have an associated init script to restart them:
-ruby1.8:</p>
-
-<pre><code>    906     /usr/bin/ruby1.8
-</code></pre>
-
-<p>```</p>
-
-<p>こういうときは
-<code>sudo ls -l /proc/906</code> や
-<code>sudo cat -v /proc/906/cmdline</code>
-などで対応するプログラムを調べて再起動します。</p>
-
-<h2>使用例 3</h2>
-
-<p>再起動が必要なものがみつからなかった場合は以下のようなメッセージが出てきます。</p>
-
-<p><code>
-$ sudo checkrestart
-Found 0 processes using old versions of upgraded files
-</code></p>
-
-<h2>まとめ</h2>
-
-<p>今回は <code>debian-goodies</code> の中から <code>checkrestart</code> を紹介しました。</p>
 ]]></content>
   </entry>
   
