@@ -4,7 +4,7 @@
   <title><![CDATA[Category: openssl | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/openssl/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-08T16:56:34+09:00</updated>
+  <updated>2014-04-09T02:05:09+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -32,6 +32,44 @@ Ubuntu なら libssl の更新は OS 自体を再起動した方が良いと思�
 
 <!--more-->
 
+
+<h2><code>mod_spdy</code> にも影響</h2>
+
+<p>(<code>mod_spdy</code> について 2014-04-09 に追記)</p>
+
+<p><a href="https://groups.google.com/forum/#!topic/mod-spdy-discuss/0yAGH8BHfQo">mod_spdy</a>
+も影響を受けるので、
+<code>mod-spdy-beta</code> パッケージを入れている場合は更新が提供されるまではアンインストール (<code>sudo aptitude purge mod-spdy-beta</code> など) する方が良さそうです。
+(<code>a2dismod spdy</code> しただけだと <code>sudo service apache2 restart</code> してもチェックツールでチェックしても vulnerable のままでした。)</p>
+
+<p><code>mod-spdy-beta</code> に含まれる <code>mod_ssl_with_npn.so</code> は改変した <code>libssl</code> を静的リンクしているようなので、
+システム側の OpenSSL が 0.9.8 系などのディストリビューション (wheezy など) でも以下のようになっていて、脆弱性の影響を受けます。</p>
+
+<p>```
+$ ldd /usr/lib/apache2/modules/mod_ssl.so</p>
+
+<pre><code>    linux-vdso.so.1 =&gt;  (0x00007fff25b9a000)
+    libssl.so.1.0.0 =&gt; /usr/lib/x86_64-linux-gnu/libssl.so.1.0.0 (0x00007f6ae2d93000)
+    libcrypto.so.1.0.0 =&gt; /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0 (0x00007f6ae299c000)
+    libpthread.so.0 =&gt; /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f6ae277f000)
+    libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6 (0x00007f6ae23f4000)
+    libdl.so.2 =&gt; /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f6ae21f0000)
+    libz.so.1 =&gt; /lib/x86_64-linux-gnu/libz.so.1 (0x00007f6ae1fd8000)
+    /lib64/ld-linux-x86-64.so.2 (0x00007f6ae322d000)
+</code></pre>
+
+<p>$ ldd /usr/lib/apache2/modules/mod_ssl_with_npn.so</p>
+
+<pre><code>    linux-vdso.so.1 =&gt;  (0x00007fff825ff000)
+    librt.so.1 =&gt; /lib/x86_64-linux-gnu/librt.so.1 (0x00007f8704d4e000)
+    libcrypt.so.1 =&gt; /lib/x86_64-linux-gnu/libcrypt.so.1 (0x00007f8704b17000)
+    libpthread.so.0 =&gt; /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f87048fa000)
+    libdl.so.2 =&gt; /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f87046f6000)
+    libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6 (0x00007f870436b000)
+    /lib64/ld-linux-x86-64.so.2 (0x00007f8705367000)
+</code></pre>
+
+<p>```</p>
 
 <h2>影響を受ける OpenSSL のバージョン</h2>
 
@@ -94,7 +132,7 @@ stable (wheezy) だと影響があるようです。
 
 <h2>openssh-server の鍵の再生成</h2>
 
-<p>追記:
+<p>2014-04-08 追記:
 <a href="http://undeadly.org/cgi?action=article&amp;sid=20140408063423">OpenSSH は影響を受けない</a>
 ようです。</p>
 
@@ -151,6 +189,44 @@ CA まで再生成する必要があるのかどうかがわからないので
 LAN 内のサーバーなど、そのサーバーにアクセスできる環境に攻撃者が入れる時点で問題がある環境なら、
 アップデートを適用して再起動して今後鍵を抜き取られる可能性をなくしてから、
 ゆっくり続報を待ってから対処を考えるということでも良いと思います。</p>
+
+<h2>参考リンク</h2>
+
+<p>2014-04-09 参考リンクを追加</p>
+
+<ul>
+<li><a href="http://d.hatena.ne.jp/nekoruri/20140408/heartbleed">CVE-2014-0160 OpenSSL Heartbleed 脆弱性まとめ &ndash; めもおきば</a>
+
+<ul>
+<li>このリンク先が日本語としては一番情報がまとまっているようです。</li>
+</ul>
+</li>
+<li><a href="http://jvn.jp/vu/JVNVU94401838/">JVNVU#94401838: OpenSSL の heartbeat 拡張に情報漏えいの脆弱性</a>
+
+<ul>
+<li>ベンダ情報とか CVSS とか。</li>
+</ul>
+</li>
+<li><a href="http://heartbleed.com/">Heartbleed Bug</a>
+
+<ul>
+<li>英語だけど Google Chrome の翻訳機能でもだいたい読めます。</li>
+</ul>
+</li>
+<li><a href="http://www.exploit-db.com/exploits/32745/">OpenSSL TLS Heartbeat Extension &ndash; Memory Disclosure</a>
+
+<ul>
+<li>実際に情報が抜き出せるチェックツールで、これをみて他のツールの誤検知ではなく <code>mod_spdy</code> が原因だと気付きました。</li>
+</ul>
+</li>
+<li><a href="https://groups.google.com/forum/#!topic/mod-spdy-discuss/0yAGH8BHfQo">CVE-2014-0160 / heartbleed openssl bug &amp; mod_spdy &ndash; Google グループ</a>
+
+<ul>
+<li><code>mod_spdy</code> の対応の話 (英語) です。日本時間の 2014-04-09 02:00 時点ではまだ対応中で修正版のリリースはされていないようです。</li>
+</ul>
+</li>
+</ul>
+
 ]]></content>
   </entry>
   
