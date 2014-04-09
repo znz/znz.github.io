@@ -4,7 +4,7 @@
   <title><![CDATA[Category: security | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/security/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-09T10:04:11+09:00</updated>
+  <updated>2014-04-10T01:08:56+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,99 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[CVE-2014-0160 での Cookie 漏洩]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-09-cve-2014-0160.html"/>
+    <updated>2014-04-09T23:55:46+09:00</updated>
+    <id>http://blog.n-z.jp/blog/cve-2014-0160</id>
+    <content type="html"><![CDATA[<p>影響範囲の一例として
+<a href="https://www.mattslifebytes.com/?p=533">Hijacking user sessions with the Heartbleed vulnerability</a>
+の実際にどういうデータが抜き取られてしまうのか、という例で
+<code>JSESSIONID</code>
+が見えているように Cookie が漏洩している可能性があります。</p>
+
+<!--more-->
+
+
+<h2>考えられる攻撃シナリオ</h2>
+
+<p><a href="http://www.exploit-db.com/exploits/32745/">OpenSSL TLS Heartbeat Extension &ndash; Memory Disclosure</a>
+を自分のサーバーに試した時に
+<code>mod-spdy-beta</code>
+が原因で脆弱性が残ったままになっていて、
+Rails アプリの Cookie が見えていました。</p>
+
+<p>そこで考えたのは上記のブログに書いてあるようにセッションハイジャックが可能だということでした。</p>
+
+<p>悪い状況を考えると、
+脆弱性の情報が公開されてから対策がされるまでの間に
+全世界の Web サーバーに Heartbleed の攻撃を仕掛けておいて、
+後でログを調べて、こういう Cookie のような情報があれば
+それを使って別途セッションハイジャックなどの別の攻撃をする、
+という可能性があります。</p>
+
+<h2>Rails での対処方法案</h2>
+
+<p><code>config/initializers/secret_token.rb</code> の <code>secret_token</code> を再生成して設定し直すという方法が考えられます。
+その際、ログインしているユーザーのセッションが無効になったり、
+Remember me で覚えさせていても忘れられたりするということが起きるので、
+ユーザーへの影響を考えて実施する必要がありそうです。</p>
+
+<p>また、データベースへ保存するデータの暗号化の鍵としても使っていたら、
+読めなくなってしまうので、そういう用途にも使っていたら、
+別の方法で既存の Cookie を無効にするしかなさそうです。</p>
+
+<h2>secure 属性を付けていても無関係</h2>
+
+<p>クライアントとの通信内容の残骸が漏洩してしまうので、
+Cookie に secure 属性を付けていても防げません。</p>
+
+<h2>アプリケーションサーバーが別プロセスでも無関係</h2>
+
+<p>apache+passenger や nginx+php-fpm のようにアプリケーションサーバーとフロントエンドの Web サーバーが別プロセスにわかれていても、
+HTTPS 向けに暗号化する前の平文のデータがフロントエンドの Web サーバーに残っていて、そこの情報が漏洩してしまうので、
+Cookie のようなクライアントに返す情報は影響を受けて漏洩している可能性があります。</p>
+
+<p>バックエンドのサーバーでしか読み込んでいなくて、フロントエンドには渡していない情報はこの経路では漏洩しません。</p>
+
+<p>例えば、典型的な Rails アプリの構成ではデータベースサーバーへ接続するためのユーザー名やパスワードはクライアントには渡さないので、この経路では漏洩しません。</p>
+
+<h2>フロントエンドサーバーの秘密鍵</h2>
+
+<p>既に情報収集していれば知って可能性が高いと思いますが、
+フロントエンドサーバーのプロセスが読み込んでいる情報にあたる SSL/TLS の秘密鍵は漏洩している可能性があります。</p>
+
+<p>きちんとした対処としては
+<a href="http://d.hatena.ne.jp/nekoruri/20140408/heartbleed">CVE-2014-0160 OpenSSL Heartbleed 脆弱性まとめ &ndash; めもおきば</a>
+にも書いてあるように</p>
+
+<ol>
+<li><em>秘密鍵から作り直して</em> 証明書を再発行</li>
+<li>過去の証明書を <em>失効</em></li>
+</ol>
+
+
+<p>の両方が必要です。</p>
+
+<h2>余談</h2>
+
+<p>SPDY とか使いたいから HTTPS にしてるだけで HTTP で通信してても良いような内容しか扱ってないサーバーなら (VirtualHost の他のホストも含めてという条件付きで)、放置でも良いのかもしれませんが、少なくとも次の証明書の更新の時には秘密鍵を作り直した方が良いように思います。</p>
+
+<h2>まとめ</h2>
+
+<p>外部から SSL/TLS 接続を受けるプロセスが持っている情報が漏洩している可能性がある、ということで、具体例として Cookie について少し詳しく考えてみました。</p>
+
+<p>簡単に言えば、脆弱性のある状態でクライアントと通信している内容はすべて漏洩している可能性がある、つまり HTTPS で通信していても HTTP と同じような機密性しかなかった可能性がある、と考えるのが良さそうです。</p>
+
+<p>つまりクライアントから送った情報も漏洩の可能性があるので、
+Heartbleed 脆弱性が残っているサーバーにはクレジットカード番号などの情報は
+送らない方が良い、ということになります。</p>
+
+<p>関連する話なので一緒に書いてしまったので、ちょっと紛らわしいですが、
+サーバーの秘密鍵の漏洩の可能性もフロントエンドサーバーの管理者は別途対応する必要があります。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[CVE-2014-0160 の OpenSSL の脆弱性対応]]></title>
@@ -133,7 +226,8 @@ stable (wheezy) だと影響があるようです。
 
 <p>2014-04-08 追記:
 <a href="http://undeadly.org/cgi?action=article&amp;sid=20140408063423">OpenSSH は影響を受けない</a>
-ようです。</p>
+ようです。
+(2014-04-09 23:55 追記: SSH の通信部分で OpenSSL を使っていないので、直接は影響を受けないというだけで、 PAM で LDAPS を使っている場合などは当然影響を受けます。)</p>
 
 <p>サーバー側では <code>/etc/ssh/ssh_host_*</code> を削除して <code>dpkg-reconfigure openssh-server</code> で再生成するのが良さそうです。</p>
 
