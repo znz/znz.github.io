@@ -4,7 +4,7 @@
   <title><![CDATA[Category: docker | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/docker/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-10T01:08:56+09:00</updated>
+  <updated>2014-04-13T00:46:05+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,106 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第3回 コンテナ型仮想化の情報交換会＠大阪 (コンテナ型VMや関連するカーネル等の技術が話題の勉強会)に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-12-lxcjp.html"/>
+    <updated>2014-04-12T22:23:56+09:00</updated>
+    <id>http://blog.n-z.jp/blog/lxcjp</id>
+    <content type="html"><![CDATA[<p><a href="http://atnd.org/events/46446">第3回 コンテナ型仮想化の情報交換会＠大阪 (コンテナ型VMや関連するカーネル等の技術が話題の勉強会)</a>
+に参加してきました。</p>
+
+<!--more-->
+
+
+<h2>全体の感想</h2>
+
+<p>全体的には LXC や Docker に限らず、
+Hyper-V 上での FreeBSD jail の話や Vagrant や CircleCI (LXC を使っている) などの話もあって、面白かったです。</p>
+
+<h2>会場</h2>
+
+<p>ちょっと早めに出発して、梅田から難波橋を通って堺筋を通って会場まで歩いていきました。
+場所もわかりやすくて交差点の名前と目的地のビルの名前をちゃんとチェックしていれば迷わずにたどり着けました。</p>
+
+<p>会場無線 LAN があったのですが、
+最初に接続した MacBook Air は問題なく繋がっていたのですが、
+後から追加でつなごうとした iPod touch は無線 LAN 自体は繋がっているのに APIPA の IP アドレスになっていて、
+DHCP の割り当て IP アドレスが足りなかったのではないかと思いました。</p>
+
+<h2>LXC</h2>
+
+<p>いろいろと知らないことも多くて勉強になったのですが、特に <code>veth</code> と <code>macvlan</code> の違いがよくわかっていなかったので、
+<code>veth</code> は作成しただけだと通信に使えなくてペアの片方をネットワークネームスペースに入れないと使えないというコンテナ用の機能で、
+<code>macvlan</code> は物理 NIC に別 MAC アドレスを付けて使うもの、
+というのがわかって良かったです。</p>
+
+<p>LXC という言葉がさすものが「カーネルのコンテナ機能」のときと「<code>lxc-start</code> などの LXC のユーザーランド」のことがある、というのは気をつける必要があると思いました。
+たとえば Docker 0.9 で LXC への依存がなくなったというのは <code>lxc-start</code> などを使わなくなって、システムコールを <code>libcontainer</code> という別ライブラリで直接呼んでカーネルのコンテナ機能を使うようになったなど。</p>
+
+<h2>FreeBSD jail</h2>
+
+<p>jail については存在は知っていたのですが、使ったことはなかったので、そういうものなのかと思ってみていました。</p>
+
+<h2>VagrantユーザのためのDocker入門</h2>
+
+<p>途中の質問にあった container と image の違いで
+<a href="http://docs.docker.io/en/latest/terms/image/">http://docs.docker.io/en/latest/terms/image/</a>
+に書いてある
+<code>In Docker terminology, a read-only Layer is called an image. An image never changes.</code>
+が根拠だと思うのですが、
+イメージはコンテナに名前をつけてリードオンリーにしたもの、という説明で
+今まで曖昧にしていた違いがちゃんとわかったように思いました。</p>
+
+<p>このブログの Docker 関連記事の中で一番人気の
+<a href="http://blog.n-z.jp/blog/2013-12-24-docker-rm.html">Dockerで不要になったコンテナやイメージを削除する</a>
+で割とコンテナとイメージを曖昧な感じで書いているのは、はっきりとは区別できていなかったからでした。</p>
+
+<p>Vagrant との使い分けも実際に両方使っている人の話だったので、非常に参考になりました。
+基本的には Vagrant も Docker も開発環境として使うという話でした。</p>
+
+<h2>Docker運用の観点からみたLXC</h2>
+
+<p>いろいろな話がありました。
+基本的には production 環境として使う話でした。</p>
+
+<h2>Docker の layer 数制限の話</h2>
+
+<p>休憩時間に話をしていたのですが layer の制限が 42 から 127 に増えたのは
+<a href="https://github.com/dotcloud/docker/pull/2897">Increase max image depth to 127</a>
+からで、
+理由は aufs の方で <code>CONFIG_AUFS_BRANCH_MAX_127</code> という設定を <code>y</code> にすると
+制限が 127 になるから、ということのようでした。</p>
+
+<p>懇親会の時にも話が出たのですが、
+<code>RUN</code> ごとにキャッシュがきくので、
+基本的には <code>Dockerfile</code> の変更を試している間は <code>RUN</code> ごとに細かくコマンドを並べて試行錯誤して、
+出来上がったら <code>&amp;&amp;</code> でつなげて一行の <code>RUN</code> にまとめるのが良さそう、
+という話でした。</p>
+
+<p>関連する話としては aufs の layer が重なっているのを git で merge するときのようにまとめたい、
+という意見に対して、
+<code>Dockerfile</code> をマスター (主) として扱って、
+イメージは捨てていつでも作り直せるもの (従) として扱う方が良い、
+だから、無理に aufs の差分イメージの中を直接いじってマージしようとせずに
+<code>Dockerfile</code> から再生成した方が良い、
+という話がありました。</p>
+
+<h2>CircleCI, Cucumber-Chef</h2>
+
+<p><code>CircleCI</code> と <code>ngrok</code> を組み合わせて、
+rebuild.fm で話があったブランチごとよりもさらに富豪的に、
+コミットごとに時間制限付きのサーバーを動かす話などがありました。</p>
+
+<p><code>CircleCI</code> の1時間という時間制限 (SSH で入れるようにして動かすと30分) と
+ローカルサーバーを外に公開できる <code>ngrok</code> というものを組み合わせて
+コミットごとに一定時間サーバーを動かしているという話でした。</p>
+
+<h2>終わり</h2>
+
+<p>他の発表の時間に余裕を持たせていて、パネルディスカッションはありませんでした。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[boot2dockerでdockerを試す]]></title>
@@ -626,336 +726,6 @@ trunk の nightly build などをしようと思ったら、
 <code>docker build</code> してくれる仕組みがあるので、
 <code>docker push</code> とうまく使い分けて
 公開可能なイメージはどんどん公開すると良いのではないでしょうか。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[dockerのWeb UI 3種類を比較してみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-15-compare-docker-web-ui.html"/>
-    <updated>2013-12-15T00:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/compare-docker-web-ui</id>
-    <content type="html"><![CDATA[<p><a href="http://www.docker.io/">docker</a> の Web UI を比較してみました。</p>
-
-<p>対象は以下の3種類の Web UI です。
-検索すると <code>DockerUI</code> 以外が見つけにくいようなので、
-まとめて紹介します。</p>
-
-<ul>
-<li><a href="https://github.com/shipyard/shipyard">Shipyard</a></li>
-<li><a href="https://github.com/dynport/dockland">Dockland</a></li>
-<li><a href="https://github.com/crosbymichael/dockerui">DockerUI</a></li>
-</ul>
-
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<p>先月末頃にも試したのですが、
-その時にはこんなに <code>docker</code> が流行るとは思っていなかったので、
-ちゃんとまとめていませんでした。</p>
-
-<p>そこで改めて新しいバージョンを試しつつ比較したいと思います。</p>
-
-<ul>
-<li>amd64 の Ubuntu 13.04 (raring)</li>
-<li>docker 0.7.1</li>
-<li>Shipyard version 0dc558</li>
-<li>Dockland 5a02db9d20</li>
-<li>DockerUI v0.3 (5094acc024)</li>
-</ul>
-
-
-<h2>Shipyard</h2>
-
-<h3>インストール</h3>
-
-<p><a href="https://github.com/shipyard/shipyard/wiki/QuickStart">QuickStart</a>
-の説明を参考にして <code>/etc/default/docker</code> を作成して <code>DOCKER_OPTS</code> を設定します。
-<code>-d</code> は <code>/etc/init/docker.conf</code> の方に書いてあるので不要です。</p>
-
-<p>VirtualBox の中で試したので、
-IP アドレスは <code>10.0.2.15</code> にしています。</p>
-
-<p><code>sh /etc/default/docker
-DOCKER_OPTS="-H tcp://10.0.2.15:4243 -H unix:///var/run/docker.sock"
-</code></p>
-
-<p>公開されている latest Shipyard image を使って起動します。</p>
-
-<p><code>console
-docker pull shipyard/shipyard
-docker run -i -t -d -p 80:80 -p 8000:8000 shipyard/shipyard
-</code></p>
-
-<p>バージョンアップの時も同様に <code>docker pull</code> でとってくると
-古いイメージがたまっていくので、
-<code>docker images</code> で一覧を確認して
-<code>REPOSITORY</code> や <code>TAG</code> が <code>&lt;none&gt;</code> になっているイメージを
-適当に <code>docker rmi</code> で削除すると良いと思います。</p>
-
-<h3>初期設定</h3>
-
-<p><code>http://127.0.0.1:8000/</code>
-を開いて</p>
-
-<ul>
-<li>username: <code>admin</code></li>
-<li>password: <code>shipyard</code></li>
-</ul>
-
-
-<p>でログインします。</p>
-
-<p>左の <code>Hosts</code> を開いて <code>Add</code> で <code>docker</code> のホストを追加します。
-例えば以下のような設定になります。</p>
-
-<ul>
-<li>Name: raring64</li>
-<li>Hostname: 10.0.2.15</li>
-<li>Public hostname: (空欄のまま)</li>
-<li>Port: 4243</li>
-</ul>
-
-
-<h3>設定変更など</h3>
-
-<p>以前は右上の <code>admin</code> から <code>administration</code> を選んで、
-Django administration から追加する必要があったと思うのですが、
-今は shipyard の方で設定できるようになっているようです。
-追加や有効・無効の切り替えや削除は出来ても、
-編集はまだ出来ないようなので、
-<code>Name</code> などを変更したい時は
-Django administration
-の方を開く必要があるようです。</p>
-
-<p>ログインパスワードの変更などのユーザー管理も
-Django administration
-の方を開く必要があるようです。</p>
-
-<h3>使用感</h3>
-
-<p>左の <code>Containers</code> や <code>Images</code> を開いてみて見ると何となく使い方がわかると思います。
-バージョンアップで機能が増えていきそうなので、細かくは書きませんが、
-ログが見えたりするのは便利です。</p>
-
-<p><code>Applications</code> は
-<a href="https://github.com/dotcloud/hipache">hipache</a>
-に関連しているようです。</p>
-
-<h2>Dockland</h2>
-
-<h3>バージョン</h3>
-
-<p>作りはじめで放置されているようで、
-6 commits しかなくて、
-latest commit も 2013 年 6 月になっています。
-そのためバージョンは前回と変わっていません。</p>
-
-<h3>依存関係</h3>
-
-<p>sinatra ベースで作られていて、
-graphviz も必要なので、
-クリーンな環境に入れるのは大変です。</p>
-
-<p>前回は docker のホスト側に入れたら大変だったので、
-今回は <code>Dockerfile</code> を使ってインストールしました。</p>
-
-<h3>インストール</h3>
-
-<p>README にあった <code>dockland.dockerfile</code>
-は古い docker のバージョンが対象のようなので、
-最近の docker にあわせて
-<code>EXPOSE</code> をコメントアウトするなどの
-変更をして使います。
-<code>APP_REVISION</code> のあたりは特定のリビジョンに固定して使いたい時のものだと思ったので、コメントアウトしています。</p>
-
-<p>```plain dockland.dockerfile</p>
-
-<h1>/tmp/dockland.dockerfile</h1>
-
-<p>FROM ubuntu:12.04</p>
-
-<p>RUN sed &rsquo;s/main$/main universe/&lsquo; -i /etc/apt/sources.list &amp;&amp; apt-get update &amp;&amp; apt-get upgrade -y
-RUN apt-get install ruby1.9.1 ruby1.9.1-dev build-essential git-core graphviz libssl-dev -y</p>
-
-<p>RUN git clone <a href="https://github.com/dynport/dockland.git">https://github.com/dynport/dockland.git</a> /app</p>
-
-<h1>this is to speed up updates</h1>
-
-<p>RUN cd /app &amp;&amp; gem install bundler &mdash;no-ri &mdash;no-rdoc &amp;&amp; bundle</p>
-
-<h1>change the revision to update your image</h1>
-
-<h1>ENV APP_REVISION 51f5445abeeb080568edeca248d68b29a66f1387</h1>
-
-<h1>RUN cd /app &amp;&amp; git fetch -q origin  &amp;&amp; git reset -q &mdash;hard $APP_REVISION &amp;&amp; git clean -q -d -x -f &amp;&amp; bundle</h1>
-
-<h1>EXPOSE 80</h1>
-
-<p>CMD cd /app &amp;&amp; bundle exec ./bin/dockland -h ${DOCKER_HOST-<a href="http://10.0.2.15:4243">http://10.0.2.15:4243</a>} -p 80
-```</p>
-
-<p>公開するポートの指定は
-docker 0.6.5 から
-<code>Dockerfile</code> の
-<code>EXPOSE</code> では出来なくなっていて、
-<code>docker run</code> の引数の <code>-p</code> で指定する必要があります。
-( <a href="http://blog.docker.io/2013/11/docker-0-7-docker-now-runs-on-any-linux-distribution/">Docker 0.7 runs on all Linux distributions – and 6 other major features | Docker Blog</a> の Feature 4: Advanced port redirects 参照)
-<code>EXPOSE 80</code> のような指定はまだ使えるように書いてあるのですが、
-ちゃんと使えたとしても外側のポートが可変なのは使いにくいので、
-起動する時に指定するようにしました。</p>
-
-<p><code>console
-docker build -t dockland:dockland - &lt; /tmp/dockland.dockerfile
-id=$(docker run -d -p 8080:80 dockland:dockland)
-curl -I http://127.0.0.1:8080
-</code></p>
-
-<p>docker 側の API の公開設定は shipyard の方で設定したのと同じです。</p>
-
-<h3>使用感</h3>
-
-<p><code>graphviz</code> が必須ということからわかるかもしれませんが、
-<code>docker images -viz</code> から生成できるイメージの有向グラフを使っています。
-上の例だと <code>http://127.0.0.1:8080/</code> を開くと
-矢印で繋がったイメージの ID 一覧が出てきて、
-楕円の中の ID をクリックするとイメージの詳細情報が表示できます。</p>
-
-<p>詳細ページには <code>DELETE</code> というボタンがあったり、
-History から祖先のイメージをたどれたりするだけで
-機能はほとんどありません。</p>
-
-<p><code>docker images -viz</code> の図を良い感じに見たい、
-という用途には良さそうです。</p>
-
-<h2>DockerUI</h2>
-
-<p>最後は DockerUI です。</p>
-
-<h3>インストール</h3>
-
-<p><code>console
-docker pull crosbymichael/dockerui
-docker run -d -p 9000:9000 crosbymichael/dockerui -e="http://10.0.2.15:4243"
-</code></p>
-
-<h3><code>-api-enable-cors</code> は必要?</h3>
-
-<p>DockerUI は docker 側の引数に <code>-api-enable-cors</code> が必要と書いていますが、
-ちょっと表示を試した感じでは付けていなくても動いていました。
-本当に必要なのでしょうか?</p>
-
-<h3>使用感</h3>
-
-<p>最初の画面で円グラフが表示されているなど、
-見た目は良く、
-前回試した時に比べて機能も増えているように感じました。</p>
-
-<p>認証がなかったり、 <code>-api-enable-cors</code> が必要と書いていたりして
-セキュリティ的に気になる点がありました。</p>
-
-<p>VM の中で動かすだけなので、セキュリティ的なことは気にしないとか、
-firewall などで別途セキュリティは確保できるという状態なら
-良いのではないでしょうか。</p>
-
-<h3>dokku 環境にインストール</h3>
-
-<p>もうちょっと調べていたところ、
-<a href="https://github.com/crosbymichael/dockerui/pull/14">Makes dockerui compatible with dokku</a>
-という変更が入っているようなので、
-<code>dokku</code> 環境では <code>docker pull</code> の代わりに
-<code>dokku</code> への <code>git push</code> で簡単に最新版を使えるようになるようです。</p>
-
-<p><code>dokku</code> への <code>git push</code> は Installing のところで少し時間がかかります。</p>
-
-<p>deploy 出来れば他の <code>dokku</code> に deploy したアプリと同じように
-<code>http://dockerui.deploy.127.0.0.1.xip.io</code>
-のような <code>dokku</code> で設定した URL で見えるようになります。</p>
-
-<p>参考のため、実際に試したログを載せておきます。
-<code>~/.ssh/config</code> で <code>raring64</code> という名前で <code>ssh</code> 接続できるようにしていて、
-<code>dokku</code> ユーザーに接続する必要があるので、
-<code>dokku@raring64</code> になっています。</p>
-
-<p>```console
-% git clone <a href="https://github.com/crosbymichael/dockerui">https://github.com/crosbymichael/dockerui</a>
-Cloning into &lsquo;dockerui&rsquo;&hellip;
-remote: Counting objects: 709, done.
-remote: Compressing objects: 100% (385/385), done.
-remote: Total 709 (delta 315), reused 705 (delta 314)
-Receiving objects: 100% (709/709), 2.50 MiB | 585.00 KiB/s, done.
-Resolving deltas: 100% (315/315), done.
-Checking connectivity&hellip; done.
-% cd dockerui
-% git remote add raring64 dokku@raring64:dockerui
-% git push raring64 master
-Counting objects: 705, done.
-Delta compression using up to 4 threads.
-Compressing objects: 100% (389/389), done.
-Writing objects: 100% (705/705), 2.50 MiB | 0 bytes/s, done.
-Total 705 (delta 313), reused 698 (delta 306)
-&mdash;&mdash;&ndash;> Cleaning up &hellip;
-&mdash;&mdash;&ndash;> Building dockerui &hellip;</p>
-
-<pre><code>   Go app detected
-</code></pre>
-
-<p>&mdash;&mdash;&ndash;> Installing Go 1.1.2&hellip; done</p>
-
-<pre><code>   Installing Virtualenv... done
-   Installing Mercurial... done
-   Installing Bazaar... done
-</code></pre>
-
-<p>&mdash;&mdash;&ndash;> Running: go get -tags heroku ./&hellip;
-&mdash;&mdash;&ndash;> Discovering process types</p>
-
-<pre><code>   Procfile declares types -&gt; web
-</code></pre>
-
-<p>&mdash;&mdash;&ndash;> Releasing dockerui &hellip;
-&mdash;&mdash;&ndash;> Deploying dockerui &hellip;
-=====> Application deployed:</p>
-
-<pre><code>   http://dockerui.deploy.127.0.0.1.xip.io
-</code></pre>
-
-<p>To dokku@raring64:dockerui
- * [new branch]      master &ndash;> master
-Killed by signal 1.
-% ssh dokku@raring64 config:set dockerui DOCKER_ENDPOINT=<a href="http://10.0.2.15:4243">http://10.0.2.15:4243</a>
-&mdash;&mdash;&ndash;> Setting config vars and restarting dockerui
-DOCKER_ENDPOINT: <a href="http://10.0.2.15:4243">http://10.0.2.15:4243</a>
-&mdash;&mdash;&ndash;> Releasing dockerui &hellip;
-&mdash;&mdash;&ndash;> Release complete!
-&mdash;&mdash;&ndash;> Deploying dockerui &hellip;
-&mdash;&mdash;&ndash;> Deploy complete!
-Killed by signal 1.
-```</p>
-
-<p>最初は pull request の説明にあった <code>config:add</code> で試していて、
-<code>ssh dokku@raring64 logs dockerui</code> で確認してみても
-<code>http: proxy error: unsupported protocol scheme ""</code>
-とログに出ているだけでうまく情報がとれていないと思ったら、
-<code>config:set</code> が正しい、というのが原因でした。</p>
-
-<h2>まとめ</h2>
-
-<p>以前に試した時は <code>Shipyard</code>
-が一番高機能で開発も活発に見えて良さそうに感じましたが、
-今は <code>DockerUI</code> も機能が増えていて、
-今後、どちらも主流になる可能性があるように感じました。</p>
-
-<p><code>DockerUI</code> の方は認証がなかったり、
-docker の設定に <code>-api-enable-cors</code> が必要と書いていたりするので、
-セキュリティを気にするのなら、
-<code>Shipyard</code> の方がお勧めできると思いました。</p>
-
-<p><code>Dockland</code> は <code>docker images -viz</code> を使っているというアイデアは
-良さそうに感じたので、ぜひ他の Web UI でも採用されると便利そうだと
-思いました。</p>
 ]]></content>
   </entry>
   

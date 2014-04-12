@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: lxcjp | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/lxcjp/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-04-13T00:46:05+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[第3回 コンテナ型仮想化の情報交換会＠大阪 (コンテナ型VMや関連するカーネル等の技術が話題の勉強会)に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-12-lxcjp.html"/>
+    <updated>2014-04-12T22:23:56+09:00</updated>
+    <id>http://blog.n-z.jp/blog/lxcjp</id>
+    <content type="html"><![CDATA[<p><a href="http://atnd.org/events/46446">第3回 コンテナ型仮想化の情報交換会＠大阪 (コンテナ型VMや関連するカーネル等の技術が話題の勉強会)</a>
+に参加してきました。</p>
+
+<!--more-->
+
+
+<h2>全体の感想</h2>
+
+<p>全体的には LXC や Docker に限らず、
+Hyper-V 上での FreeBSD jail の話や Vagrant や CircleCI (LXC を使っている) などの話もあって、面白かったです。</p>
+
+<h2>会場</h2>
+
+<p>ちょっと早めに出発して、梅田から難波橋を通って堺筋を通って会場まで歩いていきました。
+場所もわかりやすくて交差点の名前と目的地のビルの名前をちゃんとチェックしていれば迷わずにたどり着けました。</p>
+
+<p>会場無線 LAN があったのですが、
+最初に接続した MacBook Air は問題なく繋がっていたのですが、
+後から追加でつなごうとした iPod touch は無線 LAN 自体は繋がっているのに APIPA の IP アドレスになっていて、
+DHCP の割り当て IP アドレスが足りなかったのではないかと思いました。</p>
+
+<h2>LXC</h2>
+
+<p>いろいろと知らないことも多くて勉強になったのですが、特に <code>veth</code> と <code>macvlan</code> の違いがよくわかっていなかったので、
+<code>veth</code> は作成しただけだと通信に使えなくてペアの片方をネットワークネームスペースに入れないと使えないというコンテナ用の機能で、
+<code>macvlan</code> は物理 NIC に別 MAC アドレスを付けて使うもの、
+というのがわかって良かったです。</p>
+
+<p>LXC という言葉がさすものが「カーネルのコンテナ機能」のときと「<code>lxc-start</code> などの LXC のユーザーランド」のことがある、というのは気をつける必要があると思いました。
+たとえば Docker 0.9 で LXC への依存がなくなったというのは <code>lxc-start</code> などを使わなくなって、システムコールを <code>libcontainer</code> という別ライブラリで直接呼んでカーネルのコンテナ機能を使うようになったなど。</p>
+
+<h2>FreeBSD jail</h2>
+
+<p>jail については存在は知っていたのですが、使ったことはなかったので、そういうものなのかと思ってみていました。</p>
+
+<h2>VagrantユーザのためのDocker入門</h2>
+
+<p>途中の質問にあった container と image の違いで
+<a href="http://docs.docker.io/en/latest/terms/image/">http://docs.docker.io/en/latest/terms/image/</a>
+に書いてある
+<code>In Docker terminology, a read-only Layer is called an image. An image never changes.</code>
+が根拠だと思うのですが、
+イメージはコンテナに名前をつけてリードオンリーにしたもの、という説明で
+今まで曖昧にしていた違いがちゃんとわかったように思いました。</p>
+
+<p>このブログの Docker 関連記事の中で一番人気の
+<a href="http://blog.n-z.jp/blog/2013-12-24-docker-rm.html">Dockerで不要になったコンテナやイメージを削除する</a>
+で割とコンテナとイメージを曖昧な感じで書いているのは、はっきりとは区別できていなかったからでした。</p>
+
+<p>Vagrant との使い分けも実際に両方使っている人の話だったので、非常に参考になりました。
+基本的には Vagrant も Docker も開発環境として使うという話でした。</p>
+
+<h2>Docker運用の観点からみたLXC</h2>
+
+<p>いろいろな話がありました。
+基本的には production 環境として使う話でした。</p>
+
+<h2>Docker の layer 数制限の話</h2>
+
+<p>休憩時間に話をしていたのですが layer の制限が 42 から 127 に増えたのは
+<a href="https://github.com/dotcloud/docker/pull/2897">Increase max image depth to 127</a>
+からで、
+理由は aufs の方で <code>CONFIG_AUFS_BRANCH_MAX_127</code> という設定を <code>y</code> にすると
+制限が 127 になるから、ということのようでした。</p>
+
+<p>懇親会の時にも話が出たのですが、
+<code>RUN</code> ごとにキャッシュがきくので、
+基本的には <code>Dockerfile</code> の変更を試している間は <code>RUN</code> ごとに細かくコマンドを並べて試行錯誤して、
+出来上がったら <code>&amp;&amp;</code> でつなげて一行の <code>RUN</code> にまとめるのが良さそう、
+という話でした。</p>
+
+<p>関連する話としては aufs の layer が重なっているのを git で merge するときのようにまとめたい、
+という意見に対して、
+<code>Dockerfile</code> をマスター (主) として扱って、
+イメージは捨てていつでも作り直せるもの (従) として扱う方が良い、
+だから、無理に aufs の差分イメージの中を直接いじってマージしようとせずに
+<code>Dockerfile</code> から再生成した方が良い、
+という話がありました。</p>
+
+<h2>CircleCI, Cucumber-Chef</h2>
+
+<p><code>CircleCI</code> と <code>ngrok</code> を組み合わせて、
+rebuild.fm で話があったブランチごとよりもさらに富豪的に、
+コミットごとに時間制限付きのサーバーを動かす話などがありました。</p>
+
+<p><code>CircleCI</code> の1時間という時間制限 (SSH で入れるようにして動かすと30分) と
+ローカルサーバーを外に公開できる <code>ngrok</code> というものを組み合わせて
+コミットごとに一定時間サーバーを動かしているという話でした。</p>
+
+<h2>終わり</h2>
+
+<p>他の発表の時間に余裕を持たせていて、パネルディスカッションはありませんでした。</p>
+]]></content>
+  </entry>
+  
+</feed>

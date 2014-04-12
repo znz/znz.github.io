@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-10T01:08:56+09:00</updated>
+  <updated>2014-04-13T00:46:05+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,106 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第3回 コンテナ型仮想化の情報交換会＠大阪 (コンテナ型VMや関連するカーネル等の技術が話題の勉強会)に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-12-lxcjp.html"/>
+    <updated>2014-04-12T22:23:56+09:00</updated>
+    <id>http://blog.n-z.jp/blog/lxcjp</id>
+    <content type="html"><![CDATA[<p><a href="http://atnd.org/events/46446">第3回 コンテナ型仮想化の情報交換会＠大阪 (コンテナ型VMや関連するカーネル等の技術が話題の勉強会)</a>
+に参加してきました。</p>
+
+<!--more-->
+
+
+<h2>全体の感想</h2>
+
+<p>全体的には LXC や Docker に限らず、
+Hyper-V 上での FreeBSD jail の話や Vagrant や CircleCI (LXC を使っている) などの話もあって、面白かったです。</p>
+
+<h2>会場</h2>
+
+<p>ちょっと早めに出発して、梅田から難波橋を通って堺筋を通って会場まで歩いていきました。
+場所もわかりやすくて交差点の名前と目的地のビルの名前をちゃんとチェックしていれば迷わずにたどり着けました。</p>
+
+<p>会場無線 LAN があったのですが、
+最初に接続した MacBook Air は問題なく繋がっていたのですが、
+後から追加でつなごうとした iPod touch は無線 LAN 自体は繋がっているのに APIPA の IP アドレスになっていて、
+DHCP の割り当て IP アドレスが足りなかったのではないかと思いました。</p>
+
+<h2>LXC</h2>
+
+<p>いろいろと知らないことも多くて勉強になったのですが、特に <code>veth</code> と <code>macvlan</code> の違いがよくわかっていなかったので、
+<code>veth</code> は作成しただけだと通信に使えなくてペアの片方をネットワークネームスペースに入れないと使えないというコンテナ用の機能で、
+<code>macvlan</code> は物理 NIC に別 MAC アドレスを付けて使うもの、
+というのがわかって良かったです。</p>
+
+<p>LXC という言葉がさすものが「カーネルのコンテナ機能」のときと「<code>lxc-start</code> などの LXC のユーザーランド」のことがある、というのは気をつける必要があると思いました。
+たとえば Docker 0.9 で LXC への依存がなくなったというのは <code>lxc-start</code> などを使わなくなって、システムコールを <code>libcontainer</code> という別ライブラリで直接呼んでカーネルのコンテナ機能を使うようになったなど。</p>
+
+<h2>FreeBSD jail</h2>
+
+<p>jail については存在は知っていたのですが、使ったことはなかったので、そういうものなのかと思ってみていました。</p>
+
+<h2>VagrantユーザのためのDocker入門</h2>
+
+<p>途中の質問にあった container と image の違いで
+<a href="http://docs.docker.io/en/latest/terms/image/">http://docs.docker.io/en/latest/terms/image/</a>
+に書いてある
+<code>In Docker terminology, a read-only Layer is called an image. An image never changes.</code>
+が根拠だと思うのですが、
+イメージはコンテナに名前をつけてリードオンリーにしたもの、という説明で
+今まで曖昧にしていた違いがちゃんとわかったように思いました。</p>
+
+<p>このブログの Docker 関連記事の中で一番人気の
+<a href="http://blog.n-z.jp/blog/2013-12-24-docker-rm.html">Dockerで不要になったコンテナやイメージを削除する</a>
+で割とコンテナとイメージを曖昧な感じで書いているのは、はっきりとは区別できていなかったからでした。</p>
+
+<p>Vagrant との使い分けも実際に両方使っている人の話だったので、非常に参考になりました。
+基本的には Vagrant も Docker も開発環境として使うという話でした。</p>
+
+<h2>Docker運用の観点からみたLXC</h2>
+
+<p>いろいろな話がありました。
+基本的には production 環境として使う話でした。</p>
+
+<h2>Docker の layer 数制限の話</h2>
+
+<p>休憩時間に話をしていたのですが layer の制限が 42 から 127 に増えたのは
+<a href="https://github.com/dotcloud/docker/pull/2897">Increase max image depth to 127</a>
+からで、
+理由は aufs の方で <code>CONFIG_AUFS_BRANCH_MAX_127</code> という設定を <code>y</code> にすると
+制限が 127 になるから、ということのようでした。</p>
+
+<p>懇親会の時にも話が出たのですが、
+<code>RUN</code> ごとにキャッシュがきくので、
+基本的には <code>Dockerfile</code> の変更を試している間は <code>RUN</code> ごとに細かくコマンドを並べて試行錯誤して、
+出来上がったら <code>&amp;&amp;</code> でつなげて一行の <code>RUN</code> にまとめるのが良さそう、
+という話でした。</p>
+
+<p>関連する話としては aufs の layer が重なっているのを git で merge するときのようにまとめたい、
+という意見に対して、
+<code>Dockerfile</code> をマスター (主) として扱って、
+イメージは捨てていつでも作り直せるもの (従) として扱う方が良い、
+だから、無理に aufs の差分イメージの中を直接いじってマージしようとせずに
+<code>Dockerfile</code> から再生成した方が良い、
+という話がありました。</p>
+
+<h2>CircleCI, Cucumber-Chef</h2>
+
+<p><code>CircleCI</code> と <code>ngrok</code> を組み合わせて、
+rebuild.fm で話があったブランチごとよりもさらに富豪的に、
+コミットごとに時間制限付きのサーバーを動かす話などがありました。</p>
+
+<p><code>CircleCI</code> の1時間という時間制限 (SSH で入れるようにして動かすと30分) と
+ローカルサーバーを外に公開できる <code>ngrok</code> というものを組み合わせて
+コミットごとに一定時間サーバーを動かしているという話でした。</p>
+
+<h2>終わり</h2>
+
+<p>他の発表の時間に余裕を持たせていて、パネルディスカッションはありませんでした。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[CVE-2014-0160 での Cookie 漏洩]]></title>
@@ -3263,95 +3363,6 @@ bootstrap-custom.css.scss の内容は以下のようにしました。</p>
 の代わりに
 <code>@import 'bootstrap-custom';</code>
 で使うことを想定しているようです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[rails_best_practices 1.15.0でtryが壊れた]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-02-05-rails-best-practices-1-15-0-broken.html"/>
-    <updated>2014-02-05T10:35:06+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rails-best-practices-1-15-0-broken</id>
-    <content type="html"><![CDATA[<p>今日の <code>bundle update</code> をしてみたところ、開発環境での devise でのログイン時に <code>devise (3.2.2) lib/devise/hooks/csrf_cleaner.rb, line 3</code> で <code>wrong number of arguments (2 for 1)</code> という <code>ArgumentError</code> が発生するようになりました。</p>
-
-<p>その原因調査方法の記録です。</p>
-
-<!--more-->
-
-
-<p>例外が発生した行は以下の内容で、今まで問題なく動いていたし、特に問題はなさそうだったので、他の gem の影響だということがわかりました。</p>
-
-<figure class='code'><figcaption><span>lib/devise/hooks/csrf_cleaner.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">Warden</span><span class="p">:</span><span class="ss">:Manager</span><span class="o">.</span><span class="n">after_authentication</span> <span class="k">do</span> <span class="o">|</span><span class="n">record</span><span class="p">,</span> <span class="n">warden</span><span class="p">,</span> <span class="n">options</span><span class="o">|</span>
-</span><span class='line'>  <span class="k">if</span> <span class="no">Devise</span><span class="o">.</span><span class="n">clean_up_csrf_token_on_authentication</span>
-</span><span class='line'>    <span class="n">warden</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">try</span><span class="p">(</span><span class="ss">:delete</span><span class="p">,</span> <span class="ss">:_csrf_token</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>ソースコードを追いかけるのは難しそうだったので、 better_errors の live shell を使って調査しました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">&gt;</span>&gt; env.keys
-</span><span class='line'><span class="go">=&gt; 略</span>
-</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>
-</span><span class='line'><span class="go">=&gt; Warden::Proxy:70192217236640 @config={:default_scope=&gt;:user, :scope_defaults=&gt;{}, :default_strategies=&gt;{:user=&gt;[:rememberable, :database_authenticatable]}, :intercept_401=&gt;false, :failure_app=&gt;#&lt;Devise::Delegator:0x007fadcc44d438&gt;}</span>
-</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request
-</span><span class='line'><span class="go">=&gt; #&lt;ActionDispatch::Request:0x007fadd10c4dc0 略&gt;</span>
-</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session
-</span><span class='line'><span class="go">=&gt; {&quot;session_id&quot;=&gt;&quot;略&quot;, &quot;user_return_to&quot;=&gt;&quot;/&quot;, &quot;_csrf_token&quot;=&gt;&quot;略&quot;, &quot;warden.user.user.key&quot;=&gt;[[8], &quot;$2a$10$略&quot;]}</span>
-</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.try<span class="o">(</span>:delete, :_csrf_token<span class="o">)</span>
-</span><span class='line'><span class="go">!! #&lt;ArgumentError: wrong number of arguments (2 for 1)&gt;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>env["warden"]</code> 経由で再現しました。</p>
-
-<p>次に原因を探るために <code>arity</code> を調べました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.methods.grep /delete/
-</span><span class='line'><span class="go">=&gt; [:delete, :delete_if]</span>
-</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.method<span class="o">(</span><span class="s2">&quot;delete&quot;</span><span class="o">)</span>
-</span><span class='line'><span class="go">=&gt; #&lt;Method: Rack::Session::Abstract::SessionHash#delete&gt;</span>
-</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.method<span class="o">(</span><span class="s2">&quot;delete&quot;</span><span class="o">)</span>.arity
-</span><span class='line'><span class="go">=&gt; 1</span>
-</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.method<span class="o">(</span><span class="s2">&quot;try&quot;</span><span class="o">)</span>
-</span><span class='line'><span class="go">=&gt; #&lt;Method: Rack::Session::Abstract::SessionHash(Object)#try&gt;</span>
-</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.method<span class="o">(</span><span class="s2">&quot;try&quot;</span><span class="o">)</span>.arity
-</span><span class='line'><span class="go">=&gt; 1</span>
-</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.method<span class="o">(</span><span class="s2">&quot;try&quot;</span><span class="o">)</span>.source_location
-</span><span class='line'><span class="go">=&gt; [&quot;略/rails_best_practices-1.15.0/lib/rails_best_practices/core_ext/object.rb&quot;, 7]</span>
-</span><span class='line'><span class="gp">&gt;</span>&gt;
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>rails_best_practices 1.15.0 が原因とわかったので issues を確認すると既に同様の現象の報告があったので、<a href="https://github.com/railsbp/rails_best_practices/issues/202#issuecomment-34129010">コメントしておきました</a>。</p>
 ]]></content>
   </entry>
   
