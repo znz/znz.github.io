@@ -4,7 +4,7 @@
   <title><![CDATA[Category: debian | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/debian/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-13T00:46:05+09:00</updated>
+  <updated>2014-04-16T23:05:27+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,484 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[OpenSSL/GnuTLS での CSR の作り方]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-16-new-csr.html"/>
+    <updated>2014-04-16T10:09:24+09:00</updated>
+    <id>http://blog.n-z.jp/blog/new-csr</id>
+    <content type="html"><![CDATA[<p>サーバー証明書を発行してもらう時などに毎回調べつつ CSR を作成しているので、
+GnuTLS と OpenSSL を使った方法をまとめてみました。</p>
+
+<!--more-->
+
+
+<h2>パッケージインストール</h2>
+
+<p>OpenSSL の方は入っていることが多いと思いますが、入っていなければ <code>openssl</code> パッケージをいれておきます。</p>
+
+<p>GnuTLS の方は Debian や Ubuntu の場合は <code>gnutls-bin</code> パッケージに <code>gnutls-cli</code> コマンドなどが入っています。
+RHEL などでは <code>gnutls-utils</code> というパッケージに入っているらしいです。</p>
+
+<h2>certtool コマンド</h2>
+
+<p><code>certtool</code> コマンドは Mac OS X にもありますが、 GnuTLS のものとは別物です。
+ここで説明しているのは GnuTLS の <code>certtool</code> コマンドです。</p>
+
+<h2>秘密鍵作成</h2>
+
+<p>秘密鍵の生成はランダムな情報を元に生成するので、ビット数やエントロピーの量に応じて時間がかかります。
+デスクトップマシンなどではマウスを動かすなどの方法でエントロピーを増やすことが出来るかもしれません。</p>
+
+<p>作成されるファイルのパーミッションなどを考えると暗号化しないなら GnuTLS の
+<code>certtool --generate-privkey --bits 4096 --outfile example.key</code>
+の方法がオススメです。</p>
+
+<h3>GnuTLS</h3>
+
+<p>GnuTLS の <code>certtool</code> コマンドでは <code>--generate-privkey</code> で秘密鍵を作成できます。
+<code>--bits</code> で鍵のビット数を指定しないと squeeze だと 2048 ビット、 precise や wheezy だと 2432 ビットになりました。
+ファイルのパーミッションも <code>-rw-------</code> (600) で作成されるので、そのまま使えます。</p>
+
+<p><code>console gnutls
+$ certtool --generate-privkey --outfile example-tls.key
+Generating a 2432 bit RSA private key...
+</code></p>
+
+<p><code>console gnutls
+$ certtool --generate-privkey --bits 4096 --outfile example-tls.key
+Generating a 4096 bit RSA private key...
+</code></p>
+
+<h3>OpenSSL</h3>
+
+<p>OpenSSL では <code>genrsa</code> サブコマンドで生成します。
+OpenSSL 1.0.0 では <code>genpkey</code> サブコマンドになっているようですが、
+<code>genrsa</code> もまだ使えるので、以下は <code>genrsa</code> だけ書いています。</p>
+
+<p>ビット数を指定しないと squeeze だと 1024 ビット、 precise や wheezy だと 512 ビットになりました。
+また、そのままだとパーミッションが <code>-rw-rw-r--</code> (664) で生成されるので、あらかじめパーミッションを設定したファイルを用意しておいて上書きさせるか、すぐに <code>chmod</code> で変更しておいた方が良さそうです。</p>
+
+<p><code>console openssl
+$ touch example-ssl.key
+$ chmod 600 example-ssl.key
+$ openssl genrsa -out example-ssl.key
+Generating RSA private key, 512 bit long modulus
+....++++++++++++
+.........................++++++++++++
+e is 65537 (0x10001)
+</code></p>
+
+<p><code>console openssl
+$ touch example-ssl.key
+$ chmod 600 example-ssl.key
+$ openssl genrsa -out example-ssl.key 4096
+Generating RSA private key, 4096 bit long modulus
+......................................................++
+...........++
+e is 65537 (0x10001)
+</code></p>
+
+<p>ネット上見つかる情報では <code>-des3</code> などで生成したファイルを一度暗号化して、
+サーバーの起動時に不要になるようにすぐに外すような例もあるようですが、
+そんなことをするぐらいなら最初から暗号化せずに生成すれば良いと思います。</p>
+
+<p>暗号化した状態のファイルを別途バックアップするなどの目的があるのなら、
+意味があると思いますが、
+暗号化した状態のファイルを残さないのなら単なる無駄だと思います。</p>
+
+<h2>秘密鍵の内容確認</h2>
+
+<p>秘密鍵の内容を確認することはあまりないと思いますが、
+<code>openssl rsa -in example.key -text -noout</code>
+の方法がオススメです。</p>
+
+<h3>OpenSSL</h3>
+
+<p>OpenSSL で秘密鍵の内容を確認するには <code>rsa</code> サブコマンドを使います。
+<code>-text</code> で内容全体の表示で <code>-noout</code> は <code>-----BEGIN RSA PRIVATE KEY-----</code> から <code>-----END RSA PRIVATE KEY-----</code> を表示しないという意味です。
+秘密鍵本体の前にテキストの説明がついたものも元の秘密鍵と同様に扱えるようなので、
+デフォルトでは元の内容も出力するようになっているのだと思います。</p>
+
+<p>```console openssl
+$ openssl rsa -in example-ssl.key -text -noout
+Private-Key: (4096 bit)
+modulus:</p>
+
+<pre><code>00:cb:35:ec:f6:00:5a:75:d7:55:14:f8:55:91:1a:
+(略)
+</code></pre>
+
+<p>publicExponent: 65537 (0x10001)
+privateExponent:</p>
+
+<pre><code>4d:86:de:47:a0:2c:e2:e6:6b:2c:5b:ed:f1:35:10:
+(略)
+</code></pre>
+
+<p>prime1:</p>
+
+<pre><code>00:ef:49:b3:f8:4c:1e:a9:13:a9:fb:86:7e:80:7a:
+(略)
+</code></pre>
+
+<p>prime2:</p>
+
+<pre><code>00:d9:67:2f:e1:4c:13:78:fa:dd:2b:7a:3e:f5:68:
+(略)
+</code></pre>
+
+<p>exponent1:</p>
+
+<pre><code>00:ba:18:ee:ff:a7:6b:9d:01:2f:0c:f0:0f:88:29:
+(略)
+</code></pre>
+
+<p>exponent2:</p>
+
+<pre><code>52:93:94:27:32:5b:4f:1f:92:74:9a:39:61:c3:ae:
+(略)
+</code></pre>
+
+<p>coefficient:</p>
+
+<pre><code>44:e9:a2:de:87:e7:2d:f0:57:58:d6:fc:85:20:df:
+(略)
+</code></pre>
+
+<p>```</p>
+
+<h3>GnuTLS</h3>
+
+<p>GnuTLS の <code>certtool</code> で秘密鍵の内容を確認するには <code>-k</code> (<code>--key-info</code>) を使います。
+<code>openssl</code> の <code>-noout</code> 相当のオプションは見つけられませんでした。</p>
+
+<p>```console gnutls
+$ certtool -k &mdash;infile example-tls.key
+Public Key Info:</p>
+
+<pre><code>    Public Key Algorithm: RSA
+    Key Security Level: High
+</code></pre>
+
+<p>modulus:</p>
+
+<pre><code>    00:da:45:da:ca:13:ac:59:43:55:87:68:04:16:1a:
+    (略)
+</code></pre>
+
+<p>public exponent:</p>
+
+<pre><code>    01:00:01:
+</code></pre>
+
+<p>private exponent:</p>
+
+<pre><code>    3c:5b:18:96:cc:3d:da:28:fe:5b:84:ed:ac:56:e2:
+    (略)
+</code></pre>
+
+<p>prime1:</p>
+
+<pre><code>    00:dc:f3:92:13:d5:c7:cf:bc:9f:76:b3:f6:a2:60:
+    (略)
+</code></pre>
+
+<p>prime2:</p>
+
+<pre><code>    00:fc:e5:83:0e:2e:d4:a1:be:37:bf:05:6e:c3:d3:
+    (略)
+</code></pre>
+
+<p>coefficient:</p>
+
+<pre><code>    63:74:e3:95:9e:d6:6c:7d:d9:2d:ad:45:f8:0b:1a:
+    (略)
+</code></pre>
+
+<p>exp1:</p>
+
+<pre><code>    00:a1:1d:a7:9e:79:1c:2b:da:42:79:bf:7f:10:26:
+    (略)
+</code></pre>
+
+<p>exp2:</p>
+
+<pre><code>    00:b3:be:9c:ab:53:f5:a5:10:01:a7:2f:41:4e:c5:
+    (略)
+    c4:31:
+</code></pre>
+
+<p>Public Key ID: 45:44:BC:C4:BB:95:24:97:5D:C2:95:BF:27:95:02:2C:50:09:9E:35</p>
+
+<p>&mdash;&mdash;-BEGIN RSA PRIVATE KEY&mdash;&mdash;&ndash;
+(略)
+&mdash;&mdash;-END RSA PRIVATE KEY&mdash;&mdash;&ndash;</p>
+
+<p>```</p>
+
+<h2>CSR 作成と内容確認</h2>
+
+<p>OpenSSL は <code>openssl req</code> で作成も内容の確認も出来ます。
+GnuTLS の <code>certtool</code> は <code>-q</code> (<code>--generate-request</code>) で作成して
+<code>--crq-info</code> で内容を確認できます。</p>
+
+<p>以下の例ではそれぞれで作成して、両方で内容を確認しています。</p>
+
+<h3>OpenSSL</h3>
+
+<p>OpenSSL では <code>C</code> と <code>ST</code> と <code>O</code> にデフォルト値が入っていて、
+対話的に作成しつつ空欄にしたい時は
+別途 <code>openssl.cnf</code> を用意する必要がありそうです。</p>
+
+<p>```console openssl
+$ openssl req -new -key example-ssl.key -out example-ssl.csr
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,</p>
+
+<h2>If you enter &lsquo;.&rsquo;, the field will be left blank.</h2>
+
+<p>Country Name (2 letter code) [AU]:JP
+State or Province Name (full name) [Some-State]:Osaka
+Locality Name (eg, city) []:
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:
+Organizational Unit Name (eg, section) []:
+Common Name (e.g. server FQDN or YOUR name) []:ssl.example.jp
+Email Address []:</p>
+
+<p>Please enter the following &lsquo;extra&rsquo; attributes
+to be sent with your certificate request
+A challenge password []:
+An optional company name []:
+$ openssl req -in example-ssl.csr -text -noout
+Certificate Request:</p>
+
+<pre><code>Data:
+    Version: 0 (0x0)
+    Subject: C=JP, ST=Osaka, O=Internet Widgits Pty Ltd, CN=ssl.example.jp
+    Subject Public Key Info:
+        Public Key Algorithm: rsaEncryption
+            Public-Key: (4096 bit)
+            Modulus:
+                00:cb:35:ec:f6:00:5a:75:d7:55:14:f8:55:91:1a:
+                (略)
+            Exponent: 65537 (0x10001)
+    Attributes:
+        a0:00
+Signature Algorithm: sha1WithRSAEncryption
+     4f:1a:a7:57:9f:88:f3:17:23:aa:51:12:11:ff:c0:24:31:4c:
+     (略)
+</code></pre>
+
+<p>$ certtool &mdash;crq-info &mdash;infile example-ssl.csr
+PKCS #10 Certificate Request Information:</p>
+
+<pre><code>    Version: 1
+    Subject: C=JP,ST=Osaka,O=Internet Widgits Pty Ltd,CN=ssl.example.jp
+    Subject Public Key Algorithm: RSA
+            Modulus (bits 4096):
+                    cb:35:ec:f6:00:5a:75:d7:55:14:f8:55:91:1a:9b:83
+                    (略)
+            Exponent:
+                    01:00:01
+</code></pre>
+
+<p>Other Information:</p>
+
+<pre><code>    Public Key Id:
+            c14459bdb79e6b71e6303e4ffd9c7ab43dc9b9df
+</code></pre>
+
+<p>&mdash;&mdash;-BEGIN NEW CERTIFICATE REQUEST&mdash;&mdash;&ndash;
+(略)
+&mdash;&mdash;-END NEW CERTIFICATE REQUEST&mdash;&mdash;&ndash;
+```</p>
+
+<h3>GnuTLS</h3>
+
+<p>GnuTLS ではテンプレートファイルを作成しておいて <code>--template</code> で指定する方法が多いようですが、
+対話的にも作成できました。
+<code>Subject</code> を <code>CN</code> だけにするのは OpenSSL より簡単に出来たのですが、
+<code>Requested Extensions</code> が設定されるようなので、
+不要な場合には困りそうです。</p>
+
+<p>```console gnutls
+$ certtool -q &mdash;load-privkey example-tls.key &mdash;outfile example-tls.csr
+Generating a PKCS #10 certificate request&hellip;
+Country name (2 chars):
+Organization name:
+Organizational unit name:
+Locality name:
+State or province name:
+Common name: tls.example.jp
+UID:
+Enter a dnsName of the subject of the certificate:
+Enter the IP address of the subject of the certificate:
+Enter the e-mail of the subject of the certificate:
+Enter a challenge password:
+Does the certificate belong to an authority? (y/N):
+Will the certificate be used for signing (DHE and RSA-EXPORT ciphersuites)? (y/N):
+Will the certificate be used for encryption (RSA ciphersuites)? (y/N):
+Is this a TLS web client certificate? (y/N):
+Is this also a TLS web server certificate? (y/N):
+$ openssl req -in example-tls.csr -text -noout
+Certificate Request:</p>
+
+<pre><code>Data:
+    Version: 0 (0x0)
+    Subject: CN=tls.example.jp
+    Subject Public Key Info:
+        Public Key Algorithm: rsaEncryption
+            Public-Key: (4096 bit)
+            Modulus:
+                00:da:45:da:ca:13:ac:59:43:55:87:68:04:16:1a:
+                (略)
+            Exponent: 65537 (0x10001)
+    Attributes:
+    Requested Extensions:
+        X509v3 Basic Constraints: critical
+            CA:FALSE
+        X509v3 Key Usage: critical
+            Digital Signature
+Signature Algorithm: sha1WithRSAEncryption
+     cb:71:d2:c9:a2:97:14:74:f0:63:69:6b:36:31:ff:ce:f2:a0:
+     (略)
+</code></pre>
+
+<p>$ certtool &mdash;crq-info &mdash;infile example-tls.csr
+PKCS #10 Certificate Request Information:</p>
+
+<pre><code>    Version: 1
+    Subject: CN=tls.example.jp
+    Subject Public Key Algorithm: RSA
+            Modulus (bits 4096):
+                    da:45:da:ca:13:ac:59:43:55:87:68:04:16:1a:09:41
+                    (略)
+            Exponent:
+                    01:00:01
+    Attributes:
+            Extensions:
+                    Basic Constraints (critical):
+                            Certificate Authority (CA): FALSE
+                    Key Usage (critical):
+                            Digital signature.
+</code></pre>
+
+<p>Other Information:</p>
+
+<pre><code>    Public Key Id:
+            4544bcc4bb9524975dc295bf2795022c50099e35
+</code></pre>
+
+<p>&mdash;&mdash;-BEGIN NEW CERTIFICATE REQUEST&mdash;&mdash;&ndash;
+(略)
+&mdash;&mdash;-END NEW CERTIFICATE REQUEST&mdash;&mdash;&ndash;
+```</p>
+
+<h2>まとめて作成</h2>
+
+<p>CSR の生成の時に秘密鍵を指定しないと、
+CSR と一緒に秘密鍵を生成できるようです。</p>
+
+<h3>OpenSSL</h3>
+
+<p><code>openssl req -new</code> で <code>-key</code> の代わりに <code>-newkey</code> などを指定すると CSR と一緒に秘密鍵も生成できます。
+この場合もそのままだとパーミッションが <code>-rw-rw-r--</code> (664) になるようなので、注意が必要です。
+<code>-nodes</code> を付けないと暗号化するためのパスフレーズを要求されます。</p>
+
+<p>```console openssl
+$ openssl req -new -newkey rsa:4096 -nodes -keyout server.key -out server.csr
+Generating a 4096 bit RSA private key
+&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;++
+&hellip;&hellip;++</p>
+
+<h2>writing new private key to &lsquo;server.key&rsquo;</h2>
+
+<p>You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,</p>
+
+<h2>If you enter &lsquo;.&rsquo;, the field will be left blank.</h2>
+
+<p>Country Name (2 letter code) [AU]:JP
+State or Province Name (full name) [Some-State]:Osaka
+Locality Name (eg, city) []:
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:
+Organizational Unit Name (eg, section) []:
+Common Name (e.g. server FQDN or YOUR name) []:ssl.example.jp
+Email Address []:</p>
+
+<p>Please enter the following &lsquo;extra&rsquo; attributes
+to be sent with your certificate request
+A challenge password []:
+An optional company name []:
+```</p>
+
+<h3>GnuTLS</h3>
+
+<p><code>certtool -q</code> で <code>--load-privkey</code> を指定しないと秘密鍵も一緒に生成するようです。
+出力は <code>--outfile</code> で指定したファイルにまとめて入ってしまって、
+使い勝手は良くないので、個別に生成した方が良さそうです。</p>
+
+<p>```console gnutls
+$ certtool -q &mdash;outfile out.txt
+Generating a PKCS #10 certificate request&hellip;
+Generating a 2432 bit RSA private key&hellip;
+Country name (2 chars):
+Organization name:
+Organizational unit name:
+Locality name:
+State or province name:
+Common name: tls.example.jp
+UID:
+Enter a dnsName of the subject of the certificate:
+Enter the IP address of the subject of the certificate:
+Enter the e-mail of the subject of the certificate:
+Enter a challenge password:
+Does the certificate belong to an authority? (y/N):
+Will the certificate be used for signing (DHE and RSA-EXPORT ciphersuites)? (y/N):
+Will the certificate be used for encryption (RSA ciphersuites)? (y/N):
+Is this a TLS web client certificate? (y/N):
+Is this also a TLS web server certificate? (y/N):
+$ cat out.txt
+&mdash;&mdash;-BEGIN RSA PRIVATE KEY&mdash;&mdash;&ndash;
+(略)
+&mdash;&mdash;-END RSA PRIVATE KEY&mdash;&mdash;&ndash;
+PKCS #10 Certificate Request Information:</p>
+
+<pre><code>    Version: 1
+    Subject: CN=tls.example.jp
+    Subject Public Key Algorithm: RSA
+            Modulus (bits 2432):
+                    f4:ff:66:e8:c6:19:ab:7b:39:e3:72:ff:ee:13:fa:cf
+                    (略)
+            Exponent:
+                    01:00:01
+    Attributes:
+            Extensions:
+                    Basic Constraints (critical):
+                            Certificate Authority (CA): FALSE
+                    Key Usage (critical):
+                            Digital signature.
+</code></pre>
+
+<p>Other Information:</p>
+
+<pre><code>    Public Key Id:
+            61c9cef12d691e3373f71ad3a82d1ac4c4b71793
+</code></pre>
+
+<p>&mdash;&mdash;-BEGIN NEW CERTIFICATE REQUEST&mdash;&mdash;&ndash;
+(略)
+&mdash;&mdash;-END NEW CERTIFICATE REQUEST&mdash;&mdash;&ndash;
+```</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[CVE-2014-0160 の OpenSSL の脆弱性対応]]></title>
@@ -662,50 +1140,6 @@ docker のイメージではなく tarball を作成します。
 <p>目的によっては <code>variant</code> を変更したり、
 <code>include</code> でインストールするパッケージを増やしておくだけでも
 便利になると思います。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[mailmanでDKIM-Signatureヘッダを削除する]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-11-mailman-strip-dkim-signature.html"/>
-    <updated>2013-12-11T12:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/mailman-strip-dkim-signature</id>
-    <content type="html"><![CDATA[<p>fml から移行した mailman で Subject の書き換える設定をしていると、
-元の <code>DKIM-Signature</code> が残っていると受け取った側で
-メールを改ざんしているのと区別がつかないので、
-<code>DKIM</code> の検証に失敗してしまいます。</p>
-
-<p>そこで mailman で <code>DKIM-Signature</code> を削除するように設定しました。</p>
-
-<!--more-->
-
-
-<h2>mailman の設定</h2>
-
-<p><code>REMOVE_DKIM_HEADERS</code> という設定があったので、
-<code>/etc/mailman/mm_cfg.py</code> の末尾に</p>
-
-<p><code>
-REMOVE_DKIM_HEADERS = Yes
-</code></p>
-
-<p>という設定を追加して、
-<code>sudo service mailman restart</code>
-しました。</p>
-
-<p><code>mm_cfg.py</code> での設定なので、
-ML 個別の設定ではなく
-mailman 全体の設定になるようです。</p>
-
-<h2>参考</h2>
-
-<p><a href="https://bugs.launchpad.net/mailman/+bug/557493">Bug #557493 “Mailman must not strip DKIM-Signature headers” : Bugs : GNU Mailman</a>
-という話があって、設定が追加されたようです。</p>
-
-<p><code>mm_cfg.py</code> で設定できる項目の一覧は
-<code>/usr/lib/mailman/Mailman/Defaults.py</code>
-にあります。
-このファイルを良く見ていれば、もっと早くこの設定項目に気付けたのかもしれません。</p>
 ]]></content>
   </entry>
   
