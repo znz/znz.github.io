@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: vagrant | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/vagrant/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-04-21T23:35:45+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Vagrant で Ubuntu 14.04 を試す]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-18-ubuntu-1404-vagrant.html"/>
+    <updated>2014-04-18T13:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ubuntu-1404-vagrant</id>
+    <content type="html"><![CDATA[<p>Vagrant で Ubuntu 14.04 LTS (trusty) を試しました。</p>
+
+<!--more-->
+
+
+<h2>Vagrantfile 作成</h2>
+
+<p>まず <code>Vagrantfile</code> を作成します。
+box ファイルの URL は
+<a href="https://cloud-images.ubuntu.com/vagrant/trusty/">https://cloud-images.ubuntu.com/vagrant/trusty/</a>
+から探します。
+current にするといつのイメージかわかりにくいので、
+日付の URL と box 名を指定しています。</p>
+
+<p><a href="https://cloud-images.ubuntu.com/vagrant/">https://cloud-images.ubuntu.com/vagrant/</a>
+には
+<code>Ubuntu Server 14.04 LTS (Trusty Tahr) daily builds</code>
+と書いてあるのに 20140417 と 20140418 の前が 20140221 と 20140222 になっていて
+daily ではなさそうに見えるのですが、
+リリース前は更新を止めていただけなのかもしれません。</p>
+
+<p><code>console
+% mkdir trusty
+% cd trusty
+% vagrant init
+A `Vagrantfile` has been placed in this directory. You are now
+ready to `vagrant up` your first virtual environment! Please read
+the comments in the Vagrantfile as well as documentation on
+`vagrantup.com` for more information on using Vagrant.
+% vi Vagrantfile
+(config.vm.box と config.vm.box_url を設定)
+% egrep '^ *[^ #]' Vagrantfile
+VAGRANTFILE_API_VERSION = "2"
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.box = "trusty-amd64-20140418"
+  config.vm.box_url = "https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box"
+end
+</code></p>
+
+<p>この段階ではファイルとディレクトリを削除すれば元に戻せます。</p>
+
+<h2>box の追加と起動</h2>
+
+<p>初回の <code>vagrant up</code> は box のダウンロードとインストールもするので
+時間がかかります。</p>
+
+<p>```console
+% vagrant up
+Bringing machine &lsquo;default&rsquo; up with &lsquo;virtualbox&rsquo; provider&hellip;
+==> default: Box &lsquo;trusty-amd64-20140418&rsquo; could not be found. Attempting to find and install&hellip;</p>
+
+<pre><code>default: Box Provider: virtualbox
+default: Box Version: &gt;= 0
+</code></pre>
+
+<p>==> default: Adding box &lsquo;trusty-amd64-20140418&rsquo; (v0) for provider: virtualbox</p>
+
+<pre><code>default: Downloading: https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box
+</code></pre>
+
+<p>==> default: Box download is resuming from prior download progress
+==> default: Successfully added box &lsquo;trusty-amd64-20140418&rsquo; (v0) for &lsquo;virtualbox&rsquo;!
+==> default: Importing base box &lsquo;trusty-amd64-20140418&rsquo;&hellip;
+==> default: Matching MAC address for NAT networking&hellip;
+==> default: Setting the name of the VM: trusty_default_1397790655665_45006
+==> default: Clearing any previously set forwarded ports&hellip;
+==> default: Fixed port collision for 22 => 2222. Now on port 2200.
+==> default: Clearing any previously set network interfaces&hellip;
+==> default: Preparing network interfaces based on configuration&hellip;</p>
+
+<pre><code>default: Adapter 1: nat
+</code></pre>
+
+<p>==> default: Forwarding ports&hellip;</p>
+
+<pre><code>default: 22 =&gt; 2200 (adapter 1)
+</code></pre>
+
+<p>==> default: Booting VM&hellip;
+==> default: Waiting for machine to boot. This may take a few minutes&hellip;</p>
+
+<pre><code>default: SSH address: 127.0.0.1:2200
+default: SSH username: vagrant
+default: SSH auth method: private key
+default: Warning: Connection timeout. Retrying...
+default: Warning: Remote connection disconnect. Retrying...
+</code></pre>
+
+<p>==> default: Machine booted and ready!
+GuestAdditions 4.3.10 running &mdash;&ndash; OK.
+==> default: Checking for guest additions in VM&hellip;
+==> default: Mounting shared folders&hellip;</p>
+
+<pre><code>default: /vagrant =&gt; /path/to/trusty
+</code></pre>
+
+<p>```</p>
+
+<p>この段階では vagrant box が追加されて VM が作成されているので、
+元に戻すには <code>vagrant destroy</code> で VM を削除して、
+<code>vagrant box remove box名</code> で box を削除します。</p>
+
+<p>普通は <code>vagrant destroy</code> で VM を破棄するだけで
+box は使い回すと思います。</p>
+
+<p>box を先に削除してしまうと VM の削除でエラーになるようなので、
+その場合は GUI からエラーになっているディスクイメージを無視するようにするなど
+がんばって削除します。</p>
+]]></content>
+  </entry>
+  
+</feed>

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: dokku | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/dokku/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-16T23:05:27+09:00</updated>
+  <updated>2014-04-21T23:35:45+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,203 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Ubuntu 14.04 で dokku を使う]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-18-ubuntu-1404-dokku.html"/>
+    <updated>2014-04-18T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ubuntu-1404-dokku</id>
+    <content type="html"><![CDATA[<p>Ubuntu 14.04 がリリースされたので、
+<a href="https://github.com/progrium/dokku">dokku</a>
+を Ubuntu 14.04 で試してみました。</p>
+
+<!--more-->
+
+
+<h2>dokku の Vagrantfile を確認する</h2>
+
+<p>まず dokku を clone して中の Vagrantfile をみて、
+環境変数で設定できる項目があるのを確認しておきます。</p>
+
+<p><code>console
+% git clone https://github.com/progrium/dokku
+% cd dokku
+% vi Vagrantfile
+</code></p>
+
+<h2>Vagantfile を変更する</h2>
+
+<p>デフォルトの apt-line のままだとダウンロードが遅いので、
+<a href="http://mirrors.ubuntu.com/mirrors.txt">http://mirrors.ubuntu.com/mirrors.txt</a>
+からミラーサーバーを選んで (今回は jaist を選択)、
+shell provision のところで書き換えておきます。
+(関係ないところにマッチして問題が起きる可能性はほぼないので、置換元の URL の <code>.</code> はエスケープしていません。)</p>
+
+<p>```diff
+diff &mdash;git a/Vagrantfile b/Vagrantfile
+index a310f6b..7c1a133 100644
+&mdash;&ndash; a/Vagrantfile
++++ b/Vagrantfile
+@@ -29,5 +29,10 @@ Vagrant::configure(&ldquo;2&rdquo;) do |config|</p>
+
+<pre><code> vb.customize ["modifyvm", :id, "--memory", BOX_MEMORY]
+</code></pre>
+
+<p>   end</p>
+
+<ul>
+<li>config.vm.provision :shell, :inline => &ldquo;apt-get -y install git &amp;&amp; cd /root/dokku &amp;&amp; #{make_cmd}&rdquo;</li>
+<li>config.vm.provision :shell, :inline => &lt;&lt;-SHELL</li>
+<li> sed -i~ -e &rsquo;s;<a href="http://archive.ubuntu.com/ubuntu;http://ftp.jaist.ac.jp/pub/Linux/ubuntu;">http://archive.ubuntu.com/ubuntu;http://ftp.jaist.ac.jp/pub/Linux/ubuntu;</a>&lsquo; /etc/apt/sources.list &amp;&amp;</li>
+<li> apt-get update &amp;&amp;</li>
+<li> apt-get -y install git &amp;&amp;</li>
+<li> cd /root/dokku &amp;&amp; #{make_cmd}</li>
+<li>SHELL
+end
+```</li>
+</ul>
+
+
+<h2>初回起動</h2>
+
+<p><code>BOX_NAME</code>, <code>BOX_URI</code> に trusty を指定して、
+<code>BOX_MEMORY</code> も 512 から 2048 に増やした値を指定して起動します。</p>
+
+<p><code>node-js-sample</code> だと 512 メガでも問題ないのですが、
+Rails アプリを動かそうとするとメモリ不足で <code>bundle install</code> の途中で失敗して
+deploy できなかったので増やしています。</p>
+
+<p><code>console
+% BOX_NAME=trusty-amd64-20140418 BOX_URI=https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box BOX_MEMORY=2048 vagrant up
+</code></p>
+
+<p>box のダウンロードとインストール、
+VM の作成などには時間がかかるので、
+他のことをしながらゆっくり待ちます。</p>
+
+<h2>二度目以降の起動</h2>
+
+<p>VM の作成ができている状態なら、
+box の設定は参照されないので省略できます。
+<code>vagrant destroy</code> した後に <code>vagrant up</code> し直したときは参照されるので、
+毎回設定していてもかまいません。</p>
+
+<p><code>BOX_MEMORY</code> は毎回設定されるので、指定を忘れると 512 に戻ってしまいます。</p>
+
+<p><code>console
+% BOX_MEMORY=2048 vagrant up
+</code></p>
+
+<h2>dokku の初期設定</h2>
+
+<p>ssh の鍵を追加します。</p>
+
+<p>```console
+% vagrant ssh
+vagrant@dokku:~$ egrep &lsquo;^ssh&rsquo; ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
+dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6
+vagrant@dokku:~$ cat ~/.ssh/authorized_keys</p>
+
+<h1>CLOUD_IMG: This file was created/modified by the Cloud Image build process</h1>
+
+<p>ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
+command=&ldquo;FINGERPRINT=dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6 NAME=vagrant <code>cat /home/dokku/.sshcommand</code> $SSH_ORIGINAL_COMMAND&rdquo;,no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+```</p>
+
+<h2>dokku の鍵追加失敗例</h2>
+
+<p><code>cat ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant</code>
+で追加してしまうと以下のように変になってしまいます。</p>
+
+<p><code>text
+vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
+command="FINGERPRINT=is NAME=vagrant `cat /home/dokku/.sshcommand` $SSH_ORIGINAL_COMMAND",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding # CLOUD_IMG: This file was created/modified by the Cloud Image build process
+ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+</code></p>
+
+<p>```bash</p>
+
+<pre><code>KEY=$(cat)
+FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
+KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
+echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
+echo $FINGERPRINT
+</code></pre>
+
+<p>```</p>
+
+<p>の部分を以下のように <code>while read</code> ループに変えた方が良いのかもしれません。</p>
+
+<p>```bash</p>
+
+<pre><code>while read KEY; do
+  FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
+  KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
+  echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
+  echo $FINGERPRINT
+done
+</code></pre>
+
+<p>```</p>
+
+<h2>node-js-sample の deploy</h2>
+
+<p><code>node-js-sample</code> を <code>deploy</code> して動作確認します。
+以下の例では <code>ssh dokku</code> で VM に接続できるように <code>~/.ssh/config</code> に設定済みです。</p>
+
+<p>```console
+% git clone <a href="https://github.com/heroku/node-js-sample">https://github.com/heroku/node-js-sample</a>
+Cloning into &lsquo;node-js-sample&rsquo;&hellip;
+remote: Reusing existing pack: 319, done.
+remote: Total 319 (delta 0), reused 0 (delta 0)
+Receiving objects: 100% (319/319), 201.92 KiB | 210.00 KiB/s, done.
+Resolving deltas: 100% (17/17), done.
+Checking connectivity&hellip; done.
+% cd node-js-sample
+% git remote add dokku dokku:node-js-app
+%  git push &mdash;set-upstream dokku master
+Counting objects: 319, done.
+Delta compression using up to 4 threads.
+Compressing objects: 100% (274/274), done.
+Writing objects: 100% (319/319), 201.92 KiB | 0 bytes/s, done.
+Total 319 (delta 17), reused 319 (delta 17)
+&mdash;&mdash;&ndash;> Cleaning up &hellip;
+remote: Cloning into &lsquo;/tmp/tmp.ChNvZEb5S9&rsquo;&hellip;
+&mdash;&mdash;&ndash;> Building node-js-app &hellip;
+remote: warning: You appear to have cloned an empty repository.
+remote: done.
+remote: HEAD is now at 2e52ce7&hellip; Update documentation links</p>
+
+<pre><code>   Node.js app detected
+</code></pre>
+
+<p>&mdash;&mdash;&ndash;> Requested node range:  0.10.x
+&mdash;&mdash;&ndash;> Resolved node version: 0.10.26
+&mdash;&mdash;&ndash;> Downloading and installing node
+(省略)
+&mdash;&mdash;&ndash;> Discovering process types</p>
+
+<pre><code>   Procfile declares types -&gt; web
+</code></pre>
+
+<p>&mdash;&mdash;&ndash;> Releasing node-js-app &hellip;
+&mdash;&mdash;&ndash;> Deploying node-js-app &hellip;
+=====> Application deployed:</p>
+
+<pre><code>   http://node-js-app.dokku.me
+</code></pre>
+
+<p>To dokku:node-js-app
+ * [new branch]      master &ndash;> master
+Branch master set up to track remote branch master from dokku.
+```</p>
+
+<p>Vagrantfile で guest の 80 番ポートを host の 8080 番ポートで見えるように設定されているので
+<code>http://node-js-app.dokku.me:8080/</code>
+で開くと <code>Hello World!</code> と表示されます。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[VirtualBoxでdokkuを試した]]></title>

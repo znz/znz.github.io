@@ -1,0 +1,485 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Vagrant で Ubuntu 14.04 を試す - @znz blog</title>
+  <meta name="author" content="Kazuhiro NISHIYAMA">
+
+  
+  <meta name="description" content="Vagrant で Ubuntu 14.04 LTS (trusty) を試しました。 Vagrantfile 作成 まず Vagrantfile を作成します。
+box ファイルの URL は
+https://cloud-images.ubuntu.com/vagrant/trusty/ &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-04-18-ubuntu-1404-vagrant.html">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-43859023-1', 'n-z.jp');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">@znz blog</a></h1>
+  
+    <h2>ZnZ の memo のようなもの</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://www.google.co.jp/cse" id="cse-search-box">
+  <div>
+    <input type="hidden" name="cx" value="partner-pub-4711975605457723:5173725094" />
+    <input type="hidden" name="ie" value="UTF-8" />
+    <input type="text" name="q" size="40" />
+    <input type="submit" name="sa" value="検索" />
+  </div>
+</form>
+
+<script type="text/javascript" src="http://www.google.co.jp/coop/cse/brand?form=cse-search-box&amp;lang=ja"></script>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Vagrant で Ubuntu 14.04 を試す</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-04-18T13:00:00+09:00" pubdate data-updated="true">2014-04-18 (Fri)</time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Vagrant で Ubuntu 14.04 LTS (trusty) を試しました。</p>
+
+<!--more-->
+
+
+<h2>Vagrantfile 作成</h2>
+
+<p>まず <code>Vagrantfile</code> を作成します。
+box ファイルの URL は
+<a href="https://cloud-images.ubuntu.com/vagrant/trusty/">https://cloud-images.ubuntu.com/vagrant/trusty/</a>
+から探します。
+current にするといつのイメージかわかりにくいので、
+日付の URL と box 名を指定しています。</p>
+
+<p><a href="https://cloud-images.ubuntu.com/vagrant/">https://cloud-images.ubuntu.com/vagrant/</a>
+には
+<code>Ubuntu Server 14.04 LTS (Trusty Tahr) daily builds</code>
+と書いてあるのに 20140417 と 20140418 の前が 20140221 と 20140222 になっていて
+daily ではなさそうに見えるのですが、
+リリース前は更新を止めていただけなのかもしれません。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> mkdir trusty
+</span><span class='line'><span class="gp">%</span> <span class="nb">cd </span>trusty
+</span><span class='line'><span class="gp">%</span> vagrant init
+</span><span class='line'><span class="go">A `Vagrantfile` has been placed in this directory. You are now</span>
+</span><span class='line'><span class="go">ready to `vagrant up` your first virtual environment! Please read</span>
+</span><span class='line'><span class="go">the comments in the Vagrantfile as well as documentation on</span>
+</span><span class='line'><span class="go">`vagrantup.com` for more information on using Vagrant.</span>
+</span><span class='line'><span class="gp">%</span> vi Vagrantfile
+</span><span class='line'><span class="go">(config.vm.box と config.vm.box_url を設定)</span>
+</span><span class='line'><span class="gp">%</span> egrep <span class="s1">&#39;^ *[^ #]&#39;</span> Vagrantfile
+</span><span class='line'><span class="go">VAGRANTFILE_API_VERSION = &quot;2&quot;</span>
+</span><span class='line'><span class="go">Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|</span>
+</span><span class='line'><span class="go">  config.vm.box = &quot;trusty-amd64-20140418&quot;</span>
+</span><span class='line'><span class="go">  config.vm.box_url = &quot;https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box&quot;</span>
+</span><span class='line'><span class="go">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>この段階ではファイルとディレクトリを削除すれば元に戻せます。</p>
+
+<h2>box の追加と起動</h2>
+
+<p>初回の <code>vagrant up</code> は box のダウンロードとインストールもするので
+時間がかかります。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> vagrant up
+</span><span class='line'><span class="go">Bringing machine &#39;default&#39; up with &#39;virtualbox&#39; provider...</span>
+</span><span class='line'><span class="go">==&gt; default: Box &#39;trusty-amd64-20140418&#39; could not be found. Attempting to find and install...</span>
+</span><span class='line'><span class="go">    default: Box Provider: virtualbox</span>
+</span><span class='line'><span class="go">    default: Box Version: &gt;= 0</span>
+</span><span class='line'><span class="go">==&gt; default: Adding box &#39;trusty-amd64-20140418&#39; (v0) for provider: virtualbox</span>
+</span><span class='line'><span class="go">    default: Downloading: https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box</span>
+</span><span class='line'><span class="go">==&gt; default: Box download is resuming from prior download progress</span>
+</span><span class='line'><span class="go">==&gt; default: Successfully added box &#39;trusty-amd64-20140418&#39; (v0) for &#39;virtualbox&#39;!</span>
+</span><span class='line'><span class="go">==&gt; default: Importing base box &#39;trusty-amd64-20140418&#39;...</span>
+</span><span class='line'><span class="go">==&gt; default: Matching MAC address for NAT networking...</span>
+</span><span class='line'><span class="go">==&gt; default: Setting the name of the VM: trusty_default_1397790655665_45006</span>
+</span><span class='line'><span class="go">==&gt; default: Clearing any previously set forwarded ports...</span>
+</span><span class='line'><span class="go">==&gt; default: Fixed port collision for 22 =&gt; 2222. Now on port 2200.</span>
+</span><span class='line'><span class="go">==&gt; default: Clearing any previously set network interfaces...</span>
+</span><span class='line'><span class="go">==&gt; default: Preparing network interfaces based on configuration...</span>
+</span><span class='line'><span class="go">    default: Adapter 1: nat</span>
+</span><span class='line'><span class="go">==&gt; default: Forwarding ports...</span>
+</span><span class='line'><span class="go">    default: 22 =&gt; 2200 (adapter 1)</span>
+</span><span class='line'><span class="go">==&gt; default: Booting VM...</span>
+</span><span class='line'><span class="go">==&gt; default: Waiting for machine to boot. This may take a few minutes...</span>
+</span><span class='line'><span class="go">    default: SSH address: 127.0.0.1:2200</span>
+</span><span class='line'><span class="go">    default: SSH username: vagrant</span>
+</span><span class='line'><span class="go">    default: SSH auth method: private key</span>
+</span><span class='line'><span class="go">    default: Warning: Connection timeout. Retrying...</span>
+</span><span class='line'><span class="go">    default: Warning: Remote connection disconnect. Retrying...</span>
+</span><span class='line'><span class="go">==&gt; default: Machine booted and ready!</span>
+</span><span class='line'><span class="go">GuestAdditions 4.3.10 running --- OK.</span>
+</span><span class='line'><span class="go">==&gt; default: Checking for guest additions in VM...</span>
+</span><span class='line'><span class="go">==&gt; default: Mounting shared folders...</span>
+</span><span class='line'><span class="go">    default: /vagrant =&gt; /path/to/trusty</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>この段階では vagrant box が追加されて VM が作成されているので、
+元に戻すには <code>vagrant destroy</code> で VM を削除して、
+<code>vagrant box remove box名</code> で box を削除します。</p>
+
+<p>普通は <code>vagrant destroy</code> で VM を破棄するだけで
+box は使い回すと思います。</p>
+
+<p>box を先に削除してしまうと VM の削除でエラーになるようなので、
+その場合は GUI からエラーになっているディスクイメージを無視するようにするなど
+がんばって削除します。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-04-18T13:00:00+09:00" pubdate data-updated="true">2014-04-18 (Fri)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>, <a class='category' href='/blog/categories/vagrant/'>vagrant</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2014-04-18-ubuntu-1404-vagrant.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2014-04-18-ubuntu-1404-vagrant.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2014-04-18-ubuntu-1404-vagrant.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014-04-16-new-csr.html" title="Previous Post: OpenSSL/GnuTLS での CSR の作り方">&laquo; OpenSSL/GnuTLS での CSR の作り方</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2014-04-18-ubuntu-1404-dokku.html" title="Next Post: Ubuntu 14.04 で dokku を使う">Ubuntu 14.04 で dokku を使う &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- sidebar -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:160px;height:600px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4210402292"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+<section>
+  <h1>About Me</h1>
+  <img src="/favicon.png" style="float:right">
+  <p>
+    <a href="http://rubycommitters.org/">Ruby のコミッター</a>とかやってます。
+    フルスタックエンジニアかもしれません。
+  </p>
+<script data-gittip-username="znz"
+        data-gittip-widget="button"
+        src="//gttp.co/v1.js"></script>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014-04-18-ubuntu-1404-dokku.html">Ubuntu 14.04 で dokku を使う</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-04-18-ubuntu-1404-vagrant.html">Vagrant で Ubuntu 14.04 を試す</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-04-16-new-csr.html">OpenSSL/GnuTLS での CSR の作り方</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-04-12-lxcjp.html">第3回 コンテナ型仮想化の情報交換会＠大阪 (コンテナ型VMや関連するカーネル等の技術が話題の勉強会)に参加した</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-04-09-cve-2014-0160.html">CVE-2014-0160 での Cookie 漏洩</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>Tag Cloud</h1>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 102.92682926829268%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 107.3170731707317%'>amagasakirb(5)</a> <a href='/blog/categories/ansible' style='font-size: 104.39024390243902%'>ansible(3)</a> <a href='/blog/categories/anyenv' style='font-size: 101.46341463414635%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.46341463414635%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 101.46341463414635%'>boot2docker(1)</a> <a href='/blog/categories/bootstrap' style='font-size: 101.46341463414635%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 101.46341463414635%'>bts(1)</a> <a href='/blog/categories/certification' style='font-size: 101.46341463414635%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 102.92682926829268%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 104.39024390243902%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 120.48780487804878%'>debian(14)</a> <a href='/blog/categories/devise' style='font-size: 102.92682926829268%'>devise(2)</a> <a href='/blog/categories/dkms' style='font-size: 101.46341463414635%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 113.17073170731707%'>docker(9)</a> <a href='/blog/categories/dokku' style='font-size: 102.92682926829268%'>dokku(2)</a> <a href='/blog/categories/doorkeeper' style='font-size: 101.46341463414635%'>doorkeeper(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.46341463414635%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 111.70731707317073%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 135.1219512195122%'>event(24)</a> <a href='/blog/categories/gem' style='font-size: 105.85365853658537%'>gem(4)</a> <a href='/blog/categories/git' style='font-size: 104.39024390243902%'>git(3)</a> <a href='/blog/categories/github' style='font-size: 107.3170731707317%'>github(5)</a> <a href='/blog/categories/haml' style='font-size: 101.46341463414635%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 101.46341463414635%'>heroku(1)</a> <a href='/blog/categories/homebrew' style='font-size: 107.3170731707317%'>homebrew(5)</a> <a href='/blog/categories/html5' style='font-size: 104.39024390243902%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 104.39024390243902%'>ime(3)</a> <a href='/blog/categories/irb' style='font-size: 101.46341463414635%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.46341463414635%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 105.85365853658537%'>javascript(4)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 102.92682926829268%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.46341463414635%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 101.46341463414635%'>jus(1)</a> <a href='/blog/categories/k-of' style='font-size: 101.46341463414635%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 105.85365853658537%'>kansaidebian(4)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.46341463414635%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.46341463414635%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 105.85365853658537%'>land-of-lisp(4)</a> <a href='/blog/categories/linux' style='font-size: 107.3170731707317%'>linux(5)</a> <a href='/blog/categories/lxc' style='font-size: 101.46341463414635%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.46341463414635%'>lxcjp(1)</a> <a href='/blog/categories/mail' style='font-size: 101.46341463414635%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 102.92682926829268%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 105.85365853658537%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.46341463414635%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.46341463414635%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.46341463414635%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 102.92682926829268%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.46341463414635%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 101.46341463414635%'>oauth2(1)</a> <a href='/blog/categories/octopress' style='font-size: 105.85365853658537%'>octopress(4)</a> <a href='/blog/categories/omniauth' style='font-size: 101.46341463414635%'>omniauth(1)</a> <a href='/blog/categories/openssl' style='font-size: 102.92682926829268%'>openssl(2)</a> <a href='/blog/categories/osx' style='font-size: 127.8048780487805%'>osx(19)</a> <a href='/blog/categories/packer' style='font-size: 101.46341463414635%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.46341463414635%'>passenger(1)</a> <a href='/blog/categories/postfix' style='font-size: 102.92682926829268%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 102.92682926829268%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.46341463414635%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.46341463414635%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 101.46341463414635%'>r(1)</a> <a href='/blog/categories/rabbit' style='font-size: 102.92682926829268%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 133.65853658536585%'>rails(23)</a> <a href='/blog/categories/ransack' style='font-size: 101.46341463414635%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 105.85365853658537%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.46341463414635%'>redmine(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.46341463414635%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(41)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.46341463414635%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 102.92682926829268%'>rubykansai(2)</a> <a href='/blog/categories/rubymotion' style='font-size: 113.17073170731707%'>rubymotion(9)</a> <a href='/blog/categories/security' style='font-size: 104.39024390243902%'>security(3)</a> <a href='/blog/categories/shell' style='font-size: 101.46341463414635%'>shell(1)</a> <a href='/blog/categories/slim' style='font-size: 101.46341463414635%'>slim(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.46341463414635%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 105.85365853658537%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 121.95121951219512%'>ubuntu(15)</a> <a href='/blog/categories/upstart' style='font-size: 102.92682926829268%'>upstart(2)</a> <a href='/blog/categories/vagrant' style='font-size: 101.46341463414635%'>vagrant(1)</a> <a href='/blog/categories/virtualbox' style='font-size: 101.46341463414635%'>virtualbox(1)</a> <a href='/blog/categories/weechat' style='font-size: 101.46341463414635%'>weechat(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.46341463414635%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 107.3170731707317%'>zsh(5)</a> </span>
+</section>
+<section class="clearfix">
+<h1><a href="https://coderwall.com/">coderwall.com</a></h1>
+<link href="http://coderwall.com/stylesheets/jquery.coderwall.css" media="all" rel="stylesheet" type="text/css">
+<script src="http://coderwall.com/javascripts/jquery.coderwall.js"></script>
+<section class="coderwall" data-coderwall-username="znz" data-coderwall-orientation="vertical" style="width:80%"></section>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/znz">@znz</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'znz',
+            count: 3,
+            skip_forks: false,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Kazuhiro NISHIYAMA -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'znzblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-04-18-ubuntu-1404-vagrant.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-04-18-ubuntu-1404-vagrant.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+<script type="text/javascript" src="http://b.st-hatena.com/js/bookmark_button.js" charset="utf-8" async="async"></script>
+
+
+</body>
+</html>

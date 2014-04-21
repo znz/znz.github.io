@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-16T23:05:27+09:00</updated>
+  <updated>2014-04-21T23:35:45+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,319 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Ubuntu 14.04 で dokku を使う]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-18-ubuntu-1404-dokku.html"/>
+    <updated>2014-04-18T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ubuntu-1404-dokku</id>
+    <content type="html"><![CDATA[<p>Ubuntu 14.04 がリリースされたので、
+<a href="https://github.com/progrium/dokku">dokku</a>
+を Ubuntu 14.04 で試してみました。</p>
+
+<!--more-->
+
+
+<h2>dokku の Vagrantfile を確認する</h2>
+
+<p>まず dokku を clone して中の Vagrantfile をみて、
+環境変数で設定できる項目があるのを確認しておきます。</p>
+
+<p><code>console
+% git clone https://github.com/progrium/dokku
+% cd dokku
+% vi Vagrantfile
+</code></p>
+
+<h2>Vagantfile を変更する</h2>
+
+<p>デフォルトの apt-line のままだとダウンロードが遅いので、
+<a href="http://mirrors.ubuntu.com/mirrors.txt">http://mirrors.ubuntu.com/mirrors.txt</a>
+からミラーサーバーを選んで (今回は jaist を選択)、
+shell provision のところで書き換えておきます。
+(関係ないところにマッチして問題が起きる可能性はほぼないので、置換元の URL の <code>.</code> はエスケープしていません。)</p>
+
+<p>```diff
+diff &mdash;git a/Vagrantfile b/Vagrantfile
+index a310f6b..7c1a133 100644
+&mdash;&ndash; a/Vagrantfile
++++ b/Vagrantfile
+@@ -29,5 +29,10 @@ Vagrant::configure(&ldquo;2&rdquo;) do |config|</p>
+
+<pre><code> vb.customize ["modifyvm", :id, "--memory", BOX_MEMORY]
+</code></pre>
+
+<p>   end</p>
+
+<ul>
+<li>config.vm.provision :shell, :inline => &ldquo;apt-get -y install git &amp;&amp; cd /root/dokku &amp;&amp; #{make_cmd}&rdquo;</li>
+<li>config.vm.provision :shell, :inline => &lt;&lt;-SHELL</li>
+<li> sed -i~ -e &rsquo;s;<a href="http://archive.ubuntu.com/ubuntu;http://ftp.jaist.ac.jp/pub/Linux/ubuntu;">http://archive.ubuntu.com/ubuntu;http://ftp.jaist.ac.jp/pub/Linux/ubuntu;</a>&lsquo; /etc/apt/sources.list &amp;&amp;</li>
+<li> apt-get update &amp;&amp;</li>
+<li> apt-get -y install git &amp;&amp;</li>
+<li> cd /root/dokku &amp;&amp; #{make_cmd}</li>
+<li>SHELL
+end
+```</li>
+</ul>
+
+
+<h2>初回起動</h2>
+
+<p><code>BOX_NAME</code>, <code>BOX_URI</code> に trusty を指定して、
+<code>BOX_MEMORY</code> も 512 から 2048 に増やした値を指定して起動します。</p>
+
+<p><code>node-js-sample</code> だと 512 メガでも問題ないのですが、
+Rails アプリを動かそうとするとメモリ不足で <code>bundle install</code> の途中で失敗して
+deploy できなかったので増やしています。</p>
+
+<p><code>console
+% BOX_NAME=trusty-amd64-20140418 BOX_URI=https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box BOX_MEMORY=2048 vagrant up
+</code></p>
+
+<p>box のダウンロードとインストール、
+VM の作成などには時間がかかるので、
+他のことをしながらゆっくり待ちます。</p>
+
+<h2>二度目以降の起動</h2>
+
+<p>VM の作成ができている状態なら、
+box の設定は参照されないので省略できます。
+<code>vagrant destroy</code> した後に <code>vagrant up</code> し直したときは参照されるので、
+毎回設定していてもかまいません。</p>
+
+<p><code>BOX_MEMORY</code> は毎回設定されるので、指定を忘れると 512 に戻ってしまいます。</p>
+
+<p><code>console
+% BOX_MEMORY=2048 vagrant up
+</code></p>
+
+<h2>dokku の初期設定</h2>
+
+<p>ssh の鍵を追加します。</p>
+
+<p>```console
+% vagrant ssh
+vagrant@dokku:~$ egrep &lsquo;^ssh&rsquo; ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
+dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6
+vagrant@dokku:~$ cat ~/.ssh/authorized_keys</p>
+
+<h1>CLOUD_IMG: This file was created/modified by the Cloud Image build process</h1>
+
+<p>ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
+command=&ldquo;FINGERPRINT=dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6 NAME=vagrant <code>cat /home/dokku/.sshcommand</code> $SSH_ORIGINAL_COMMAND&rdquo;,no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+```</p>
+
+<h2>dokku の鍵追加失敗例</h2>
+
+<p><code>cat ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant</code>
+で追加してしまうと以下のように変になってしまいます。</p>
+
+<p><code>text
+vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
+command="FINGERPRINT=is NAME=vagrant `cat /home/dokku/.sshcommand` $SSH_ORIGINAL_COMMAND",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding # CLOUD_IMG: This file was created/modified by the Cloud Image build process
+ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+</code></p>
+
+<p>```bash</p>
+
+<pre><code>KEY=$(cat)
+FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
+KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
+echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
+echo $FINGERPRINT
+</code></pre>
+
+<p>```</p>
+
+<p>の部分を以下のように <code>while read</code> ループに変えた方が良いのかもしれません。</p>
+
+<p>```bash</p>
+
+<pre><code>while read KEY; do
+  FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
+  KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
+  echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
+  echo $FINGERPRINT
+done
+</code></pre>
+
+<p>```</p>
+
+<h2>node-js-sample の deploy</h2>
+
+<p><code>node-js-sample</code> を <code>deploy</code> して動作確認します。
+以下の例では <code>ssh dokku</code> で VM に接続できるように <code>~/.ssh/config</code> に設定済みです。</p>
+
+<p>```console
+% git clone <a href="https://github.com/heroku/node-js-sample">https://github.com/heroku/node-js-sample</a>
+Cloning into &lsquo;node-js-sample&rsquo;&hellip;
+remote: Reusing existing pack: 319, done.
+remote: Total 319 (delta 0), reused 0 (delta 0)
+Receiving objects: 100% (319/319), 201.92 KiB | 210.00 KiB/s, done.
+Resolving deltas: 100% (17/17), done.
+Checking connectivity&hellip; done.
+% cd node-js-sample
+% git remote add dokku dokku:node-js-app
+%  git push &mdash;set-upstream dokku master
+Counting objects: 319, done.
+Delta compression using up to 4 threads.
+Compressing objects: 100% (274/274), done.
+Writing objects: 100% (319/319), 201.92 KiB | 0 bytes/s, done.
+Total 319 (delta 17), reused 319 (delta 17)
+&mdash;&mdash;&ndash;> Cleaning up &hellip;
+remote: Cloning into &lsquo;/tmp/tmp.ChNvZEb5S9&rsquo;&hellip;
+&mdash;&mdash;&ndash;> Building node-js-app &hellip;
+remote: warning: You appear to have cloned an empty repository.
+remote: done.
+remote: HEAD is now at 2e52ce7&hellip; Update documentation links</p>
+
+<pre><code>   Node.js app detected
+</code></pre>
+
+<p>&mdash;&mdash;&ndash;> Requested node range:  0.10.x
+&mdash;&mdash;&ndash;> Resolved node version: 0.10.26
+&mdash;&mdash;&ndash;> Downloading and installing node
+(省略)
+&mdash;&mdash;&ndash;> Discovering process types</p>
+
+<pre><code>   Procfile declares types -&gt; web
+</code></pre>
+
+<p>&mdash;&mdash;&ndash;> Releasing node-js-app &hellip;
+&mdash;&mdash;&ndash;> Deploying node-js-app &hellip;
+=====> Application deployed:</p>
+
+<pre><code>   http://node-js-app.dokku.me
+</code></pre>
+
+<p>To dokku:node-js-app
+ * [new branch]      master &ndash;> master
+Branch master set up to track remote branch master from dokku.
+```</p>
+
+<p>Vagrantfile で guest の 80 番ポートを host の 8080 番ポートで見えるように設定されているので
+<code>http://node-js-app.dokku.me:8080/</code>
+で開くと <code>Hello World!</code> と表示されます。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Vagrant で Ubuntu 14.04 を試す]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-18-ubuntu-1404-vagrant.html"/>
+    <updated>2014-04-18T13:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ubuntu-1404-vagrant</id>
+    <content type="html"><![CDATA[<p>Vagrant で Ubuntu 14.04 LTS (trusty) を試しました。</p>
+
+<!--more-->
+
+
+<h2>Vagrantfile 作成</h2>
+
+<p>まず <code>Vagrantfile</code> を作成します。
+box ファイルの URL は
+<a href="https://cloud-images.ubuntu.com/vagrant/trusty/">https://cloud-images.ubuntu.com/vagrant/trusty/</a>
+から探します。
+current にするといつのイメージかわかりにくいので、
+日付の URL と box 名を指定しています。</p>
+
+<p><a href="https://cloud-images.ubuntu.com/vagrant/">https://cloud-images.ubuntu.com/vagrant/</a>
+には
+<code>Ubuntu Server 14.04 LTS (Trusty Tahr) daily builds</code>
+と書いてあるのに 20140417 と 20140418 の前が 20140221 と 20140222 になっていて
+daily ではなさそうに見えるのですが、
+リリース前は更新を止めていただけなのかもしれません。</p>
+
+<p><code>console
+% mkdir trusty
+% cd trusty
+% vagrant init
+A `Vagrantfile` has been placed in this directory. You are now
+ready to `vagrant up` your first virtual environment! Please read
+the comments in the Vagrantfile as well as documentation on
+`vagrantup.com` for more information on using Vagrant.
+% vi Vagrantfile
+(config.vm.box と config.vm.box_url を設定)
+% egrep '^ *[^ #]' Vagrantfile
+VAGRANTFILE_API_VERSION = "2"
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.box = "trusty-amd64-20140418"
+  config.vm.box_url = "https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box"
+end
+</code></p>
+
+<p>この段階ではファイルとディレクトリを削除すれば元に戻せます。</p>
+
+<h2>box の追加と起動</h2>
+
+<p>初回の <code>vagrant up</code> は box のダウンロードとインストールもするので
+時間がかかります。</p>
+
+<p>```console
+% vagrant up
+Bringing machine &lsquo;default&rsquo; up with &lsquo;virtualbox&rsquo; provider&hellip;
+==> default: Box &lsquo;trusty-amd64-20140418&rsquo; could not be found. Attempting to find and install&hellip;</p>
+
+<pre><code>default: Box Provider: virtualbox
+default: Box Version: &gt;= 0
+</code></pre>
+
+<p>==> default: Adding box &lsquo;trusty-amd64-20140418&rsquo; (v0) for provider: virtualbox</p>
+
+<pre><code>default: Downloading: https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box
+</code></pre>
+
+<p>==> default: Box download is resuming from prior download progress
+==> default: Successfully added box &lsquo;trusty-amd64-20140418&rsquo; (v0) for &lsquo;virtualbox&rsquo;!
+==> default: Importing base box &lsquo;trusty-amd64-20140418&rsquo;&hellip;
+==> default: Matching MAC address for NAT networking&hellip;
+==> default: Setting the name of the VM: trusty_default_1397790655665_45006
+==> default: Clearing any previously set forwarded ports&hellip;
+==> default: Fixed port collision for 22 => 2222. Now on port 2200.
+==> default: Clearing any previously set network interfaces&hellip;
+==> default: Preparing network interfaces based on configuration&hellip;</p>
+
+<pre><code>default: Adapter 1: nat
+</code></pre>
+
+<p>==> default: Forwarding ports&hellip;</p>
+
+<pre><code>default: 22 =&gt; 2200 (adapter 1)
+</code></pre>
+
+<p>==> default: Booting VM&hellip;
+==> default: Waiting for machine to boot. This may take a few minutes&hellip;</p>
+
+<pre><code>default: SSH address: 127.0.0.1:2200
+default: SSH username: vagrant
+default: SSH auth method: private key
+default: Warning: Connection timeout. Retrying...
+default: Warning: Remote connection disconnect. Retrying...
+</code></pre>
+
+<p>==> default: Machine booted and ready!
+GuestAdditions 4.3.10 running &mdash;&ndash; OK.
+==> default: Checking for guest additions in VM&hellip;
+==> default: Mounting shared folders&hellip;</p>
+
+<pre><code>default: /vagrant =&gt; /path/to/trusty
+</code></pre>
+
+<p>```</p>
+
+<p>この段階では vagrant box が追加されて VM が作成されているので、
+元に戻すには <code>vagrant destroy</code> で VM を削除して、
+<code>vagrant box remove box名</code> で box を削除します。</p>
+
+<p>普通は <code>vagrant destroy</code> で VM を破棄するだけで
+box は使い回すと思います。</p>
+
+<p>box を先に削除してしまうと VM の削除でエラーになるようなので、
+その場合は GUI からエラーになっているディスクイメージを無視するようにするなど
+がんばって削除します。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[OpenSSL/GnuTLS での CSR の作り方]]></title>
@@ -879,437 +1192,6 @@ VirtualBox のカーネルモジュールをビルドしようとしています
 バージョンを上げても古いバージョンの <code>source</code> が残ったままだと
 同じエラーが出続けるようなので、
 クリーンインストールやそれに近い状態にすると直るということのようです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[upstart-socket-bridgeとrubyを組み合わせる]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-14-upstart-socket-bridge-with-ruby.html"/>
-    <updated>2013-12-14T00:45:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/upstart-socket-bridge-with-ruby</id>
-    <content type="html"><![CDATA[<p><a href="http://gihyo.jp/admin/clip/01/ubuntu-topics/201312/06">Ubuntu Weekly Topics 2013年12月6日号</a>
-の「その他のニュース」で紹介されていた
-「upstart-socket-bridgeをxinetdライクなソケット待ち受け管理機構として扱う
-<a href="http://cheesehead-techblog.blogspot.jp/2013/12/upstart-socket-bridge.html">アプリケーションの作り方</a>
-。」
-が python3 で書かれていて、
-同じことが ruby で実装できるのか気になったので、
-IRC でちょっと助言を受けつつ移植してみました。</p>
-
-<!--more-->
-
-
-<h2>試した環境</h2>
-
-<ul>
-<li>amd64 の Ubuntu 13.10 (saucy)</li>
-<li><code>/usr/bin/ruby</code> は <code>ruby 1.9.3p194 (2012-04-20 revision 35410) [x86_64-linux]</code></li>
-</ul>
-
-
-<h2>ruby で試す</h2>
-
-<p>必須なのはソケット周りだけですが、
-デバッグ用のメッセージをファイルに残すようにして
-動作確認していたので、
-その部分も残しています。</p>
-
-<p>```ruby /tmp/test-service.rb
- #!/usr/bin/ruby
- require &lsquo;socket&rsquo;
- open(&ldquo;/tmp/test.log&rdquo;, &ldquo;w&rdquo;) do |f|
-   ENV.each do |key, value|</p>
-
-<pre><code> f.puts "#{key}=#{value}"
-</code></pre>
-
-<p>   end
-   begin</p>
-
-<pre><code> serv_socket = Socket.for_fd(ENV["UPSTART_FDS"].to_i)
- client_socket, client_addrinfo = serv_socket.accept
- message = client_socket.recv(1024)
- f.puts message
- client_socket.send("I got your message: #{message}", 0)
- client_socket.close
-</code></pre>
-
-<p>   rescue Exception => e</p>
-
-<pre><code> f.puts e.inspect
- f.puts e.backtrace
-</code></pre>
-
-<p>   end
-   f.puts &ldquo;finished&rdquo;
- end
-```</p>
-
-<p>バグとしては
-<code>for_fd</code> の引数の <code>to_i</code> を忘れていたり、
-<code>send</code> の引数が足りなかったりしました。</p>
-
-<p><code>text /etc/init/socket-test.conf
- description "upstart-socket-bridge test"
- start on socket PROTO=inet PORT=34567 ADDR=127.0.0.1  # 34567 番ポートで待ち受け
- setuid exampleuser                                    # root ではなく exampleuser で動作
- exec /usr/bin/ruby /tmp/test-service.rb               # サービス起動
-</code></p>
-
-<p><code>nc</code> コマンドで接続して動作確認します。</p>
-
-<p><code>console
- $ nc localhost 34567
- Hello Ruby
- I got your message: Hello Ruby
-</code></p>
-
-<p>最後にテストで作成したファイルを削除しておきます。</p>
-
-<p><code>console
- $ sudo rm /etc/init/socket-test.conf  # ブリッジとの接続解除
- $ rm /tmp/test-service.rb             # テストサービス削除
- $ rm /tmp/test.log                    # ログファイル削除
-</code></p>
-
-<h2>まとめ</h2>
-
-<p>python3 の <code>socket.fromfd</code> に相当するのは
-ruby だと <code>BasicSocket.for_fd</code> で、
-<code>BasicSocket</code> クラスには <code>accept</code> がないので、
-<code>BasicSocket</code> クラスを継承している <code>Socket</code> クラスの
-<code>Socket#for_fd</code> を使いました。</p>
-
-<p><code>inetd</code> や <code>xinetd</code> だと標準入出力にソケットをつないでくれて、
-サービスは簡単にかけるのに、
-<code>upstart</code> だと <code>accept</code> して <code>accept</code> から返ってきたソケットを
-<code>close</code> するまでがサービス側でやらないといけないようになっていて、
-ちょっと面倒に感じました。</p>
-
-<p>たまたま目についたプログラムを移植してみただけで、
-深追いはしていないのですが、
-どういう利点があるものなのか、
-調べてみるのも良いのかもしれません。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[dockerのカスタムベースイメージを作成する]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-13-docker-custom-base-image.html"/>
-    <updated>2013-12-13T18:49:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/docker-custom-base-image</id>
-    <content type="html"><![CDATA[<p>例などにある ubuntu の base image は
-apt-line が archive.ubuntu.com になっていて、
-apt-get install などが遅いです。</p>
-
-<p>日本で使うのなら日本のミラーを使った方が良いので、
-そういう base image を作ります。</p>
-
-<p>base image はあまりカスタマイズせずに、
-派生するイメージにDockerfile などを使って
-カスタマイズをした方が望ましいのですが、
-ほぼ必須のものを毎回インストールするのは無駄なので、
-ついでに日本語 locale を入れるというカスタマイズもしておきます。</p>
-
-<!--more-->
-
-
-<h2>docker 向けのポイント</h2>
-
-<p>最初に docker 向けのポイントをまとめておきます。</p>
-
-<ul>
-<li>最小限にするなら <code>--variant=minbase</code></li>
-<li><code>--include=iproute</code> などで <code>iproute</code> パッケージを入れておかないとネットワークにつながらない</li>
-<li><code>policy-rc.d</code> とか <code>initctl</code> を対処しておかないとパッケージのインストール時に変なことになるかも</li>
-<li><code>dpkg</code> に <code>force-unsafe-io</code> を設定すると <code>apt</code> を高速化できる</li>
-<li><a href="https://github.com/dotcloud/docker/blob/master/contrib/mkimage-debootstrap.sh">mkimage-debootstrap.sh</a> をそのまま使う場合も日本のミラーを指定する方が良い</li>
-</ul>
-
-
-<h2>base image の作り方</h2>
-
-<p>公式ドキュメントの
-<a href="http://docs.docker.io/en/latest/use/baseimages/">Base Image Creation</a>
-を参考にして、基本は
-<a href="https://github.com/dotcloud/docker/blob/master/contrib/mkimage-debootstrap.sh">mkimage-debootstrap.sh</a>
-の手順を使います。</p>
-
-<p>カスタマイズのため、手順を追いかけるだけで直接は使いません。</p>
-
-<h2>debootstrap の実行</h2>
-
-<p>最初は以下のように <code>/tmp/wheezy64</code> などの適当な場所に
-<code>debootstrap</code> で <code>chroot</code> 環境を作成します。
-proxy 環境なら <code>sudo http_proxy=$http_proxy debootstrap ...</code>
-のように指定すれば良いようです。</p>
-
-<p>Debian での例:
-<code>
- sudo debootstrap --verbose --variant=minbase --include=iproute --arch=amd64 wheezy /tmp/wheezy64 http://cdn.debian.or.jp/debian
-</code></p>
-
-<p>Ubuntu での例:
-<code>
- sudo debootstrap --verbose --variant=minbase --arch=amd64 precise /tmp/precise64 http://ftp.jaist.ac.jp/pub/Linux/ubuntu/
-</code></p>
-
-<h3>variant</h3>
-
-<p><code>variant</code> で <code>minbase</code> を指定するとインストールされるパッケージが減って、
-本当に最小限の環境になります。
-具体的には <code>Essential: yes</code> のパッケージ
-( <code>aptitude search '~E'</code> または <code>aptitude search '?essential'</code> で一覧)
-と <code>apt</code> がインストールされます。</p>
-
-<p><code>buildd</code> という <code>variant</code> もあって <code>minbase</code> に加えて
-<code>build-essential</code> が追加でインストールされるようなので、
-CI 環境用などの base image なら <code>--variant=buildd</code> の方が
-良いかもしれません。</p>
-
-<p>デフォルトだと <code>Priority</code> が <code>imporant</code> のパッケージ
-( <code>aptitude search '~pimportant</code> または <code>aptitude search '?priority(important)' で一覧)
-がインストールされるようです。
-インストールされるパッケージの差分は
-</code>aptitude search &lsquo;~pimportant!~E`
-で調べられます。</p>
-
-<h3>include</h3>
-
-<p>元の <code>mkimage-debootstrap.sh</code> では <code>iproute,iputils-ping</code> と指定してますが、
-<code>iputils-ping</code> は必須ではないのでここでは省略しています。</p>
-
-<p><code>iproute</code> は docker 環境では必須です。
-このパッケージに含まれる <code>ip</code> コマンドが入っていないとネットワークにつながりません。</p>
-
-<p><code>iproute</code> パッケージは <code>Priority</code> が <code>optional</code> なので
-普通に <code>debootstrap</code> を実行しても入らないので、
-注意が必要です。</p>
-
-<h3>その他の引数</h3>
-
-<p>arch の指定とか suite の指定とか生成先ディレクトリの指定とか、
-ミラーの指定とかは見てわかる通りです。</p>
-
-<h2>docker 向けのカスタマイズ</h2>
-
-<p>次に生成されたディレクトリの中で
-<code>mkimage-debootstrap.sh</code>
-にデフォルト (<code>-d</code> オプションが指定されなかったとき) の処理をしていきます。</p>
-
-<h3>policy-rc.d</h3>
-
-<p>ファイルの作成方法は何でも良いのですが、
-exit status で 101 を返す <code>usr/sbin/policy-rc.d</code> を作成して、
-パッケージのインストールやアップデートなどで init スクリプトが
-実行されないようにします。</p>
-
-<p>ちなみに
-<code>$'...'</code> は bash に <code>\n</code> を解釈させるための書き方なので、
-<code>'...'</code> や <code>"..."</code> の間違いではありません。</p>
-
-<p><code>
- echo $'#!/bin/sh\nexit 101' | sudo tee usr/sbin/policy-rc.d &gt; /dev/null
- sudo chmod +x usr/sbin/policy-rc.d
-</code></p>
-
-<p><code>policy-rc.d</code> については <code>invoke-rc.d</code> の man を参照してください。</p>
-
-<h3>sbin/initctl</h3>
-
-<p>initctl を実行してしまう upstart スクリプトがあるらしく、
-その対処もします。</p>
-
-<p>policy-rc.d は存在しなかったので、作成するだけでしたが、
-<code>sbin/initctl</code> はパッケージ管理のファイルとして存在するので
-<code>dpkg-divert</code> でパッケージの更新などで上書きされないようにしています。</p>
-
-<p><code>
- sudo chroot . dpkg-divert --local --rename --add /sbin/initctl
- sudo ln -sf /bin/true sbin/initctl
-</code></p>
-
-<h3>パッケージのキャッシュの削除</h3>
-
-<p><code>
- sudo chroot . apt-get clean
-</code></p>
-
-<p>を実行して不要な deb ファイルなどを削除して、
-イメージのサイズを削減しています。</p>
-
-<p>後で独自カスタマイズのところでパッケージをインストールして、
-その後でまた実行するので、その場合はここでは実行しなくてもかまいません。</p>
-
-<h3>apt の高速化など</h3>
-
-<p><code>mkimage-debootstrap.sh</code> のコメントには
-<code>dpkg</code> がパッケージの展開後に <code>sync()</code> を呼んでいるのが
-原因で無駄に遅くなっているので、
-強制的に <code>sync()</code> を呼ばなくさせると書いています。</p>
-
-<p><code>
- echo 'force-unsafe-io' | sudo tee etc/dpkg/dpkg.cfg.d/02apt-speedup &gt; /dev/null
-</code></p>
-
-<p>それから、 deb ファイルを残さないようにして image ファイルが大きくならないようにしています。</p>
-
-<p><code>
- echo 'DPkg::Post-Invoke {"/bin/rm -f /var/cache/apt/archives/*.deb || true";};' | sudo tee etc/apt/apt.conf.d/no-cache &gt; /dev/null
-</code></p>
-
-<h3>元に戻す方法</h3>
-
-<p><code>mkimage-debootstrap.sh</code> のコメントに
-元に戻す方法も書いてありました。
-<code>dpkg-divert</code> 以外はファイルを消すだけです。</p>
-
-<p><code>
- rm /usr/sbin/policy-rc.d
- rm /sbin/initctl; dpkg-divert --rename --remove /sbin/initctl
- rm /etc/dpkg/dpkg.cfg.d/02apt-speedup
- rm /etc/apt/apt.conf.d/no-cache
-</code></p>
-
-<h3>apt-line の変更</h3>
-
-<p><code>etc/apt/sources.list</code> をみると</p>
-
-<p><code>
- deb http://cdn.debian.or.jp/debian wheezy main
-</code></p>
-
-<p>だけになっているので、 <code>updates</code> と <code>security</code> を追加します。</p>
-
-<p><code>mkimage-debootstrap.sh</code> もデフォルト
-(<code>-d</code> も <code>-s</code> も指定されていないとき)
-の動作では追加します。</p>
-
-<p>この例では以下のようにしました。</p>
-
-<p>debian での例:
-<code>
- deb http://cdn.debian.or.jp/debian wheezy main
- deb http://cdn.debian.or.jp/debian wheezy-updates main
- deb http://security.debian.org/ wheezy/updates main
-</code></p>
-
-<p>ubuntu での例:
-<code>
- deb http://ftp.jaist.ac.jp/pub/Linux/ubuntu precise main universe
- deb http://ftp.jaist.ac.jp/pub/Linux/ubuntu precise-updates main universe
- deb http://ftp.jaist.ac.jp/pub/Linux/ubuntu precise-security main universe
-</code></p>
-
-<p>main 以外を追加したい場合はここで追加しておくと良さそうです。
-<code>mkimage-debootstrap.sh</code> でも ubuntu の場合は <code>universe</code> が追加されていました。</p>
-
-<h2>独自カスタマイズ</h2>
-
-<p>ここから独自カスタマイズになります。</p>
-
-<h3>アップデート実行</h3>
-
-<p>base image にセキュリティアップデートも入れておきたいなら、
-更新しておきます。</p>
-
-<p><code>
- sudo chroot . apt-get update
- sudo chroot . apt-get dist-upgrade
-</code></p>
-
-<h3>日本語 locale 追加</h3>
-
-<p>debian の場合は
-別環境で <code>debconf-get-selections</code> で調べておいた設定を使って、
-<code>debconf-set-selections</code> で設定を入れておいて
-<code>DEBIAN_FRONTEND=noninteractive</code> でインストールします。</p>
-
-<p><code>
- echo locales locales/locales_to_be_generated multiselect ja_JP.EUC-JP EUC-JP, ja_JP.UTF-8 UTF-8 | sudo chroot . debconf-set-selections
- echo locales locales/default_environment_locale select ja_JP.UTF-8 | sudo chroot . debconf-set-selections
- sudo chroot . env DEBIAN_FRONTEND=noninteractive apt-get install locales
-</code></p>
-
-<p>ubuntu の場合は
-<code>language-pack-ja</code> パッケージを入れても良いのですが、
-不要なパッケージを入れるのが嫌なら <code>locale-gen</code> コマンドで
-生成しても良いです。</p>
-
-<p><code>
- sudo chroot . locale-gen ja_JP.UTF-8
- sudo chroot . locale-gen ja_JP.EUC-JP
-</code></p>
-
-<h3>パッケージのキャッシュの削除</h3>
-
-<p>カスタマイズが終わったら clean を実行しておきます。
-<code>etc/apt/apt.conf.d/no-cache</code> を作成していれば不要かもしれません。</p>
-
-<p><code>
- sudo chroot . apt-get clean
-</code></p>
-
-<h2>イメージ作成と取り込み</h2>
-
-<h3>tarball 作成</h3>
-
-<p><code>mkimage-debootstrap.sh</code> は <code>-t</code> オプションが指定されたときに
-docker のイメージではなく tarball を作成します。
-直接取り込むならこの手順は不要です。</p>
-
-<p>作成方法としては
-最初に <code>touch</code> で一般ユーザー権限のファイルになるようにしておいて、
-中身は <code>root</code> 権限で入れるようにしています。</p>
-
-<p><code>
- touch /tmp/wheezy64.tar.xz
- sudo tar --numeric-owner -caf /tmp/wheezy64.tar.xz .
-</code></p>
-
-<h3>イメージ取り込み</h3>
-
-<p><code>sudo docker</code> は root 権限が不要な設定にいていれば <code>docker</code> だけでかまいません。</p>
-
-<p><code>mkimage-debootstrap.sh</code> は安定版や LTS に <code>latest</code> タグを設定したり、
-<code>etc/debian_version</code> や <code>etc/lsb-release</code> をみて
-タグを設定しているので、必要に応じて設定しておきます。</p>
-
-<p>イメージ名としては「ユーザー名/レポジトリ名」という形式が推奨されていますが、
-ここでは例として「ユーザー名」の部分は「local」にしておきます。
-そして「レポジトリ名」としては日本語 locale を入れたということで
-<code>-ja</code> を付けました。
-日本のミラーを使っているということで <code>-ja-jp</code> にしても良かったのですが、
-長かったので、 <code>-ja</code> だけにしました。</p>
-
-<p>Debian での例:
-<code>
- sudo tar --numeric-owner -c . | sudo docker import - local/debian-ja:wheezy
- sudo docker tag local/debian-ja:wheezy local/debian-ja:latest
- sudo docker tag local/debian-ja:wheezy local/debian-ja:7.2
-</code></p>
-
-<p>Ubuntu での例:
-<code>
- sudo tar --numeric-owner -c . | sudo docker import - local/ubuntu-ja:precise
- sudo docker tag local/ubuntu-ja:precise local/ubuntu-ja:latest
- sudo docker tag local/ubuntu-ja:precise local/ubuntu-ja:12.04
-</code></p>
-
-<h2>まとめ</h2>
-
-<p><a href="https://github.com/dotcloud/docker/blob/master/contrib/mkimage-debootstrap.sh">mkimage-debootstrap.sh</a>
-で何をやっているのか、
-同じことを手動でやるのはどうするのかということを説明しました。</p>
-
-<p>最初のポイントにも書きましたが
-<code>mkimage-debootstrap.sh</code>
-を直接使うのも良いですが、
-最低限ミラーを指定するのがおすすめです。</p>
-
-<p>目的によっては <code>variant</code> を変更したり、
-<code>include</code> でインストールするパッケージを増やしておくだけでも
-便利になると思います。</p>
 ]]></content>
   </entry>
   
