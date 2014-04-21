@@ -1,0 +1,173 @@
+---
+layout: post
+title: "Ubuntu 14.04 で dokku を使う"
+date: 2014-04-18 23:00:00 +0900
+comments: true
+categories: ubuntu docker dokku
+---
+Ubuntu 14.04 がリリースされたので、
+[dokku](https://github.com/progrium/dokku)
+を Ubuntu 14.04 で試してみました。
+
+<!--more-->
+
+## dokku の Vagrantfile を確認する
+
+まず dokku を clone して中の Vagrantfile をみて、
+環境変数で設定できる項目があるのを確認しておきます。
+
+```console
+% git clone https://github.com/progrium/dokku
+% cd dokku
+% vi Vagrantfile
+```
+
+## Vagantfile を変更する
+
+デフォルトの apt-line のままだとダウンロードが遅いので、
+http://mirrors.ubuntu.com/mirrors.txt
+からミラーサーバーを選んで (今回は jaist を選択)、
+shell provision のところで書き換えておきます。
+(関係ないところにマッチして問題が起きる可能性はほぼないので、置換元の URL の `.` はエスケープしていません。)
+
+```diff
+diff --git a/Vagrantfile b/Vagrantfile
+index a310f6b..7c1a133 100644
+--- a/Vagrantfile
++++ b/Vagrantfile
+@@ -29,5 +29,10 @@ Vagrant::configure("2") do |config|
+     vb.customize ["modifyvm", :id, "--memory", BOX_MEMORY]
+   end
+ 
+-  config.vm.provision :shell, :inline => "apt-get -y install git && cd /root/dokku && #{make_cmd}"
++  config.vm.provision :shell, :inline => <<-SHELL
++    sed -i~ -e 's;http://archive.ubuntu.com/ubuntu;http://ftp.jaist.ac.jp/pub/Linux/ubuntu;' /etc/apt/sources.list &&
++    apt-get update &&
++    apt-get -y install git &&
++    cd /root/dokku && #{make_cmd}
++  SHELL
+ end
+```
+
+## 初回起動
+
+`BOX_NAME`, `BOX_URI` に trusty を指定して、
+`BOX_MEMORY` も 512 から 2048 に増やした値を指定して起動します。
+
+`node-js-sample` だと 512 メガでも問題ないのですが、
+Rails アプリを動かそうとするとメモリ不足で `bundle install` の途中で失敗して
+deploy できなかったので増やしています。
+
+```console
+% BOX_NAME=trusty-amd64-20140418 BOX_URI=https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box BOX_MEMORY=2048 vagrant up
+```
+
+box のダウンロードとインストール、
+VM の作成などには時間がかかるので、
+他のことをしながらゆっくり待ちます。
+
+## 二度目以降の起動
+
+VM の作成ができている状態なら、
+box の設定は参照されないので省略できます。
+`vagrant destroy` した後に `vagrant up` し直したときは参照されるので、
+毎回設定していてもかまいません。
+
+`BOX_MEMORY` は毎回設定されるので、指定を忘れると 512 に戻ってしまいます。
+
+```console
+% BOX_MEMORY=2048 vagrant up
+```
+
+## dokku の初期設定
+
+ssh の鍵を追加します。
+
+```console
+% vagrant ssh
+vagrant@dokku:~$ egrep '^ssh' ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
+dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6
+vagrant@dokku:~$ cat ~/.ssh/authorized_keys
+# CLOUD_IMG: This file was created/modified by the Cloud Image build process
+ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
+command="FINGERPRINT=dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6 NAME=vagrant `cat /home/dokku/.sshcommand` $SSH_ORIGINAL_COMMAND",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+```
+
+## dokku の鍵追加失敗例
+
+`cat ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant`
+で追加してしまうと以下のように変になってしまいます。
+
+```text
+vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
+command="FINGERPRINT=is NAME=vagrant `cat /home/dokku/.sshcommand` $SSH_ORIGINAL_COMMAND",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding # CLOUD_IMG: This file was created/modified by the Cloud Image build process
+ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+```
+
+```bash
+    KEY=$(cat)
+    FINGERPRINT=$(ssh-keygen -lf /dev/stdin <<< $(echo $KEY) | awk '{print $2}')
+    KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
+    echo "$KEY_PREFIX $KEY" >> "$USERHOME/.ssh/authorized_keys"
+    echo $FINGERPRINT
+```
+
+の部分を以下のように `while read` ループに変えた方が良いのかもしれません。
+
+```bash
+    while read KEY; do
+      FINGERPRINT=$(ssh-keygen -lf /dev/stdin <<< $(echo $KEY) | awk '{print $2}')
+      KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
+      echo "$KEY_PREFIX $KEY" >> "$USERHOME/.ssh/authorized_keys"
+      echo $FINGERPRINT
+    done
+```
+
+## node-js-sample の deploy
+
+`node-js-sample` を `deploy` して動作確認します。
+以下の例では `ssh dokku` で VM に接続できるように `~/.ssh/config` に設定済みです。
+
+```console
+% git clone https://github.com/heroku/node-js-sample
+Cloning into 'node-js-sample'...
+remote: Reusing existing pack: 319, done.
+remote: Total 319 (delta 0), reused 0 (delta 0)
+Receiving objects: 100% (319/319), 201.92 KiB | 210.00 KiB/s, done.
+Resolving deltas: 100% (17/17), done.
+Checking connectivity... done.
+% cd node-js-sample
+% git remote add dokku dokku:node-js-app
+%  git push --set-upstream dokku master
+Counting objects: 319, done.
+Delta compression using up to 4 threads.
+Compressing objects: 100% (274/274), done.
+Writing objects: 100% (319/319), 201.92 KiB | 0 bytes/s, done.
+Total 319 (delta 17), reused 319 (delta 17)
+-----> Cleaning up ...
+remote: Cloning into '/tmp/tmp.ChNvZEb5S9'...
+-----> Building node-js-app ...
+remote: warning: You appear to have cloned an empty repository.
+remote: done.
+remote: HEAD is now at 2e52ce7... Update documentation links
+       Node.js app detected
+-----> Requested node range:  0.10.x
+-----> Resolved node version: 0.10.26
+-----> Downloading and installing node
+(省略)
+-----> Discovering process types
+       Procfile declares types -> web
+-----> Releasing node-js-app ...
+-----> Deploying node-js-app ...
+=====> Application deployed:
+       http://node-js-app.dokku.me
+
+To dokku:node-js-app
+ * [new branch]      master -> master
+Branch master set up to track remote branch master from dokku.
+```
+
+Vagrantfile で guest の 80 番ポートを host の 8080 番ポートで見えるように設定されているので
+`http://node-js-app.dokku.me:8080/`
+で開くと `Hello World!` と表示されます。
