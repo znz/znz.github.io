@@ -4,7 +4,7 @@
   <title><![CDATA[Category: homebrew | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/homebrew/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-21T23:35:45+09:00</updated>
+  <updated>2014-04-22T00:47:01+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,90 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[homebrew cask で sylpheed test1 をインストールした]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-21-brew-cask-sylpheed.html"/>
+    <updated>2014-04-21T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/brew-cask-sylpheed</id>
+    <content type="html"><![CDATA[<p><a href="http://sylpheed.sraoss.jp/ja/news.html">Sylpheed 3.4.1-test1 for Mac OS X (テスト版)</a>
+がリリースされていたので、
+homebrew cask を使ってインストールしてみました。</p>
+
+<p>dmg で配布されているアプリケーションを homebrew cask に対応させる例としても参考になると思います。</p>
+
+<!--more-->
+
+
+<h2>homebrew cask のインストール</h2>
+
+<p><a href="http://brew.sh/">Homebre</a>
+と
+<a href="https://github.com/phinze/homebrew-cask">homebrew-cask</a>
+をあらかじめインストールしておきます。</p>
+
+<h2>cask 作成</h2>
+
+<p><code>brew cask create sylpheed-test</code> で作成して、
+内容を以下のように変更しました。</p>
+
+<p><code>ruby
+class SylpheedTest &lt; Cask
+  url 'http://sylpheed.sraoss.jp/sylpheed/macosx/Sylpheed_3.4.1-test1.dmg'
+  homepage 'http://sylpheed.sraoss.jp/'
+  version '3.4.1-test1'
+  sha256 '52505ab7913fd58fa921a9c8b574286f08073321b440b7aa23dba3896b4b2ddc'
+  link 'Sylpheed.app'
+end
+</code></p>
+
+<p><code>sha256</code> は
+<a href="https://github.com/phinze/homebrew-cask/blob/master/CONTRIBUTING.md#cask-stanzas">Cask Stanzas</a>
+の説明にあるように別途 <code>url</code> に指定したファイルをダウンロードして <code>shasum -a 256 &lt;file&gt;</code> で調べました。
+もし upstream のリリースアナウンスに書いてあれば、それをそのまま使えば良いと思います。</p>
+
+<p>編集途中で閉じてしまった場合は
+<code>brew cask edit sylpheed-test</code>
+で再編集できます。</p>
+
+<p>実体は <code>$(brew --prefix)/Library/Taps/phinze-cask/Casks/sylpheed-test.rb</code> にあります。</p>
+
+<h2>インストール</h2>
+
+<p><code>sylpheed-test.rb</code> が作成できたら <code>brew cask install sylpheed-test</code> でインストールできます。</p>
+
+<p>```console
+% brew cask install sylpheed-test
+==> Downloading <a href="http://sylpheed.sraoss.jp/sylpheed/macosx/Sylpheed_3.4.1-test1.dmg">http://sylpheed.sraoss.jp/sylpheed/macosx/Sylpheed_3.4.1-test1.dmg</a></p>
+
+<h6>################################################################## 100.0%</h6>
+
+<p>==> Symlinking App &lsquo;Sylpheed.app&rsquo; to &lsquo;/Users/kazu/Applications/Sylpheed.app&rsquo;
+🍺  sylpheed-test installed to &lsquo;/opt/homebrew-cask/Caskroom/sylpheed-test/3.4.1-test1&rsquo; (314 files, 32M)
+```</p>
+
+<h2>起動</h2>
+
+<p>Launchpad から起動したり、Spotlight で検索したりして普通に起動します。</p>
+
+<p>初回起動で
+<code>~/Library/Application Support/Sylpheed/Mailboxes/Mail</code>
+を作るかきかれましたが、その時点で既に
+<code>~/Library/Application Support/Sylpheed</code>
+は作成されていました。</p>
+
+<h2>まとめ</h2>
+
+<p>テスト版なので、まだ変なところはあるようですが (Command+V がメッセージビューのトグルになってペーストできないとか)
+Mac OS X 版特有の問題があるだけのようなので、今後の正式版に期待しています。</p>
+
+<p>まだ test 版なので pull request はしていないのですが、
+正式版が出たら homebrew cask に pull request を送るかもしれません。
+beta 版なども対応するなら
+<a href="https://github.com/caskroom/homebrew-versions">homebrew-cask-versions</a>
+に pull request を送ると良さそうです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[MavericksでEmacs.appが起動時にホームディレクトリにならない]]></title>
@@ -312,61 +396,6 @@ brew reinstall poppler --with-glib
 </code></p>
 
 <p>これでも動かなければ gem も uninstall して install し直す予定でした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Mac で rabbiter が動いた]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-08-rabbiter-on-mac.html"/>
-    <updated>2013-09-08T21:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rabbiter-on-mac</id>
-    <content type="html"><![CDATA[<p>homebrew を使った Mac OS X 10.8.4 環境で rabbiter (2.0.1) が動くようになりました。</p>
-
-<!--more-->
-
-
-<p>rabbiter の issues に報告していた
-<a href="https://github.com/rabbit-shocker/rabbiter/issues/1">show_uri の問題</a>
-と
-<a href="https://github.com/rabbit-shocker/rabbiter/issues/2">glib-networking のルート証明書の問題</a>
-が解決したので、 <code>glib-networking</code> を <code>brew reinstall glib-networking --with-curl-ca-bundle</code> でインストールすれば使えるようになりました。
-ちなみに、初回のインストールでも <code>brew install</code> ではなく <code>brew reinstall</code> で大丈夫のようです。</p>
-
-<p>以下のように <code>configure</code> に <code>--with-ca-certificates</code> が付いていれば使えます。</p>
-
-<p><code>
-% brew reinstall glib-networking --with-curl-ca-bundle
-==&gt; Reinstalling glib-networking --with-curl-ca-bundle
-==&gt; Downloading http://ftp.gnome.org/pub/GNOME/sources/glib-networking/2.36/glib-networkin
-Already downloaded: /Library/Caches/Homebrew/glib-networking-2.36.2.tar.xz
-==&gt; ./configure --with-ca-certificates=/usr/local/opt/curl-ca-bundle/share/ca-bundle.crt -
-==&gt; make install
-🍺  /usr/local/Cellar/glib-networking/2.36.2: 68 files, 352K, built in 18 seconds
-</code></p>
-
-<p>以下のように <code>configure</code> に <code>--without-ca-certificates</code> と付いているときは rabbiter が使えません。</p>
-
-<p><code>
-% brew reinstall glib-networking
-==&gt; Reinstalling glib-networking
-==&gt; Downloading http://ftp.gnome.org/pub/GNOME/sources/glib-networking/2.36/glib-networkin
-Already downloaded: /Library/Caches/Homebrew/glib-networking-2.36.2.tar.xz
-==&gt; ./configure --without-ca-certificates --prefix=/usr/local/Cellar/glib-networking/2.36.
-==&gt; make install
-🍺  /usr/local/Cellar/glib-networking/2.36.2: 68 files, 352K, built in 21 seconds
-</code></p>
-
-<p>一度 <code>--with-curl-ca-bundle</code> 付きでインストールした後だと、以下のようにオプションなしの reinstall でもオプションが付くようです。</p>
-
-<p><code>
-% brew reinstall glib-networking
-==&gt; Reinstalling glib-networking --with-curl-ca-bundle
-==&gt; Downloading http://ftp.gnome.org/pub/GNOME/sources/glib-networking/2.36/glib-networkin
-Already downloaded: /Library/Caches/Homebrew/glib-networking-2.36.2.tar.xz
-==&gt; ./configure --with-ca-certificates=/usr/local/opt/curl-ca-bundle/share/ca-bundle.crt -
-==&gt; make install
-🍺  /usr/local/Cellar/glib-networking/2.36.2: 68 files, 352K, built in 18 seconds
-</code></p>
 ]]></content>
   </entry>
   

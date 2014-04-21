@@ -4,7 +4,7 @@
   <title><![CDATA[Category: osx | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/osx/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-21T23:35:45+09:00</updated>
+  <updated>2014-04-22T00:47:01+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,90 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[homebrew cask で sylpheed test1 をインストールした]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-21-brew-cask-sylpheed.html"/>
+    <updated>2014-04-21T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/brew-cask-sylpheed</id>
+    <content type="html"><![CDATA[<p><a href="http://sylpheed.sraoss.jp/ja/news.html">Sylpheed 3.4.1-test1 for Mac OS X (テスト版)</a>
+がリリースされていたので、
+homebrew cask を使ってインストールしてみました。</p>
+
+<p>dmg で配布されているアプリケーションを homebrew cask に対応させる例としても参考になると思います。</p>
+
+<!--more-->
+
+
+<h2>homebrew cask のインストール</h2>
+
+<p><a href="http://brew.sh/">Homebre</a>
+と
+<a href="https://github.com/phinze/homebrew-cask">homebrew-cask</a>
+をあらかじめインストールしておきます。</p>
+
+<h2>cask 作成</h2>
+
+<p><code>brew cask create sylpheed-test</code> で作成して、
+内容を以下のように変更しました。</p>
+
+<p><code>ruby
+class SylpheedTest &lt; Cask
+  url 'http://sylpheed.sraoss.jp/sylpheed/macosx/Sylpheed_3.4.1-test1.dmg'
+  homepage 'http://sylpheed.sraoss.jp/'
+  version '3.4.1-test1'
+  sha256 '52505ab7913fd58fa921a9c8b574286f08073321b440b7aa23dba3896b4b2ddc'
+  link 'Sylpheed.app'
+end
+</code></p>
+
+<p><code>sha256</code> は
+<a href="https://github.com/phinze/homebrew-cask/blob/master/CONTRIBUTING.md#cask-stanzas">Cask Stanzas</a>
+の説明にあるように別途 <code>url</code> に指定したファイルをダウンロードして <code>shasum -a 256 &lt;file&gt;</code> で調べました。
+もし upstream のリリースアナウンスに書いてあれば、それをそのまま使えば良いと思います。</p>
+
+<p>編集途中で閉じてしまった場合は
+<code>brew cask edit sylpheed-test</code>
+で再編集できます。</p>
+
+<p>実体は <code>$(brew --prefix)/Library/Taps/phinze-cask/Casks/sylpheed-test.rb</code> にあります。</p>
+
+<h2>インストール</h2>
+
+<p><code>sylpheed-test.rb</code> が作成できたら <code>brew cask install sylpheed-test</code> でインストールできます。</p>
+
+<p>```console
+% brew cask install sylpheed-test
+==> Downloading <a href="http://sylpheed.sraoss.jp/sylpheed/macosx/Sylpheed_3.4.1-test1.dmg">http://sylpheed.sraoss.jp/sylpheed/macosx/Sylpheed_3.4.1-test1.dmg</a></p>
+
+<h6>################################################################## 100.0%</h6>
+
+<p>==> Symlinking App &lsquo;Sylpheed.app&rsquo; to &lsquo;/Users/kazu/Applications/Sylpheed.app&rsquo;
+🍺  sylpheed-test installed to &lsquo;/opt/homebrew-cask/Caskroom/sylpheed-test/3.4.1-test1&rsquo; (314 files, 32M)
+```</p>
+
+<h2>起動</h2>
+
+<p>Launchpad から起動したり、Spotlight で検索したりして普通に起動します。</p>
+
+<p>初回起動で
+<code>~/Library/Application Support/Sylpheed/Mailboxes/Mail</code>
+を作るかきかれましたが、その時点で既に
+<code>~/Library/Application Support/Sylpheed</code>
+は作成されていました。</p>
+
+<h2>まとめ</h2>
+
+<p>テスト版なので、まだ変なところはあるようですが (Command+V がメッセージビューのトグルになってペーストできないとか)
+Mac OS X 版特有の問題があるだけのようなので、今後の正式版に期待しています。</p>
+
+<p>まだ test 版なので pull request はしていないのですが、
+正式版が出たら homebrew cask に pull request を送るかもしれません。
+beta 版なども対応するなら
+<a href="https://github.com/caskroom/homebrew-versions">homebrew-cask-versions</a>
+に pull request を送ると良さそうです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 9 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -357,95 +441,6 @@ URL を受け取っても見せる window がなくなっているので
 
 <p>今回はみんなもくもくとそれぞれの作業が進んだという感じで、
 成果発表もすぐに終わった感じでした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[RubyMotionのOSXアプリの起動エラー]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-28-rubymotion-error.html"/>
-    <updated>2013-12-28T18:55:18+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-error</id>
-    <content type="html"><![CDATA[<p>最近 RubyMotion で作っている OSX アプリが
-<code>LSOpenURLsWithRole() failed with error -10810</code>
-などで起動しないことがあったので原因を調べてみました。</p>
-
-<!--more-->
-
-
-<h2>LSOpenURLsWithRole() failed with error -10810</h2>
-
-<h3>よくある原因</h3>
-
-<p><code>Hello.app/Contents/MacOS/Hello</code>
-のような実行ファイルの実体に実行属性が外れているというのが
-よくある原因のようで、
-<a href="http://owncloud.org/">ownCloud</a>
-経由で同期したアプリが実行できなかったときは
-これが原因でした。</p>
-
-<h3>別の原因</h3>
-
-<p>実行属性も問題なくて悩んでいたときに
-コンソール (Console.app) のログを見てみると</p>
-
-<p><code>
-2013/12/28 10:39:17.963 open[85406]: spawn_via_launchd() failed, errno=22 label=com.yourcompany.Hello.44032 path=.../Hello/build/MacOSX-10.9-Development/Hello.app/Contents/MacOS/Hello flags=0 : LaunchApplicationClient.cp #1168 LaunchApplicationViaLaunchDJobLabel() q=com.apple.main-thread
-</code>
-のようなログが出ていたので、
-<code>LaunchApplicationViaLaunchDJobLabel</code>
-で検索してみたところ、
-<a href="http://portingteam.com/topic/9723-mavericks-problem-opening-fresh-wrapper/">Mavericks problem opening fresh wrapper</a>
-という話が見つかって、
-そこに書いてあった</p>
-
-<p><code>
-launchctl remove $(launchctl list | grep wineskin | awk '{ print $3 }')
-</code></p>
-
-<p>という手順を参考にして解決しました。</p>
-
-<p><code>Hello</code> が2個残っていて、
-<code>$()</code> だとダメだったので個別に <code>launchctl remove</code> しました。</p>
-
-<p><code>
-% launchctl list | grep Hello
--   2   com.yourcompany.Hello.44032
--   0   com.yourcompany.Hello.53008
-%  launchctl remove $(launchctl list | awk '/Hello/{print $3}')
-usage: launchctl remove &lt;job label&gt;
-zsh: exit 1     launchctl remove $(launchctl list | awk '/Hello/{print $3}')
-%  echo launchctl remove $(launchctl list | awk '/Hello/{print $3}')
-launchctl remove com.yourcompany.Hello.44032 com.yourcompany.Hello.53008
-%  launchctl remove com.yourcompany.Hello.44032
-%  launchctl remove com.yourcompany.Hello.53008
-%  open -a Hello
-</code></p>
-
-<h3>その他</h3>
-
-<p>その他の対象方法も含めて
-<a href="http://www.thexlab.com/faqs/error-10810.html">Error -10810 Openng Applictions or Relaunching Finder</a>
-にいろいろ書いてあるようです。
-(英語で長かったのでちゃんと読んでません。)</p>
-
-<h2>MacBookPro6,2 で EXC_BAD_INSTRUCTION (SIGILL) になって起動しない</h2>
-
-<p>未解決です。</p>
-
-<p><a href="https://github.com/MohawkApps/Hacker-Bar/issues/36">EXC_BAD_INSTRUCTION crash in App Store version&hellip;</a>
-に似た話があって、
-RubyMotion のバグっぽいという話のようです。</p>
-
-<p><code>motion create --template=osx HelloOSX</code>
-で作成しただけのものでも
-<a href="https://gist.github.com/znz/8158061#file-helloosx-report-txt">クラッシュ</a>
-して起動しませんでした。</p>
-
-<p>RubyMotion を入れている自分の MacBook Air の環境の問題かどうかを切り分けるために
-<a href="http://shin1x1.github.io/vagrantx/">VagrantX</a>
-も試してみましたが、
-<a href="https://gist.github.com/znz/8158061#file-vagrantx-report-txt">同じくクラッシュ</a>
-して起動しませんでした。</p>
 ]]></content>
   </entry>
   

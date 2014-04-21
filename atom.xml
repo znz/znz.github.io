@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-21T23:35:45+09:00</updated>
+  <updated>2014-04-22T00:47:01+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,100 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[homebrew cask で sylpheed test1 をインストールした]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-21-brew-cask-sylpheed.html"/>
+    <updated>2014-04-21T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/brew-cask-sylpheed</id>
+    <content type="html"><![CDATA[<p><a href="http://sylpheed.sraoss.jp/ja/news.html">Sylpheed 3.4.1-test1 for Mac OS X (テスト版)</a>
+がリリースされていたので、
+homebrew cask を使ってインストールしてみました。</p>
+
+<p>dmg で配布されているアプリケーションを homebrew cask に対応させる例としても参考になると思います。</p>
+
+<!--more-->
+
+
+<h2>homebrew cask のインストール</h2>
+
+<p><a href="http://brew.sh/">Homebre</a>
+と
+<a href="https://github.com/phinze/homebrew-cask">homebrew-cask</a>
+をあらかじめインストールしておきます。</p>
+
+<h2>cask 作成</h2>
+
+<p><code>brew cask create sylpheed-test</code> で作成して、
+内容を以下のように変更しました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">SylpheedTest</span> <span class="o">&lt;</span> <span class="no">Cask</span>
+</span><span class='line'>  <span class="n">url</span> <span class="s1">&#39;http://sylpheed.sraoss.jp/sylpheed/macosx/Sylpheed_3.4.1-test1.dmg&#39;</span>
+</span><span class='line'>  <span class="n">homepage</span> <span class="s1">&#39;http://sylpheed.sraoss.jp/&#39;</span>
+</span><span class='line'>  <span class="n">version</span> <span class="s1">&#39;3.4.1-test1&#39;</span>
+</span><span class='line'>  <span class="n">sha256</span> <span class="s1">&#39;52505ab7913fd58fa921a9c8b574286f08073321b440b7aa23dba3896b4b2ddc&#39;</span>
+</span><span class='line'>  <span class="n">link</span> <span class="s1">&#39;Sylpheed.app&#39;</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>sha256</code> は
+<a href="https://github.com/phinze/homebrew-cask/blob/master/CONTRIBUTING.md#cask-stanzas">Cask Stanzas</a>
+の説明にあるように別途 <code>url</code> に指定したファイルをダウンロードして <code>shasum -a 256 &lt;file&gt;</code> で調べました。
+もし upstream のリリースアナウンスに書いてあれば、それをそのまま使えば良いと思います。</p>
+
+<p>編集途中で閉じてしまった場合は
+<code>brew cask edit sylpheed-test</code>
+で再編集できます。</p>
+
+<p>実体は <code>$(brew --prefix)/Library/Taps/phinze-cask/Casks/sylpheed-test.rb</code> にあります。</p>
+
+<h2>インストール</h2>
+
+<p><code>sylpheed-test.rb</code> が作成できたら <code>brew cask install sylpheed-test</code> でインストールできます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> brew cask install sylpheed-test
+</span><span class='line'><span class="go">==&gt; Downloading http://sylpheed.sraoss.jp/sylpheed/macosx/Sylpheed_3.4.1-test1.dmg</span>
+</span><span class='line'><span class="gp">#</span><span class="c">####################################################################### 100.0%</span>
+</span><span class='line'><span class="go">==&gt; Symlinking App &#39;Sylpheed.app&#39; to &#39;/Users/kazu/Applications/Sylpheed.app&#39;</span>
+</span><span class='line'><span class="go">🍺  sylpheed-test installed to &#39;/opt/homebrew-cask/Caskroom/sylpheed-test/3.4.1-test1&#39; (314 files, 32M)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>起動</h2>
+
+<p>Launchpad から起動したり、Spotlight で検索したりして普通に起動します。</p>
+
+<p>初回起動で
+<code>~/Library/Application Support/Sylpheed/Mailboxes/Mail</code>
+を作るかきかれましたが、その時点で既に
+<code>~/Library/Application Support/Sylpheed</code>
+は作成されていました。</p>
+
+<h2>まとめ</h2>
+
+<p>テスト版なので、まだ変なところはあるようですが (Command+V がメッセージビューのトグルになってペーストできないとか)
+Mac OS X 版特有の問題があるだけのようなので、今後の正式版に期待しています。</p>
+
+<p>まだ test 版なので pull request はしていないのですが、
+正式版が出たら homebrew cask に pull request を送るかもしれません。
+beta 版なども対応するなら
+<a href="https://github.com/caskroom/homebrew-versions">homebrew-cask-versions</a>
+に pull request を送ると良さそうです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Ubuntu 14.04 で dokku を使う]]></title>
@@ -3619,85 +3713,6 @@ amagasakirb としては久しぶりの Ruby の本ということになりま�
 </span><span class='line'><span class="go">=&gt; 1677-09-21 09:12:43 +0900</span>
 </span></code></pre></td></tr></table></div></figure>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[installコマンドでコマンド数を減らす]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-02-14-install.html"/>
-    <updated>2014-02-14T23:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/install</id>
-    <content type="html"><![CDATA[<p>mkdir とか touch とか chown とか chmod とか個別に実行しなくても
-install コマンドだけでまとめて出来るという話です。</p>
-
-<!--more-->
-
-
-<h2>問題例</h2>
-
-<p>Dockerfile の RUN などが典型的な例ですが、他でも例えば
-<code>mkdir -p /home/foo/.ssh; chown foo /home/foo/.ssh; chmod 0700 /home/foo/.ssh</code>
-のようなことをすることがあると思います。</p>
-
-<p>特に Dockerfile の場合は RUN ごとにイメージがたまっていくこともあって、
-<code>;</code> や <code>&amp;&amp;</code> でつなげて単独の RUN にまとめて書くことも多いと思います。</p>
-
-<h2>install でディレクトリを作る</h2>
-
-<p>たとえば</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'> mkdir -p /home/foo/.ssh
-</span><span class='line'> chown foo /home/foo/.ssh
-</span><span class='line'> chgrp users /home/foo/.ssh
-</span><span class='line'> chmod 0700 /home/foo/.ssh</span></code></pre></td></tr></table></div></figure>
-
-
-<p>なら
-<code>install -o foo -g users -m 0700 -d /home/foo/.ssh</code>
-にまとめられます。</p>
-
-<p><code>install -o foo -g users -m 0700 -d /home/foo/.ssh /home/foo/tmp</code>
-のように複数ディレクトリを同時に作成することも出来ます。</p>
-
-<p>2014-02-16 追記:
-<a href="http://qiita.com/znz/items/fee7c42587e995566a69#comment-a08bc7770a5fcdf902a0">Qiita の方のコメント</a>
-で
-<code>sudo -u user mkdir -p -m 700 /home/user/.ssh</code>
-というやり方もあるという話がありました。</p>
-
-<h2>install でファイルをコピーする</h2>
-
-<p>たとえば</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'> cp /path/from/*.txt /path/to/
-</span><span class='line'> chown foo /path/to/*.txt
-</span><span class='line'> chgrp users /path/to/*.txt
-</span><span class='line'> chmod 0644 /path/to/*.txt</span></code></pre></td></tr></table></div></figure>
-
-
-<p>なら
-<code>install -o foo -g users -m 0644 /path/from/*.txt /path/to/</code>
-にまとめられます。</p>
-
-<p><code>install -o foo -g users -m 0644 -t /path/to /path/from/*.txt</code>
-のようにディレクトリを先に書くことも出来ます。</p>
-
-<p>1ファイルだけなら
-<code>install -o foo -g users -m 0644  /path/from/foo.txt /path/to/bar.txt</code>
-のようにコピー先のファイル名を指定することも出来ます。</p>
-
-<h2>まとめ</h2>
-
-<p>たくさん <code>chown</code> や <code>chmod</code> を実行していることがあれば、
-<code>install</code> コマンドでまとめられないか検討してみてください。</p>
 ]]></content>
   </entry>
   
