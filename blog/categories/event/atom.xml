@@ -4,7 +4,7 @@
   <title><![CDATA[Category: event | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/event/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-22T00:47:01+09:00</updated>
+  <updated>2014-04-24T00:11:45+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,66 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 10 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-23-rubymotion-mokumoku.html"/>
+    <updated>2014-04-23T19:16:51+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku</id>
+    <content type="html"><![CDATA[<p>第 1 回から第 9 回にも参加した RubyMotion もくもく会 in Osaka の
+<a href="http://connpass.com/event/5674/">第 10 回 RubyMotion もくもく会 in Osaka</a>
+に参加してきました。</p>
+
+<p>次回の
+<a href="http://connpass.com/event/6116/">第 11 回 RubyMotion もくもく会 in Osaka &ndash; connpass</a>
+は 05/28(水) になりました。</p>
+
+<!--more-->
+
+
+<h2>メモ</h2>
+
+<ul>
+<li><a href="https://itunes.apple.com/jp/app/bokosuka!mogurando/id845835380?mt=8">ボコスカ！モグランド</a></li>
+<li><a href="http://www.amazon.co.jp/gp/product/4873116678/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116678&amp;linkCode=as2&amp;tag=znz-22">AngularJSアプリケーション開発ガイド</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116678" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" /> が発売されているという話</li>
+<li><a href="http://www.pixate.com/">Pixate</a></li>
+<li>MacFace</li>
+<li><a href="https://github.com/HipByte/RubyMotionSamples/issues/31">osx/Tweets app crashes on launch</a></li>
+<li><a href="http://www.impress-plus.co.jp/">http://www.impress-plus.co.jp/</a></li>
+</ul>
+
+
+<h2>調査続き</h2>
+
+<p>引き続き初回起動時の URL の受け取り方を調べていました。</p>
+
+<ul>
+<li><a href="http://questbeat.hatenablog.jp/entry/2014/04/19/123207">「ログイン時に起動」を実装する</a> はあんまり関係なかった。</li>
+<li>GitHub で <code>LSSetDefaultHandlerForURLScheme</code> を検索
+
+<ul>
+<li><a href="https://github.com/s-faychatelard/Helm/blob/2c85b303781fa430432c17ed9848a0b252c82eae/sources/others/mac/mac.mm">https://github.com/s-faychatelard/Helm/blob/2c85b303781fa430432c17ed9848a0b252c82eae/sources/others/mac/mac.mm</a> : Qt で実装していて URL を受け取っている部分がわからず (Qt のイベントに変換されたものを受け取っている?)</li>
+<li><a href="https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/misc/osx/osx_browsers.rb">https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/misc/osx/osx_browsers.rb</a> : ブラウザーの一覧の取得など</li>
+<li><a href="https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/app/osx/app.rb">https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/app/osx/app.rb</a> : <code>application:openFile:</code> や <code>application:openFiles:</code> で受け取っているように見えるが試してみても呼ばれない。</li>
+<li><a href="https://github.com/gnyrd/WebEx/blob/0ea21241591e496d1d702c45768400fa14d75662/URLHandler.m">https://github.com/gnyrd/WebEx/blob/0ea21241591e496d1d702c45768400fa14d75662/URLHandler.m</a> : <code>kAEGetURL</code> の登録に <code>handleGetURLEvent:withReplyEvent:</code> (2引数) ではなく <code>getURL:</code> (1引数) を使っている。</li>
+</ul>
+</li>
+</ul>
+
+
+<p>前回までの試行錯誤の途中で <code>setEventHandler</code> の呼び出しを <code>applicationDidFinishLaunching:</code> から <code>initialize</code> に移動していたのと <code>getURL:</code> への変更の組み合わせで、やっと初回起動時にも URL が受け取れるようになって、
+さらに <code>rake clean</code> したり一度デフォルトブラウザーを他のブラウザーに設定し直したりしていたら、
+<code>handleGetURLEvent:withReplyEvent:</code> に戻しても初回起動時に受け取れるようになっていました。</p>
+
+<p>原因がはっきりしないのが嫌な感じですが、何か設定が中途半端に残っているとうまく動かなかったようです。</p>
+
+<h2>RubyMine</h2>
+
+<p>前回のもくもく会でインストールして、他では使っていなかったので、
+ほぼ使っていないまま登録せず試用期限が切れてしまって、
+30分ごとに終了するようになってしまいました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[R と Ruby によるデータ解析入門　読書会　第1回に参加しました]]></title>
@@ -284,85 +344,6 @@ window を閉じた時に終了するようにしました。
 の話と
 <a href="http://blog.n-z.jp/blog/2014-02-23-boot2docker.html">boot2docker</a>
 でインストールした docker 環境でのデモをしました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Land of Lisp 読書会 最終回（第5回）(兵庫県)に参加してきた]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-02-22-reading-land-of-lisp.html"/>
-    <updated>2014-02-22T22:45:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/reading-land-of-lisp</id>
-    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/event/index/144998/">2月22日 Land of Lisp 読書会 最終回（第5回）(兵庫県)</a>
-に参加してきました。
-今回は第16章から最後まででした。</p>
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4873116155" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-<p>次回は4月5日で<a href="http://www.amazon.co.jp/gp/product/4873116155/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116155&amp;linkCode=as2&amp;tag=znz-22">RとRubyによるデータ解析入門</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116155" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />の読書会に決まりました。</p>
-
-<!--more-->
-
-
-<h2>会場</h2>
-
-<p>今回は今までと違って、普通の会議室がとれなかったということで音楽室でした。
-静かだったり、外から見えるようになっていたりしたのが印象的でした。</p>
-
-<h2>メモ</h2>
-
-<p>以下今回のメモです。</p>
-
-<ul>
-<li><code>,</code> が気持ち悪い。</li>
-<li>clojure だと <code>~</code></li>
-<li><code>`</code> の話とマクロの話は別</li>
-<li>Lisp のマクロの話と Ruby に似たようなものがあるかという話</li>
-<li>Ruby の <code>eval</code> と <code>class_eval</code> と <code>instance_eval</code> の話</li>
-<li>SVG の話</li>
-<li>imagemagick とか minimagick とかでも画像生成できる話 (例: <a href="http://jarp.does.notwork.org/diary/201308a.html">http://jarp.does.notwork.org/diary/201308a.html</a> )</li>
-<li>c14n (XML Canonicalization) してインデントを付けると読みやすくなる話</li>
-<li>middleman : rails の asset pipe line などの技術を使って静的サイトが作れる</li>
-<li>WMI : SNMP の Windows 専用版みたいなもの</li>
-<li>PowerShell の話
-
-<ul>
-<li>パイプをオブジェクトが流れるのがモナドとか jQuery とかっぽい</li>
-<li>他の言語の printf などと全く違う。エスケープがバッククオートとか</li>
-<li>WSHは32ビットと64ビットの問題がある?</li>
-</ul>
-</li>
-<li>単なる便利なライブラリと DSL の違いは?
-
-<ul>
-<li>外部 DSL だとわかりやすいけど、内部 DSL だと曖昧</li>
-<li>その他いろいろな意見あり</li>
-</ul>
-</li>
-<li>Ruby だと内部 DSL は括弧を省略するのが普通</li>
-<li>Gemfile とか Rakefile とか</li>
-<li>rspec の話</li>
-<li>18章「Haskell や Clojure では、遅延評価が言語のコアでサポートされている。」</li>
-<li>p.378 value が nil になることもあるから forced は必要そう</li>
-<li>lazy-car や lazy-cdr は lazy を作るのではなく force で取り出すので lazy-cons や lazy-nil と意味が違ってわかりにくい</li>
-<li>マンガはコマ割がわかりにくいし p.432 には矢印まであるのは矢印を付けるよりもコマ割を工夫すべきでは</li>
-</ul>
-
-
-<h2>次回の予定</h2>
-
-<ul>
-<li>エリック・エヴァンスのドメイン駆動設計</li>
-<li>クラウドデザインパターン</li>
-<li>SQLアンチパターン</li>
-<li>RとRubyによるデータ解析入門</li>
-</ul>
-
-
-<p>などの候補が出ましたが R と Ruby の本に決定して、
-amagasakirb としては久しぶりの Ruby の本ということになりました。</p>
 ]]></content>
   </entry>
   

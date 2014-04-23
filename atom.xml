@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-22T00:47:01+09:00</updated>
+  <updated>2014-04-24T00:11:45+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,66 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 10 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-23-rubymotion-mokumoku.html"/>
+    <updated>2014-04-23T19:16:51+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku</id>
+    <content type="html"><![CDATA[<p>第 1 回から第 9 回にも参加した RubyMotion もくもく会 in Osaka の
+<a href="http://connpass.com/event/5674/">第 10 回 RubyMotion もくもく会 in Osaka</a>
+に参加してきました。</p>
+
+<p>次回の
+<a href="http://connpass.com/event/6116/">第 11 回 RubyMotion もくもく会 in Osaka &ndash; connpass</a>
+は 05/28(水) になりました。</p>
+
+<!--more-->
+
+
+<h2>メモ</h2>
+
+<ul>
+<li><a href="https://itunes.apple.com/jp/app/bokosuka!mogurando/id845835380?mt=8">ボコスカ！モグランド</a></li>
+<li><a href="http://www.amazon.co.jp/gp/product/4873116678/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116678&amp;linkCode=as2&amp;tag=znz-22">AngularJSアプリケーション開発ガイド</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116678" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" /> が発売されているという話</li>
+<li><a href="http://www.pixate.com/">Pixate</a></li>
+<li>MacFace</li>
+<li><a href="https://github.com/HipByte/RubyMotionSamples/issues/31">osx/Tweets app crashes on launch</a></li>
+<li><a href="http://www.impress-plus.co.jp/">http://www.impress-plus.co.jp/</a></li>
+</ul>
+
+
+<h2>調査続き</h2>
+
+<p>引き続き初回起動時の URL の受け取り方を調べていました。</p>
+
+<ul>
+<li><a href="http://questbeat.hatenablog.jp/entry/2014/04/19/123207">「ログイン時に起動」を実装する</a> はあんまり関係なかった。</li>
+<li>GitHub で <code>LSSetDefaultHandlerForURLScheme</code> を検索
+
+<ul>
+<li><a href="https://github.com/s-faychatelard/Helm/blob/2c85b303781fa430432c17ed9848a0b252c82eae/sources/others/mac/mac.mm">https://github.com/s-faychatelard/Helm/blob/2c85b303781fa430432c17ed9848a0b252c82eae/sources/others/mac/mac.mm</a> : Qt で実装していて URL を受け取っている部分がわからず (Qt のイベントに変換されたものを受け取っている?)</li>
+<li><a href="https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/misc/osx/osx_browsers.rb">https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/misc/osx/osx_browsers.rb</a> : ブラウザーの一覧の取得など</li>
+<li><a href="https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/app/osx/app.rb">https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/app/osx/app.rb</a> : <code>application:openFile:</code> や <code>application:openFiles:</code> で受け取っているように見えるが試してみても呼ばれない。</li>
+<li><a href="https://github.com/gnyrd/WebEx/blob/0ea21241591e496d1d702c45768400fa14d75662/URLHandler.m">https://github.com/gnyrd/WebEx/blob/0ea21241591e496d1d702c45768400fa14d75662/URLHandler.m</a> : <code>kAEGetURL</code> の登録に <code>handleGetURLEvent:withReplyEvent:</code> (2引数) ではなく <code>getURL:</code> (1引数) を使っている。</li>
+</ul>
+</li>
+</ul>
+
+
+<p>前回までの試行錯誤の途中で <code>setEventHandler</code> の呼び出しを <code>applicationDidFinishLaunching:</code> から <code>initialize</code> に移動していたのと <code>getURL:</code> への変更の組み合わせで、やっと初回起動時にも URL が受け取れるようになって、
+さらに <code>rake clean</code> したり一度デフォルトブラウザーを他のブラウザーに設定し直したりしていたら、
+<code>handleGetURLEvent:withReplyEvent:</code> に戻しても初回起動時に受け取れるようになっていました。</p>
+
+<p>原因がはっきりしないのが嫌な感じですが、何か設定が中途半端に残っているとうまく動かなかったようです。</p>
+
+<h2>RubyMine</h2>
+
+<p>前回のもくもく会でインストールして、他では使っていなかったので、
+ほぼ使っていないまま登録せず試用期限が切れてしまって、
+30分ごとに終了するようになってしまいました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[homebrew cask で sylpheed test1 をインストールした]]></title>
@@ -3546,173 +3606,6 @@ docker のサーバーとの接続がうまくいかない場合はここでエ�
 
 <p>などの候補が出ましたが R と Ruby の本に決定して、
 amagasakirb としては久しぶりの Ruby の本ということになりました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 8 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-02-19-rubymotion-mokumoku-osaka.html"/>
-    <updated>2014-02-19T19:27:12+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
-    <content type="html"><![CDATA[<p>第 1 回から第 7 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://connpass.com/event/4910/">第 8 回 RubyMotion もくもく会 in Osaka</a>
-に参加してきました。</p>
-
-<p>次回の
-<a href="http://connpass.com/event/5276/">第 9 回 RubyMotion もくもく会 in Osaka</a>
-は 3/19(水) になりました。</p>
-
-<!--more-->
-
-
-<h2>話に出たもの</h2>
-
-<p>話に出てきたサイトなどのメモです。</p>
-
-<ul>
-<li><a href="http://connpass.com/event/5274/">iBeacon 勉強会（入門編）</a></li>
-<li><a href="http://japan.gamesalad.com/">GameSalad</a></li>
-<li><a href="http://www.hirotangame.net/">広探ゲーム</a></li>
-</ul>
-
-
-<h2>もくもく</h2>
-
-<p>ブラウザを開くのに <code>open</code> コマンドを経由から <code>NSWorkspace</code> の <code>openURLs:withAppBundleIdentifier:options:additionalEventParamDescriptor:launchIdentifiers:</code> 経由に変更しました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">openBrowser</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">r</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="no">IO</span><span class="o">.</span><span class="n">pipe</span>
-</span><span class='line'>    <span class="n">pid</span> <span class="o">=</span> <span class="no">Process</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="s1">&#39;open&#39;</span><span class="p">,</span> <span class="s1">&#39;-a&#39;</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="vi">@text</span><span class="o">.</span><span class="n">stringValue</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">[</span><span class="ss">:out</span><span class="p">,</span> <span class="ss">:err</span><span class="o">]</span> <span class="o">=&gt;</span> <span class="n">w</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">w</span><span class="o">.</span><span class="n">close</span>
-</span><span class='line'>    <span class="n">pid</span><span class="p">,</span> <span class="n">status</span> <span class="o">=</span> <span class="no">Process</span><span class="o">.</span><span class="n">waitpid2</span><span class="p">(</span><span class="n">pid</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">output</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">read</span>
-</span><span class='line'>    <span class="n">r</span><span class="o">.</span><span class="n">close</span>
-</span><span class='line'>    <span class="k">unless</span> <span class="n">status</span><span class="o">.</span><span class="n">success?</span>
-</span><span class='line'>      <span class="n">alert</span> <span class="o">=</span> <span class="no">NSAlert</span><span class="o">.</span><span class="n">new</span>
-</span><span class='line'>      <span class="n">alert</span><span class="o">.</span><span class="n">messageText</span> <span class="o">=</span> <span class="s2">&quot;Failed to open </span><span class="si">#{</span><span class="n">app</span><span class="si">}</span><span class="se">\n\n</span><span class="si">#{</span><span class="n">output</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span class='line'>      <span class="n">alert</span><span class="o">.</span><span class="n">runModal</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>open -b</code> を使っていれば引数は変わらなかったのですが、 <code>open -a</code> を使っていたので、引数がアプリケーション名からバンドル ID に変わりました。</p>
-
-<p><code>open -a 'Google Chrome' http://localhost:4000/ --args -incognito</code> の <code>-incognito</code> のような追加引数の渡し方がわからなかったので、 Chrome のシークレットウインドウを直接開く機能はなくしました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="no">NSWorkspaceLaunchAsync</span> <span class="o">=</span> <span class="mh">0x00010000</span>
-</span><span class='line'>  <span class="no">NSWorkspaceLaunchAllowingClassicStartup</span> <span class="o">=</span> <span class="mh">0x00020000</span>
-</span><span class='line'>  <span class="no">NSWorkspaceLaunchDefault</span> <span class="o">=</span> <span class="no">NSWorkspaceLaunchAsync</span> <span class="o">|</span> <span class="no">NSWorkspaceLaunchAllowingClassicStartup</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">openBrowser</span><span class="p">(</span><span class="n">app_bundle_id</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">url</span> <span class="o">=</span> <span class="no">NSURL</span><span class="o">.</span><span class="n">URLWithString</span> <span class="vi">@text</span><span class="o">.</span><span class="n">stringValue</span>
-</span><span class='line'>    <span class="n">ret</span> <span class="o">=</span> <span class="no">NSWorkspace</span><span class="o">.</span><span class="n">sharedWorkspace</span><span class="o">.</span><span class="n">openURLs</span><span class="p">(</span><span class="o">[</span><span class="n">url</span><span class="o">]</span><span class="p">,</span> <span class="ss">withAppBundleIdentifier</span><span class="p">:</span> <span class="n">app_bundle_id</span><span class="p">,</span> <span class="ss">options</span><span class="p">:</span> <span class="no">NSWorkspaceLaunchDefault</span><span class="p">,</span> <span class="ss">additionalEventParamDescriptor</span><span class="p">:</span> <span class="kp">nil</span><span class="p">,</span> <span class="ss">launchIdentifiers</span><span class="p">:</span> <span class="kp">nil</span><span class="p">)</span>
-</span><span class='line'>    <span class="k">unless</span> <span class="n">ret</span>
-</span><span class='line'>      <span class="n">alert</span> <span class="o">=</span> <span class="no">NSAlert</span><span class="o">.</span><span class="n">new</span>
-</span><span class='line'>      <span class="n">alert</span><span class="o">.</span><span class="n">messageText</span> <span class="o">=</span> <span class="s2">&quot;Failed to open </span><span class="si">#{</span><span class="n">app</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span class='line'>      <span class="n">alert</span><span class="o">.</span><span class="n">runModal</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><a href="https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/Workspace/Articles/WorkspaceServices.html">Workspace Services Programming Topics: Manipulating Files</a>
-には <code>openURL:</code> しか書いてなかったり、
-<code>additionalEventParamDescriptor</code> には何を渡せばいいのかわかりにくかったりして困りましたが、
-<a href="http://www.lancard.com/blog/2011/05/01/open-url-with-browser-about-mac-app/">http://www.lancard.com/blog/2011/05/01/open-url-with-browser-about-mac-app/</a>
-のように呼び出せばうまくいきました。</p>
-
-<p>最初に <code>rake</code> の REPL で試していたら、以下のエラーになるので、しばらく悩んでいましたが、 <code>app/app_delegate.rb</code> の中に書けば動いたので、 <code>rake</code> でコンパイルされるタイミングでリンクできていないメソッドは呼び出せないということなのかと思いました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">(main)&gt; url = NSURL.URLWithString(&quot;http://www.apple.com&quot;)</span>
-</span><span class='line'><span class="go">=&gt; #&lt;NSURL:0x7fcbe8e45060&gt;</span>
-</span><span class='line'><span class="go">(main)&gt; NSWorkspaceLaunchAsync = 0x00010000</span>
-</span><span class='line'><span class="go">=&gt; 65536</span>
-</span><span class='line'><span class="go">(main)&gt; NSWorkspaceLaunchAllowingClassicStartup = 0x00020000</span>
-</span><span class='line'><span class="go">=&gt; 131072</span>
-</span><span class='line'><span class="go">(main)&gt; NSWorkspaceLaunchDefault = NSWorkspaceLaunchAsync | NSWorkspaceLaunchAllowingClassicStartup</span>
-</span><span class='line'><span class="go">=&gt; 196608</span>
-</span><span class='line'><span class="go">(main)&gt; NSWorkspace.sharedWorkspace.openURLs([url], withAppBundleIdentifier: &quot;com.google.Chrome&quot;, options: NSWorkspaceLaunchDefault, additionalEventParamDescriptor: nil, launchIdentifiers: nil)</span>
-</span><span class='line'><span class="go">dyld: lazy symbol binding failed: Symbol not found: __ZN9RoxorCore14find_bs_cftypeESs</span>
-</span><span class='line'><span class="go">  Referenced from: /Library/RubyMotion/data/osx/librubymotion-repl.dylib</span>
-</span><span class='line'><span class="go">  Expected in: flat namespace</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">dyld: Symbol not found: __ZN9RoxorCore14find_bs_cftypeESs</span>
-</span><span class='line'><span class="go">  Referenced from: /Library/RubyMotion/data/osx/librubymotion-repl.dylib</span>
-</span><span class='line'><span class="go">  Expected in: flat namespace</span>
-</span><span class='line'>
-</span><span class='line'>
-</span><span class='line'><span class="go">================================================================================</span>
-</span><span class='line'><span class="go">The application terminated. A crash report file may have been generated by the</span>
-</span><span class='line'><span class="go">system, use `rake crashlog&#39; to open it. Use `rake debug=1&#39; to restart the app</span>
-</span><span class='line'><span class="go">in the debugger.</span>
-</span><span class='line'><span class="go">================================================================================</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>NSDate</h2>
-
-<p>途中 <code>NSDate.distantFuture</code> の返り値がおかしいという話がありました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">(main)&gt; NSDate.distantFuture</span>
-</span><span class='line'><span class="go">=&gt; 1677-09-21 09:12:43 +0900</span>
-</span><span class='line'><span class="go">(main)&gt; NSDate.distantPast</span>
-</span><span class='line'><span class="go">=&gt; 1677-09-21 09:12:43 +0900</span>
-</span></code></pre></td></tr></table></div></figure>
-
 ]]></content>
   </entry>
   

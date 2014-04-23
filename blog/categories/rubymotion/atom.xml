@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rubymotion | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rubymotion/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-22T00:47:01+09:00</updated>
+  <updated>2014-04-24T00:11:45+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,66 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 10 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-23-rubymotion-mokumoku.html"/>
+    <updated>2014-04-23T19:16:51+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku</id>
+    <content type="html"><![CDATA[<p>第 1 回から第 9 回にも参加した RubyMotion もくもく会 in Osaka の
+<a href="http://connpass.com/event/5674/">第 10 回 RubyMotion もくもく会 in Osaka</a>
+に参加してきました。</p>
+
+<p>次回の
+<a href="http://connpass.com/event/6116/">第 11 回 RubyMotion もくもく会 in Osaka &ndash; connpass</a>
+は 05/28(水) になりました。</p>
+
+<!--more-->
+
+
+<h2>メモ</h2>
+
+<ul>
+<li><a href="https://itunes.apple.com/jp/app/bokosuka!mogurando/id845835380?mt=8">ボコスカ！モグランド</a></li>
+<li><a href="http://www.amazon.co.jp/gp/product/4873116678/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116678&amp;linkCode=as2&amp;tag=znz-22">AngularJSアプリケーション開発ガイド</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116678" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" /> が発売されているという話</li>
+<li><a href="http://www.pixate.com/">Pixate</a></li>
+<li>MacFace</li>
+<li><a href="https://github.com/HipByte/RubyMotionSamples/issues/31">osx/Tweets app crashes on launch</a></li>
+<li><a href="http://www.impress-plus.co.jp/">http://www.impress-plus.co.jp/</a></li>
+</ul>
+
+
+<h2>調査続き</h2>
+
+<p>引き続き初回起動時の URL の受け取り方を調べていました。</p>
+
+<ul>
+<li><a href="http://questbeat.hatenablog.jp/entry/2014/04/19/123207">「ログイン時に起動」を実装する</a> はあんまり関係なかった。</li>
+<li>GitHub で <code>LSSetDefaultHandlerForURLScheme</code> を検索
+
+<ul>
+<li><a href="https://github.com/s-faychatelard/Helm/blob/2c85b303781fa430432c17ed9848a0b252c82eae/sources/others/mac/mac.mm">https://github.com/s-faychatelard/Helm/blob/2c85b303781fa430432c17ed9848a0b252c82eae/sources/others/mac/mac.mm</a> : Qt で実装していて URL を受け取っている部分がわからず (Qt のイベントに変換されたものを受け取っている?)</li>
+<li><a href="https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/misc/osx/osx_browsers.rb">https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/misc/osx/osx_browsers.rb</a> : ブラウザーの一覧の取得など</li>
+<li><a href="https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/app/osx/app.rb">https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/app/osx/app.rb</a> : <code>application:openFile:</code> や <code>application:openFiles:</code> で受け取っているように見えるが試してみても呼ばれない。</li>
+<li><a href="https://github.com/gnyrd/WebEx/blob/0ea21241591e496d1d702c45768400fa14d75662/URLHandler.m">https://github.com/gnyrd/WebEx/blob/0ea21241591e496d1d702c45768400fa14d75662/URLHandler.m</a> : <code>kAEGetURL</code> の登録に <code>handleGetURLEvent:withReplyEvent:</code> (2引数) ではなく <code>getURL:</code> (1引数) を使っている。</li>
+</ul>
+</li>
+</ul>
+
+
+<p>前回までの試行錯誤の途中で <code>setEventHandler</code> の呼び出しを <code>applicationDidFinishLaunching:</code> から <code>initialize</code> に移動していたのと <code>getURL:</code> への変更の組み合わせで、やっと初回起動時にも URL が受け取れるようになって、
+さらに <code>rake clean</code> したり一度デフォルトブラウザーを他のブラウザーに設定し直したりしていたら、
+<code>handleGetURLEvent:withReplyEvent:</code> に戻しても初回起動時に受け取れるようになっていました。</p>
+
+<p>原因がはっきりしないのが嫌な感じですが、何か設定が中途半端に残っているとうまく動かなかったようです。</p>
+
+<h2>RubyMine</h2>
+
+<p>前回のもくもく会でインストールして、他では使っていなかったので、
+ほぼ使っていないまま登録せず試用期限が切れてしまって、
+30分ごとに終了するようになってしまいました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 9 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -375,144 +435,6 @@ RubyMotion のバグっぽいという話のようです。</p>
 も試してみましたが、
 <a href="https://gist.github.com/znz/8158061#file-vagrantx-report-txt">同じくクラッシュ</a>
 して起動しませんでした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 6 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-26-rubymotion-mokumoku-osaka.html"/>
-    <updated>2013-12-26T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
-    <content type="html"><![CDATA[<p>第 1 回から第 5 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://connpass.com/event/4211/">第 6 回 RubyMotion もくもく会 in Osaka</a>
-に参加してきました。</p>
-
-<p>次回の
-<a href="http://connpass.com/event/4560/">第 7 回 RubyMotion もくもく会 in Osaka</a>
-は 1/22(水) になりました。</p>
-
-<!--more-->
-
-
-<h2>話に出たもの</h2>
-
-<p>話に出てきたサイトなどのメモです。</p>
-
-<ul>
-<li><a href="http://shin1x1.github.io/vagrantx/">http://shin1x1.github.io/vagrantx/</a>
-
-<ul>
-<li>URL が小文字に変わっていました。</li>
-</ul>
-</li>
-<li><a href="https://www.cocoacontrols.com/">Cocoa Controls</a></li>
-<li><a href="http://getpocket.com/">Pocket</a></li>
-<li><a href="http://71squared.com/ja/particledesigner">Particle Designer</a></li>
-<li>UIMotionEffect で視差効果が簡単に実装できる</li>
-<li>All Cast という Android アプリで Apple TV に AirPlay できる</li>
-</ul>
-
-
-<h2>やっていたこと</h2>
-
-<p>今回は前回作り始めていたデフォルトブラウザを乗っ取って、
-Firefox とか Chrome とか Safari とかに起動し分けられる
-OSX アプリの作成の続きをやっていました。</p>
-
-<p>今回の最後ではスクリーンショットのようになりました。</p>
-
-<p><img src="/images/2013-12-26-hello.png" title="&ldquo;screenshot&rdquo; &ldquo;作成途中のアプリのスクリーンショット&rdquo;" ></p>
-
-<p>適当に作った Hello.app に動作確認用のメソッドを付け足していただけなので、
-まだタイトルは Hello のままになっています。</p>
-
-<h3>URL 受け取り問題</h3>
-
-<p>LimeChat で URL をクリックしたときなどに受け取るのは
-前回調べていた <code>LSSetDefaultHandlerForURLScheme</code> での
-デフォルトブラウザ設定とあわせて、</p>
-
-<p>```ruby</p>
-
-<pre><code>NSAppleEventManager.sharedAppleEventManager.setEventHandler(
-  self,
-  andSelector: :'handleGetURLEvent:withReplyEvent:',
-  forEventClass: KInternetEventClass,
-  andEventID: KAEGetURL)
-</code></pre>
-
-<p>```</p>
-
-<p>でイベントを受け取ると Hello.app 起動中は受け取れたのですが、
-起動していない時の URL クリックのイベントを受け取れない問題は
-結局解決できませんでした。</p>
-
-<p><code>open -a Hello --args URL</code>
-というなら
-<code>NSProcessInfo.processInfo.arguments</code>
-で受け取れるのですが、
-LimeChat などでの URL クリックで起動された時や
-<code>open -a Hello URL</code>
-という起動方法だと受け取り方がわかりませんでした。</p>
-
-<p>他のブラウザの起動も
-<code>open -a 'Google Chrome' http://localhost:4000/ --args -incognito</code>
-のように URL は args ではない方法で渡さないと開けませんでした。</p>
-
-<h3><code>keyDirectObject</code> がない問題と前面に出てこない問題</h3>
-
-<p>URL の受け取り部分は今のところ、以下のようにしています。</p>
-
-<p>```ruby
-  def handleGetURLEvent(event, withReplyEvent: replyEvent)</p>
-
-<pre><code>keyDirectObject = '----'.unpack('L')[0]
-urlStr = event.paramDescriptorForKeyword(keyDirectObject).stringValue
-@text.stringValue = urlStr
-
-Process.spawn("osascript", "-e", &lt;&lt;-SCRIPT)
-</code></pre>
-
-<p>tell Application &ldquo;#{NSBundle.mainBundle.infoDictionary[&lsquo;CFBundleName&rsquo;]}&rdquo;
-  activate
-end tell</p>
-
-<pre><code>SCRIPT
-</code></pre>
-
-<p>  end
-```</p>
-
-<p>最初の問題として、
-<code>keyDirectObject</code> が RubyMotion にはなさそうだったので、
-値を調べて <code>unpack</code> で同等の値を生成するようにしました。
-この部分は前回から今回までの間に調査して作成済みだったので、
-詳しい調査方法は忘れてしまいましたが、
-引数のオブジェクトを調べて見つけたような気がします。</p>
-
-<p>前面に出てこない問題は
-今回のもくもく会の間に対処しました。</p>
-
-<p>前面に持ってくる方法がどういう API を呼べばよいのかわからず、
-AppleScript を使った方法は情報があったので、
-とりあえず <code>osascript</code> を呼び出してしまうことにしました。</p>
-
-<p>最初は <code>spawn</code> ではなく <code>system</code> を使ってしまったら、
-デッドロックしてしまって強制終了するしかなくなってしまったので、
-<code>Process.spawn</code> を使いました。</p>
-
-<h2>まとめ</h2>
-
-<p>今回は作りたいものが決まっていて、しっかりもくもく出来ました。</p>
-
-<p>起動時に URL が受け取れない問題は
-自分が使うだけなら
-URL を 2 回クリックするという方法で
-回避できるのですが、なんとかしたいところです。</p>
-
-<p><code>keyDirectObject</code> と <code>osascript</code> を使っているところは
-他に方法がなければ
-今のままでも実用上は困らないと感じました。</p>
 ]]></content>
   </entry>
   

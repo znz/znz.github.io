@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-22T00:47:01+09:00</updated>
+  <updated>2014-04-24T00:11:45+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,66 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 10 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-04-23-rubymotion-mokumoku.html"/>
+    <updated>2014-04-23T19:16:51+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku</id>
+    <content type="html"><![CDATA[<p>第 1 回から第 9 回にも参加した RubyMotion もくもく会 in Osaka の
+<a href="http://connpass.com/event/5674/">第 10 回 RubyMotion もくもく会 in Osaka</a>
+に参加してきました。</p>
+
+<p>次回の
+<a href="http://connpass.com/event/6116/">第 11 回 RubyMotion もくもく会 in Osaka &ndash; connpass</a>
+は 05/28(水) になりました。</p>
+
+<!--more-->
+
+
+<h2>メモ</h2>
+
+<ul>
+<li><a href="https://itunes.apple.com/jp/app/bokosuka!mogurando/id845835380?mt=8">ボコスカ！モグランド</a></li>
+<li><a href="http://www.amazon.co.jp/gp/product/4873116678/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116678&amp;linkCode=as2&amp;tag=znz-22">AngularJSアプリケーション開発ガイド</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116678" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" /> が発売されているという話</li>
+<li><a href="http://www.pixate.com/">Pixate</a></li>
+<li>MacFace</li>
+<li><a href="https://github.com/HipByte/RubyMotionSamples/issues/31">osx/Tweets app crashes on launch</a></li>
+<li><a href="http://www.impress-plus.co.jp/">http://www.impress-plus.co.jp/</a></li>
+</ul>
+
+
+<h2>調査続き</h2>
+
+<p>引き続き初回起動時の URL の受け取り方を調べていました。</p>
+
+<ul>
+<li><a href="http://questbeat.hatenablog.jp/entry/2014/04/19/123207">「ログイン時に起動」を実装する</a> はあんまり関係なかった。</li>
+<li>GitHub で <code>LSSetDefaultHandlerForURLScheme</code> を検索
+
+<ul>
+<li><a href="https://github.com/s-faychatelard/Helm/blob/2c85b303781fa430432c17ed9848a0b252c82eae/sources/others/mac/mac.mm">https://github.com/s-faychatelard/Helm/blob/2c85b303781fa430432c17ed9848a0b252c82eae/sources/others/mac/mac.mm</a> : Qt で実装していて URL を受け取っている部分がわからず (Qt のイベントに変換されたものを受け取っている?)</li>
+<li><a href="https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/misc/osx/osx_browsers.rb">https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/misc/osx/osx_browsers.rb</a> : ブラウザーの一覧の取得など</li>
+<li><a href="https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/app/osx/app.rb">https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/app/osx/app.rb</a> : <code>application:openFile:</code> や <code>application:openFiles:</code> で受け取っているように見えるが試してみても呼ばれない。</li>
+<li><a href="https://github.com/gnyrd/WebEx/blob/0ea21241591e496d1d702c45768400fa14d75662/URLHandler.m">https://github.com/gnyrd/WebEx/blob/0ea21241591e496d1d702c45768400fa14d75662/URLHandler.m</a> : <code>kAEGetURL</code> の登録に <code>handleGetURLEvent:withReplyEvent:</code> (2引数) ではなく <code>getURL:</code> (1引数) を使っている。</li>
+</ul>
+</li>
+</ul>
+
+
+<p>前回までの試行錯誤の途中で <code>setEventHandler</code> の呼び出しを <code>applicationDidFinishLaunching:</code> から <code>initialize</code> に移動していたのと <code>getURL:</code> への変更の組み合わせで、やっと初回起動時にも URL が受け取れるようになって、
+さらに <code>rake clean</code> したり一度デフォルトブラウザーを他のブラウザーに設定し直したりしていたら、
+<code>handleGetURLEvent:withReplyEvent:</code> に戻しても初回起動時に受け取れるようになっていました。</p>
+
+<p>原因がはっきりしないのが嫌な感じですが、何か設定が中途半端に残っているとうまく動かなかったようです。</p>
+
+<h2>RubyMine</h2>
+
+<p>前回のもくもく会でインストールして、他では使っていなかったので、
+ほぼ使っていないまま登録せず試用期限が切れてしまって、
+30分ごとに終了するようになってしまいました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[R と Ruby によるデータ解析入門　読書会　第1回に参加しました]]></title>
@@ -547,288 +607,6 @@ views 全体を見直す良い機会になっています。</p>
 機能的には問題ないのですが、
 見た目が bootstrap 3 となじまないので、
 後で対処が必要そうでした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[hamlからslimへの移行でひっかかったこと]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-03-11-haml-to-slim.html"/>
-    <updated>2014-03-11T22:39:11+09:00</updated>
-    <id>http://blog.n-z.jp/blog/haml-to-slim</id>
-    <content type="html"><![CDATA[<p>haml より slim の方が速いらしいという話を良く見かけるので、
-haml から少しずつ slim に移行しようとして、
-haml2slim で変換してみたらひっかかりまくりました。</p>
-
-<!--more-->
-
-
-<h2>インデントがない</h2>
-
-<p>haml は生成される HTML がインデントされていてみやすいのですが、
-slim は不要なスペースは入れずにコンパクトな HTML が生成されるようで、
-単純に比較できなくて困りましたが、
-<a href="https://github.com/slim-template/slim#default-options">https://github.com/slim-template/slim#default-options</a>
-で設定できるようだったので、以下のように設定しました。</p>
-
-<p><code>ruby config/initializers/slim.rb
-if Rails.env.development?
-  Slim::Engine.set_default_options pretty: true
-end
-</code></p>
-
-<h2>1.9 hash style</h2>
-
-<p><a href="https://github.com/slim-template/haml2slim/pull/23">https://github.com/slim-template/haml2slim/pull/23</a>
-に pull request がでているように
-haml で属性を <code>{foo: bar}</code> のように書く形式には対応していないようです。</p>
-
-<h2>string interpolation がおかしい</h2>
-
-<p><a href="https://github.com/slim-template/haml2slim/issues/7">https://github.com/slim-template/haml2slim/issues/7</a>
-などで報告されているように <code>#{ ... }</code> という書き方の変換で問題があるようです。
-<code>%tag(foo="#{bar}")</code> が <code>tag(foo="# bar ")</code> になっていて気づきました。</p>
-
-<h2>HTML コメントの中でタグにならない</h2>
-
-<p>```haml</p>
-
-<pre><code>/[if lt IE 9]
-  %script{src: url_for(html5shiv)}
-</code></pre>
-
-<p>```</p>
-
-<p>のように書いていたのが</p>
-
-<p>```text</p>
-
-<pre><code>/![if lt IE 9]
-  script src: url_for(html5shiv)
-</code></pre>
-
-<p>```</p>
-
-<p>のように変換されてさっぱりダメだったので、</p>
-
-<p>```text</p>
-
-<pre><code>/[if lt IE 9]
-  script(src="#{url_for(html5shiv)}")
-</code></pre>
-
-<p>```</p>
-
-<p>または</p>
-
-<p>```text</p>
-
-<pre><code>/[if lt IE 9]
-  script(src=url_for(html5shiv))
-</code></pre>
-
-<p>```</p>
-
-<p>のように書き換えました。
-HTML コメント <code>/!</code> の中だとタグが使えない (そのまま文字列としてコメントの中に入る) ようなので、
-IE コンディショナルコメント <code>/[...]</code> を使う必要があるようです。</p>
-
-<h2>エラーメッセージがわかりにくい</h2>
-
-<p>書き換え途中で、属性値をくくる <code>""</code> を忘れると
-エラーメッセージが
-<code>syntax error, unexpected ';'</code>
-としかでないので原因がわかりにくくて困りました。</p>
-
-<p>他のところでも ruby のエラーメッセージそのままなので、
-閉じ忘れ系は原因の行と離れたところでエラーになって、
-行番号もあまり当てにならなくて不便です。</p>
-
-<h2>真偽値属性の属性値が省略できない</h2>
-
-<p>haml だと <code>%div(data-pjax-container)</code> で <code>&lt;div data-pjax-container&gt;</code> に変換できるのに、
-slim だと <code>div(data-pjax-container)</code> が <code>&lt;div data-pjax-container=""&gt;</code> になってしまって、
-<code>=""</code> が余計です。</p>
-
-<p><a href="https://github.com/slim-template/slim/issues/480">Render boolean attributes without value in html5</a>
-によると
-<code>:format</code> を <code>:html</code> にすれば良いということで</p>
-
-<p><code>ruby config/initializers/slim.rb
-Slim::Engine.set_default_options format: :html
-</code></p>
-
-<p>と設定してみても slim 2.0.2 だと変化がありませんでした。</p>
-
-<p>まだリリースされていないバージョンを使う必要があるようで、
-<code>Gemfile</code> で <code>gem 'slim', github: 'slim-template/slim'</code> と指定して
-試そうとしたのですが、
-rails 3.2.17 との組み合わせは tilt の要求バージョンの解決が
-出来なくて使えませんでした。</p>
-
-<p>実験のため slim 専用の Gemfile を用意して以下のように試したところ、
-slim と temple の両方をまだリリースされていないバージョンにすると
-使えることが確認できました。</p>
-
-<p>```console
-% mkdir /tmp/slim-test
-% cd /tmp/slim-test
-% bundle init
-% echo &lsquo;gem &ldquo;slim&rdquo;, github: &ldquo;slim-template/slim&rdquo;&rsquo; >> Gemfile
-% echo &lsquo;gem &ldquo;temple&rdquo;, github: &ldquo;judofyr/temple&rdquo;&rsquo; >> Gemfile
-% bundle
-% echo &lsquo;div(ng-app)&rsquo; | bundle exec slimrb</p>
-
-<div ng-app=""></div>
-
-
-<p>% echo &lsquo;div(ng-app)&rsquo; | bundle exec slimrb -o format=:html</p>
-
-<div ng-app></div>
-
-
-<p>```</p>
-
-<p>今のところ、 <code>rack-pjax</code> の使用は止めていて、
- <code>=""</code> がつく挙動で直接困ることはなさそうなので、
-この問題は保留することにしました。</p>
-
-<h2>javascript や css の埋め込み</h2>
-
-<p>```haml</p>
-
-<pre><code>:javascript
-  window.current_user_id = #{current_user.id.to_i}
-</code></pre>
-
-<p>```</p>
-
-<p>のように書いていたら、</p>
-
-<p>```text</p>
-
-<pre><code>javascript:
-  | window.current_user_id = #{current_user.id.to_i}
-</code></pre>
-
-<p>```</p>
-
-<p>と変換されて <code>|</code> がそのまま <code>script</code> の中身に付いてしまったので、
-削除しました。</p>
-
-<p>```text</p>
-
-<pre><code>javascript:
-  window.current_user_id = #{current_user.id.to_i}
-</code></pre>
-
-<p>```</p>
-
-<p><code>:css</code> から <code>css:</code> の変換でも同様でした。
-CSS の場合は行頭が記号だと <code>|</code> がついていないこともありました。</p>
-
-<h2>空白の有無の問題</h2>
-
-<p>```haml</p>
-
-<pre><code>        = link_to home_path, class: 'brand' do
-          = image_tag("brand.png", alt: "", size: "35x35")
-          = base_title
-</code></pre>
-
-<p>```</p>
-
-<p>がそのまま slim になっていて、基本的には問題なかったのですが、
-haml と違って slim だとタグとタイトルの間に空白が入らなくなってしまって、
-見た目が変わってしまっていたので、
-<code>'</code> だけの行を追加して空白が入るようにしました。</p>
-
-<p>```text</p>
-
-<pre><code>        = link_to home_path, class: 'brand' do
-          = image_tag("brand.png", alt: "", size: "35x35")
-          '
-          = base_title
-</code></pre>
-
-<p>```</p>
-
-<h2>end が抜けるバグで SyntaxError</h2>
-
-<p><code>syntax error, unexpected keyword_ensure, expecting keyword_end</code>
-になるので原因を調べてみたところ、
-インデントの中の最初がコメントだと、
-そのブロックの <code>end</code> が抜けてしまうようです。</p>
-
-<p>```console
-% echo $&lsquo;&ndash; if true\n  / comment&rsquo; | bundle exec slimrb -e
-&lt;% if true</p>
-
-<p> %>
-% echo $&lsquo;&ndash; if true\n  |&rsquo; | bundle exec slimrb -e
-&lt;% if true</p>
-
-<p>end %>
-% echo $&lsquo;&ndash; articles.each do |a|\n  / comment&rsquo; | bundle exec slimrb -e
-&lt;% articles.each do |a|</p>
-
-<p> %>
-% echo $&lsquo;&ndash; articles.each do |a|\n  | text&rsquo; | bundle exec slimrb -e
-&lt;% articles.each do |a|
- %>text&lt;%
-%>&lt;% end %>
-% echo $&lsquo;&ndash; articles.each do |a|\n  / comment\n/ more comment&rsquo; | bundle exec slimrb -e
-&lt;% articles.each do |a|</p>
-
-<p> %>
-% echo $&lsquo;&ndash; articles.each do |a|\n  / comment\n| text\n/ more comment&rsquo; | bundle exec slimrb -e
-&lt;% articles.each do |a|</p>
-
-<p> %>text&lt;%
-%>&lt;%
-%>
-% echo $&lsquo;&ndash; articles.each do |a|\n  / comment\n| text\n&rsquo; | bundle exec slimrb -e
-&lt;% articles.each do |a|</p>
-
-<p> %>text&lt;%
-%>
-```</p>
-
-<p>この件は <a href="https://github.com/slim-template/slim/issues/485">https://github.com/slim-template/slim/issues/485</a> で報告してみました。</p>
-
-<h2>ファイル名の指定が面倒</h2>
-
-<p>これは slim や haml2slim の問題ではないのですが、
-zsh で久しぶりに compctl を使って</p>
-
-<pre><code>compctl -g '*.haml' + -g '*(-/)' haml2slim
-</code></pre>
-
-<p>と設定しましたが、ちゃんと compsys を使った方が良いと思い直して、</p>
-
-<pre><code>compdef '_files -g "*.haml"' haml2slim
-</code></pre>
-
-<p>と設定しました。</p>
-
-<h2>感想</h2>
-
-<p>シンプルとか入力が楽とかいう主観的なものは個人的には同意できなくて利点とは思えないので、
-速いという客観的な理由で slim への移行をしているのですが、
-haml2slim の出来が悪かったり、
-空白の扱いの違いで同じようなソースからでも最終的な見た目が違うものが出来たりして、
-移行は思ったより大変な印象を受けました。</p>
-
-<p>はまりどころさえわかっていれば、そこを注意して haml2slim での変換結果を修正していけば良いので、途中からはどんどん変換していけるようになりました。
-(まだ一部しか終わっていませんが。)</p>
-
-<p>それなりの数の変換をしてみた結果、最初から slim で書くようにすれば haml と大きな違いはなさそうにも感じました。</p>
-
-<p><code>end</code> 抜けなどの問題が起きたことから、
-haml と比べていろんな書き方で使われていなさそうということで、
-まだ安定してなさそうと感じました。</p>
-
-<p>また属性値なしの <code>&lt;div ng-app&gt;</code> のような出力に対応しているリリースがまだないなど、
-融通が利かない点があって問題が起きそうな可能性がありそうだと感じました。</p>
 ]]></content>
   </entry>
   
