@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-04-24T00:11:45+09:00</updated>
+  <updated>2014-05-02T23:35:55+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,222 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Mac OS X で owncloudcmd を使う]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-05-02-owncloudcmd.html"/>
+    <updated>2014-05-02T22:18:39+09:00</updated>
+    <id>http://blog.n-z.jp/blog/owncloudcmd</id>
+    <content type="html"><![CDATA[<p>ownCloud のデスクトップクライアントには <code>owncloudcmd</code> というコマンドが含まれています。
+昔は <code>ocsync</code> というコマンドが別途あったようですが、今は同梱されている <code>owncloudcmd</code> を使うのが主流のようです。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>クライアント : ownCloud client for Mac 1.5.4 に同梱の <code>owncloudcmd</code> で試しました。</li>
+<li>サーバー : 自前サーバーなら ownCloud 6.0.3 で、今回の例では <a href="https://teracloud.jp/">Teraクラウド</a> を使ってみました。</li>
+</ul>
+
+
+<h2>概要</h2>
+
+<p><code>path/to/owncloudcmd path/to/localdir ownclouds://example.jp/remote.php/webdav</code>
+のようにローカルのディレクトリと <code>owncloud</code> の WebDAV 用の URL の先頭の <code>http</code> を <code>owncloud</code> に置き換えたもの (<code>https</code> なら <code>ownclouds</code>) を指定すると同期できます。</p>
+
+<p>引数なしで実行するとオプションの説明が出ます。</p>
+
+<h2>Mac OS X 版での修正</h2>
+
+<h3><code>owncloudcmd</code> のリンクミス?</h3>
+
+<p>普通に使おうとすると <code>dyld: Library not loaded: libowncloudsync.0.dylib</code> で起動できません。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> /Applications/owncloud.app/Contents/MacOS/owncloudcmd <span class="nv">$HOME</span>/teracloud ownclouds://teracloud.jp/remote.php/webdav
+</span><span class='line'><span class="go">dyld: Library not loaded: libowncloudsync.0.dylib</span>
+</span><span class='line'><span class="go">  Referenced from: /Applications/owncloud.app/Contents/MacOS/owncloudcmd</span>
+</span><span class='line'><span class="go">  Reason: image not found</span>
+</span><span class='line'><span class="go">zsh: trace trap  /Applications/owncloud.app/Contents/MacOS/owncloudcmd</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>ライブラリのパス修正</h3>
+
+<p><code>otool -L</code> で確認すると相対パスがまずいとわかります。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> otool -L /Applications/owncloud.app/Contents/MacOS/owncloudcmd
+</span><span class='line'><span class="go">/Applications/owncloud.app/Contents/MacOS/owncloudcmd:</span>
+</span><span class='line'><span class="go"> libowncloudsync.0.dylib (compatibility version 0.0.0, current version 1.5.4)</span>
+</span><span class='line'><span class="go"> QtWebKit.framework/Versions/4/QtWebKit (compatibility version 4.9.0, current version 4.9.3)</span>
+</span><span class='line'><span class="go"> QtXmlPatterns.framework/Versions/4/QtXmlPatterns (compatibility version 4.8.0, current version 4.8.4)</span>
+</span><span class='line'><span class="go"> QtGui.framework/Versions/4/QtGui (compatibility version 4.8.0, current version 4.8.4)</span>
+</span><span class='line'><span class="go"> QtDBus.framework/Versions/4/QtDBus (compatibility version 4.8.0, current version 4.8.4)</span>
+</span><span class='line'><span class="go"> QtXml.framework/Versions/4/QtXml (compatibility version 4.8.0, current version 4.8.4)</span>
+</span><span class='line'><span class="go"> QtSql.framework/Versions/4/QtSql (compatibility version 4.8.0, current version 4.8.4)</span>
+</span><span class='line'><span class="go"> QtNetwork.framework/Versions/4/QtNetwork (compatibility version 4.8.0, current version 4.8.4)</span>
+</span><span class='line'><span class="go"> QtCore.framework/Versions/4/QtCore (compatibility version 4.8.0, current version 4.8.4)</span>
+</span><span class='line'><span class="go"> libocsync.0.dylib (compatibility version 0.0.0, current version 0.2.1)</span>
+</span><span class='line'><span class="go"> /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 125.2.11)</span>
+</span><span class='line'><span class="go"> /usr/local/opt/sqlite/lib/libsqlite3.0.dylib (compatibility version 9.0.0, current version 9.6.0)</span>
+</span><span class='line'><span class="go"> /usr/lib/libiconv.2.dylib (compatibility version 7.0.0, current version 7.0.0)</span>
+</span><span class='line'><span class="go"> /System/Library/Frameworks/CoreServices.framework/Versions/A/CoreServices (compatibility version 1.0.0, current version 44.0.0)</span>
+</span><span class='line'><span class="go"> /System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 751.63.0)</span>
+</span><span class='line'><span class="go"> /System/Library/Frameworks/AppKit.framework/Versions/C/AppKit (compatibility version 45.0.0, current version 1038.36.0)</span>
+</span><span class='line'><span class="go"> @loader_path/../Frameworks/Sparkle.framework/Versions/A/Sparkle (compatibility version 1.5.0, current version 1.5.0)</span>
+</span><span class='line'><span class="go"> /usr/local/lib/libqtkeychain.0.3.0.dylib (compatibility version 0.0.0, current version 0.3.0)</span>
+</span><span class='line'><span class="go"> /usr/local/opt/neon/lib/libneon.27.dylib (compatibility version 31.0.0, current version 31.0.0)</span>
+</span><span class='line'><span class="go"> /usr/lib/libstdc++.6.dylib (compatibility version 7.0.0, current version 7.9.0)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>install_name_tool -add_rpath</code> や <code>install_name_tool -delete_rpath</code> で試行錯誤したのですが、
+<code>otool -l /Applications/owncloud.app/Contents/MacOS/owncloudcmd</code> で確認しても
+<code>rpath</code> が後ろに追加されてきいていないようだったので、
+<code>install_name_tool -change</code> で対応することにしました。</p>
+
+<p>まず相対パスを修正しました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span>  otool -L /Applications/owncloud.app/Contents/MacOS/owncloudcmd | awk <span class="s1">&#39;$1~&quot;^lib&quot;{print &quot;install_name_tool -change &quot; $1 &quot; @executable_path/../MacOS/&quot; $1 &quot; /Applications/owncloud.app/Contents/MacOS/owncloudcmd&quot; }&#39;</span> | sh -e
+</span><span class='line'><span class="gp">%</span>  otool -L /Applications/owncloud.app/Contents/MacOS/owncloudcmd | awk <span class="s1">&#39;$1~&quot;^Qt&quot;{print &quot;install_name_tool -change &quot; $1 &quot; @executable_path/../Frameworks/&quot; $1 &quot; /Applications/owncloud.app/Contents/MacOS/owncloudcmd&quot; }&#39;</span> | sh -e
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>さらに <code>/usr/local/lib</code> をさしているものがあったのを修正しました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span>  /Applications/owncloud.app/Contents/MacOS/owncloudcmd
+</span><span class='line'><span class="go">dyld: Library not loaded: /usr/local/lib/libqtkeychain.0.3.0.dylib</span>
+</span><span class='line'><span class="go">  Referenced from: /Applications/owncloud.app/Contents/MacOS/owncloudcmd</span>
+</span><span class='line'><span class="go">  Reason: image not found</span>
+</span><span class='line'><span class="go">zsh: trace trap  /Applications/owncloud.app/Contents/MacOS/owncloudcmd</span>
+</span><span class='line'><span class="gp">%</span>  find /Applications/owncloud.app -name libqtkeychain.0.3.0.dylib
+</span><span class='line'><span class="go">/Applications/owncloud.app/Contents/MacOS/libqtkeychain.0.3.0.dylib</span>
+</span><span class='line'><span class="gp">%</span>  install_name_tool -change /usr/local/lib/libqtkeychain.0.3.0.dylib /Applications/owncloud.app/Contents/MacOS/libqtkeychain.0.3.0.dylib /Applications/owncloud.app/Contents/MacOS/owncloudcmd
+</span><span class='line'><span class="gp">%</span>  /Applications/owncloud.app/Contents/MacOS/owncloudcmd
+</span><span class='line'><span class="go">dyld: Library not loaded: /usr/local/opt/neon/lib/libneon.27.dylib</span>
+</span><span class='line'><span class="go">  Referenced from: /Applications/owncloud.app/Contents/MacOS/owncloudcmd</span>
+</span><span class='line'><span class="go">  Reason: image not found</span>
+</span><span class='line'><span class="go">zsh: trace trap  /Applications/owncloud.app/Contents/MacOS/owncloudcmd</span>
+</span><span class='line'><span class="gp">%</span>  find /Applications/owncloud.app -name libneon.27.dylib
+</span><span class='line'><span class="go">/Applications/owncloud.app/Contents/MacOS/libneon.27.dylib</span>
+</span><span class='line'><span class="gp">%</span>  install_name_tool -change /usr/local/opt/neon/lib/libneon.27.dylib /Applications/owncloud.app/Contents/MacOS/libneon.27.dylib /Applications/owncloud.app/Contents/MacOS/owncloudcmd
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>これで余計なメッセージは出ますが、使えるようになりました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span>  /Applications/owncloud.app/Contents/MacOS/owncloudcmd
+</span><span class='line'><span class="go">objc[40210]: Class WebCoreMovieObserver is implemented in both /System/Library/Frameworks/WebKit.framework/Versions/A/Frameworks/WebCore.framework/Versions/A/WebCore and /Applications/owncloud.app/Contents/Frameworks/QtWebKit.framework/Versions/4/QtWebKit. One of the two will be used. Which one is undefined.</span>
+</span><span class='line'><span class="go">objc[40210]: Class WebCoreSharedBufferData is implemented in both /System/Library/Frameworks/WebKit.framework/Versions/A/Frameworks/WebCore.framework/Versions/A/WebCore and /Applications/owncloud.app/Contents/Frameworks/QtWebKit.framework/Versions/4/QtWebKit. One of the two will be used. Which one is undefined.</span>
+</span><span class='line'><span class="go">objc[40210]: Class WebVideoFullscreenWindow is implemented in both /System/Library/Frameworks/WebKit.framework/Versions/A/Frameworks/WebCore.framework/Versions/A/WebCore and /Applications/owncloud.app/Contents/Frameworks/QtWebKit.framework/Versions/4/QtWebKit. One of the two will be used. Which one is undefined.</span>
+</span><span class='line'><span class="go">objc[40210]: Class WebVideoFullscreenController is implemented in both /System/Library/Frameworks/WebKit.framework/Versions/A/Frameworks/WebCore.framework/Versions/A/WebCore and /Applications/owncloud.app/Contents/Frameworks/QtWebKit.framework/Versions/4/QtWebKit. One of the two will be used. Which one is undefined.</span>
+</span><span class='line'><span class="go">objc[40210]: Class WebVideoFullscreenHUDWindowController is implemented in both /System/Library/Frameworks/WebKit.framework/Versions/A/Frameworks/WebCore.framework/Versions/A/WebCore and /Applications/owncloud.app/Contents/Frameworks/QtWebKit.framework/Versions/4/QtWebKit. One of the two will be used. Which one is undefined.</span>
+</span><span class='line'><span class="go">objc[40210]: Class WebVideoFullscreenHUDWindow is implemented in both /System/Library/Frameworks/WebKit.framework/Versions/A/Frameworks/WebCore.framework/Versions/A/WebCore and /Applications/owncloud.app/Contents/Frameworks/QtWebKit.framework/Versions/4/QtWebKit. One of the two will be used. Which one is undefined.</span>
+</span><span class='line'><span class="go">objc[40210]: Class WebWindowFadeAnimation is implemented in both /System/Library/Frameworks/WebKit.framework/Versions/A/Frameworks/WebCore.framework/Versions/A/WebCore and /Applications/owncloud.app/Contents/Frameworks/QtWebKit.framework/Versions/4/QtWebKit. One of the two will be used. Which one is undefined.</span>
+</span><span class='line'><span class="go">objc[40210]: Class WebWindowScaleAnimation is implemented in both /System/Library/Frameworks/WebKit.framework/Versions/A/Frameworks/WebCore.framework/Versions/A/WebCore and /Applications/owncloud.app/Contents/Frameworks/QtWebKit.framework/Versions/4/QtWebKit. One of the two will be used. Which one is undefined.</span>
+</span><span class='line'><span class="go">owncloudcmd - command line ownCloud client tool.</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">Usage: owncloudcmd &lt;sourcedir&gt; &lt;owncloudurl&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">A proxy can either be set manually using --httpproxy or it</span>
+</span><span class='line'><span class="go">uses the setting from a configured sync client.</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">Options:</span>
+</span><span class='line'><span class="go">  --confdir = configdir: Read config from there.</span>
+</span><span class='line'><span class="go">  --httpproxy = proxy:   Specify a http proxy to use.</span>
+</span><span class='line'><span class="go">                         Proxy is http://server:port</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">zsh: exit 1     /Applications/owncloud.app/Contents/MacOS/owncloudcmd</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>使い方</h2>
+
+<p>概要のところに書いたように、
+普通に <code>owncloudcmd sourcedir owncloudurl</code> で実行するとユーザー名とパスワードを聞かれます。
+URL に <code>ownclouds://user:password@example.jp/remote.php/webdav</code> のようにユーザー名とパスワードを埋め込むことも出来ますが、あまりコマンドラインにパスワードは書きたくないことが多いと思います。</p>
+
+<p>しかし、
+<a href="https://github.com/owncloud/mirall/blob/f72e1cc8375b72c97d6566c6875f7214415cea9c/src/owncloudcmd/owncloudcmd.cpp">owncloudcmd のオプション処理部分のソース</a>
+をみても <code>"--confdir"</code> は読み込むだけで使われていないようなので、
+他の方法で指定することは出来なさそうでした。</p>
+
+<h2>まとめ</h2>
+
+<p><code>owncloudcmd</code> を使えば GUI クライアントで設定しているサーバー以外のサーバーと同期したり、
+サーバーなどのコマンドラインのみの環境でも <code>owncloud</code> との同期が出来ることがわかりました。</p>
+
+<p>しかし、クライアントの出来がまだあまりよくないので、使い勝手は良くないということもわかりました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 10 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -3527,85 +3743,6 @@ docker のサーバーとの接続がうまくいかない場合はここでエ�
 <h2>つづく</h2>
 
 <p><code>docker pull</code> に時間がかかって、すぐにはいろいろ試せないようなので、別の記事に続きます。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Land of Lisp 読書会 最終回（第5回）(兵庫県)に参加してきた]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-02-22-reading-land-of-lisp.html"/>
-    <updated>2014-02-22T22:45:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/reading-land-of-lisp</id>
-    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/event/index/144998/">2月22日 Land of Lisp 読書会 最終回（第5回）(兵庫県)</a>
-に参加してきました。
-今回は第16章から最後まででした。</p>
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4873116155" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-<p>次回は4月5日で<a href="http://www.amazon.co.jp/gp/product/4873116155/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116155&amp;linkCode=as2&amp;tag=znz-22">RとRubyによるデータ解析入門</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116155" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />の読書会に決まりました。</p>
-
-<!--more-->
-
-
-<h2>会場</h2>
-
-<p>今回は今までと違って、普通の会議室がとれなかったということで音楽室でした。
-静かだったり、外から見えるようになっていたりしたのが印象的でした。</p>
-
-<h2>メモ</h2>
-
-<p>以下今回のメモです。</p>
-
-<ul>
-<li><code>,</code> が気持ち悪い。</li>
-<li>clojure だと <code>~</code></li>
-<li><code>`</code> の話とマクロの話は別</li>
-<li>Lisp のマクロの話と Ruby に似たようなものがあるかという話</li>
-<li>Ruby の <code>eval</code> と <code>class_eval</code> と <code>instance_eval</code> の話</li>
-<li>SVG の話</li>
-<li>imagemagick とか minimagick とかでも画像生成できる話 (例: <a href="http://jarp.does.notwork.org/diary/201308a.html">http://jarp.does.notwork.org/diary/201308a.html</a> )</li>
-<li>c14n (XML Canonicalization) してインデントを付けると読みやすくなる話</li>
-<li>middleman : rails の asset pipe line などの技術を使って静的サイトが作れる</li>
-<li>WMI : SNMP の Windows 専用版みたいなもの</li>
-<li>PowerShell の話
-
-<ul>
-<li>パイプをオブジェクトが流れるのがモナドとか jQuery とかっぽい</li>
-<li>他の言語の printf などと全く違う。エスケープがバッククオートとか</li>
-<li>WSHは32ビットと64ビットの問題がある?</li>
-</ul>
-</li>
-<li>単なる便利なライブラリと DSL の違いは?
-
-<ul>
-<li>外部 DSL だとわかりやすいけど、内部 DSL だと曖昧</li>
-<li>その他いろいろな意見あり</li>
-</ul>
-</li>
-<li>Ruby だと内部 DSL は括弧を省略するのが普通</li>
-<li>Gemfile とか Rakefile とか</li>
-<li>rspec の話</li>
-<li>18章「Haskell や Clojure では、遅延評価が言語のコアでサポートされている。」</li>
-<li>p.378 value が nil になることもあるから forced は必要そう</li>
-<li>lazy-car や lazy-cdr は lazy を作るのではなく force で取り出すので lazy-cons や lazy-nil と意味が違ってわかりにくい</li>
-<li>マンガはコマ割がわかりにくいし p.432 には矢印まであるのは矢印を付けるよりもコマ割を工夫すべきでは</li>
-</ul>
-
-
-<h2>次回の予定</h2>
-
-<ul>
-<li>エリック・エヴァンスのドメイン駆動設計</li>
-<li>クラウドデザインパターン</li>
-<li>SQLアンチパターン</li>
-<li>RとRubyによるデータ解析入門</li>
-</ul>
-
-
-<p>などの候補が出ましたが R と Ruby の本に決定して、
-amagasakirb としては久しぶりの Ruby の本ということになりました。</p>
 ]]></content>
   </entry>
   
