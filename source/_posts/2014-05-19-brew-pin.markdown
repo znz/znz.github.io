@@ -1,0 +1,116 @@
+---
+layout: post
+title: "brew pin でバグのあるバージョンを避ける例"
+date: 2014-05-19 21:35:03 +0900
+comments: true
+categories: homebrew osx
+---
+`graphviz version 2.38.0 (20140413.2041)`
+で
+[label の先頭の日本語が消える](http://graphviz.org/mantisbt/view.php?id=2444)
+というバグにはまったので、
+`brew pin`
+で修正されたバージョンがリリースされるまでの間、
+古いバージョンに固定することにしました。
+(バグ自体はリンク先をみればわかるようにすぐに修正されたようです。)
+
+<!--more-->
+
+## 対象バージョン
+
+現在の最新は
+
+```console
+% dot -V
+dot - graphviz version 2.38.0 (20140413.2041)
+```
+
+で以下のバージョンに戻しました。
+
+```console
+% dot -V
+dot - graphviz version 2.36.0 (20140111.2315)
+```
+
+## 対象コミット調査
+
+以下のように 2.38.0 にあがったコミットを探してみると
+`2f368f7be64a5b4a6b56b4ab85827997fa520953`
+だったので、この前に戻せば良いとわかりました。
+
+```console
+% cd $(brew --prefix)
+% git log -p Library/Formula/graphviz.rb
+```
+
+## `brew pin` で固定
+
+そして、以下の手順で固定しました。
+
+- `git checkout コミット^` でコミットの直前に戻す
+- 古いバージョンに戻すので一度アンインストール
+- 古いバージョンでインストールし直し
+- `brew pin` で固定
+- `git checkout master` で `/usr/local` (`brew --prefix`) の状態を戻す
+- `brew upgrade` で固定されているのを確認
+
+```console
+% cd $(brew --prefix)
+%  git checkout 2f368f7be64a5b4a6b56b4ab85827997fa520953\^
+Note: checking out '2f368f7be64a5b4a6b56b4ab85827997fa520953^'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by performing another checkout.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -b with the checkout command again. Example:
+
+  git checkout -b new_branch_name
+
+HEAD is now at b8b3a30... glib-networking 2.40.1
+%  lv Library/Formula/graphviz.rb
+% brew uninstall graphviz
+Uninstalling /usr/local/Cellar/graphviz/2.38.0...
+% brew install graphviz
+==> Downloading https://downloads.sf.net/project/machomebrew/Bottles/graphviz-2.36.0_1.mav
+Already downloaded: /Library/Caches/Homebrew/graphviz-2.36.0_1.mavericks.bottle.tar.gz
+==> Pouring graphviz-2.36.0_1.mavericks.bottle.tar.gz
+🍺  /usr/local/Cellar/graphviz/2.36.0_1: 470 files, 11M
+% brew pin graphviz
+% git checkout master
+Previous HEAD position was b8b3a30... glib-networking 2.40.1
+Switched to branch 'master'
+% brew upgrade
+==> No packages to upgrade
+==> Not upgrading 1 pinned package:
+graphviz 2.38.0
+```
+
+## `brew unpin`
+
+修正されたバージョンがリリースされて、
+Homebrew でインストールできるようになったら
+`brew unpin graphviz`
+で解除すれば良さそうです。
+
+`brew pin` は
+[qiita の Homebrew でバージョンを指定してインストールするコマンド作った のコメント](http://qiita.com/uasi/items/f06c6fe7c04b593ec6a3#comment-178ddb970a3033653648)
+に書いてあるように、
+FORMULA 指定なしの `brew upgrade` での更新対象にしないという意味のようなので、
+master に戻った状態で `unpin` してしまっても
+その場で `pin` し直せば大丈夫のようです。
+
+```console
+% dot -V
+dot - graphviz version 2.36.0 (20140111.2315)
+% brew unpin graphviz
+% brew pin graphviz
+% brew upgrade
+==> No packages to upgrade
+==> Not upgrading 1 pinned package:
+graphviz 2.38.0
+```
+
+修正されたバージョンがリリースされた時に `brew unpin` を忘れないように実行する必要がありますが、
+`brew upgrade` の時に毎回メッセージが出るので、気付きやすそうです。
