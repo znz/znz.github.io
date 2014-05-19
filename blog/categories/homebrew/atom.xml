@@ -4,7 +4,7 @@
   <title><![CDATA[Category: homebrew | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/homebrew/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-05-17T18:09:47+09:00</updated>
+  <updated>2014-05-19T21:42:32+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,127 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[brew pin でバグのあるバージョンを避ける例]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-05-19-brew-pin.html"/>
+    <updated>2014-05-19T21:35:03+09:00</updated>
+    <id>http://blog.n-z.jp/blog/brew-pin</id>
+    <content type="html"><![CDATA[<p><code>graphviz version 2.38.0 (20140413.2041)</code>
+で
+<a href="http://graphviz.org/mantisbt/view.php?id=2444">label の先頭の日本語が消える</a>
+というバグにはまったので、
+<code>brew pin</code>
+で修正されたバージョンがリリースされるまでの間、
+古いバージョンに固定することにしました。
+(バグ自体はリンク先をみればわかるようにすぐに修正されたようです。)</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<p>現在の最新は</p>
+
+<p><code>console
+% dot -V
+dot - graphviz version 2.38.0 (20140413.2041)
+</code></p>
+
+<p>で以下のバージョンに戻しました。</p>
+
+<p><code>console
+% dot -V
+dot - graphviz version 2.36.0 (20140111.2315)
+</code></p>
+
+<h2>対象コミット調査</h2>
+
+<p>以下のように 2.38.0 にあがったコミットを探してみると
+<code>2f368f7be64a5b4a6b56b4ab85827997fa520953</code>
+だったので、この前に戻せば良いとわかりました。</p>
+
+<p><code>console
+% cd $(brew --prefix)
+% git log -p Library/Formula/graphviz.rb
+</code></p>
+
+<h2><code>brew pin</code> で固定</h2>
+
+<p>そして、以下の手順で固定しました。</p>
+
+<ul>
+<li><code>git checkout コミット^</code> でコミットの直前に戻す</li>
+<li>古いバージョンに戻すので一度アンインストール</li>
+<li>古いバージョンでインストールし直し</li>
+<li><code>brew pin</code> で固定</li>
+<li><code>git checkout master</code> で <code>/usr/local</code> (<code>brew --prefix</code>) の状態を戻す</li>
+<li><code>brew upgrade</code> で固定されているのを確認</li>
+</ul>
+
+
+<p>```console
+% cd $(brew &mdash;prefix)
+%  git checkout 2f368f7be64a5b4a6b56b4ab85827997fa520953^
+Note: checking out &lsquo;2f368f7be64a5b4a6b56b4ab85827997fa520953^&rsquo;.</p>
+
+<p>You are in &lsquo;detached HEAD&rsquo; state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by performing another checkout.</p>
+
+<p>If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -b with the checkout command again. Example:</p>
+
+<p>  git checkout -b new_branch_name</p>
+
+<p>HEAD is now at b8b3a30&hellip; glib-networking 2.40.1
+%  lv Library/Formula/graphviz.rb
+% brew uninstall graphviz
+Uninstalling /usr/local/Cellar/graphviz/2.38.0&hellip;
+% brew install graphviz
+==> Downloading <a href="https://downloads.sf.net/project/machomebrew/Bottles/graphviz-2.36.0_1.mav">https://downloads.sf.net/project/machomebrew/Bottles/graphviz-2.36.0_1.mav</a>
+Already downloaded: /Library/Caches/Homebrew/graphviz-2.36.0_1.mavericks.bottle.tar.gz
+==> Pouring graphviz-2.36.0_1.mavericks.bottle.tar.gz
+🍺  /usr/local/Cellar/graphviz/2.36.0_1: 470 files, 11M
+% brew pin graphviz
+% git checkout master
+Previous HEAD position was b8b3a30&hellip; glib-networking 2.40.1
+Switched to branch &lsquo;master&rsquo;
+% brew upgrade
+==> No packages to upgrade
+==> Not upgrading 1 pinned package:
+graphviz 2.38.0
+```</p>
+
+<h2><code>brew unpin</code></h2>
+
+<p>修正されたバージョンがリリースされて、
+Homebrew でインストールできるようになったら
+<code>brew unpin graphviz</code>
+で解除すれば良さそうです。</p>
+
+<p><code>brew pin</code> は
+<a href="http://qiita.com/uasi/items/f06c6fe7c04b593ec6a3#comment-178ddb970a3033653648">qiita の Homebrew でバージョンを指定してインストールするコマンド作った のコメント</a>
+に書いてあるように、
+FORMULA 指定なしの <code>brew upgrade</code> での更新対象にしないという意味のようなので、
+master に戻った状態で <code>unpin</code> してしまっても
+その場で <code>pin</code> し直せば大丈夫のようです。</p>
+
+<p><code>console
+% dot -V
+dot - graphviz version 2.36.0 (20140111.2315)
+% brew unpin graphviz
+% brew pin graphviz
+% brew upgrade
+==&gt; No packages to upgrade
+==&gt; Not upgrading 1 pinned package:
+graphviz 2.38.0
+</code></p>
+
+<p>修正されたバージョンがリリースされた時に <code>brew unpin</code> を忘れないように実行する必要がありますが、
+<code>brew upgrade</code> の時に毎回メッセージが出るので、気付きやすそうです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[homebrew cask で sylpheed test1 をインストールした]]></title>
@@ -365,37 +486,6 @@ pip install ansible
 オプションなしの <code>brew reinstall</code> の時に使われるオプションを
 埋め込んでおくという用途に使うのには向いていないということが
 わかりました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Mac で rabbit が動かなくなったので brew reinstall したら直った]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-09-rabbit-on-mac.html"/>
-    <updated>2013-09-09T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rabbit-on-mac</id>
-    <content type="html"><![CDATA[<p>いつの間にか動かなくなっていた rabbit (2.1.1) が <code>brew reinstall</code> で動くようになったという話です。</p>
-
-<!--more-->
-
-
-<p>現象としては rabbit のウィンドウが出てくるのに無反応で、スライドの内容も表示されないし、クリックにも反応せず、 <code>Ctrl+C</code> での停止もきかないので <code>kill -KILL</code> で強制終了するしかないという状態でした。</p>
-
-<p>現象から考えて、リンクしているライブラリとの不整合が原因だろうと予想してインストール手順をやり直すことにしました。</p>
-
-<p><a href="http://rabbit-shocker.org/ja/install/homebrew.html">Mac OS XでHomebrewを使ったインストール方法</a> の「brew install と brew link の実行」の手順を以下のようにちょっと変更してやり直したら動くようになりました。</p>
-
-<p><code>
-brew reinstall cairo
-brew unlink cairo
-brew link cairo
-brew unlink pixman
-brew link --overwrite pixman
-brew reinstall pango
-brew reinstall gtk+
-brew reinstall poppler --with-glib
-</code></p>
-
-<p>これでも動かなければ gem も uninstall して install し直す予定でした。</p>
 ]]></content>
   </entry>
   

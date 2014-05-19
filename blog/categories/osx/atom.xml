@@ -4,7 +4,7 @@
   <title><![CDATA[Category: osx | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/osx/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-05-17T18:09:47+09:00</updated>
+  <updated>2014-05-19T21:42:32+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,127 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[brew pin でバグのあるバージョンを避ける例]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-05-19-brew-pin.html"/>
+    <updated>2014-05-19T21:35:03+09:00</updated>
+    <id>http://blog.n-z.jp/blog/brew-pin</id>
+    <content type="html"><![CDATA[<p><code>graphviz version 2.38.0 (20140413.2041)</code>
+で
+<a href="http://graphviz.org/mantisbt/view.php?id=2444">label の先頭の日本語が消える</a>
+というバグにはまったので、
+<code>brew pin</code>
+で修正されたバージョンがリリースされるまでの間、
+古いバージョンに固定することにしました。
+(バグ自体はリンク先をみればわかるようにすぐに修正されたようです。)</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<p>現在の最新は</p>
+
+<p><code>console
+% dot -V
+dot - graphviz version 2.38.0 (20140413.2041)
+</code></p>
+
+<p>で以下のバージョンに戻しました。</p>
+
+<p><code>console
+% dot -V
+dot - graphviz version 2.36.0 (20140111.2315)
+</code></p>
+
+<h2>対象コミット調査</h2>
+
+<p>以下のように 2.38.0 にあがったコミットを探してみると
+<code>2f368f7be64a5b4a6b56b4ab85827997fa520953</code>
+だったので、この前に戻せば良いとわかりました。</p>
+
+<p><code>console
+% cd $(brew --prefix)
+% git log -p Library/Formula/graphviz.rb
+</code></p>
+
+<h2><code>brew pin</code> で固定</h2>
+
+<p>そして、以下の手順で固定しました。</p>
+
+<ul>
+<li><code>git checkout コミット^</code> でコミットの直前に戻す</li>
+<li>古いバージョンに戻すので一度アンインストール</li>
+<li>古いバージョンでインストールし直し</li>
+<li><code>brew pin</code> で固定</li>
+<li><code>git checkout master</code> で <code>/usr/local</code> (<code>brew --prefix</code>) の状態を戻す</li>
+<li><code>brew upgrade</code> で固定されているのを確認</li>
+</ul>
+
+
+<p>```console
+% cd $(brew &mdash;prefix)
+%  git checkout 2f368f7be64a5b4a6b56b4ab85827997fa520953^
+Note: checking out &lsquo;2f368f7be64a5b4a6b56b4ab85827997fa520953^&rsquo;.</p>
+
+<p>You are in &lsquo;detached HEAD&rsquo; state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by performing another checkout.</p>
+
+<p>If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -b with the checkout command again. Example:</p>
+
+<p>  git checkout -b new_branch_name</p>
+
+<p>HEAD is now at b8b3a30&hellip; glib-networking 2.40.1
+%  lv Library/Formula/graphviz.rb
+% brew uninstall graphviz
+Uninstalling /usr/local/Cellar/graphviz/2.38.0&hellip;
+% brew install graphviz
+==> Downloading <a href="https://downloads.sf.net/project/machomebrew/Bottles/graphviz-2.36.0_1.mav">https://downloads.sf.net/project/machomebrew/Bottles/graphviz-2.36.0_1.mav</a>
+Already downloaded: /Library/Caches/Homebrew/graphviz-2.36.0_1.mavericks.bottle.tar.gz
+==> Pouring graphviz-2.36.0_1.mavericks.bottle.tar.gz
+🍺  /usr/local/Cellar/graphviz/2.36.0_1: 470 files, 11M
+% brew pin graphviz
+% git checkout master
+Previous HEAD position was b8b3a30&hellip; glib-networking 2.40.1
+Switched to branch &lsquo;master&rsquo;
+% brew upgrade
+==> No packages to upgrade
+==> Not upgrading 1 pinned package:
+graphviz 2.38.0
+```</p>
+
+<h2><code>brew unpin</code></h2>
+
+<p>修正されたバージョンがリリースされて、
+Homebrew でインストールできるようになったら
+<code>brew unpin graphviz</code>
+で解除すれば良さそうです。</p>
+
+<p><code>brew pin</code> は
+<a href="http://qiita.com/uasi/items/f06c6fe7c04b593ec6a3#comment-178ddb970a3033653648">qiita の Homebrew でバージョンを指定してインストールするコマンド作った のコメント</a>
+に書いてあるように、
+FORMULA 指定なしの <code>brew upgrade</code> での更新対象にしないという意味のようなので、
+master に戻った状態で <code>unpin</code> してしまっても
+その場で <code>pin</code> し直せば大丈夫のようです。</p>
+
+<p><code>console
+% dot -V
+dot - graphviz version 2.36.0 (20140111.2315)
+% brew unpin graphviz
+% brew pin graphviz
+% brew upgrade
+==&gt; No packages to upgrade
+==&gt; Not upgrading 1 pinned package:
+graphviz 2.38.0
+</code></p>
+
+<p>修正されたバージョンがリリースされた時に <code>brew unpin</code> を忘れないように実行する必要がありますが、
+<code>brew upgrade</code> の時に毎回メッセージが出るので、気付きやすそうです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Mac OS X で owncloudcmd を使う]]></title>
@@ -375,126 +496,6 @@ window を閉じた時に終了するようにしました。
 
 <p>  end
 ```</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 8 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-02-19-rubymotion-mokumoku-osaka.html"/>
-    <updated>2014-02-19T19:27:12+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
-    <content type="html"><![CDATA[<p>第 1 回から第 7 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://connpass.com/event/4910/">第 8 回 RubyMotion もくもく会 in Osaka</a>
-に参加してきました。</p>
-
-<p>次回の
-<a href="http://connpass.com/event/5276/">第 9 回 RubyMotion もくもく会 in Osaka</a>
-は 3/19(水) になりました。</p>
-
-<!--more-->
-
-
-<h2>話に出たもの</h2>
-
-<p>話に出てきたサイトなどのメモです。</p>
-
-<ul>
-<li><a href="http://connpass.com/event/5274/">iBeacon 勉強会（入門編）</a></li>
-<li><a href="http://japan.gamesalad.com/">GameSalad</a></li>
-<li><a href="http://www.hirotangame.net/">広探ゲーム</a></li>
-</ul>
-
-
-<h2>もくもく</h2>
-
-<p>ブラウザを開くのに <code>open</code> コマンドを経由から <code>NSWorkspace</code> の <code>openURLs:withAppBundleIdentifier:options:additionalEventParamDescriptor:launchIdentifiers:</code> 経由に変更しました。</p>
-
-<p>```ruby
-  def openBrowser(app, *args)</p>
-
-<pre><code>r, w = IO.pipe
-pid = Process.spawn('open', '-a', app, @text.stringValue, *args, [:out, :err] =&gt; w)
-w.close
-pid, status = Process.waitpid2(pid)
-output = r.read
-r.close
-unless status.success?
-  alert = NSAlert.new
-  alert.messageText = "Failed to open #{app}\n\n#{output}"
-  alert.runModal
-end
-</code></pre>
-
-<p>  end
-```</p>
-
-<p><code>open -b</code> を使っていれば引数は変わらなかったのですが、 <code>open -a</code> を使っていたので、引数がアプリケーション名からバンドル ID に変わりました。</p>
-
-<p><code>open -a 'Google Chrome' http://localhost:4000/ --args -incognito</code> の <code>-incognito</code> のような追加引数の渡し方がわからなかったので、 Chrome のシークレットウインドウを直接開く機能はなくしました。</p>
-
-<p>```ruby
-  NSWorkspaceLaunchAsync = 0x00010000
-  NSWorkspaceLaunchAllowingClassicStartup = 0x00020000
-  NSWorkspaceLaunchDefault = NSWorkspaceLaunchAsync | NSWorkspaceLaunchAllowingClassicStartup</p>
-
-<p>  def openBrowser(app_bundle_id)</p>
-
-<pre><code>url = NSURL.URLWithString @text.stringValue
-ret = NSWorkspace.sharedWorkspace.openURLs([url], withAppBundleIdentifier: app_bundle_id, options: NSWorkspaceLaunchDefault, additionalEventParamDescriptor: nil, launchIdentifiers: nil)
-unless ret
-  alert = NSAlert.new
-  alert.messageText = "Failed to open #{app}"
-  alert.runModal
-end
-</code></pre>
-
-<p>  end
-```</p>
-
-<p><a href="https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/Workspace/Articles/WorkspaceServices.html">Workspace Services Programming Topics: Manipulating Files</a>
-には <code>openURL:</code> しか書いてなかったり、
-<code>additionalEventParamDescriptor</code> には何を渡せばいいのかわかりにくかったりして困りましたが、
-<a href="http://www.lancard.com/blog/2011/05/01/open-url-with-browser-about-mac-app/">http://www.lancard.com/blog/2011/05/01/open-url-with-browser-about-mac-app/</a>
-のように呼び出せばうまくいきました。</p>
-
-<p>最初に <code>rake</code> の REPL で試していたら、以下のエラーになるので、しばらく悩んでいましたが、 <code>app/app_delegate.rb</code> の中に書けば動いたので、 <code>rake</code> でコンパイルされるタイミングでリンクできていないメソッドは呼び出せないということなのかと思いました。</p>
-
-<p>```console
-(main)> url = NSURL.URLWithString(&ldquo;<a href="http://www.apple.com">http://www.apple.com</a>&rdquo;)
-=> #&lt;NSURL:0x7fcbe8e45060>
-(main)> NSWorkspaceLaunchAsync = 0x00010000
-=> 65536
-(main)> NSWorkspaceLaunchAllowingClassicStartup = 0x00020000
-=> 131072
-(main)> NSWorkspaceLaunchDefault = NSWorkspaceLaunchAsync | NSWorkspaceLaunchAllowingClassicStartup
-=> 196608
-(main)> NSWorkspace.sharedWorkspace.openURLs([url], withAppBundleIdentifier: &ldquo;com.google.Chrome&rdquo;, options: NSWorkspaceLaunchDefault, additionalEventParamDescriptor: nil, launchIdentifiers: nil)
-dyld: lazy symbol binding failed: Symbol not found: __ZN9RoxorCore14find_bs_cftypeESs
-  Referenced from: /Library/RubyMotion/data/osx/librubymotion-repl.dylib
-  Expected in: flat namespace</p>
-
-<p>dyld: Symbol not found: __ZN9RoxorCore14find_bs_cftypeESs
-  Referenced from: /Library/RubyMotion/data/osx/librubymotion-repl.dylib
-  Expected in: flat namespace</p>
-
-<p>================================================================================
-The application terminated. A crash report file may have been generated by the
-system, use <code>rake crashlog' to open it. Use</code>rake debug=1' to restart the app</p>
-
-<h1>in the debugger.</h1>
-
-<p>```</p>
-
-<h2>NSDate</h2>
-
-<p>途中 <code>NSDate.distantFuture</code> の返り値がおかしいという話がありました。</p>
-
-<p><code>
-(main)&gt; NSDate.distantFuture
-=&gt; 1677-09-21 09:12:43 +0900
-(main)&gt; NSDate.distantPast
-=&gt; 1677-09-21 09:12:43 +0900
-</code></p>
 ]]></content>
   </entry>
   
