@@ -4,7 +4,7 @@
   <title><![CDATA[Category: debian | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/debian/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-05-20T22:56:14+09:00</updated>
+  <updated>2014-05-20T23:16:07+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,94 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ansible で sources.list を変更したときに update する]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-05-20-ansible-apt-update.html"/>
+    <updated>2014-05-20T22:58:09+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ansible-apt-update</id>
+    <content type="html"><![CDATA[<p>ansible で sources.list を変更したときには
+<code>apt-get update</code> して欲しいのですが、
+毎回 update するのは無駄なので、
+<code>cache_valid_time</code> も使いたいと思ったので対処しました。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>クライアント側 ansible 1.6.1</li>
+<li>サーバー側 Ubuntu 12.04</li>
+</ul>
+
+
+<h2>やり方</h2>
+
+<p><code>register</code> で <code>template</code> モジュールの実行結果を受けて、
+<code>changed</code> の場合は必ず update して、
+<code>skipped</code> の場合は <code>cache_valid_time</code> で情報が古い場合だけ update するようにしました。</p>
+
+<p></p>
+
+<h2>```yaml tasks/apt.yaml</h2>
+
+<ul>
+<li>template: src=sources.list.{{ ansible_distribution }}.j2 dest=/etc/apt/sources.list owner=root group=root mode=0644
+register: apt_sources_list</li>
+<li>apt: update_cache=yes
+when: apt_sources_list|changed</li>
+<li>apt: update_cache=yes cache_valid_time=3600
+when: apt_sources_list|skipped
+```
+</li>
+</ul>
+
+
+<h2>テンプレートの内容</h2>
+
+<p>gathering facts で設定された <code>ansible_distribution_release</code> と
+<code>vars</code> で別途設定した <code>apt_ubuntu_uri</code> と <code>apt_ubuntu_components</code> を
+組み合わせて apt-line を作るようにしました。</p>
+
+<p>Ubuntu をインストールした直後の sources.list では
+components が別の行になっているものもあったのですが、
+1 行にまとめました。</p>
+
+<p>
+```text templates/sources.list.Ubuntu.j2
+deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }} {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
+deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }} {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
+deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-updates {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
+deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-updates {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}</p>
+
+<h1>deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-backports {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}</h1>
+
+<h1>deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-backports {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}</h1>
+
+<p>deb <a href="http://security.ubuntu.com/ubuntu">http://security.ubuntu.com/ubuntu</a> {{ ansible_distribution_release }}-security {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
+deb-src <a href="http://security.ubuntu.com/ubuntu">http://security.ubuntu.com/ubuntu</a> {{ ansible_distribution_release }}-security {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
+```
+</p>
+
+<p><code>backports</code> は使っていなかったのでコメントアウトしていますが、
+<code>deb-src</code> も使わないのならコメントアウトしておいても良さそうです。</p>
+
+<h2><code>vars</code> の内容</h2>
+
+<p>例として jaist ミラーを使うようにしました。</p>
+
+<h2>```yaml vars/main.yml</h2>
+
+<p>apt_ubuntu_uri: &ldquo;<a href="http://ftp.jaist.ac.jp/pub/Linux/ubuntu/">http://ftp.jaist.ac.jp/pub/Linux/ubuntu/</a>&rdquo;
+apt_ubuntu_components:
+&ndash; main
+&ndash; restricted
+&ndash; universe
+&ndash; multiverse
+```</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[OpenSSL/GnuTLS での CSR の作り方]]></title>
@@ -820,326 +908,6 @@ LAN 内のサーバーなど、そのサーバーにアクセスできる環境�
 <h2>まとめ</h2>
 
 <p>今回の <a href="https://wiki.debian.org/KansaiDebianMeeting">関西Debian勉強会</a> は今までの発表をきくのがメインだったのを、変えていっている途中でもくもくの会など、今後どういう内容にしていくのが良いのか、試行錯誤中という感じでした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[dockerのカスタムベースイメージを作成する]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-13-docker-custom-base-image.html"/>
-    <updated>2013-12-13T18:49:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/docker-custom-base-image</id>
-    <content type="html"><![CDATA[<p>例などにある ubuntu の base image は
-apt-line が archive.ubuntu.com になっていて、
-apt-get install などが遅いです。</p>
-
-<p>日本で使うのなら日本のミラーを使った方が良いので、
-そういう base image を作ります。</p>
-
-<p>base image はあまりカスタマイズせずに、
-派生するイメージにDockerfile などを使って
-カスタマイズをした方が望ましいのですが、
-ほぼ必須のものを毎回インストールするのは無駄なので、
-ついでに日本語 locale を入れるというカスタマイズもしておきます。</p>
-
-<!--more-->
-
-
-<h2>docker 向けのポイント</h2>
-
-<p>最初に docker 向けのポイントをまとめておきます。</p>
-
-<ul>
-<li>最小限にするなら <code>--variant=minbase</code></li>
-<li><code>--include=iproute</code> などで <code>iproute</code> パッケージを入れておかないとネットワークにつながらない</li>
-<li><code>policy-rc.d</code> とか <code>initctl</code> を対処しておかないとパッケージのインストール時に変なことになるかも</li>
-<li><code>dpkg</code> に <code>force-unsafe-io</code> を設定すると <code>apt</code> を高速化できる</li>
-<li><a href="https://github.com/dotcloud/docker/blob/master/contrib/mkimage-debootstrap.sh">mkimage-debootstrap.sh</a> をそのまま使う場合も日本のミラーを指定する方が良い</li>
-</ul>
-
-
-<h2>base image の作り方</h2>
-
-<p>公式ドキュメントの
-<a href="http://docs.docker.io/en/latest/use/baseimages/">Base Image Creation</a>
-を参考にして、基本は
-<a href="https://github.com/dotcloud/docker/blob/master/contrib/mkimage-debootstrap.sh">mkimage-debootstrap.sh</a>
-の手順を使います。</p>
-
-<p>カスタマイズのため、手順を追いかけるだけで直接は使いません。</p>
-
-<h2>debootstrap の実行</h2>
-
-<p>最初は以下のように <code>/tmp/wheezy64</code> などの適当な場所に
-<code>debootstrap</code> で <code>chroot</code> 環境を作成します。
-proxy 環境なら <code>sudo http_proxy=$http_proxy debootstrap ...</code>
-のように指定すれば良いようです。</p>
-
-<p>Debian での例:
-<code>
- sudo debootstrap --verbose --variant=minbase --include=iproute --arch=amd64 wheezy /tmp/wheezy64 http://cdn.debian.or.jp/debian
-</code></p>
-
-<p>Ubuntu での例:
-<code>
- sudo debootstrap --verbose --variant=minbase --arch=amd64 precise /tmp/precise64 http://ftp.jaist.ac.jp/pub/Linux/ubuntu/
-</code></p>
-
-<h3>variant</h3>
-
-<p><code>variant</code> で <code>minbase</code> を指定するとインストールされるパッケージが減って、
-本当に最小限の環境になります。
-具体的には <code>Essential: yes</code> のパッケージ
-( <code>aptitude search '~E'</code> または <code>aptitude search '?essential'</code> で一覧)
-と <code>apt</code> がインストールされます。</p>
-
-<p><code>buildd</code> という <code>variant</code> もあって <code>minbase</code> に加えて
-<code>build-essential</code> が追加でインストールされるようなので、
-CI 環境用などの base image なら <code>--variant=buildd</code> の方が
-良いかもしれません。</p>
-
-<p>デフォルトだと <code>Priority</code> が <code>imporant</code> のパッケージ
-( <code>aptitude search '~pimportant</code> または <code>aptitude search '?priority(important)' で一覧)
-がインストールされるようです。
-インストールされるパッケージの差分は
-</code>aptitude search &lsquo;~pimportant!~E`
-で調べられます。</p>
-
-<h3>include</h3>
-
-<p>元の <code>mkimage-debootstrap.sh</code> では <code>iproute,iputils-ping</code> と指定してますが、
-<code>iputils-ping</code> は必須ではないのでここでは省略しています。</p>
-
-<p><code>iproute</code> は docker 環境では必須です。
-このパッケージに含まれる <code>ip</code> コマンドが入っていないとネットワークにつながりません。</p>
-
-<p><code>iproute</code> パッケージは <code>Priority</code> が <code>optional</code> なので
-普通に <code>debootstrap</code> を実行しても入らないので、
-注意が必要です。</p>
-
-<h3>その他の引数</h3>
-
-<p>arch の指定とか suite の指定とか生成先ディレクトリの指定とか、
-ミラーの指定とかは見てわかる通りです。</p>
-
-<h2>docker 向けのカスタマイズ</h2>
-
-<p>次に生成されたディレクトリの中で
-<code>mkimage-debootstrap.sh</code>
-にデフォルト (<code>-d</code> オプションが指定されなかったとき) の処理をしていきます。</p>
-
-<h3>policy-rc.d</h3>
-
-<p>ファイルの作成方法は何でも良いのですが、
-exit status で 101 を返す <code>usr/sbin/policy-rc.d</code> を作成して、
-パッケージのインストールやアップデートなどで init スクリプトが
-実行されないようにします。</p>
-
-<p>ちなみに
-<code>$'...'</code> は bash に <code>\n</code> を解釈させるための書き方なので、
-<code>'...'</code> や <code>"..."</code> の間違いではありません。</p>
-
-<p><code>
- echo $'#!/bin/sh\nexit 101' | sudo tee usr/sbin/policy-rc.d &gt; /dev/null
- sudo chmod +x usr/sbin/policy-rc.d
-</code></p>
-
-<p><code>policy-rc.d</code> については <code>invoke-rc.d</code> の man を参照してください。</p>
-
-<h3>sbin/initctl</h3>
-
-<p>initctl を実行してしまう upstart スクリプトがあるらしく、
-その対処もします。</p>
-
-<p>policy-rc.d は存在しなかったので、作成するだけでしたが、
-<code>sbin/initctl</code> はパッケージ管理のファイルとして存在するので
-<code>dpkg-divert</code> でパッケージの更新などで上書きされないようにしています。</p>
-
-<p><code>
- sudo chroot . dpkg-divert --local --rename --add /sbin/initctl
- sudo ln -sf /bin/true sbin/initctl
-</code></p>
-
-<h3>パッケージのキャッシュの削除</h3>
-
-<p><code>
- sudo chroot . apt-get clean
-</code></p>
-
-<p>を実行して不要な deb ファイルなどを削除して、
-イメージのサイズを削減しています。</p>
-
-<p>後で独自カスタマイズのところでパッケージをインストールして、
-その後でまた実行するので、その場合はここでは実行しなくてもかまいません。</p>
-
-<h3>apt の高速化など</h3>
-
-<p><code>mkimage-debootstrap.sh</code> のコメントには
-<code>dpkg</code> がパッケージの展開後に <code>sync()</code> を呼んでいるのが
-原因で無駄に遅くなっているので、
-強制的に <code>sync()</code> を呼ばなくさせると書いています。</p>
-
-<p><code>
- echo 'force-unsafe-io' | sudo tee etc/dpkg/dpkg.cfg.d/02apt-speedup &gt; /dev/null
-</code></p>
-
-<p>それから、 deb ファイルを残さないようにして image ファイルが大きくならないようにしています。</p>
-
-<p><code>
- echo 'DPkg::Post-Invoke {"/bin/rm -f /var/cache/apt/archives/*.deb || true";};' | sudo tee etc/apt/apt.conf.d/no-cache &gt; /dev/null
-</code></p>
-
-<h3>元に戻す方法</h3>
-
-<p><code>mkimage-debootstrap.sh</code> のコメントに
-元に戻す方法も書いてありました。
-<code>dpkg-divert</code> 以外はファイルを消すだけです。</p>
-
-<p><code>
- rm /usr/sbin/policy-rc.d
- rm /sbin/initctl; dpkg-divert --rename --remove /sbin/initctl
- rm /etc/dpkg/dpkg.cfg.d/02apt-speedup
- rm /etc/apt/apt.conf.d/no-cache
-</code></p>
-
-<h3>apt-line の変更</h3>
-
-<p><code>etc/apt/sources.list</code> をみると</p>
-
-<p><code>
- deb http://cdn.debian.or.jp/debian wheezy main
-</code></p>
-
-<p>だけになっているので、 <code>updates</code> と <code>security</code> を追加します。</p>
-
-<p><code>mkimage-debootstrap.sh</code> もデフォルト
-(<code>-d</code> も <code>-s</code> も指定されていないとき)
-の動作では追加します。</p>
-
-<p>この例では以下のようにしました。</p>
-
-<p>debian での例:
-<code>
- deb http://cdn.debian.or.jp/debian wheezy main
- deb http://cdn.debian.or.jp/debian wheezy-updates main
- deb http://security.debian.org/ wheezy/updates main
-</code></p>
-
-<p>ubuntu での例:
-<code>
- deb http://ftp.jaist.ac.jp/pub/Linux/ubuntu precise main universe
- deb http://ftp.jaist.ac.jp/pub/Linux/ubuntu precise-updates main universe
- deb http://ftp.jaist.ac.jp/pub/Linux/ubuntu precise-security main universe
-</code></p>
-
-<p>main 以外を追加したい場合はここで追加しておくと良さそうです。
-<code>mkimage-debootstrap.sh</code> でも ubuntu の場合は <code>universe</code> が追加されていました。</p>
-
-<h2>独自カスタマイズ</h2>
-
-<p>ここから独自カスタマイズになります。</p>
-
-<h3>アップデート実行</h3>
-
-<p>base image にセキュリティアップデートも入れておきたいなら、
-更新しておきます。</p>
-
-<p><code>
- sudo chroot . apt-get update
- sudo chroot . apt-get dist-upgrade
-</code></p>
-
-<h3>日本語 locale 追加</h3>
-
-<p>debian の場合は
-別環境で <code>debconf-get-selections</code> で調べておいた設定を使って、
-<code>debconf-set-selections</code> で設定を入れておいて
-<code>DEBIAN_FRONTEND=noninteractive</code> でインストールします。</p>
-
-<p><code>
- echo locales locales/locales_to_be_generated multiselect ja_JP.EUC-JP EUC-JP, ja_JP.UTF-8 UTF-8 | sudo chroot . debconf-set-selections
- echo locales locales/default_environment_locale select ja_JP.UTF-8 | sudo chroot . debconf-set-selections
- sudo chroot . env DEBIAN_FRONTEND=noninteractive apt-get install locales
-</code></p>
-
-<p>ubuntu の場合は
-<code>language-pack-ja</code> パッケージを入れても良いのですが、
-不要なパッケージを入れるのが嫌なら <code>locale-gen</code> コマンドで
-生成しても良いです。</p>
-
-<p><code>
- sudo chroot . locale-gen ja_JP.UTF-8
- sudo chroot . locale-gen ja_JP.EUC-JP
-</code></p>
-
-<h3>パッケージのキャッシュの削除</h3>
-
-<p>カスタマイズが終わったら clean を実行しておきます。
-<code>etc/apt/apt.conf.d/no-cache</code> を作成していれば不要かもしれません。</p>
-
-<p><code>
- sudo chroot . apt-get clean
-</code></p>
-
-<h2>イメージ作成と取り込み</h2>
-
-<h3>tarball 作成</h3>
-
-<p><code>mkimage-debootstrap.sh</code> は <code>-t</code> オプションが指定されたときに
-docker のイメージではなく tarball を作成します。
-直接取り込むならこの手順は不要です。</p>
-
-<p>作成方法としては
-最初に <code>touch</code> で一般ユーザー権限のファイルになるようにしておいて、
-中身は <code>root</code> 権限で入れるようにしています。</p>
-
-<p><code>
- touch /tmp/wheezy64.tar.xz
- sudo tar --numeric-owner -caf /tmp/wheezy64.tar.xz .
-</code></p>
-
-<h3>イメージ取り込み</h3>
-
-<p><code>sudo docker</code> は root 権限が不要な設定にいていれば <code>docker</code> だけでかまいません。</p>
-
-<p><code>mkimage-debootstrap.sh</code> は安定版や LTS に <code>latest</code> タグを設定したり、
-<code>etc/debian_version</code> や <code>etc/lsb-release</code> をみて
-タグを設定しているので、必要に応じて設定しておきます。</p>
-
-<p>イメージ名としては「ユーザー名/レポジトリ名」という形式が推奨されていますが、
-ここでは例として「ユーザー名」の部分は「local」にしておきます。
-そして「レポジトリ名」としては日本語 locale を入れたということで
-<code>-ja</code> を付けました。
-日本のミラーを使っているということで <code>-ja-jp</code> にしても良かったのですが、
-長かったので、 <code>-ja</code> だけにしました。</p>
-
-<p>Debian での例:
-<code>
- sudo tar --numeric-owner -c . | sudo docker import - local/debian-ja:wheezy
- sudo docker tag local/debian-ja:wheezy local/debian-ja:latest
- sudo docker tag local/debian-ja:wheezy local/debian-ja:7.2
-</code></p>
-
-<p>Ubuntu での例:
-<code>
- sudo tar --numeric-owner -c . | sudo docker import - local/ubuntu-ja:precise
- sudo docker tag local/ubuntu-ja:precise local/ubuntu-ja:latest
- sudo docker tag local/ubuntu-ja:precise local/ubuntu-ja:12.04
-</code></p>
-
-<h2>まとめ</h2>
-
-<p><a href="https://github.com/dotcloud/docker/blob/master/contrib/mkimage-debootstrap.sh">mkimage-debootstrap.sh</a>
-で何をやっているのか、
-同じことを手動でやるのはどうするのかということを説明しました。</p>
-
-<p>最初のポイントにも書きましたが
-<code>mkimage-debootstrap.sh</code>
-を直接使うのも良いですが、
-最低限ミラーを指定するのがおすすめです。</p>
-
-<p>目的によっては <code>variant</code> を変更したり、
-<code>include</code> でインストールするパッケージを増やしておくだけでも
-便利になると思います。</p>
 ]]></content>
   </entry>
   
