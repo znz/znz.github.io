@@ -36,7 +36,6 @@ ansible all -s -K -i ./inventory_hosts -m apt_repository -a "repo='ppa:chris-lea
 `- apt: pkg=python-apt`
 も書いておくと良いかもしれません。
 
-
 [nodejs-ppa.yml](https://github.com/znz/ansible-playbook-passenger/blob/master/provisioning/roles/passenger/tasks/nodejs-ppa.yml)
 が実際の使用例です。
 
@@ -46,3 +45,8 @@ ansible all -s -K -i ./inventory_hosts -m apt_repository -a "repo='ppa:chris-lea
 - apt_repository: repo='ppa:chris-lea/node.js'
   when: ansible_distribution_release == "precise"
 ```
+
+Debian の場合や ubuntu 14.04 の場合は除外しても良いかと思って、
+ubuntu 12.04 の時だけ実行するために
+`when: ansible_distribution_release == "precise"`
+で実行する環境を制限しています。
