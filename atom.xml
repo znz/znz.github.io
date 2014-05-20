@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-05-20T23:16:07+09:00</updated>
+  <updated>2014-05-20T23:55:52+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,70 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[octopress で ansible の記事を書く時のエスケープ]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-05-20-octopress-ansible.html"/>
+    <updated>2014-05-20T23:25:18+09:00</updated>
+    <id>http://blog.n-z.jp/blog/octopress-ansible</id>
+    <content type="html"><![CDATA[<p>octopress で ansible の記事を書く時に連続する <code>{</code> のエスケープに困ったので、
+対処方法を調べました。</p>
+
+<!--more-->
+
+
+<h2>コードブロックのエスケープ</h2>
+
+<p><a href="http://stackoverflow.com/questions/15786144/how-to-escape-in-markdown-on-octopress">How to escape {{ in markdown on Octopress? &ndash; Stack Overflow</a>
+にあるように</p>
+
+<pre><code>```種類 ファイル名
+コードブロック
+```
+</code></pre>
+
+<p>の外側を
+<code>{% raw %}</code> と <code>{% endraw %}</code>
+でくくればうまくいきました。</p>
+
+<h2>文中の {{ のエスケープ</h2>
+
+<p>先ほどのリンクのアンカーやこの節の見出しのような文の途中は</p>
+
+<pre><code>{{ "{{" }}
+</code></pre>
+
+<p>のように書けばエスケープできました。</p>
+
+<p>幅なしスペース (<code>&amp;#x200B;</code>) のような幅のない文字を挟んでごまかすという手もあるかもしれません。</p>
+
+<h2>文中の <code>{%</code> のエスケープ</h2>
+
+<p><code>{% raw %}</code> と <code>{% endraw %}</code> 自体をエスケープするのに</p>
+
+<pre><code>{{ "{%" }}
+</code></pre>
+
+<p>を使って</p>
+
+<pre><code>`{{ "{%" }} raw %}` と `{{ "{%" }} endraw %}`
+</code></pre>
+
+<p>のように書きました。</p>
+
+<p><code>%}</code> まで <code>""</code> の中に入れようとして</p>
+
+<pre><code>`{{ "{% raw %}" }}`
+</code></pre>
+
+<p>と書くと</p>
+
+<pre><code>Liquid Exception: Variable '{{ "{% raw %}' was not properly terminated with regexp: /\}\}/
+</code></pre>
+
+<p>というエラーになってうまくいきませんでした。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ansible で sources.list を変更したときに update する]]></title>
@@ -3215,97 +3279,6 @@ haml と比べていろんな書き方で使われていなさそうというこ
 
 <p>また属性値なしの <code>&lt;div ng-app&gt;</code> のような出力に対応しているリリースがまだないなど、
 融通が利かない点があって問題が起きそうな可能性がありそうだと感じました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Ruby 2.1.1のHash#rejectの不具合対策]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-03-11-hash-reject.html"/>
-    <updated>2014-03-11T14:22:28+09:00</updated>
-    <id>http://blog.n-z.jp/blog/hash-reject</id>
-    <content type="html"><![CDATA[<p><a href="https://www.ruby-lang.org/ja/news/2014/03/10/regression-of-hash-reject-in-ruby-2-1-1/">Ruby 2.1.1 に含まれる Hash#reject の不具合について</a>
-という話があって、
-自分で書くコードでは普通は Hash を継承することはない (is-a にせずに has-a にすることが多い) ので影響はないのですが、
-Rails の中の ActiveSupport が影響を受けるということで対処を入れました。</p>
-
-<p>他にもバックポート漏れのコミットをあてた独自ビルドを使うとか、
-Ruby 2.1.0 を使う、という対処もあるようです。</p>
-
-<!--more-->
-
-
-<p><a href="https://github.com/rails/rails/issues/14188">Rails の Issue #14188</a>
-で話があるようにセキュリティ修正ではないため、
-Rails 3.2 系にこの修正は入らないので、
-モンキーパッチを入れることにしました。</p>
-
-<p>bugs.ruby-lang.org では
-<a href="https://github.com/ruby/bugs.ruby-lang.org/blob/ro-2-5/lib/redmine/core_ext.rb">https://github.com/ruby/bugs.ruby-lang.org/blob/ro-2-5/lib/redmine/core_ext.rb</a>
-のように対処していたのを参考にして、
-以下のようなコードを
-<code>config/initializers/hash_reject.rb</code>
-に置いて対処することにしました。</p>
-
-<figure class='code'><figcaption><span>config/initializers/hash_reject.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># monkey patch for regression of Hash#reject in Ruby 2.1.1</span>
-</span><span class='line'><span class="c1"># see https://www.ruby-lang.org/ja/news/2014/03/10/regression-of-hash-reject-in-ruby-2-1-1/</span>
-</span><span class='line'><span class="c1"># or https://www.ruby-lang.org/en/news/2014/03/10/regression-of-hash-reject-in-ruby-2-1-1/</span>
-</span><span class='line'><span class="nb">require</span> <span class="s1">&#39;active_support/hash_with_indifferent_access&#39;</span>
-</span><span class='line'><span class="nb">require</span> <span class="s1">&#39;active_support/ordered_hash&#39;</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">module</span> <span class="nn">ActiveSupport</span>
-</span><span class='line'>  <span class="k">class</span> <span class="nc">HashWithIndifferentAccess</span>
-</span><span class='line'>    <span class="k">def</span> <span class="nf">select</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
-</span><span class='line'>      <span class="nb">dup</span><span class="o">.</span><span class="n">tap</span> <span class="p">{</span> <span class="o">|</span><span class="nb">hash</span><span class="o">|</span> <span class="nb">hash</span><span class="o">.</span><span class="n">select!</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="k">def</span> <span class="nf">reject</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
-</span><span class='line'>      <span class="nb">dup</span><span class="o">.</span><span class="n">tap</span> <span class="p">{</span> <span class="o">|</span><span class="nb">hash</span><span class="o">|</span> <span class="nb">hash</span><span class="o">.</span><span class="n">reject!</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">class</span> <span class="nc">OrderedHash</span>
-</span><span class='line'>    <span class="k">def</span> <span class="nf">select</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
-</span><span class='line'>      <span class="nb">dup</span><span class="o">.</span><span class="n">tap</span> <span class="p">{</span> <span class="o">|</span><span class="nb">hash</span><span class="o">|</span> <span class="nb">hash</span><span class="o">.</span><span class="n">select!</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="k">def</span> <span class="nf">reject</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
-</span><span class='line'>      <span class="nb">dup</span><span class="o">.</span><span class="n">tap</span> <span class="p">{</span> <span class="o">|</span><span class="nb">hash</span><span class="o">|</span> <span class="nb">hash</span><span class="o">.</span><span class="n">reject!</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span> <span class="p">}</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>ここのコードが実行される前に読み込まれていれば問題ないのですが、
-ここでクラス定義してしまうと元々の定義が autoload されなくなるので、
-念のため require しています。</p>
 ]]></content>
   </entry>
   
