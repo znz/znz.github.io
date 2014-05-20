@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "ansibleでppaを追加する"
+title: "ansible で ppa を追加する"
 date: 2014-05-20 22:47:22 +0900
 comments: true
 categories: ansible ubuntu
