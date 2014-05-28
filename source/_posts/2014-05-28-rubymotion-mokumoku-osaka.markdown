@@ -6,7 +6,7 @@ comments: true
 categories: event ruby rubymotion osx
 ---
 第 1 回から第 10 回にも参加した RubyMotion もくもく会 in Osaka の
-[第 11 回 RubyMotion もくもく会 in Osaka](http://connpass.com/event/5674/)
+[第 11 回 RubyMotion もくもく会 in Osaka](http://connpass.com/event/6116/)
 に参加してきました。
 
 次回の
