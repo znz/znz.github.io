@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-05-28T23:38:57+09:00</updated>
+  <updated>2014-06-05T22:43:09+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,89 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ansible-galaxy を使ってみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-02-ansible-galaxy.html"/>
+    <updated>2014-06-02T22:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ansible-galaxy</id>
+    <content type="html"><![CDATA[<p>ansible の複数の playbook で role を共有するのに
+<a href="https://galaxy.ansible.com/">Ansible Galaxy</a>
+はどうだろうと思って登録してみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>ansible 1.6.2</li>
+</ul>
+
+
+<h2>アカウント登録</h2>
+
+<p>後で github から role を import するということもあって、
+github 連携でアカウントを登録しました。</p>
+
+<p>アカウントは4文字以上必須ということで <code>znzj</code> にしました。
+(<a href="https://index.docker.io/">docker index</a> とか
+<a href="https://vagrantcloud.com/">Vagrant Cloud</a> とか
+最近は4文字以上必須が多いのでしょうか?)</p>
+
+<h2>role を github に公開</h2>
+
+<p><code>ansible-galaxy init ansible-role-ja_jp</code> でひな形を作成して、
+<code>provisioning/roles/ja_jp</code> というディレクトリの中身だったものを移行して
+<a href="https://github.com/znz/ansible-role-ja_jp">https://github.com/znz/ansible-role-ja_jp</a> として公開しました。</p>
+
+<p>apt のミラーサイトとして日本のミラーを使ったり、日本語 locale にしたり、タイムゾーンを JST にしたりする role です。</p>
+
+<h2>Ansbile Galaxy に role を追加</h2>
+
+<p>ログインした状態だと右上の方に出てくる <code>Add a Role</code> というリンクから登録します。</p>
+
+<ul>
+<li>Github Username/Account : znz</li>
+<li>Github Repository : ansible-role-ja_jp</li>
+<li>Alternate Name : ja_jp</li>
+</ul>
+
+
+<p>という内容で登録したところ、
+<a href="https://galaxy.ansible.com/list#/roles/967">https://galaxy.ansible.com/list#/roles/967</a>
+で見えるようになりました。</p>
+
+<p>URL をみるとわかるように JavaScript オフだと個別の role は見えません。
+ちょっと試した感じだと代用の URL も見つけられませんでした。</p>
+
+<h2>動作確認</h2>
+
+<p><code>ansible-galaxy install znzj.ja_jp</code> だと <code>/usr/local/etc/ansible/roles/znzj.ja_jp</code> にインストールされてしまった (Homebrew でインストールした ansible を使っている場合) ので、
+<code>ansible-galaxy install --roles-path ./roles znzj.ja_jp</code>
+でカレントディレクトリの中にインストールし直しました。</p>
+
+<h2>感想</h2>
+
+<p>これだけだと git submodule に比べて利点が見えてこないのですが、
+依存関係やバージョン指定をちゃんと使えれば便利そうに思いました。</p>
+
+<p>自分が登録した role にバージョンを指定する方法がわからず、
+今のところバージョンなしのままなので、どうにかしたいです。</p>
+
+<h2>参考サイト</h2>
+
+<ul>
+<li><a href="http://qiita.com/kiri/items/f329a35543022d6e45d0">AnsibleWorks Galaxyにroleを登録してみる &ndash; Qiita</a>
+
+<ul>
+<li>スクリーンショットをみると AnsibleWorks Galaxy になっているところが今は Ansible Galaxy なので、いつの間にか名前が変わっているようです。</li>
+</ul>
+</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 11 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -2719,330 +2802,6 @@ window を閉じた時に終了するようにしました。
 </span><span class='line'>  <span class="k">end</span>
 </span></code></pre></td></tr></table></div></figure>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[bootstrap 2.3.2 から bootstrap 3.1.1 への移行]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-03-14-bootstrap-2-to-3.html"/>
-    <updated>2014-03-14T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/bootstrap-2-to-3</id>
-    <content type="html"><![CDATA[<p>Rails 3.2.17 を使っている rails アプリで
-bootstrap 2.3.2 から bootstrap 3.1.1 に移行している途中なのですが、
-どういうところに対処が必要だったのか、
-メモをまとめてみました。</p>
-
-<!--more-->
-
-
-<h2>Gemfile 変更</h2>
-
-<p>bootstrap 2 系のときは twitter-bootstrap-rails gem を使っていたのですが、
-bootstrap 3 系対応がリリースされていないこともあって、
-bootstrap 側から公式にリリースされている bootstrap-sass gem に移行しました。</p>
-
-<p>bootstrap-sass は rails_admin gem で使われていて、
-バージョンが rails_admin によって制限されてしまうので、
-公式の less の gem があれば良かったのですが、
-見つけられなかったので、
-自分しか使っていない rails_admin を rails 4 に上げるまでの間、
-一時的に rails_admin を外して、
-新しい bootstrap-sass を rails 3.2.17 と一緒に使いました。</p>
-
-<figure class='code'><figcaption><span>Gemfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">gem</span> <span class="s1">&#39;less-rails&#39;</span>
-</span><span class='line'><span class="n">gem</span> <span class="s1">&#39;twitter-bootstrap-rails&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>を <a href="https://github.com/twbs/bootstrap-sass">https://github.com/twbs/bootstrap-sass</a> に書いてあるバージョン指定付きで</p>
-
-<figure class='code'><figcaption><span>Gemfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">gem</span> <span class="s1">&#39;sass-rails&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;= 3.2&#39;</span>
-</span><span class='line'><span class="n">gem</span> <span class="s1">&#39;bootstrap-sass&#39;</span><span class="p">,</span> <span class="s1">&#39;~&gt; 3.1.1&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>に書き換えて、 <code>bundle update</code> で反映しました。</p>
-
-<h2>twitter-bootstrap-rails のヘルパーメソッド削除</h2>
-
-<p>twitter-bootstrap-rails で定義されているヘルパーメソッドを使っていたら、
-削除するなり代替メソッドを定義して置き換えるなり、
-一時的にコメントアウトするなりしてエラーにならないようにしておきます。</p>
-
-<p>今回は <code>glyph</code> と <code>add_breadcrumb</code> がひっかかりました。</p>
-
-<h2>bootstrap_and_overrides.css.less 削除</h2>
-
-<p>app/assets/stylesheets/bootstrap_and_overrides.css.less を削除して、
-app/assets/stylesheets/app.css.scss のようなファイルに移行しました。</p>
-
-<figure class='code'><figcaption><span>app.css.scss</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="k">@import</span> <span class="s2">&quot;bootstrap&quot;</span><span class="p">;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">//</span> <span class="err">その他の</span> <span class="nt">bootstrap_and_overrides</span><span class="nc">.css.less</span> <span class="err">から移行した内容</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>キャッシュ削除</h2>
-
-<p>less を消したはずなのにエラーにならなくておかしいと思っていたら、
-キャッシュの影響だったので、
-development 環境でもキャッシュを有効にしている場合は削除します。</p>
-
-<p><code>bundle exec rake tmp:clear</code> で消したり、
-<code>rake</code> 経由だと遅いと思ったら
-<code>rm -rf tmp/cache</code> のようにばっさり削除したりすると良いと思います。</p>
-
-<h2>.navbar</h2>
-
-<p>bootstrap 2 を使っていた頃は
-<code>.navbar</code> と <code>.nav</code> の違いがよくわかっていなかったのですが、
-<code>.navbar</code> は上 (または下) のバーのことで、
-<code>.nav</code> はその中にある <code>ul</code> のリンクのことでした。</p>
-
-<p><code>.nav</code> は他にも <code>.nav-tabs</code> のような使い方もするというのを先に知っていれば
-迷わなかったと思います。</p>
-
-<p><a href="http://getbootstrap.com/components/#nav">http://getbootstrap.com/components/#nav</a>
-(古い方: <a href="http://getbootstrap.com/2.3.2/components.html#navs">http://getbootstrap.com/2.3.2/components.html#navs</a> )
-の説明では navbar の上なのですが、
-サイトの作成順として画面の上から作っていっていたので、
-迷ってしまっていたようです。</p>
-
-<p><code>.navbar</code> の中の <code>.nav</code> は <code>.navbar-nav</code> に変わっている、
-<code>.navbar-inner</code> は <code>.container</code> か <code>.container-fluid</code> に置き換えなど、
-変更点が多いので、
-<code>.navbar</code> の中身は全面的に見直すのが良さそうです。</p>
-
-<h2>.brand から .navbar-brand</h2>
-
-<p><code>.brand</code> から <code>.navbar-brand</code> に変わっていました。</p>
-
-<p>中に画像を入れているとずれてしまうので、
-scss に以下のように書いて調整しました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="nc">.navbar-brand</span> <span class="p">{</span>
-</span><span class='line'>  <span class="k">padding-top</span><span class="o">:</span> <span class="m">8px</span><span class="p">;</span>
-</span><span class='line'>  <span class="n">img</span> <span class="err">{</span>
-</span><span class='line'>    <span class="k">height</span><span class="o">:</span> <span class="m">34px</span><span class="p">;</span>
-</span><span class='line'>    <span class="k">width</span><span class="o">:</span> <span class="m">34px</span><span class="p">;</span>
-</span><span class='line'>  <span class="p">}</span>
-</span><span class='line'><span class="err">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>8 + 34 + 8 ということで高さ 50px の <code>.navbar</code> の真ん中になることを期待しています。</p>
-
-<h2>.container (固定幅) か .container-fluid (横幅いっぱい)</h2>
-
-<p>grid system の配置を使うなら <code>.row</code> は <code>.container</code> か <code>.container-fluid</code> の中に置く必要があります。</p>
-
-<p>違いは実際に window の横幅を変えてみればわかるのですが、
-<code>.container</code> だと
-<a href="http://getbootstrap.com/css/#grid">http://getbootstrap.com/css/#grid</a>
-のように 768px 992px 1200px のところで急に配置が変わって、
-その間は左右の余白が増減するだけのようです。</p>
-
-<p><code>.container-fluid</code> だと普通のサイトと同じように出来るだけ横幅いっぱいになるように中身の横幅が変わります。</p>
-
-<p>bootstrap 2 ではレスポンシブにしたいときは <code>.container-fluid</code> で固定幅の時は <code>.container</code> だったので、
-<code>.container-fluid</code> しか使っていなかったのですが、
-今はレスポンシブな中で使い分けが出来るようになっているようです。</p>
-
-<p><a href="http://getbootstrap.com/examples/navbar-fixed-top/">http://getbootstrap.com/examples/navbar-fixed-top/</a>
-の例で <code>Project name</code> が左端によっていないのも <code>.container</code> を使っているからです。
-ブラウザーのデベロッパーツールで <code>.container-fluid</code> に変えて横幅を変えてみれば
-違いがわかると思います。</p>
-
-<h2><code>.row-fluid .span*</code> から <code>.row .col-xs-*</code></h2>
-
-<p><code>.row</code> と <code>.row-fluid</code> の区別はなくなって、
-<code>.row</code> に統一されています。</p>
-
-<p><code>.span*</code> の置き換えは <code>.col-md-*</code> と説明されていることが多いようですが、
-<code>.col-md-</code> が <code>@media (min-width: 992px)</code> になっているなど、
-小さい画面サイズ用のスタイルを大きい画面用のスタイルで上書きするようになっているので、
-画面サイズに関わらず同じ分割をしたいのなら <code>.col-xs-</code> だけ指定すれば良さそうです。</p>
-
-<h2>btn</h2>
-
-<p><code>btn</code> だけでは色や枠 (border) が変わらなくなったので、
-<code>btn-default</code> を足す必要がありました。</p>
-
-<p>サイズ変更の <code>btn-mini</code> などがなくなって <code>btn-xs</code> などに変更する必要がありました。</p>
-
-<h2>list-unstyled</h2>
-
-<p><code>ul.unstyled</code> は <code>ul.list-unstyled</code> に変更する必要がありました。</p>
-
-<h2>font-awesome-sass</h2>
-
-<p>アイコンは glyphicons ではなく font-awesome を使っていたので、
-<a href="https://github.com/FortAwesome/font-awesome-sass">font-awesome-sass</a>
-に乗り換えました。</p>
-
-<p>mixin や variables などがなければ関係なさそうですが、
-<a href="https://github.com/twbs/bootstrap-sass#usage">bootstrap-sass の Usage</a>
-では <code>//= require</code> より <code>@import</code> が推奨されていたので、</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="k">@import</span> <span class="s2">&quot;bootstrap&quot;</span><span class="p">;</span>
-</span><span class='line'><span class="k">@import</span> <span class="s2">&quot;font-awesome&quot;</span><span class="p">;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>のように <code>@import</code> にしてみました。</p>
-
-<p><code>&lt;i class="icon-sort"&gt;&lt;/i&gt;</code> が
-<code>&lt;i class="fa fa-sort"&gt;&lt;/i&gt;</code> に変わるような感じで、
-<code>icon-</code> を <code>fa-</code> に置き換えるだけではなく、
-<code>fa</code> の追加が必要でした。</p>
-
-<p><code>glyph</code> ヘルパーメソッドを使っていた場合は、
-<code>icon</code> ヘルパーメソッドに書き換えると良いのですが、
-複数引数の扱いが違うのと、
-<code>_</code> を <code>-</code> に置き換える処理がなくなっているのに注意が必要です。</p>
-
-<p>たとえば <code>glyph(:sort_up)</code> は <code>icon('sort-up')</code> のように書き換えました。</p>
-
-<p><code>glyph(:lock, :white)</code> のような複数指定には対応していないようなので、</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="p">=</span> <span class="n">icon</span><span class="p">(</span><span class="s1">&#39;spinner fa-spin&#39;</span><span class="o">.</span><span class="n">freeze</span><span class="p">)</span>
-</span><span class='line'><span class="cp">-# or</span>
-</span><span class='line'><span class="p">=</span> <span class="n">icon</span><span class="p">(</span><span class="ss">:spinner</span><span class="p">,</span> <span class="kp">nil</span><span class="p">,</span> <span class="ss">class</span><span class="p">:</span> <span class="s1">&#39;fa-spin&#39;</span><span class="p">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>のように 2 個目以降は無理矢理埋め込むしかなさそうです。</p>
-
-<p>それぞれのヘルパーメソッドのソースは以下のようになっています。</p>
-
-<ul>
-<li><a href="https://github.com/seyhunak/twitter-bootstrap-rails/blob/40afc477f6a3813ef82cf5821602c9cf2422efc2/app/helpers/glyph_helper.rb">glyph</a></li>
-<li><a href="https://github.com/FortAwesome/font-awesome-sass/blob/23ca05e75e85ec84afecca9f62e7f01d1fb9628b/lib/font_awesome/sass/rails/helpers.rb">icon</a></li>
-</ul>
-
-
-<p><code>icon</code> は第2引数に文字列を指定すると間にスペースを入れてくれるので、
-今までは</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="nt">i</span><span class="o">[</span><span class="nt">class</span><span class="o">^=</span><span class="s2">&quot;icon-&quot;</span><span class="o">]</span><span class="nd">:after</span> <span class="p">{</span>
-</span><span class='line'>  <span class="k">content</span><span class="o">:</span> <span class="s2">&quot; &quot;</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>のようにスタイルシートで空白を足していたのですが、</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">icon</span><span class="p">(</span><span class="ss">:pencil</span><span class="p">,</span> <span class="n">t</span><span class="p">(</span><span class="s1">&#39;.edit&#39;</span><span class="p">,</span> <span class="ss">default</span><span class="p">:</span> <span class="ss">:&#39;helpers.links.edit&#39;</span><span class="p">))</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>のように使うのも良さそうです。</p>
-
-<p>今回は書き換えの手間を減らすため、以下のように今までと同じようにスタイルシートで空白を入れるようにしました。
-何のスタイルが影響しているのか調べていないのですが、半角スペースだとうまくいかなかったので、 NBSP を直接埋め込みました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="nt">i</span><span class="nc">.fa</span><span class="nd">:after</span> <span class="p">{</span>
-</span><span class='line'>  <span class="k">content</span><span class="o">:</span> <span class="s2">&quot; &quot;</span><span class="p">;</span> <span class="o">//</span> <span class="n">nbsp</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>いくつかのアイコンの名前は変更が必要でした。
-使っていて影響があったのは以下のアイコンでした。</p>
-
-<ul>
-<li>変更前 変更後</li>
-<li>comment-alt comment-o</li>
-<li>folder_close folder</li>
-<li>picture picture-o</li>
-<li>remove times</li>
-<li>signin sign-in</li>
-<li>signout sign-out</li>
-<li>star-empty star-o</li>
-<li>trash trash-o</li>
-</ul>
-
-
-<h2>pagination</h2>
-
-<p>kaminari を使っているので、
-<code>app/views/kaminari/_paginator.html.*</code>
-の
-<code>nav.pagination ul</code>
-という構造になっている部分を
-<code>ul.pagination</code>
-に書き換えるだけでした。</p>
-
-<h2>label</h2>
-
-<p><code>btn</code> と同様に <code>label</code> 単独ではなく <code>label-default</code> と組み合わせるようになりました。</p>
-
-<p>選択されているものに <code>label-inverse</code> を使っていたのになくなってしまったので、
-<code>label-primary</code> に変えました。</p>
-
-<p>意味的には <code>.nav</code> に変えた方が良さそうなので、
-一通り一時的な対処をした後にちゃんと変更しようと思っています。</p>
-
-<h2>muted</h2>
-
-<p><code>.muted</code> は <code>.text-muted</code> に変更しました。</p>
-
-<h2>参考サイト: Bootstrap3移行ガイド</h2>
-
-<p>基本的に本家のドキュメントを参照していたのですが、
-ここまで変更してから 2 から 3 への移行のドキュメントを探して、
-<a href="http://bootstrap.s1.adexd.net/">Bootstrap3移行ガイド</a>
-をみつけて見てみたのですが、全体としては非常に参考になるのですが、
-所々気になる点がありました。
-連絡先が見つけられなかったので、ここにメモしておきます。</p>
-
-<p><a href="http://bootstrap.s1.adexd.net/css.php#grid">グリッドシステム（Grid system）</a>
-の【Bootstrap2.xとの変更箇所】の説明で <code>.row</code> と使い分けると書いているのは
-間違いだと思います。</p>
-
-<p>スクリーンリーダー用のクラスを
-<a href="http://bootstrap.s1.adexd.net/css.php#screen-reader">すべての要素の表示を隠す</a>
-と説明しているなど、たまに間違いがあるようです。</p>
-
-<h2>現状まとめ</h2>
-
-<p>layouts といくつかのコントローラーに対応する views を変更すれば
-ある程度自分のアプリで使っているものは網羅できるので、
-そこからは移行に必要な変更点はわかってきて速くなっていく感じでした。</p>
-
-<p>先日書いた haml から slim への移行も同時にやっていて、
-views 全体を見直す良い機会になっています。</p>
-
-<p>一部で jquery-ui を使っていて、
-機能的には問題ないのですが、
-見た目が bootstrap 3 となじまないので、
-後で対処が必要そうでした。</p>
 ]]></content>
   </entry>
   

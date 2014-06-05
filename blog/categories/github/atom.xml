@@ -4,7 +4,7 @@
   <title><![CDATA[Category: github | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/github/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-05-28T23:38:57+09:00</updated>
+  <updated>2014-06-05T22:43:09+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,89 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ansible-galaxy を使ってみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-02-ansible-galaxy.html"/>
+    <updated>2014-06-02T22:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ansible-galaxy</id>
+    <content type="html"><![CDATA[<p>ansible の複数の playbook で role を共有するのに
+<a href="https://galaxy.ansible.com/">Ansible Galaxy</a>
+はどうだろうと思って登録してみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>ansible 1.6.2</li>
+</ul>
+
+
+<h2>アカウント登録</h2>
+
+<p>後で github から role を import するということもあって、
+github 連携でアカウントを登録しました。</p>
+
+<p>アカウントは4文字以上必須ということで <code>znzj</code> にしました。
+(<a href="https://index.docker.io/">docker index</a> とか
+<a href="https://vagrantcloud.com/">Vagrant Cloud</a> とか
+最近は4文字以上必須が多いのでしょうか?)</p>
+
+<h2>role を github に公開</h2>
+
+<p><code>ansible-galaxy init ansible-role-ja_jp</code> でひな形を作成して、
+<code>provisioning/roles/ja_jp</code> というディレクトリの中身だったものを移行して
+<a href="https://github.com/znz/ansible-role-ja_jp">https://github.com/znz/ansible-role-ja_jp</a> として公開しました。</p>
+
+<p>apt のミラーサイトとして日本のミラーを使ったり、日本語 locale にしたり、タイムゾーンを JST にしたりする role です。</p>
+
+<h2>Ansbile Galaxy に role を追加</h2>
+
+<p>ログインした状態だと右上の方に出てくる <code>Add a Role</code> というリンクから登録します。</p>
+
+<ul>
+<li>Github Username/Account : znz</li>
+<li>Github Repository : ansible-role-ja_jp</li>
+<li>Alternate Name : ja_jp</li>
+</ul>
+
+
+<p>という内容で登録したところ、
+<a href="https://galaxy.ansible.com/list#/roles/967">https://galaxy.ansible.com/list#/roles/967</a>
+で見えるようになりました。</p>
+
+<p>URL をみるとわかるように JavaScript オフだと個別の role は見えません。
+ちょっと試した感じだと代用の URL も見つけられませんでした。</p>
+
+<h2>動作確認</h2>
+
+<p><code>ansible-galaxy install znzj.ja_jp</code> だと <code>/usr/local/etc/ansible/roles/znzj.ja_jp</code> にインストールされてしまった (Homebrew でインストールした ansible を使っている場合) ので、
+<code>ansible-galaxy install --roles-path ./roles znzj.ja_jp</code>
+でカレントディレクトリの中にインストールし直しました。</p>
+
+<h2>感想</h2>
+
+<p>これだけだと git submodule に比べて利点が見えてこないのですが、
+依存関係やバージョン指定をちゃんと使えれば便利そうに思いました。</p>
+
+<p>自分が登録した role にバージョンを指定する方法がわからず、
+今のところバージョンなしのままなので、どうにかしたいです。</p>
+
+<h2>参考サイト</h2>
+
+<ul>
+<li><a href="http://qiita.com/kiri/items/f329a35543022d6e45d0">AnsibleWorks Galaxyにroleを登録してみる &ndash; Qiita</a>
+
+<ul>
+<li>スクリーンショットをみると AnsibleWorks Galaxy になっているところが今は Ansible Galaxy なので、いつの間にか名前が変わっているようです。</li>
+</ul>
+</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[nadokaさんの0.8.6をリリースした関連の話]]></title>
@@ -497,86 +580,6 @@ git clone https://github.com/znz/rbenv-plug.git ~/.rbenv/plugins/rbenv-plug
 <code>rbenv-plugin</code> のサブコマンドと思いっきり名前がかぶっていました。
 <code>rbenv-plugins-install</code> という複数形の名前も使われてしまっていたので、
 思い切って短い名前に変更しました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[www.ruby-lang.org への pull request の出し方]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-30-how-to-pull-request.html"/>
-    <updated>2013-09-30T22:43:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/how-to-pull-request</id>
-    <content type="html"><![CDATA[<p><a href="https://www.ruby-lang.org/en/news/2013/09/23/ruby-2-1-0-preview1-is-released/">Ruby 2.1.0-preview1 is released</a>
-というアナウンスが一週間経ってもまだ日本語訳が出来ていなかったので、
-ちょっとの暇を見つけて pull request を出してみたので、
-その手順をまとめておきます。</p>
-
-<!--more-->
-
-
-<p>まず github のアカウントは持っているというのは前提として話を進めます。</p>
-
-<p>初回は
-<a href="https://github.com/ruby/www.ruby-lang.org">https://github.com/ruby/www.ruby-lang.org</a>
-の右上から自分のアカウントに Fork します。</p>
-
-<p>すでに Fork していて二回目以降は upstream の変更を merge する必要があります。
-<a href="https://help.github.com/articles/syncing-a-fork">Syncing a fork</a>
-を参考にして merge します。</p>
-
-<p>実行したコマンドだけまとめておきます。
-詳細は github のヘルプを参照してください。</p>
-
-<p><code>console
-% git clone git@github.com:znz/www.ruby-lang.org.git
-% cd www.ruby-lang.org
-% git remote add upstream https://github.com/ruby/www.ruby-lang.org.git
-% git remote -v
-% git fetch upstream
-% git branch -va
-% git checkout master
-% git merge upstream/master
-% git push
-</code></p>
-
-<p>英語版を元にして日本語版を作成します。</p>
-
-<p><code>console
-% cp {en,ja}/news/_posts/2013-09-23-ruby-2-1-0-preview1-is-released.md
-% git add ja/news/_posts/2013-09-23-ruby-2-1-0-preview1-is-released.md
-% vi ja/news/_posts/2013-09-23-ruby-2-1-0-preview1-is-released.md
-</code></p>
-
-<p>プレビュー用に <code>bundle install</code> します。</p>
-
-<p><code>console
-% bundle install
-% rake -T
-% rake preview
-</code></p>
-
-<p><code>rake preview</code>
-でサーバーが起動しているので、
-ブラウザで
-<code>http://localhost:4000/</code>
-を開いて表示を確認します。</p>
-
-<p>github に push して、
-ブラウザから pull request を出します。</p>
-
-<p>ブランチを切り忘れていたので、
-ここで作りました。</p>
-
-<p><code>console
-% git checkout -b ruby210preview1
-% git commit -av
-% git push --set-upstream origin ruby210preview1
-</code></p>
-
-<p>最後に
-<code>git checkout master</code>
-で master ブランチに戻るなり、
-消してしまって、
-また作業する時に clone し直すなりします。</p>
 ]]></content>
   </entry>
   

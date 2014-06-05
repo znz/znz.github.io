@@ -5,14 +5,13 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>ansible で sources.list を変更したときに update する - @znz blog</title>
+  <title>ansible-galaxy を使ってみた - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="ansible で sources.list を変更したときには
-apt-get update して欲しいのですが、
-毎回 update するのは無駄なので、
-cache_valid_time も使いたいと思ったので対処しました。 動作確認バージョン クライアント側 ansible 1.6.1 &hellip;">
+  <meta name="description" content="ansible の複数の playbook で role を共有するのに
+Ansible Galaxy
+はどうだろうと思って登録してみました。 動作確認バージョン ansible 1.6.2 アカウント登録 後で github から role を import するということもあって、 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -21,7 +20,7 @@ cache_valid_time も使いたいと思ったので対処しました。 動作�
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-05-20-ansible-apt-update.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-06-02-ansible-galaxy.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -83,7 +82,7 @@ cache_valid_time も使いたいと思ったので対処しました。 動作�
   
   <header>
     
-      <h1 class="entry-title">ansible で sources.list を変更したときに update する</h1>
+      <h1 class="entry-title">ansible-galaxy を使ってみた</h1>
     
     
       <p class="meta">
@@ -99,7 +98,7 @@ cache_valid_time も使いたいと思ったので対処しました。 動作�
   
 
 
-<time datetime="2014-05-20T22:58:09+09:00" pubdate data-updated="true">2014-05-20 (Tue)</time>
+<time datetime="2014-06-02T22:00:00+09:00" pubdate data-updated="true">2014-06-02 (Mon)</time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -109,10 +108,9 @@ cache_valid_time も使いたいと思ったので対処しました。 動作�
   </header>
 
 
-<div class="entry-content"><p>ansible で sources.list を変更したときには
-<code>apt-get update</code> して欲しいのですが、
-毎回 update するのは無駄なので、
-<code>cache_valid_time</code> も使いたいと思ったので対処しました。</p>
+<div class="entry-content"><p>ansible の複数の playbook で role を共有するのに
+<a href="https://galaxy.ansible.com/">Ansible Galaxy</a>
+はどうだろうと思って登録してみました。</p>
 
 <!--more-->
 
@@ -120,85 +118,70 @@ cache_valid_time も使いたいと思ったので対処しました。 動作�
 <h2>動作確認バージョン</h2>
 
 <ul>
-<li>クライアント側 ansible 1.6.1</li>
-<li>サーバー側 Ubuntu 12.04</li>
+<li>ansible 1.6.2</li>
 </ul>
 
 
-<h2>やり方</h2>
+<h2>アカウント登録</h2>
 
-<p><code>register</code> で <code>template</code> モジュールの実行結果を受けて、
-<code>changed</code> の場合は必ず update して、
-<code>skipped</code> の場合は <code>cache_valid_time</code> で情報が古い場合だけ update するようにしました。</p>
+<p>後で github から role を import するということもあって、
+github 連携でアカウントを登録しました。</p>
 
-<figure class='code'><figcaption><span>tasks/apt.yaml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">src=sources.list.{{ ansible_distribution }}.j2 dest=/etc/apt/sources.list owner=root group=root mode=0644</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">register</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">apt_sources_list</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">apt</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">update_cache=yes</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">when</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">apt_sources_list|changed</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">apt</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">update_cache=yes cache_valid_time=3600</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">when</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">apt_sources_list|skipped</span>
-</span></code></pre></td></tr></table></div></figure>
+<p>アカウントは4文字以上必須ということで <code>znzj</code> にしました。
+(<a href="https://index.docker.io/">docker index</a> とか
+<a href="https://vagrantcloud.com/">Vagrant Cloud</a> とか
+最近は4文字以上必須が多いのでしょうか?)</p>
 
+<h2>role を github に公開</h2>
 
-<h2>テンプレートの内容</h2>
+<p><code>ansible-galaxy init ansible-role-ja_jp</code> でひな形を作成して、
+<code>provisioning/roles/ja_jp</code> というディレクトリの中身だったものを移行して
+<a href="https://github.com/znz/ansible-role-ja_jp">https://github.com/znz/ansible-role-ja_jp</a> として公開しました。</p>
 
-<p>gathering facts で設定された <code>ansible_distribution_release</code> と
-<code>vars</code> で別途設定した <code>apt_ubuntu_uri</code> と <code>apt_ubuntu_components</code> を
-組み合わせて apt-line を作るようにしました。</p>
+<p>apt のミラーサイトとして日本のミラーを使ったり、日本語 locale にしたり、タイムゾーンを JST にしたりする role です。</p>
 
-<p>Ubuntu をインストールした直後の sources.list では
-components が別の行になっているものもあったのですが、
-1 行にまとめました。</p>
+<h2>Ansbile Galaxy に role を追加</h2>
 
-<figure class='code'><figcaption><span>templates/sources.list.Ubuntu.j2</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }} {{ apt_ubuntu_components | join(&quot; &quot;) }}
-</span><span class='line'>deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }} {{ apt_ubuntu_components | join(&quot; &quot;) }}
-</span><span class='line'>deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-updates {{ apt_ubuntu_components | join(&quot; &quot;) }}
-</span><span class='line'>deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-updates {{ apt_ubuntu_components | join(&quot; &quot;) }}
-</span><span class='line'>#deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-backports {{ apt_ubuntu_components | join(&quot; &quot;) }}
-</span><span class='line'>#deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-backports {{ apt_ubuntu_components | join(&quot; &quot;) }}
-</span><span class='line'>deb http://security.ubuntu.com/ubuntu {{ ansible_distribution_release }}-security {{ apt_ubuntu_components | join(&quot; &quot;) }}
-</span><span class='line'>deb-src http://security.ubuntu.com/ubuntu {{ ansible_distribution_release }}-security {{ apt_ubuntu_components | join(&quot; &quot;) }}
-</span></code></pre></td></tr></table></div></figure>
+<p>ログインした状態だと右上の方に出てくる <code>Add a Role</code> というリンクから登録します。</p>
+
+<ul>
+<li>Github Username/Account : znz</li>
+<li>Github Repository : ansible-role-ja_jp</li>
+<li>Alternate Name : ja_jp</li>
+</ul>
 
 
-<p><code>backports</code> は使っていなかったのでコメントアウトしていますが、
-<code>deb-src</code> も使わないのならコメントアウトしておいても良さそうです。</p>
+<p>という内容で登録したところ、
+<a href="https://galaxy.ansible.com/list#/roles/967">https://galaxy.ansible.com/list#/roles/967</a>
+で見えるようになりました。</p>
 
-<h2><code>vars</code> の内容</h2>
+<p>URL をみるとわかるように JavaScript オフだと個別の role は見えません。
+ちょっと試した感じだと代用の URL も見つけられませんでした。</p>
 
-<p>例として jaist ミラーを使うようにしました。</p>
+<h2>動作確認</h2>
 
-<figure class='code'><figcaption><span>vars/main.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
-</span><span class='line'><span class="l-Scalar-Plain">apt_ubuntu_uri</span><span class="p-Indicator">:</span> <span class="s">&quot;http://ftp.jaist.ac.jp/pub/Linux/ubuntu/&quot;</span>
-</span><span class='line'><span class="l-Scalar-Plain">apt_ubuntu_components</span><span class="p-Indicator">:</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">main</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">restricted</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">universe</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">multiverse</span>
-</span></code></pre></td></tr></table></div></figure>
+<p><code>ansible-galaxy install znzj.ja_jp</code> だと <code>/usr/local/etc/ansible/roles/znzj.ja_jp</code> にインストールされてしまった (Homebrew でインストールした ansible を使っている場合) ので、
+<code>ansible-galaxy install --roles-path ./roles znzj.ja_jp</code>
+でカレントディレクトリの中にインストールし直しました。</p>
+
+<h2>感想</h2>
+
+<p>これだけだと git submodule に比べて利点が見えてこないのですが、
+依存関係やバージョン指定をちゃんと使えれば便利そうに思いました。</p>
+
+<p>自分が登録した role にバージョンを指定する方法がわからず、
+今のところバージョンなしのままなので、どうにかしたいです。</p>
+
+<h2>参考サイト</h2>
+
+<ul>
+<li><a href="http://qiita.com/kiri/items/f329a35543022d6e45d0">AnsibleWorks Galaxyにroleを登録してみる &ndash; Qiita</a>
+
+<ul>
+<li>スクリーンショットをみると AnsibleWorks Galaxy になっているところが今は Ansible Galaxy なので、いつの間にか名前が変わっているようです。</li>
+</ul>
+</li>
+</ul>
 
 </div>
 
@@ -222,12 +205,12 @@ components が別の行になっているものもあったのですが、
   
 
 
-<time datetime="2014-05-20T22:58:09+09:00" pubdate data-updated="true">2014-05-20 (Tue)</time>
+<time datetime="2014-06-02T22:00:00+09:00" pubdate data-updated="true">2014-06-02 (Mon)</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/ansible/'>ansible</a>, <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>
+    <a class='category' href='/blog/categories/ansible/'>ansible</a>, <a class='category' href='/blog/categories/git/'>git</a>, <a class='category' href='/blog/categories/github/'>github</a>
   
 </span>
 
@@ -236,12 +219,12 @@ components が別の行になっているものもあったのですが、
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2014-05-20-ansible-apt-update.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2014-05-20-ansible-apt-update.html" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2014-06-02-ansible-galaxy.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2014-06-02-ansible-galaxy.html" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
   
-  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2014-05-20-ansible-apt-update.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2014-06-02-ansible-galaxy.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
   
     <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
   
@@ -260,10 +243,8 @@ components が別の行になっているものもあったのですが、
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2014-05-20-ansible-add-ppa.html" title="Previous Post: ansible で ppa を追加する">&laquo; ansible で ppa を追加する</a>
+        <a class="basic-alignment left" href="/blog/2014-05-28-rubymotion-mokumoku-osaka.html" title="Previous Post: 第 11 回 RubyMotion もくもく会 in Osaka に参加した">&laquo; 第 11 回 RubyMotion もくもく会 in Osaka に参加した</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2014-05-20-octopress-ansible.html" title="Next Post: octopress で ansible の記事を書く時のエスケープ">octopress で ansible の記事を書く時のエスケープ &raquo;</a>
       
     </p>
   </footer>
@@ -388,8 +369,8 @@ components が別の行になっているものもあったのですが、
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-05-20-ansible-apt-update.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2014-05-20-ansible-apt-update.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-06-02-ansible-galaxy.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-06-02-ansible-galaxy.html';
         var disqus_script = 'embed.js';
       
     (function () {
