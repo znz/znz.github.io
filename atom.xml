@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-05T22:43:09+09:00</updated>
+  <updated>2014-06-05T23:20:08+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,156 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Vagrant の Multi VM 間で IPsec を試した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-04-vagrant-multivm-ipsec-demo.html"/>
+    <updated>2014-06-04T22:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/vagrant-multivm-ipsec-demo</id>
+    <content type="html"><![CDATA[<p>正常に IPsec の暗号化通信ができているときの racoon のログなどを確認したかったので、
+Vagrant と ansible で
+IPsec で通信できる Multi VM 環境を作ってみました。</p>
+
+<p>playbook は
+<a href="https://github.com/znz/ansible-playbook-ipsec-demo">https://github.com/znz/ansible-playbook-ipsec-demo</a>
+で公開しています。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>ホスト OS : Mac OS X 10.9.3</li>
+<li>VirtualBox 4.3.12</li>
+<li>Vagrant 1.6.3</li>
+<li>ansible 1.6.2</li>
+<li>ゲスト OS : Ubuntu 14.04 &times; 2</li>
+</ul>
+
+
+<p>Ubuntu は <a href="https://cloud-images.ubuntu.com/vagrant/trusty/current/">https://cloud-images.ubuntu.com/vagrant/trusty/current/</a> のイメージを使ったので、
+daily build の状態によっては動作が変わっているかもしれません。</p>
+
+<h2>ホストオンリーネットワーク</h2>
+
+<p>使った後は</p>
+
+<ul>
+<li>vboxnet1 (192.168.50.1/24)</li>
+<li>vboxnet2 (192.168.11.1/24)</li>
+<li>vboxnet3 (192.168.12.1/24)</li>
+</ul>
+
+
+<p>が勝手に増えているので、不要なら設定で消しておくと良いと思います。</p>
+
+<p>ネットワークとしては以下のように 192.168.50.0/24 の部分で IPsec 接続をして、
+192.168.11.11 と 192.168.12.12 をつなぐ、という感じにしています。
+デフォルトの eth0 は外部への接続用としてそのままにしています。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>192.168.11.11 (vm1:eth2)
+</span><span class='line'>       |
+</span><span class='line'>192.168.50.11 (vm1:eth1)
+</span><span class='line'>       |
+</span><span class='line'>192.168.50.12 (vm2:eth1)
+</span><span class='line'>       |
+</span><span class='line'>192.168.12.12 (vm2:eth2)</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>準備</h2>
+
+<p>Usage に書いてあるように準備をしておきます。
+先日作った <code>ja_jp</code> role は git submodule にしているので、</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% git submodule init
+</span><span class='line'>% git submodule update</span></code></pre></td></tr></table></div></figure>
+
+
+<p>で取得する必要があります。</p>
+
+<h2>試し方</h2>
+
+<p><code>vagrant up</code>
+すると
+<code>/etc/ipsec-tools.conf</code>
+と
+<code>/etc/racoon/racoon.conf</code>
+に設定が入っている状態になっているので、
+始点アドレスを指定して
+<code>ipsec-tools.conf</code>
+に設定した経路を通るようにパケットを送ると
+IPsec VPN がつながります。</p>
+
+<p><code>ping</code> コマンドのように直接始点アドレスを指定するオプションがない場合は
+<code>ping -I eth2 192.168.12.12</code> のように network interface で指定すれば
+良いようです。</p>
+
+<h2>動作確認</h2>
+
+<p>以下のコマンドの出力が接続前後で変わることが確認できます。</p>
+
+<ul>
+<li><code>racoonctl -l show-sa isakmp</code></li>
+<li><code>racoonctl -l show-sa ipsec</code></li>
+<li><code>setkey -D</code></li>
+</ul>
+
+
+<p>racoon のログが <code>/var/log/syslog</code> に大量に出ているのを確認できます。
+(<code>racoon.conf</code> で <code>log debug</code> にしているため)</p>
+
+<h2>tshark でパケットの確認</h2>
+
+<p><code>tshark</code> パッケージをインストールした後、
+<code>sudo dpkg-reconfigure wireshark-common</code>
+で一般ユーザーでも実行を許可するようにして、
+実行を許可するユーザーを <code>wireshark</code> に追加します。</p>
+
+<p>グループの追加を反映するためにログインし直すと、
+<code>tshark -i eth1 -V 'port 500'</code>
+などでパケットの確認ができるようになります。</p>
+
+<p>暗号化されていて詳細はわかりませんが、
+UDP の 500 番ポートで Informational のパケットが流れていることが確認できました。</p>
+
+<p>GUI の wireshark の方では
+<a href="http://ask.wireshark.org/questions/12019/how-can-i-decrypt-ikev1-andor-esp-packets">http://ask.wireshark.org/questions/12019/how-can-i-decrypt-ikev1-andor-esp-packets</a>
+の方法で暗号化の解除もできるようです。</p>
+
+<p>syslog の方で racoon のログをみると、
+DPD のパケットらしいということが確認できました。
+syslog の方で <code>#012</code> となっている部分がありますが、
+これは rsyslog で改行が変換されたたもので空白として無視すれば良くて、
+例えば</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Jun  4 17:54:43 vm1 racoon: DEBUG: new cookie:#012831d33d46e20f8e6
+</span><span class='line'>Jun  4 17:54:43 vm1 racoon: DEBUG: final encryption key computed:
+</span><span class='line'>Jun  4 17:54:43 vm1 racoon: DEBUG: #012932d361f fc62ddc2 6164d513 d40d211f b7364166 232cf490</span></code></pre></td></tr></table></div></figure>
+
+
+<p>というログなら cookie は <code>831d33d46e20f8e6</code> になります。</p>
+
+<p>鍵は <code>932d361ffc62ddc26164d513d40d211fb7364166232cf490</code> になると思ったのですが、
+これを
+Edit &ndash;> Preferences &ndash;> Protocols &ndash;> ISAKMP &ndash;> IKEv1 Decryption Table:
+に設定すれば良いはずなのですが、試したところ decrypt されなかったので、
+あっているのかどうかはわかりませんでした。
+cookie の方は他のログなどで確認できたので、あっているはずです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ansible-galaxy を使ってみた]]></title>
@@ -2735,73 +2885,6 @@ LAN 内のサーバーなど、そのサーバーにアクセスできる環境�
 <p>他はこういうことをやっています、というサービスの紹介っぽい感じが多くて、
 プログラミングの話は少なかったので、内容は面白いけど
 Ruby/Rails勉強会＠関西向きではないかも、と感じるものもありました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 9 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-03-19-rubymotion-mokumoku-osaka.html"/>
-    <updated>2014-03-19T19:32:08+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
-    <content type="html"><![CDATA[<p>第 1 回から第 8 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://connpass.com/event/5276/">第 9 回 RubyMotion もくもく会 in Osaka</a>
-に参加してきました。</p>
-
-<p>次回の
-<a href="http://connpass.com/event/5674/">第 10 回 RubyMotion もくもく会 in Osaka</a>
-は 4/23(水) になりました。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<ul>
-<li><a href="https://github.com/shin1x1/vagrantx/issues/1">VagrantX のロゴ</a></li>
-<li><a href="http://www.jetbrains.com/ruby/">RubyMine</a></li>
-<li><a href="http://testflightapp.com/">TestFlight</a> の代わりに今は <a href="https://deploygate.com/">DeployGate</a> が良いという話</li>
-</ul>
-
-
-<h2>やったこと</h2>
-
-<p>RubyMine をインストールして使い始めてみました。
-試用期間は次回のもくもく会には切れているので、
-それまでに他でも使っておかないとあっという間に試用期間が終わってしまいそうです。</p>
-
-<p><a href="http://stackoverflow.com/questions/9289613/handlegeturlevent-doesnt-get-called">イベントハンドラの設定を init でやれば良い</a>というような話があったので、
-init メソッドを定義してみたところ、呼ばれていなかったので、
-initialize にしてみたら、
-呼ばれていることは確認できても、
-やっぱり起動時の URL は受け取れないままでした。</p>
-
-<p>内部的な変更としては
-REPL で確認した時に
-<code>KeyDirectObject</code> が存在しなかったので、
-<code>keyDirectObject = '----'.unpack('L')[0]</code>
-のように作っていたのを
-<code>KeyDirectObject</code>
-を使うように変えました。</p>
-
-<p>以前のもくもく会の時に気付いたように
-<code>rake</code>
-でのコンパイル時に参照していない定数は REPL でも存在しないというだけでした。</p>
-
-<p>他にはいろいろ調べている時に
-<a href="http://vivacocoa.jp/objective-c3e/chapter5c.html">ウィンドウのクローズとアプリケーションの終了を同期させる</a>
-というのを知ったので、
-以下のメソッド定義を追加して
-window を閉じた時に終了するようにしました。
-これを追加するまでは閉じたら開き直す手段がなくて何も出来なくなっていました。</p>
-
-<figure class='code'><figcaption><span>app/app_delegate.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">applicationShouldTerminateAfterLastWindowClosed</span><span class="p">(</span><span class="n">application</span><span class="p">)</span>
-</span><span class='line'>    <span class="kp">true</span>
-</span><span class='line'>  <span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
 ]]></content>
   </entry>
   

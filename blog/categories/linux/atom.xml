@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-05T22:43:09+09:00</updated>
+  <updated>2014-06-05T23:20:08+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,156 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Vagrant の Multi VM 間で IPsec を試した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-04-vagrant-multivm-ipsec-demo.html"/>
+    <updated>2014-06-04T22:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/vagrant-multivm-ipsec-demo</id>
+    <content type="html"><![CDATA[<p>正常に IPsec の暗号化通信ができているときの racoon のログなどを確認したかったので、
+Vagrant と ansible で
+IPsec で通信できる Multi VM 環境を作ってみました。</p>
+
+<p>playbook は
+<a href="https://github.com/znz/ansible-playbook-ipsec-demo">https://github.com/znz/ansible-playbook-ipsec-demo</a>
+で公開しています。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>ホスト OS : Mac OS X 10.9.3</li>
+<li>VirtualBox 4.3.12</li>
+<li>Vagrant 1.6.3</li>
+<li>ansible 1.6.2</li>
+<li>ゲスト OS : Ubuntu 14.04 &times; 2</li>
+</ul>
+
+
+<p>Ubuntu は <a href="https://cloud-images.ubuntu.com/vagrant/trusty/current/">https://cloud-images.ubuntu.com/vagrant/trusty/current/</a> のイメージを使ったので、
+daily build の状態によっては動作が変わっているかもしれません。</p>
+
+<h2>ホストオンリーネットワーク</h2>
+
+<p>使った後は</p>
+
+<ul>
+<li>vboxnet1 (192.168.50.1/24)</li>
+<li>vboxnet2 (192.168.11.1/24)</li>
+<li>vboxnet3 (192.168.12.1/24)</li>
+</ul>
+
+
+<p>が勝手に増えているので、不要なら設定で消しておくと良いと思います。</p>
+
+<p>ネットワークとしては以下のように 192.168.50.0/24 の部分で IPsec 接続をして、
+192.168.11.11 と 192.168.12.12 をつなぐ、という感じにしています。
+デフォルトの eth0 は外部への接続用としてそのままにしています。</p>
+
+<p>```
+192.168.11.11 (vm1:eth2)</p>
+
+<pre><code>   |
+</code></pre>
+
+<p>192.168.50.11 (vm1:eth1)</p>
+
+<pre><code>   |
+</code></pre>
+
+<p>192.168.50.12 (vm2:eth1)</p>
+
+<pre><code>   |
+</code></pre>
+
+<p>192.168.12.12 (vm2:eth2)
+```</p>
+
+<h2>準備</h2>
+
+<p>Usage に書いてあるように準備をしておきます。
+先日作った <code>ja_jp</code> role は git submodule にしているので、</p>
+
+<p><code>
+% git submodule init
+% git submodule update
+</code></p>
+
+<p>で取得する必要があります。</p>
+
+<h2>試し方</h2>
+
+<p><code>vagrant up</code>
+すると
+<code>/etc/ipsec-tools.conf</code>
+と
+<code>/etc/racoon/racoon.conf</code>
+に設定が入っている状態になっているので、
+始点アドレスを指定して
+<code>ipsec-tools.conf</code>
+に設定した経路を通るようにパケットを送ると
+IPsec VPN がつながります。</p>
+
+<p><code>ping</code> コマンドのように直接始点アドレスを指定するオプションがない場合は
+<code>ping -I eth2 192.168.12.12</code> のように network interface で指定すれば
+良いようです。</p>
+
+<h2>動作確認</h2>
+
+<p>以下のコマンドの出力が接続前後で変わることが確認できます。</p>
+
+<ul>
+<li><code>racoonctl -l show-sa isakmp</code></li>
+<li><code>racoonctl -l show-sa ipsec</code></li>
+<li><code>setkey -D</code></li>
+</ul>
+
+
+<p>racoon のログが <code>/var/log/syslog</code> に大量に出ているのを確認できます。
+(<code>racoon.conf</code> で <code>log debug</code> にしているため)</p>
+
+<h2>tshark でパケットの確認</h2>
+
+<p><code>tshark</code> パッケージをインストールした後、
+<code>sudo dpkg-reconfigure wireshark-common</code>
+で一般ユーザーでも実行を許可するようにして、
+実行を許可するユーザーを <code>wireshark</code> に追加します。</p>
+
+<p>グループの追加を反映するためにログインし直すと、
+<code>tshark -i eth1 -V 'port 500'</code>
+などでパケットの確認ができるようになります。</p>
+
+<p>暗号化されていて詳細はわかりませんが、
+UDP の 500 番ポートで Informational のパケットが流れていることが確認できました。</p>
+
+<p>GUI の wireshark の方では
+<a href="http://ask.wireshark.org/questions/12019/how-can-i-decrypt-ikev1-andor-esp-packets">http://ask.wireshark.org/questions/12019/how-can-i-decrypt-ikev1-andor-esp-packets</a>
+の方法で暗号化の解除もできるようです。</p>
+
+<p>syslog の方で racoon のログをみると、
+DPD のパケットらしいということが確認できました。
+syslog の方で <code>#012</code> となっている部分がありますが、
+これは rsyslog で改行が変換されたたもので空白として無視すれば良くて、
+例えば</p>
+
+<p><code>
+Jun  4 17:54:43 vm1 racoon: DEBUG: new cookie:#012831d33d46e20f8e6
+Jun  4 17:54:43 vm1 racoon: DEBUG: final encryption key computed:
+Jun  4 17:54:43 vm1 racoon: DEBUG: #012932d361f fc62ddc2 6164d513 d40d211f b7364166 232cf490
+</code></p>
+
+<p>というログなら cookie は <code>831d33d46e20f8e6</code> になります。</p>
+
+<p>鍵は <code>932d361ffc62ddc26164d513d40d211fb7364166232cf490</code> になると思ったのですが、
+これを
+Edit &ndash;> Preferences &ndash;> Protocols &ndash;> ISAKMP &ndash;> IKEv1 Decryption Table:
+に設定すれば良いはずなのですが、試したところ decrypt されなかったので、
+あっているのかどうかはわかりませんでした。
+cookie の方は他のログなどで確認できたので、あっているはずです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[LILO ＆ 東海道らぐのイベントに参加しました]]></title>
@@ -501,119 +651,6 @@ heroku と違って確認なしにいきなり削除されてしまうので注�
 <p>で一覧が出てきます。</p>
 
 <p>普段使いそうなのは <code>config</code> 関連と <code>logs</code> だと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[/dev/snd/hwC0D0でPermission deniedになる問題を調べた]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-04-dev-snd-hwc0d0-permission-denied.html"/>
-    <updated>2013-11-04T14:22:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/dev-snd-hwc0d0-permission-denied</id>
-    <content type="html"><![CDATA[<p><code>/dev/snd/hwC0D0</code> を <code>O_RDWR</code> で <code>open(2)</code> するところで
-<code>Permission denied</code> になるという話
-(
-<a href="https://twitter.com/takaswie/status/397014733494026240">ツイート</a>、
-<a href="https://forums.ubuntulinux.jp/viewtopic.php?pid=100488#p100488">Ubuntu日本語フォーラム</a>
-)
-が気になったので、調べてみました。</p>
-
-<!--more-->
-
-
-<h2>結論</h2>
-
-<p>最終的にどうすれば良いか知りたい人向けの情報としては、
-<code>setcap cap_sys_rawio=ep filename</code>
-でケーパビリティ (capability) を設定する、ということになります。</p>
-
-<p>以下は、その結論にたどり着くまでに調べたことのメモです。</p>
-
-<h2>パーミッションと ACL</h2>
-
-<p><a href="http://blog.n-z.jp/blog/2013-10-27-kansai-debian-meeting.html">第 77 回 関西 Debian 勉強会に参加した</a>
-で書いたように、
-audio グループに属しているか、コンソールから直接ログインしていれば
-パーミッションの問題はないはずです。</p>
-
-<h2>余談: デバイスの sticky bit</h2>
-
-<p><code>crw-rw---T</code> になっていて、
-もしかして末尾の sticky bit が影響しているのかと思って調べてみたところ、
-<a href="http://lists.debian.org/debian-user/2012/02/msg01273.html">Re: Sticky bit on device files?</a>
-によると udev の管理用のフラグとして使われているようでした。
-今回の件とは関係なさそうだったので、これ以上深追いはしていません。</p>
-
-<h2>AppArmor</h2>
-
-<p><code>/etc/apparmor.d/abstractions/audio</code> に
-<code>/dev/snd/*      rw,</code> とあるので、
-念のため
-<code>sudo service apparmor stop</code>
-で <code>AppArmor</code> を止めて試してみましたが、
-変化が無かったので、
-<code>sudo service apparmor start</code>
-で戻しました。</p>
-
-<h2>カーネルのソースコード探索</h2>
-
-<p><code>strace</code> などで確認しても、
-ユーザーランドでは <code>EACCES</code> が返ってくるとしかわからないので、
-こうなったらカーネルのソースコードから <code>EACCES</code> を返しているところを
-探すしかないということで、
-<code>apt-get source linux-image-$(uname -r)</code>
-でソースコードをダウンロードして探してみました。</p>
-
-<p><code>grep -r EACCES sound</code> で探してみると
-<code>sound/pci/hda/hda_hwdep.c</code> で以下のように
-<code>CAP_SYS_RAWIO</code> をみていることがわかりました。</p>
-
-<p>```c sound/pci/hda/hda_hwdep.c
- static int hda_hwdep_open(struct snd_hwdep <em>hw, struct file </em>file)
- {
- #ifndef CONFIG_SND_DEBUG_VERBOSE</p>
-
-<pre><code>if (!capable(CAP_SYS_RAWIO))
-    return -EACCES;
-</code></pre>
-
-<p> #endif</p>
-
-<pre><code>return 0;
-</code></pre>
-
-<p> }
-```</p>
-
-<h2>Linux のケーパビリティ (capability)</h2>
-
-<p><a href="http://linuxjm.sourceforge.jp/html/LDP_man-pages/man7/capabilities.7.html">Man page of CAPABILITIES</a>
-が関係しているということがわかったところで、
-設定方法も調べてみると、
-<code>setcap</code> で設定できるとわかったので、
-以下のような簡単なテストプログラムを用意して、
-<code>sudo setcap cap_sys_rawio=ep ./a.out</code>
-でケーパビリティを設定すると
-<code>open(2)</code>
-に成功するのを確認できました。
-<code>cap_sys_rawio=ep</code> は危険そうなので、
-テストプログラムとはいえ、
-任意のパスを受け取れるようにするのは止めた方が良さそうに思いました。</p>
-
-<p>```c open-hwC0D0.c
- #include &lt;sys/types.h>
- #include &lt;sys/stat.h>
- #include &lt;fcntl.h>
- #include &lt;stdio.h></p>
-
-<p> int main() {</p>
-
-<pre><code>open("/dev/snd/hwC0D0", O_RDWR);
-perror("open");
-return 0;
-</code></pre>
-
-<p> }
-```</p>
 ]]></content>
   </entry>
   
