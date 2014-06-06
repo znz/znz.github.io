@@ -35,7 +35,21 @@ OpenSSL の脆弱性
     deb http://ftp.jp.debian.org/debian squeeze-lts main non-free contrib
     deb-src http://ftp.jp.debian.org/debian squeeze-lts main non-free contrib
 
-を追加します。
+を **追加** します。
+
+ネタ元の Debian Wiki に書いてあるように適切に使うには squeeze と squeeze security の apt-line も残した上で squeeze lts の apt-line を **追加** する必要があります。
+
+## apt pinning を使っている時の注意点
+
+`/etc/apt/apt.conf` で
+
+    APT::Default-Release "squeeze";
+
+のように設定している場合はコメントアウトするか
+
+    APT::Default-Release "squeeze-lts";
+
+に書き換える必要があります。
 
 ## 更新の反映
 
