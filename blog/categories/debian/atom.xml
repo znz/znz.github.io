@@ -4,7 +4,7 @@
   <title><![CDATA[Category: debian | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/debian/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-05T23:20:08+09:00</updated>
+  <updated>2014-06-06T14:37:00+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,79 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Debian squeeze (6.0) LTS の使い方]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-06-squeeze-lts.html"/>
+    <updated>2014-06-06T14:07:35+09:00</updated>
+    <id>http://blog.n-z.jp/blog/squeeze-lts</id>
+    <content type="html"><![CDATA[<p>OpenSSL の脆弱性
+(<a href="http://ccsinjection.lepidum.co.jp/ja.html">CCS Injection</a>,<a href="https://security-tracker.debian.org/tracker/CVE-2014-0224">CVE-2014-0224</a>)
+の修正が
+<a href="https://lists.debian.org/debian-lts-announce/2014/06/msg00002.html">squeeze の LTS に入ったというアナウンス</a>
+があったのに、
+今まで通り使っている squeeze には修正が入らないと思って調べてみたところ、
+<a href="https://wiki.debian.org/LTS/Using#Add_squeeze-lts_to_your_sources.list">apt-line の追加</a>
+が必要でした。</p>
+
+<!--more-->
+
+
+<h2>追加する apt-line</h2>
+
+<p>既存の <code>/etc/apt/sources.list</code> に</p>
+
+<pre><code>deb http://ftp.jp.debian.org/debian squeeze main non-free contrib
+deb-src http://ftp.jp.debian.org/debian squeeze main non-free contrib
+
+deb http://security.debian.org/ squeeze/updates main contrib non-free
+deb-src http://security.debian.org/ squeeze/updates main contrib non-free
+
+# squeeze-updates, previously known as 'volatile'
+deb http://ftp.jp.debian.org/debian squeeze-updates main contrib non-free
+deb-src http://ftp.jp.debian.org/debian squeeze-updates main contrib non-free
+</code></pre>
+
+<p>という apt-line を設定したとすると、</p>
+
+<pre><code>deb http://ftp.jp.debian.org/debian squeeze-lts main non-free contrib
+deb-src http://ftp.jp.debian.org/debian squeeze-lts main non-free contrib
+</code></pre>
+
+<p>を追加します。</p>
+
+<h2>更新の反映</h2>
+
+<p>いつも通り <code>apt-get update</code> と <code>apt-get upgrade</code> で更新できます。</p>
+
+<h2>サポート対象外のパッケージを調べる</h2>
+
+<p><code>squeeze-lts</code> の apt-line を追加すると <code>debian-security-support</code> というパッケージがインストールできるようになります。</p>
+
+<p><code>debian-security-support</code> パッケージをインストール中にサポート対象外のパッケージについての情報が表示されます。
+インストール後は <code>check-support-status</code> で同じ内容が表示できます。</p>
+
+<p>Ubuntu には <code>ubuntu-support-status</code> というコマンドがあるので、似たようなものが Debian にもできたということでしょうか。
+<code>debian-security-support</code> パッケージは今のところ <code>sid</code> と <code>squeeze-lts</code> にだけあるようです。</p>
+
+<h2>aptitude 検索パターンで LTS に収録されているパッケージ一覧</h2>
+
+<p><code>aptitude search '~A squeeze-lts'</code> で <code>squeeze-lts</code> に収録されているパッケージ一覧が調べられます。</p>
+
+<p>今のところ、</p>
+
+<ul>
+<li><code>chkrootkit</code></li>
+<li><code>debian-security-support</code></li>
+<li><code>gnutls</code> 関係</li>
+<li><code>hello</code></li>
+<li><code>openssl</code> 関係</li>
+</ul>
+
+
+<p>がありました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ansible で sources.list を変更したときに update する]]></title>
@@ -840,74 +913,6 @@ LAN 内のサーバーなど、そのサーバーにアクセスできる環境�
 の話と
 <a href="http://blog.n-z.jp/blog/2014-02-23-boot2docker.html">boot2docker</a>
 でインストールした docker 環境でのデモをしました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 80 回 関西 Debian 勉強会に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-01-26-kansai-debian-meeting.html"/>
-    <updated>2014-01-26T14:05:18+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
-    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20140126">第 80 回 関西 Debian 勉強会</a>
-に参加してきました。</p>
-
-<p>今回は事前課題の発表で話が盛り上がって、その後の佐々木さんの話も盛り上がって長かったので、もくもくの会は少しだけでした。</p>
-
-<p>事前課題で募集があったので、 LT もしました。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<p>以下 URL などのメモです。</p>
-
-<ul>
-<li>Debian で redmine を使う方法
-
-<ul>
-<li>stable を使う</li>
-<li>gem2deb</li>
-<li>deb パッケージの ruby は使わない</li>
-</ul>
-</li>
-<li>UEFI のマシンでのインストールが大変という話</li>
-<li><a href="http://www.docker.io/">docker</a> が <a href="http://packages.qa.debian.org/d/docker.io.html">docker.io</a> という名前で Debian に入っている
-
-<ul>
-<li>upstream 側の Ubuntu 用のパッケージ名は <a href="http://docs.docker.io/en/latest/installation/ubuntulinux/">lxc-docker</a></li>
-</ul>
-</li>
-<li><a href="http://jenkins-ci.org/">Jenkins</a></li>
-<li><a href="http://jenkins-debian-glue.org/">jenkins-debian-glue</a></li>
-<li><a href="https://github.com/rcrowley/freight">freight</a> : A modern take on the Debian archive.</li>
-</ul>
-
-
-<h2>LT しました</h2>
-
-<p>さくらの VPS の Debian wheezy で IPv6 設定をした話の LT 用スライドです。</p>
-
-<ul>
-<li><a href="https://github.com/znz/sakura-vps-debian-ipv6">https://github.com/znz/sakura-vps-debian-ipv6</a></li>
-<li><a href="http://slide.rabbit-shocker.org/authors/znz/sakura-vps-debian-ipv6/">http://slide.rabbit-shocker.org/authors/znz/sakura-vps-debian-ipv6/</a></li>
-<li><a href="https://speakerdeck.com/znz/sakurafalsevpsdeipv6she-ding">https://speakerdeck.com/znz/sakurafalsevpsdeipv6she-ding</a></li>
-<li>(<code>slideshare.net</code> は 30分以上たっても Conversion in progress のままなので後で)</li>
-</ul>
-
-
-<p>LT ということで 5 分に収まるような軽い話をしました。
-内容としては <a href="http://mla.n-z.jp/?debian-users:56921">debian-users:56921</a> に投稿した内容にちょっと説明を足しました。</p>
-
-<h2>もくもくの会</h2>
-
-<p>13時からと勘違いしていたので、早めに到着して、出発前から作成していた <code>rd2markdown</code> の Web アプリ作成の続きをしていました。
-もくもくの時間でも引き続き作業していました。
-これは後日公開します。</p>
-
-<h2>まとめ</h2>
-
-<p>今回の <a href="https://wiki.debian.org/KansaiDebianMeeting">関西Debian勉強会</a> は今までの発表をきくのがメインだったのを、変えていっている途中でもくもくの会など、今後どういう内容にしていくのが良いのか、試行錯誤中という感じでした。</p>
 ]]></content>
   </entry>
   

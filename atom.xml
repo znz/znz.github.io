@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-05T23:20:08+09:00</updated>
+  <updated>2014-06-06T14:37:00+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,79 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Debian squeeze (6.0) LTS の使い方]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-06-squeeze-lts.html"/>
+    <updated>2014-06-06T14:07:35+09:00</updated>
+    <id>http://blog.n-z.jp/blog/squeeze-lts</id>
+    <content type="html"><![CDATA[<p>OpenSSL の脆弱性
+(<a href="http://ccsinjection.lepidum.co.jp/ja.html">CCS Injection</a>,<a href="https://security-tracker.debian.org/tracker/CVE-2014-0224">CVE-2014-0224</a>)
+の修正が
+<a href="https://lists.debian.org/debian-lts-announce/2014/06/msg00002.html">squeeze の LTS に入ったというアナウンス</a>
+があったのに、
+今まで通り使っている squeeze には修正が入らないと思って調べてみたところ、
+<a href="https://wiki.debian.org/LTS/Using#Add_squeeze-lts_to_your_sources.list">apt-line の追加</a>
+が必要でした。</p>
+
+<!--more-->
+
+
+<h2>追加する apt-line</h2>
+
+<p>既存の <code>/etc/apt/sources.list</code> に</p>
+
+<pre><code>deb http://ftp.jp.debian.org/debian squeeze main non-free contrib
+deb-src http://ftp.jp.debian.org/debian squeeze main non-free contrib
+
+deb http://security.debian.org/ squeeze/updates main contrib non-free
+deb-src http://security.debian.org/ squeeze/updates main contrib non-free
+
+# squeeze-updates, previously known as 'volatile'
+deb http://ftp.jp.debian.org/debian squeeze-updates main contrib non-free
+deb-src http://ftp.jp.debian.org/debian squeeze-updates main contrib non-free
+</code></pre>
+
+<p>という apt-line を設定したとすると、</p>
+
+<pre><code>deb http://ftp.jp.debian.org/debian squeeze-lts main non-free contrib
+deb-src http://ftp.jp.debian.org/debian squeeze-lts main non-free contrib
+</code></pre>
+
+<p>を追加します。</p>
+
+<h2>更新の反映</h2>
+
+<p>いつも通り <code>apt-get update</code> と <code>apt-get upgrade</code> で更新できます。</p>
+
+<h2>サポート対象外のパッケージを調べる</h2>
+
+<p><code>squeeze-lts</code> の apt-line を追加すると <code>debian-security-support</code> というパッケージがインストールできるようになります。</p>
+
+<p><code>debian-security-support</code> パッケージをインストール中にサポート対象外のパッケージについての情報が表示されます。
+インストール後は <code>check-support-status</code> で同じ内容が表示できます。</p>
+
+<p>Ubuntu には <code>ubuntu-support-status</code> というコマンドがあるので、似たようなものが Debian にもできたということでしょうか。
+<code>debian-security-support</code> パッケージは今のところ <code>sid</code> と <code>squeeze-lts</code> にだけあるようです。</p>
+
+<h2>aptitude 検索パターンで LTS に収録されているパッケージ一覧</h2>
+
+<p><code>aptitude search '~A squeeze-lts'</code> で <code>squeeze-lts</code> に収録されているパッケージ一覧が調べられます。</p>
+
+<p>今のところ、</p>
+
+<ul>
+<li><code>chkrootkit</code></li>
+<li><code>debian-security-support</code></li>
+<li><code>gnutls</code> 関係</li>
+<li><code>hello</code></li>
+<li><code>openssl</code> 関係</li>
+</ul>
+
+
+<p>がありました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Vagrant の Multi VM 間で IPsec を試した]]></title>
@@ -2805,86 +2878,6 @@ LAN 内のサーバーなど、そのサーバーにアクセスできる環境�
 <h2>懇親会</h2>
 
 <p>花見によさそうな場所がなかったのと、天気が下り坂ということもあり、結局いつものさくら水産での懇親会でした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第60回 Ruby/Rails勉強会＠関西で正規表現の先読みについてという発表をしました]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-03-29-kansaiworkshop060.html"/>
-    <updated>2014-03-29T22:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansaiworkshop060</id>
-    <content type="html"><![CDATA[<p><a href="https://github.com/rubykansai/workshops/wiki/Kansaiworkshop060">第50回 Ruby/Rails勉強会＠関西</a> に参加して、「正規表現の先読みについて」という発表をしてきました。</p>
-
-<!--more-->
-
-
-<h2>発表資料</h2>
-
-<ul>
-<li><a href="https://github.com/znz/regexp-201403">https://github.com/znz/regexp-201403</a></li>
-<li><a href="http://slide.rabbit-shocker.org/authors/znz/regexp-201403/">http://slide.rabbit-shocker.org/authors/znz/regexp-201403/</a></li>
-<li><a href="https://speakerdeck.com/znz/zheng-gui-biao-xian-falsexian-du-minituite">https://speakerdeck.com/znz/zheng-gui-biao-xian-falsexian-du-minituite</a></li>
-<li><a href="http://www.slideshare.net/znzjp/regexp-201403">http://www.slideshare.net/znzjp/regexp-201403</a></li>
-</ul>
-
-
-<h2>デモアプリ</h2>
-
-<p>デモに使った Web アプリのソースは
-<a href="https://gist.github.com/znz/9835956#file-regexp-201403-rb">https://gist.github.com/znz/9835956#file-regexp-201403-rb</a>
-で公開しています。</p>
-
-<p>heroku にも deploy したので、
-<a href="http://regexp-201403.herokuapp.com/">http://regexp-201403.herokuapp.com/</a>
-で試せます。</p>
-
-<h3>制限事項</h3>
-
-<p>発表で見せる範囲しかちゃんと作っていないので、
-変なことをすると変になるのはそういうものです。</p>
-
-<p>対応している正規表現も最初に例として並んでいるもので使っているようなものしか対応していません。</p>
-
-<h2>発表内容</h2>
-
-<p>デモを先に作って後で発表資料を作ったので、デモの方がメインで資料は後付けという感じです。</p>
-
-<h2>KPT</h2>
-
-<ul>
-<li>Keep
-
-<ul>
-<li>ちゃんと発表できた。</li>
-<li>直前になってしまったけれど、発表資料もちゃんと作成できた。</li>
-</ul>
-</li>
-<li>Problem
-
-<ul>
-<li>準備の時間があまり取れなかった。</li>
-<li>会場の後ろの方でちゃんと見えていたのかとか、聞こえていたのかとかが確認できなかった。</li>
-<li>発表資料の公開が遅くなった。(4月3日)</li>
-</ul>
-</li>
-<li>Try
-
-<ul>
-<li>中継内容の事前確認をしておきたい。録画ありかどうかとか。</li>
-<li>今度こそ rabbiter を使いたい。</li>
-</ul>
-</li>
-</ul>
-
-
-<h2>他の発表の感想とか</h2>
-
-<p>RSpec 3 対応のライブコーディングは事前にかなりちゃんと準備をしてきた感じがして、
-内容も参考になって非常に良かったです。</p>
-
-<p>他はこういうことをやっています、というサービスの紹介っぽい感じが多くて、
-プログラミングの話は少なかったので、内容は面白いけど
-Ruby/Rails勉強会＠関西向きではないかも、と感じるものもありました。</p>
 ]]></content>
   </entry>
   
