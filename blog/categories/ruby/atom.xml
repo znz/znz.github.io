@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-06T23:42:08+09:00</updated>
+  <updated>2014-06-13T23:31:26+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,179 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[fluentd に drb で接続してみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-13-fluentd-drb.html"/>
+    <updated>2014-06-13T22:41:08+09:00</updated>
+    <id>http://blog.n-z.jp/blog/fluentd-drb</id>
+    <content type="html"><![CDATA[<p>druby の口が公開されていたら、そのユーザーの権限で何でも実行できるはず、
+ということで、ちょっと試してみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li><code>ruby</code> 2.1.2</li>
+<li><code>fluentd</code> 0.10.49</li>
+</ul>
+
+
+<h2>環境の準備</h2>
+
+<p>vagrant 上で rbenv と ruby-build を使ってインストールした ruby 2.1.2 で</p>
+
+<ul>
+<li><code>gem install fluentd</code></li>
+<li><code>fluentd --setup /vagrant/fluent</code></li>
+<li><code>fluentd -c /vagrant/fluent/fluent.conf &amp;</code></li>
+</ul>
+
+
+<p>と起動して準備しておきました。</p>
+
+<h2>実行例</h2>
+
+<p><code>irb</code> を起動しているユーザーと同じユーザーで <code>fluentd</code> も起動しているので、
+特に面白いことはできそうになかったのですが、
+<code>/proc/$$/cmdline</code> を確認すると <code>irb</code> 側ではなく、
+ちゃんと <code>fluentd</code> 側で任意のコマンドが実行できていることがわかります。</p>
+
+<pre><code>vagrant@fluentd-vm:~$ rbenv exec irb -r irb/completion --simple-prompt
+&gt;&gt; require 'drb'
+=&gt; true
+&gt;&gt; d = DRbObject.new_with_uri('druby://127.0.0.1:24230'); nil
+=&gt; nil
+&gt;&gt; d.method_missing(:send, :eval, "`id`")
+=&gt; "uid=1000(vagrant) gid=1000(vagrant) groups=1000(vagrant)\n"
+&gt;&gt; d.method_missing(:send, :eval, '`cat /proc/$PPID/cmdline`')
+=&gt; "/opt/rbenv/versions/2.1.2/bin/ruby\x00/opt/rbenv/versions/2.1.2/bin/fluentd\x00-c\x00/vagrant/fluent/fluent.conf\x00"
+</code></pre>
+
+<h2>雑感</h2>
+
+<p><code>root</code> 権限で起動しているなら <code>debug_agent</code> は有効にしない方が良さそうだし、
+ローカルユーザーが <code>fluentd</code> の実行ユーザーの権限を使えるとまずい場合も有効にしない方が良さそうだと思いました。</p>
+
+<p>また、知っている人には当たり前のことですが、
+<code>drb</code> は外部に安全に公開できるものではないので、
+使う場合も <code>localhost</code> だけ待ち受けるように制限すべきです。</p>
+
+<p>td-agent は初期設定でそうなっているのですが、
+<code>fluentd --setup</code> はそうなっていないので、
+適切に設定を変更するなり firewall で塞ぐなりしておく必要がありそうです。</p>
+
+<h2>td-agent 1.1.19-1 での初期設定</h2>
+
+<p><code>127.0.0.1</code> だけで待ち受けるようになっていました。</p>
+
+<pre><code>## live debugging agent
+&lt;source&gt;
+  type debug_agent
+  bind 127.0.0.1
+  port 24230
+&lt;/source&gt;
+</code></pre>
+
+<h2><code>fluentd --setup</code> で生成される設定</h2>
+
+<p>外からも受けつけるようになっていました。</p>
+
+<pre><code># Listen DRb for debug
+&lt;source&gt;
+  type debug_agent
+  port 24230
+&lt;/source&gt;
+</code></pre>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[ci_reporter から rspec_junit_formatter に移行した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-13-ci-reporter-to-rspec-junit-formatter.html"/>
+    <updated>2014-06-13T22:33:12+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ci-reporter-to-rspec-junit-formatter</id>
+    <content type="html"><![CDATA[<p>rspec 2 から rpsec 3 への移行で <code>ci_reporter</code> がうまく動かなくなって困っていたら、
+<code>rspec_junit_formatter</code> というのを<a href="https://twitter.com/joker1007/status/477372843601055744">教えてもらった</a>ので、
+移行してみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li><code>ruby</code> 2.1.2</li>
+<li><code>rails</code> 3.2.18</li>
+<li><code>rspec-rails</code> 3.0.1</li>
+<li><code>rspec_junit_formatter</code> 0.2.0</li>
+</ul>
+
+
+<h2>Gemfile の変更</h2>
+
+<p><code>group :test</code> の <code>gem 'ci_reporter', require: false</code> を <code>gem 'rspec_junit_formatter'</code> に変更しました。</p>
+
+<h2>jenkins で実行しているシェルスクリプトの変更</h2>
+
+<p><code>bundle exec rake -f $(bundle show ci_reporter)/stub.rake ci:setup:rspec default SPEC_OPTS=--no-drb COVERAGE=on</code>
+のように実行していたのを</p>
+
+<p><code>
+rm -rf spec/reports
+cat &gt;.rspec &lt;&lt;EOF
+--format RspecJunitFormatter
+--out spec/reports/rspec.xml
+EOF
+bundle exec rake COVERAGE=on
+</code></p>
+
+<p>に変更しました。
+<code>spec/reports</code> は自動で作成してくれるようで、事前に作成しておく必要はないようです。
+<code>ci_reporter</code> はタスクの最初の方で <code>spec/reports</code> を削除していたので、同様に削除するようにしました。</p>
+
+<p><code>COVERAGE=on</code> は <code>simplecov</code>, <code>simplecov-rcov</code> を有効にするかどうかのフラグとして使っているので今回の移行とは無関係です。</p>
+
+<p><a href="https://github.com/sj26/rspec_junit_formatter">RSpec JUnit Formatter の README</a> に書いてある
+<code>rspec --format RspecJunitFormatter --out rspec.xml</code>
+という実行方法だとテスト用データベースの初期化関連で問題がおきたので、
+<code>rspec</code> コマンド直接ではなく <code>rake</code> コマンドのデフォルトタスクで実行するために、
+<code>.rspec</code> ファイルを書き換えるようにしました。
+<code>SPEC_OPTS</code> で指定する方法でも良かったかもしれません。</p>
+
+<h2>Jenkins の設定</h2>
+
+<p><code>ci_reporter</code> の設定のときに
+<code>ビルド後の処理</code> で <code>JUnitテスト結果の集計</code> を追加していて、
+<code>テスト結果XML</code> は <code>spec/reports/**/*.xml</code> という設定にしていて、
+<code>RspecJunitFormatter</code> の出力先の方をそちらにあわせたので、
+Jenkins 側の設定は変更していません。</p>
+
+<h2>テスト結果</h2>
+
+<p>Jenkins のテスト結果の表示では <code>spec.controllers</code> や <code>spec.models</code> などがパッケージになっていました。</p>
+
+<p><code>spec/support/*.rb</code> で <code>shared_examples</code> を定義していたら、
+<code>spec.support</code> がパッケージになってしまっているのが気になりましたが、
+<code>ci_reporter</code> のときはほぼすべてが <code>(root)</code> というパッケージになっていたのに比べると
+便利になったように思います。</p>
+
+<h2><code>RSpec::Core::DeprecationError</code></h2>
+
+<p><code>RSpec.configure do |config|</code> で <code>config.raise_errors_for_deprecations!</code> を実行していると</p>
+
+<pre><code>.../gems/rspec-core-3.0.1/lib/rspec/core/formatters/deprecation_formatter.rb:186:in `puts': Treating `metadata[:execution_result]` as a hash is deprecated. Use the attributes methods to access the data instead. Called from .../rspec_junit_formatter-0.2.0/lib/rspec_junit_formatter/rspec3.rb:43:in `result_of'. (RSpec::Core::DeprecationError)`
+</code></pre>
+
+<p>というエラーになったので、
+<code>config.raise_errors_for_deprecations!</code>
+を外しました。</p>
+
+<p><a href="https://github.com/sj26/rspec_junit_formatter/commit/96f0115f7dabbea623f04b60dc23519683f39cfa">github の master では直っている</a>ので、次のバージョンがリリースされたら解決しそうです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 11 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -215,172 +388,6 @@
 <p>前回のもくもく会でインストールして、他では使っていなかったので、
 ほぼ使っていないまま登録せず試用期限が切れてしまって、
 30分ごとに終了するようになってしまいました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[R と Ruby によるデータ解析入門　読書会　第1回に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-04-05-amagasakirb.html"/>
-    <updated>2014-04-05T22:55:31+09:00</updated>
-    <id>http://blog.n-z.jp/blog/amagasakirb</id>
-    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/event/index/153995/">4月5日 R と Ruby によるデータ解析入門 読書会 第1回(兵庫県)</a>
-に参加しました。
-今回はまえがきから3章まででした。</p>
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4873116155" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-<p>次回は5月17日だそうです。</p>
-
-<!--more-->
-
-
-<h2>会場</h2>
-
-<p>いつもの部屋に戻っていました。
-今回は参加者が多くて、最終的には10名になっていました。</p>
-
-<h2>メモ</h2>
-
-<p>以下今回のメモです。</p>
-
-<ul>
-<li>「はじめに」の「カラーテレビを見るとカラーの夢を見る」から白黒テレビの時代は白黒の夢だったのかとか、テレビの普及以前はどうだったのかという話</li>
-<li>p.2 : 「C 言語はブール型を持たない」から C99 だと <code>_Bool</code> があるという話</li>
-<li>p.5 : 脚注の magic comment から書き方の流派の話
-
-<ul>
-<li>2.0 からデフォルトエンコーディングは utf-8 になった。</li>
-<li>1.9 のデフォルトエンコーディングは us-ascii だった。</li>
-</ul>
-</li>
-<li>p.13 ループ : <code>hungry?</code> と <code>full?</code> の中間の状態はないのか</li>
-<li>R で <code>demo('Japanese')</code> とか</li>
-<li>shoes の Debian パッケージは wheezy にはあるが sid だとなくなっていた。</li>
-<li><code>sd</code> とかから名前の省略の話</li>
-<li>p.33 gforge のあたりから rubyforge はもうすぐ終了予定の話
-
-<ul>
-<li><a href="https://twitter.com/evanphx/status/399552820380053505">Announced today that we&rsquo;re sunsetting RubyForge. Last day will be May 15th. Begin your data migration now!</a></li>
-</ul>
-</li>
-<li>1オリジンか0オリジンかとか西暦0年の有無の話とか Oracle と PostgreSQL の非互換の話とか</li>
-<li>p.39 「最も基礎的なデータ構造であるベクトル」からスカラーはないのかという話</li>
-<li>p.40 「二重角括弧は常に 1 つの値を返します」の意味が分かりにくいという話</li>
-<li>このあたりで REPL で毎回付いていた <code>[1]</code> はベクトルを表してるっぽいことに気付いた</li>
-<li>p.47 <code>rbind</code> は _r_ows bind だった。
-<code>help(rbind)</code> で <code>cbind</code> と一緒に説明が出てきた。</li>
-<li>p.57 <code>factor</code> の使用例 : 年を連続値ではなく離散値として扱うために使っているらしい。</li>
-<li>3章は翻訳独自の追加の章
-
-<ul>
-<li>更なる前提知識がないとこれでもまだ難しい</li>
-<li>8つの魔法とあるが、それぞれの説明の詳しさが違う</li>
-</ul>
-</li>
-<li>p-value だけとりたい場合とかどうすればいいのかわからない
-
-<ul>
-<li><code>t.test()</code> の返り値はオブジェクトっぽいがその属性の取り出し方がわからない</li>
-<li><code>help(t.test)</code> でいろいろ情報は出てきた</li>
-<li><code>v = t.test(hoge)</code> だと <code>v$p.value</code> とか <code>v["p.value"]</code> とかで取り出せた。</li>
-</ul>
-</li>
-<li><code>help</code> とかの使い方 (調べ方) を説明してほしかったという話</li>
-<li>プログラマ (言語オタク?) 向けには今回の読書会の本よりも
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4873115795" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-<a href="http://www.amazon.co.jp/gp/product/4873115795/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873115795&amp;linkCode=as2&amp;tag=znz-22">アート・オブ・Rプログラミング</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873115795" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />
-がオススメらしい。</li>
-</ul>
-
-
-<h2>懇親会</h2>
-
-<p>花見によさそうな場所がなかったのと、天気が下り坂ということもあり、結局いつものさくら水産での懇親会でした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第60回 Ruby/Rails勉強会＠関西で正規表現の先読みについてという発表をしました]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-03-29-kansaiworkshop060.html"/>
-    <updated>2014-03-29T22:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansaiworkshop060</id>
-    <content type="html"><![CDATA[<p><a href="https://github.com/rubykansai/workshops/wiki/Kansaiworkshop060">第50回 Ruby/Rails勉強会＠関西</a> に参加して、「正規表現の先読みについて」という発表をしてきました。</p>
-
-<!--more-->
-
-
-<h2>発表資料</h2>
-
-<ul>
-<li><a href="https://github.com/znz/regexp-201403">https://github.com/znz/regexp-201403</a></li>
-<li><a href="http://slide.rabbit-shocker.org/authors/znz/regexp-201403/">http://slide.rabbit-shocker.org/authors/znz/regexp-201403/</a></li>
-<li><a href="https://speakerdeck.com/znz/zheng-gui-biao-xian-falsexian-du-minituite">https://speakerdeck.com/znz/zheng-gui-biao-xian-falsexian-du-minituite</a></li>
-<li><a href="http://www.slideshare.net/znzjp/regexp-201403">http://www.slideshare.net/znzjp/regexp-201403</a></li>
-</ul>
-
-
-<h2>デモアプリ</h2>
-
-<p>デモに使った Web アプリのソースは
-<a href="https://gist.github.com/znz/9835956#file-regexp-201403-rb">https://gist.github.com/znz/9835956#file-regexp-201403-rb</a>
-で公開しています。</p>
-
-<p>heroku にも deploy したので、
-<a href="http://regexp-201403.herokuapp.com/">http://regexp-201403.herokuapp.com/</a>
-で試せます。</p>
-
-<h3>制限事項</h3>
-
-<p>発表で見せる範囲しかちゃんと作っていないので、
-変なことをすると変になるのはそういうものです。</p>
-
-<p>対応している正規表現も最初に例として並んでいるもので使っているようなものしか対応していません。</p>
-
-<h2>発表内容</h2>
-
-<p>デモを先に作って後で発表資料を作ったので、デモの方がメインで資料は後付けという感じです。</p>
-
-<h2>KPT</h2>
-
-<ul>
-<li>Keep
-
-<ul>
-<li>ちゃんと発表できた。</li>
-<li>直前になってしまったけれど、発表資料もちゃんと作成できた。</li>
-</ul>
-</li>
-<li>Problem
-
-<ul>
-<li>準備の時間があまり取れなかった。</li>
-<li>会場の後ろの方でちゃんと見えていたのかとか、聞こえていたのかとかが確認できなかった。</li>
-<li>発表資料の公開が遅くなった。(4月3日)</li>
-</ul>
-</li>
-<li>Try
-
-<ul>
-<li>中継内容の事前確認をしておきたい。録画ありかどうかとか。</li>
-<li>今度こそ rabbiter を使いたい。</li>
-</ul>
-</li>
-</ul>
-
-
-<h2>他の発表の感想とか</h2>
-
-<p>RSpec 3 対応のライブコーディングは事前にかなりちゃんと準備をしてきた感じがして、
-内容も参考になって非常に良かったです。</p>
-
-<p>他はこういうことをやっています、というサービスの紹介っぽい感じが多くて、
-プログラミングの話は少なかったので、内容は面白いけど
-Ruby/Rails勉強会＠関西向きではないかも、と感じるものもありました。</p>
 ]]></content>
   </entry>
   

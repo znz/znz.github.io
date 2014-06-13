@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: rspec | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/rspec/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-06-13T23:31:26+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[ci_reporter から rspec_junit_formatter に移行した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-13-ci-reporter-to-rspec-junit-formatter.html"/>
+    <updated>2014-06-13T22:33:12+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ci-reporter-to-rspec-junit-formatter</id>
+    <content type="html"><![CDATA[<p>rspec 2 から rpsec 3 への移行で <code>ci_reporter</code> がうまく動かなくなって困っていたら、
+<code>rspec_junit_formatter</code> というのを<a href="https://twitter.com/joker1007/status/477372843601055744">教えてもらった</a>ので、
+移行してみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li><code>ruby</code> 2.1.2</li>
+<li><code>rails</code> 3.2.18</li>
+<li><code>rspec-rails</code> 3.0.1</li>
+<li><code>rspec_junit_formatter</code> 0.2.0</li>
+</ul>
+
+
+<h2>Gemfile の変更</h2>
+
+<p><code>group :test</code> の <code>gem 'ci_reporter', require: false</code> を <code>gem 'rspec_junit_formatter'</code> に変更しました。</p>
+
+<h2>jenkins で実行しているシェルスクリプトの変更</h2>
+
+<p><code>bundle exec rake -f $(bundle show ci_reporter)/stub.rake ci:setup:rspec default SPEC_OPTS=--no-drb COVERAGE=on</code>
+のように実行していたのを</p>
+
+<p><code>
+rm -rf spec/reports
+cat &gt;.rspec &lt;&lt;EOF
+--format RspecJunitFormatter
+--out spec/reports/rspec.xml
+EOF
+bundle exec rake COVERAGE=on
+</code></p>
+
+<p>に変更しました。
+<code>spec/reports</code> は自動で作成してくれるようで、事前に作成しておく必要はないようです。
+<code>ci_reporter</code> はタスクの最初の方で <code>spec/reports</code> を削除していたので、同様に削除するようにしました。</p>
+
+<p><code>COVERAGE=on</code> は <code>simplecov</code>, <code>simplecov-rcov</code> を有効にするかどうかのフラグとして使っているので今回の移行とは無関係です。</p>
+
+<p><a href="https://github.com/sj26/rspec_junit_formatter">RSpec JUnit Formatter の README</a> に書いてある
+<code>rspec --format RspecJunitFormatter --out rspec.xml</code>
+という実行方法だとテスト用データベースの初期化関連で問題がおきたので、
+<code>rspec</code> コマンド直接ではなく <code>rake</code> コマンドのデフォルトタスクで実行するために、
+<code>.rspec</code> ファイルを書き換えるようにしました。
+<code>SPEC_OPTS</code> で指定する方法でも良かったかもしれません。</p>
+
+<h2>Jenkins の設定</h2>
+
+<p><code>ci_reporter</code> の設定のときに
+<code>ビルド後の処理</code> で <code>JUnitテスト結果の集計</code> を追加していて、
+<code>テスト結果XML</code> は <code>spec/reports/**/*.xml</code> という設定にしていて、
+<code>RspecJunitFormatter</code> の出力先の方をそちらにあわせたので、
+Jenkins 側の設定は変更していません。</p>
+
+<h2>テスト結果</h2>
+
+<p>Jenkins のテスト結果の表示では <code>spec.controllers</code> や <code>spec.models</code> などがパッケージになっていました。</p>
+
+<p><code>spec/support/*.rb</code> で <code>shared_examples</code> を定義していたら、
+<code>spec.support</code> がパッケージになってしまっているのが気になりましたが、
+<code>ci_reporter</code> のときはほぼすべてが <code>(root)</code> というパッケージになっていたのに比べると
+便利になったように思います。</p>
+
+<h2><code>RSpec::Core::DeprecationError</code></h2>
+
+<p><code>RSpec.configure do |config|</code> で <code>config.raise_errors_for_deprecations!</code> を実行していると</p>
+
+<pre><code>.../gems/rspec-core-3.0.1/lib/rspec/core/formatters/deprecation_formatter.rb:186:in `puts': Treating `metadata[:execution_result]` as a hash is deprecated. Use the attributes methods to access the data instead. Called from .../rspec_junit_formatter-0.2.0/lib/rspec_junit_formatter/rspec3.rb:43:in `result_of'. (RSpec::Core::DeprecationError)`
+</code></pre>
+
+<p>というエラーになったので、
+<code>config.raise_errors_for_deprecations!</code>
+を外しました。</p>
+
+<p><a href="https://github.com/sj26/rspec_junit_formatter/commit/96f0115f7dabbea623f04b60dc23519683f39cfa">github の master では直っている</a>ので、次のバージョンがリリースされたら解決しそうです。</p>
+]]></content>
+  </entry>
+  
+</feed>
