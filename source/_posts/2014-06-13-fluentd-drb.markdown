@@ -75,3 +75,8 @@ td-agent は初期設定でそうなっているのですが、
       type debug_agent
       port 24230
     </source>
+
+## 参考
+
+- [るりま の DRb](http://docs.ruby-lang.org/ja/2.1.0/library/drb.html) のセキュリティ
+- [RDoc の DRb の Security の説明](http://docs.ruby-lang.org/en/2.1.0/DRb.html#module-DRb-label-Security) (英語)
