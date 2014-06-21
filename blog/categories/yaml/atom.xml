@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: yaml | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/yaml/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-06-21T22:21:43+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[ansible使いのためのYAML入門]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-21-ansible-yaml.html"/>
+    <updated>2014-06-21T20:39:38+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ansible-yaml</id>
+    <content type="html"><![CDATA[<p>ansible の設定ファイルは YAML なのですが、
+ansible の説明では YAML 由来のいろんな書き方についてはあまり説明がないので、
+ansible の設定ファイルを書く時に知っておくと便利な YAML の知識についてまとめてみました。</p>
+
+<!--more-->
+
+
+<h2>YAML のバージョン</h2>
+
+<p><a href="http://yaml.org/" title="The Official YAML Web Site">The Official YAML Web Site</a>
+によると YAML の仕様としては
+YAML 1.2 (3rd Edition)
+まで存在するようですが、
+ansible は PyYaml を使っていて、
+libyaml binding なので
+対応している YAML のバージョンは
+<a href="http://yaml.org/spec/1.1/">YAML 1.1 (2nd Edition)</a>
+になります。</p>
+
+<h2>コレクション</h2>
+
+<p>参考: <a href="http://yaml.org/spec/1.1/#id857181" title="2.1. Collections">2.1. Collections</a></p>
+
+<h3>配列</h3>
+
+<p><code>-</code> で列挙すると配列になります。
+YAML は空白に敏感なので、
+<code>-foo</code> のように書くとエラーになります。</p>
+
+<p>```yaml</p>
+
+<pre><code>- foo
+- bar
+</code></pre>
+
+<p>```</p>
+
+<h3>マッピング</h3>
+
+<p>プログラミング言語によってはハッシュとか連想配列とか言われているデータ構造です。
+キーと値を <code>:</code> (コロンとスペース) で区切ります。</p>
+
+<p>読みやすくするために <code>:</code> の前後の空白を増やしても良いようです。</p>
+
+<p>```yaml</p>
+
+<pre><code>foo:  bar
+hoge: fuga
+bar : baz
+</code></pre>
+
+<p>```</p>
+
+<h3>マッピングと配列</h3>
+
+<p>マッピングの値に配列を入れるとき</p>
+
+<p>```yaml</p>
+
+<pre><code>roles:
+  - foo
+  - bar
+</code></pre>
+
+<p>```</p>
+
+<p>のようにインデントするのが普通のようですが、</p>
+
+<p>```yaml</p>
+
+<pre><code>roles:
+- foo
+- bar
+</code></pre>
+
+<p>```</p>
+
+<p>のようにインデントせずに配列を書いても大丈夫です。</p>
+
+<p>インデントを浅くできるので、個人的にはこの書き方を多用しています。</p>
+
+<h3>フロースタイル</h3>
+
+<p>フロースタイルというコンパクトな書き方も出来ます。
+ansible の設定ファイルでは見覚えがないのですが、
+知っておくと見た時に悩まなくて済むと思います。</p>
+
+<p><a href="http://yaml.org/spec/1.1/#id857181" title="2.1. Collections">2.1. Collections</a>
+の <code>Example 2.5. Sequence of Sequences</code> や <code>Example 2.6. Mapping of Mappings</code> を参考にしてみてください。</p>
+
+<h2>構造</h2>
+
+<p>参考: <a href="http://yaml.org/spec/1.1/#id857577" title="2.2. Structures">2.2. Structures</a></p>
+
+<h3>ファイル冒頭の <code>---</code></h3>
+
+<p>YAML ファイルの頭に <code>---</code> が入っていることがありますが、
+これは複数 YAML ドキュメントを YAML ストリームとしてまとめるときに
+YAML ドキュメントの開始部分を示すのに使うようです。</p>
+
+<p>ansible などの用途では YAML ストリームは使わないので、
+あってもなくても良いと思います。</p>
+
+<p>迷うなら付けておけば YAML ファイルということがちょっとわかりやすくなると思います。</p>
+
+<p>```console</p>
+
+<pre><code>% cat example.yml
+---
+foo: bar
+---
+hoge: fuga
+% ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' example.yml
+{"foo"=&gt;"bar"}
+% ruby -r yaml -r pp -e 'pp YAML.load_stream(ARGF)' example.yml
+[{"foo"=&gt;"bar"}, {"hoge"=&gt;"fuga"}]
+</code></pre>
+
+<p>```</p>
+
+<h3>コメント</h3>
+
+<p><code>#</code> から行末までがコメントです。
+行頭以外からでもコメントになります。</p>
+
+<p>```yaml</p>
+
+<pre><code>foo: # ここはコメント
+  - bar
+hoge:
+  # ここもコメント
+  - fuga
+</code></pre>
+
+<p>```</p>
+
+<h2>スカラー値</h2>
+
+<p>参考: <a href="http://yaml.org/spec/1.1/#id858081" title="2.3. Scalars">2.3. Scalars</a></p>
+
+<h3>リテラル形式と折り返し形式</h3>
+
+<p><code>|</code> を使うと literal style で改行をそのまま使った文字列を指定できます。
+ansible の設定では shell と組み合わせに便利です。</p>
+
+<p><a href="https://github.com/znz/ansible-role-rbenv/blob/7fceb7b4f5155ba385d88cdcaf436ecd84238aca/tasks/rbenv.yml">https://github.com/znz/ansible-role-rbenv/blob/7fceb7b4f5155ba385d88cdcaf436ecd84238aca/tasks/rbenv.yml</a>
+では以下のように <code>creates=</code> によるガード条件を最初の行に書いて、
+次の行からシェルスクリプトの内容を書いています。</p>
+
+<p>```yaml</p>
+
+<pre><code>- name: rbenv install 
+  shell: |
+   creates=/versions/
+   set -e
+   . /etc/profile.d/rbenv.sh
+   export CONFIGURE_OPTS="--disable-install-doc"
+   rbenv install 
+   rbenv global 
+</code></pre>
+
+<p>```</p>
+
+<p><code>&gt;</code> を使うと folded style になります。
+literal style と違って改行も普通の空白に置き換えられるので、
+ansible の設定ファイルでは使ったことがありません。</p>
+
+<p>上の例からわかるように YAML としては <code>creates=</code> も文字列の一部で、
+その文字列の一部をガード条件として解釈しているのは ansible の方になります。</p>
+
+<h2>真偽値</h2>
+
+<p>ansible の playbook ファイルで
+<code>sudo: yes</code> だったり
+<code>sudo: True</code> だったり
+いくつかの書き方がありますが、
+すべて YAML の解釈の時点で真偽値になっています。</p>
+
+<p>以下の例では大文字小文字の差が多いので、フロースタイルでまとめています。</p>
+
+<p>```console</p>
+
+<pre><code>% cat example.yml
+---
+- [true, True, TRUE]
+- [false, False, FALSE]
+- [yes, Yes, YES]
+- [no, No, NO]
+- [on, On, ON]
+- [off, Off, OFF]
+% ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' example.yml
+[[[true, true, true],
+  [false, false, false],
+  [true, true, true],
+  [false, false, false],
+  [true, true, true],
+  [false, false, false]]]
+</code></pre>
+
+<p>```</p>
+
+<h2>文字列として解釈させる</h2>
+
+<p>以上のように元に文字列以外として解釈される可能性があると文字列として指定したい時に困るので、
+そういうときは <code>""</code> などでくくっておくか、
+<code>!!str</code> で明示的に文字列型ということを指定します。</p>
+
+<p>```console</p>
+
+<pre><code>% cat /tmp/example.yml
+---
+- "true"
+- 'false'
+- !!str yes
+% ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' /tmp/example.yml
+["true", "false", "yes"]
+</code></pre>
+
+<p>```</p>
+
+<h2>まとめ</h2>
+
+<p>ansible の設定ファイルを書く時に、自分が困ったり悩んだことを中心にまとめてみました。
+同じようなことで悩んだり、どうすればいいのか困った時に参考にしてみてください。</p>
+]]></content>
+  </entry>
+  
+</feed>

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ansible | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ansible/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-21T13:47:51+09:00</updated>
+  <updated>2014-06-21T22:21:43+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,238 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ansible使いのためのYAML入門]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-21-ansible-yaml.html"/>
+    <updated>2014-06-21T20:39:38+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ansible-yaml</id>
+    <content type="html"><![CDATA[<p>ansible の設定ファイルは YAML なのですが、
+ansible の説明では YAML 由来のいろんな書き方についてはあまり説明がないので、
+ansible の設定ファイルを書く時に知っておくと便利な YAML の知識についてまとめてみました。</p>
+
+<!--more-->
+
+
+<h2>YAML のバージョン</h2>
+
+<p><a href="http://yaml.org/" title="The Official YAML Web Site">The Official YAML Web Site</a>
+によると YAML の仕様としては
+YAML 1.2 (3rd Edition)
+まで存在するようですが、
+ansible は PyYaml を使っていて、
+libyaml binding なので
+対応している YAML のバージョンは
+<a href="http://yaml.org/spec/1.1/">YAML 1.1 (2nd Edition)</a>
+になります。</p>
+
+<h2>コレクション</h2>
+
+<p>参考: <a href="http://yaml.org/spec/1.1/#id857181" title="2.1. Collections">2.1. Collections</a></p>
+
+<h3>配列</h3>
+
+<p><code>-</code> で列挙すると配列になります。
+YAML は空白に敏感なので、
+<code>-foo</code> のように書くとエラーになります。</p>
+
+<p>```yaml</p>
+
+<pre><code>- foo
+- bar
+</code></pre>
+
+<p>```</p>
+
+<h3>マッピング</h3>
+
+<p>プログラミング言語によってはハッシュとか連想配列とか言われているデータ構造です。
+キーと値を <code>:</code> (コロンとスペース) で区切ります。</p>
+
+<p>読みやすくするために <code>:</code> の前後の空白を増やしても良いようです。</p>
+
+<p>```yaml</p>
+
+<pre><code>foo:  bar
+hoge: fuga
+bar : baz
+</code></pre>
+
+<p>```</p>
+
+<h3>マッピングと配列</h3>
+
+<p>マッピングの値に配列を入れるとき</p>
+
+<p>```yaml</p>
+
+<pre><code>roles:
+  - foo
+  - bar
+</code></pre>
+
+<p>```</p>
+
+<p>のようにインデントするのが普通のようですが、</p>
+
+<p>```yaml</p>
+
+<pre><code>roles:
+- foo
+- bar
+</code></pre>
+
+<p>```</p>
+
+<p>のようにインデントせずに配列を書いても大丈夫です。</p>
+
+<p>インデントを浅くできるので、個人的にはこの書き方を多用しています。</p>
+
+<h3>フロースタイル</h3>
+
+<p>フロースタイルというコンパクトな書き方も出来ます。
+ansible の設定ファイルでは見覚えがないのですが、
+知っておくと見た時に悩まなくて済むと思います。</p>
+
+<p><a href="http://yaml.org/spec/1.1/#id857181" title="2.1. Collections">2.1. Collections</a>
+の <code>Example 2.5. Sequence of Sequences</code> や <code>Example 2.6. Mapping of Mappings</code> を参考にしてみてください。</p>
+
+<h2>構造</h2>
+
+<p>参考: <a href="http://yaml.org/spec/1.1/#id857577" title="2.2. Structures">2.2. Structures</a></p>
+
+<h3>ファイル冒頭の <code>---</code></h3>
+
+<p>YAML ファイルの頭に <code>---</code> が入っていることがありますが、
+これは複数 YAML ドキュメントを YAML ストリームとしてまとめるときに
+YAML ドキュメントの開始部分を示すのに使うようです。</p>
+
+<p>ansible などの用途では YAML ストリームは使わないので、
+あってもなくても良いと思います。</p>
+
+<p>迷うなら付けておけば YAML ファイルということがちょっとわかりやすくなると思います。</p>
+
+<p>```console</p>
+
+<pre><code>% cat example.yml
+---
+foo: bar
+---
+hoge: fuga
+% ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' example.yml
+{"foo"=&gt;"bar"}
+% ruby -r yaml -r pp -e 'pp YAML.load_stream(ARGF)' example.yml
+[{"foo"=&gt;"bar"}, {"hoge"=&gt;"fuga"}]
+</code></pre>
+
+<p>```</p>
+
+<h3>コメント</h3>
+
+<p><code>#</code> から行末までがコメントです。
+行頭以外からでもコメントになります。</p>
+
+<p>```yaml</p>
+
+<pre><code>foo: # ここはコメント
+  - bar
+hoge:
+  # ここもコメント
+  - fuga
+</code></pre>
+
+<p>```</p>
+
+<h2>スカラー値</h2>
+
+<p>参考: <a href="http://yaml.org/spec/1.1/#id858081" title="2.3. Scalars">2.3. Scalars</a></p>
+
+<h3>リテラル形式と折り返し形式</h3>
+
+<p><code>|</code> を使うと literal style で改行をそのまま使った文字列を指定できます。
+ansible の設定では shell と組み合わせに便利です。</p>
+
+<p><a href="https://github.com/znz/ansible-role-rbenv/blob/7fceb7b4f5155ba385d88cdcaf436ecd84238aca/tasks/rbenv.yml">https://github.com/znz/ansible-role-rbenv/blob/7fceb7b4f5155ba385d88cdcaf436ecd84238aca/tasks/rbenv.yml</a>
+では以下のように <code>creates=</code> によるガード条件を最初の行に書いて、
+次の行からシェルスクリプトの内容を書いています。</p>
+
+<p>```yaml</p>
+
+<pre><code>- name: rbenv install 
+  shell: |
+   creates=/versions/
+   set -e
+   . /etc/profile.d/rbenv.sh
+   export CONFIGURE_OPTS="--disable-install-doc"
+   rbenv install 
+   rbenv global 
+</code></pre>
+
+<p>```</p>
+
+<p><code>&gt;</code> を使うと folded style になります。
+literal style と違って改行も普通の空白に置き換えられるので、
+ansible の設定ファイルでは使ったことがありません。</p>
+
+<p>上の例からわかるように YAML としては <code>creates=</code> も文字列の一部で、
+その文字列の一部をガード条件として解釈しているのは ansible の方になります。</p>
+
+<h2>真偽値</h2>
+
+<p>ansible の playbook ファイルで
+<code>sudo: yes</code> だったり
+<code>sudo: True</code> だったり
+いくつかの書き方がありますが、
+すべて YAML の解釈の時点で真偽値になっています。</p>
+
+<p>以下の例では大文字小文字の差が多いので、フロースタイルでまとめています。</p>
+
+<p>```console</p>
+
+<pre><code>% cat example.yml
+---
+- [true, True, TRUE]
+- [false, False, FALSE]
+- [yes, Yes, YES]
+- [no, No, NO]
+- [on, On, ON]
+- [off, Off, OFF]
+% ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' example.yml
+[[[true, true, true],
+  [false, false, false],
+  [true, true, true],
+  [false, false, false],
+  [true, true, true],
+  [false, false, false]]]
+</code></pre>
+
+<p>```</p>
+
+<h2>文字列として解釈させる</h2>
+
+<p>以上のように元に文字列以外として解釈される可能性があると文字列として指定したい時に困るので、
+そういうときは <code>""</code> などでくくっておくか、
+<code>!!str</code> で明示的に文字列型ということを指定します。</p>
+
+<p>```console</p>
+
+<pre><code>% cat /tmp/example.yml
+---
+- "true"
+- 'false'
+- !!str yes
+% ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' /tmp/example.yml
+["true", "false", "yes"]
+</code></pre>
+
+<p>```</p>
+
+<h2>まとめ</h2>
+
+<p>ansible の設定ファイルを書く時に、自分が困ったり悩んだことを中心にまとめてみました。
+同じようなことで悩んだり、どうすればいいのか困った時に参考にしてみてください。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ansible-galaxy を使ってみた]]></title>
@@ -325,140 +557,6 @@ when: ansible_distribution_release == &ldquo;precise&rdquo;
 ubuntu 12.04 の時だけ実行するために
 <code>when: ansible_distribution_release == "precise"</code>
 で実行する環境を制限しています。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[ansibleで1ファイルのplaybookからroleに書き換える方法]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-12-07-ansible-split-playbook.html"/>
-    <updated>2013-12-07T01:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ansible-split-playbook</id>
-    <content type="html"><![CDATA[<p><code>ansible</code> を使い始める時は1個の YAML ファイルから始めるのが手軽で良いのですが、
-それを
-<a href="http://www.ansibleworks.com/docs/playbooks_best_practices.html">Best Practices</a>
-にあわせて <code>roles</code> にしようとしたら、
-対応がよくわからなくて困ったことがあったので、
-書き換え方をまとめてみました。</p>
-
-<p>この投稿は
-<a href="http://qiita.com/advent-calendar/2013/ansible">Ansible Advent Calendar 2013</a>
-の7日目の記事です。</p>
-
-<!--more-->
-
-
-<p>全体的に動作確認せずに以前使ったファイルを参考にしているので、
-間違っている部分があるかもしれないので、その時はコメントなどで
-教えてください。</p>
-
-<h2>1個の YAML ファイルの例</h2>
-
-<p>仮にこんな感じの <code>playbook.yml</code> があって、
-これを <code>roles</code> にしたいとします。</p>
-
-<h2>```yaml playbook.yml</h2>
-
-<ul>
-<li>hosts: foo-servers
-sudo: yes
-vars:
-  adminuser: vagrant
-  admingroup: vagrant
-  homedir: /home/vagrant
-tasks:
-
-<ul>
-<li>apt: pkg=zsh</li>
-<li>template: src=zshrc dest=/.zshrc owner= group= mode=0644
-```</li>
-</ul>
-</li>
-</ul>
-
-
-<p>この例だとテンプレートファイルとして <code>zshrc</code> ファイルが同じディレクトリにあります。</p>
-
-<h2>role 作成</h2>
-
-<p>ここでは role の名前を <code>zsh</code> にしてみます。</p>
-
-<p>元の <code>playbook.yml</code> と <code>zshrc</code> から</p>
-
-<ul>
-<li><code>roles/zsh/tasks/main.yml</code></li>
-<li><code>roles/zsh/templates/zshrc.j2</code></li>
-<li><code>roles/zsh/vars/main.yml</code></li>
-</ul>
-
-
-<p>というファイルを作ることになります。</p>
-
-<h3>roles/zsh/tasks/main.yml</h3>
-
-<p>処理のメイン部分です。
-元の <code>playbook.yml</code> の <code>tasks</code> の値に並んでいた配列を書きます。</p>
-
-<h2>```yaml roles/zsh/tasks/main.yml</h2>
-
-<ul>
-<li>apt: pkg=zsh</li>
-<li>template: src=zshrc dest=/.zshrc owner= group= mode=0644
-```</li>
-</ul>
-
-
-<h3>roles/zsh/templates/zshrc.j2</h3>
-
-<p>元の <code>zshrc</code> にテンプレート言語がわかりやすいように拡張子を付けただけです。
-例として <code>zshrc</code> にしてしまっただけなので、
-本来は <code>vars</code> の変数を展開したいファイルを使うことになると思います。</p>
-
-<h3>roles/zsh/vars/main.yml</h3>
-
-<p>変数の定義部分です。
-元の <code>playbook.yml</code> の <code>vars</code> の値に並んでいたハッシュを書きます。</p>
-
-<h2>```yaml roles/zsh/vars/main.yml</h2>
-
-<p>adminuser: vagrant
-admingroup: vagrant
-homedir: /home/vagrant
-```</p>
-
-<h3>その他</h3>
-
-<p><code>roles/zsh/handleres/main.yml</code> のような他のディレクトリとか、
-<code>main.yml</code> 以外の <code>*.yml</code> ファイルとかも使えますが、
-一番最初の段階では知らなくても大丈夫だと思います。</p>
-
-<h2>読み込み側 YAML</h2>
-
-<p><code>vars</code> とか <code>tasks</code> を並べていた代わりに <code>roles</code> を使って読み込みます。
-今回は <code>role: zsh</code> で読み込みましたが、他の例をみてみると <code>- zsh</code> だけでも良さそうです。</p>
-
-<h2>```yaml site.yml</h2>
-
-<ul>
-<li>hosts: foo-servers
-sudo: yes
-roles:
-
-<ul>
-<li>role: zsh
-```</li>
-</ul>
-</li>
-</ul>
-
-
-<h2>まとめ</h2>
-
-<p>最初は 1ファイルの YAML と roles 用の複数の YAML ファイルの対応関係がよくわからなくて、
-roles 用の YAML ファイルに余計な記述をしてここでは使えないと言われたりして悩んだので、
-簡単に対応関係をまとめてみました。</p>
-
-<p>まだあまり使っていなくて、間違っているところもあるかもしれないので、
-何かあればコメントなどで指摘してもらえるとありがたいです。</p>
 ]]></content>
   </entry>
   
