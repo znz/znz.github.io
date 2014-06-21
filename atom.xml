@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-21T12:00:16+09:00</updated>
+  <updated>2014-06-21T13:47:51+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,91 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[シェルで glob 結果を事前に確認する方法]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-21-confirm-glob.html"/>
+    <updated>2014-06-21T13:16:56+09:00</updated>
+    <id>http://blog.n-z.jp/blog/confirm-glob</id>
+    <content type="html"><![CDATA[<p><code>rm *~</code> のつもりで <code>rm * ~</code> (半角スペースが混ざっている) のように実行してしまうような間違いをすると危険です。</p>
+
+<p>その対策として <code>tcsh</code> には <code>rmstar</code> という設定があったり
+<code>zsh</code> には <code>RM_STAR_SILENT</code> や <code>RM_STAR_WAIT</code> という設定があるのですが、
+ちゃんと展開結果を確認してからコマンドを実行する方が安全です。</p>
+
+<p>また <code>rm</code> 以外でも展開結果を事前に確認できると便利なことが多いです。</p>
+
+<!--more-->
+
+
+<h2>展開結果の確認方法</h2>
+
+<p><code>bash</code> や <code>zsh</code> の一般的なキー割り当てだと <code>C-x g</code> (Control を押しながら x を押して Control を離して g) で展開結果を確認できます。</p>
+
+<p>Tab キーだとコマンドライン中に展開されてしまいますが、
+<code>C-x g</code> だと確認だけ出来ます。</p>
+
+<h3>bash の場合</h3>
+
+<p>たとえば <code>bash</code> なら以下のように展開結果が出て、
+プロンプトの行が出てきます。</p>
+
+<figure class='code'><figcaption><span>bash</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> <span class="nb">echo</span> /etc/host*&lt;C-x&gt;g
+</span><span class='line'><span class="go">host.conf    hostname     hosts        hosts.allow  hosts.deny</span>
+</span><span class='line'><span class="gp">$</span> <span class="nb">echo</span> /etc/host*
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>zsh の場合</h3>
+
+<p><code>zsh</code> ならプロンプトの行の下に展開結果が出てきます。</p>
+
+<figure class='code'><figcaption><span>zsh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> <span class="nb">echo</span> /etc/host*
+</span><span class='line'><span class="go">/etc/host.conf    /etc/hostname     /etc/hosts        /etc/hosts.allow  /etc/hosts.deny</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Tab キーの動作</h2>
+
+<p>比較のため Tab キーでの動作例も載せておきます。</p>
+
+<h3>bash の場合</h3>
+
+<p>実際には同じ行でしたが、最初の展開結果に置き換わりました。</p>
+
+<figure class='code'><figcaption><span>bash</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> <span class="nb">echo</span> /etc/host*&lt;tab&gt;
+</span><span class='line'><span class="gp">$</span> <span class="nb">echo</span> /etc/host.conf
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>zsh の場合</h3>
+
+<p>こちらも実際には同じ行ですが、すべての展開結果に置き換わりました。</p>
+
+<figure class='code'><figcaption><span>zsh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> <span class="nb">echo</span> /etc/host*&lt;tab&gt;
+</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> /etc/host.conf /etc/hostname /etc/hosts /etc/hosts.allow /etc/hosts.deny
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>glob で指定しにくい一部のファイルだけ除外するなど、展開された方が便利な時は
+Tab キーで展開してからコマンドラインを編集して実行することもあります。</p>
+
+<h2>まとめ</h2>
+
+<p>一般的な bash 環境ならどこでも使えて、
+複雑な glob の展開結果の確認にも便利なので、
+<code>C-x g</code> は非常にオススメです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 12 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -2217,678 +2302,6 @@ box は使い回すと思います。</p>
 <p>box を先に削除してしまうと VM の削除でエラーになるようなので、
 その場合は GUI からエラーになっているディスクイメージを無視するようにするなど
 がんばって削除します。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[OpenSSL/GnuTLS での CSR の作り方]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-04-16-new-csr.html"/>
-    <updated>2014-04-16T10:09:24+09:00</updated>
-    <id>http://blog.n-z.jp/blog/new-csr</id>
-    <content type="html"><![CDATA[<p>サーバー証明書を発行してもらう時などに毎回調べつつ CSR を作成しているので、
-GnuTLS と OpenSSL を使った方法をまとめてみました。</p>
-
-<!--more-->
-
-
-<h2>パッケージインストール</h2>
-
-<p>OpenSSL の方は入っていることが多いと思いますが、入っていなければ <code>openssl</code> パッケージをいれておきます。</p>
-
-<p>GnuTLS の方は Debian や Ubuntu の場合は <code>gnutls-bin</code> パッケージに <code>gnutls-cli</code> コマンドなどが入っています。
-RHEL などでは <code>gnutls-utils</code> というパッケージに入っているらしいです。</p>
-
-<h2>certtool コマンド</h2>
-
-<p><code>certtool</code> コマンドは Mac OS X にもありますが、 GnuTLS のものとは別物です。
-ここで説明しているのは GnuTLS の <code>certtool</code> コマンドです。</p>
-
-<h2>秘密鍵作成</h2>
-
-<p>秘密鍵の生成はランダムな情報を元に生成するので、ビット数やエントロピーの量に応じて時間がかかります。
-デスクトップマシンなどではマウスを動かすなどの方法でエントロピーを増やすことが出来るかもしれません。</p>
-
-<p>作成されるファイルのパーミッションなどを考えると暗号化しないなら GnuTLS の
-<code>certtool --generate-privkey --bits 4096 --outfile example.key</code>
-の方法がオススメです。</p>
-
-<h3>GnuTLS</h3>
-
-<p>GnuTLS の <code>certtool</code> コマンドでは <code>--generate-privkey</code> で秘密鍵を作成できます。
-<code>--bits</code> で鍵のビット数を指定しないと squeeze だと 2048 ビット、 precise や wheezy だと 2432 ビットになりました。
-ファイルのパーミッションも <code>-rw-------</code> (600) で作成されるので、そのまま使えます。</p>
-
-<figure class='code'><figcaption><span>gnutls</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> certtool --generate-privkey --outfile example-tls.key
-</span><span class='line'><span class="go">Generating a 2432 bit RSA private key...</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><figcaption><span>gnutls</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> certtool --generate-privkey --bits 4096 --outfile example-tls.key
-</span><span class='line'><span class="go">Generating a 4096 bit RSA private key...</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>OpenSSL</h3>
-
-<p>OpenSSL では <code>genrsa</code> サブコマンドで生成します。
-OpenSSL 1.0.0 では <code>genpkey</code> サブコマンドになっているようですが、
-<code>genrsa</code> もまだ使えるので、以下は <code>genrsa</code> だけ書いています。</p>
-
-<p>ビット数を指定しないと squeeze だと 1024 ビット、 precise や wheezy だと 512 ビットになりました。
-また、そのままだとパーミッションが <code>-rw-rw-r--</code> (664) で生成されるので、あらかじめパーミッションを設定したファイルを用意しておいて上書きさせるか、すぐに <code>chmod</code> で変更しておいた方が良さそうです。</p>
-
-<figure class='code'><figcaption><span>openssl</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> touch example-ssl.key
-</span><span class='line'><span class="gp">$</span> chmod 600 example-ssl.key
-</span><span class='line'><span class="gp">$</span> openssl genrsa -out example-ssl.key
-</span><span class='line'><span class="go">Generating RSA private key, 512 bit long modulus</span>
-</span><span class='line'><span class="go">....++++++++++++</span>
-</span><span class='line'><span class="go">.........................++++++++++++</span>
-</span><span class='line'><span class="go">e is 65537 (0x10001)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><figcaption><span>openssl</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> touch example-ssl.key
-</span><span class='line'><span class="gp">$</span> chmod 600 example-ssl.key
-</span><span class='line'><span class="gp">$</span> openssl genrsa -out example-ssl.key 4096
-</span><span class='line'><span class="go">Generating RSA private key, 4096 bit long modulus</span>
-</span><span class='line'><span class="go">......................................................++</span>
-</span><span class='line'><span class="go">...........++</span>
-</span><span class='line'><span class="go">e is 65537 (0x10001)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>ネット上見つかる情報では <code>-des3</code> などで生成したファイルを一度暗号化して、
-サーバーの起動時に不要になるようにすぐに外すような例もあるようですが、
-そんなことをするぐらいなら最初から暗号化せずに生成すれば良いと思います。</p>
-
-<p>暗号化した状態のファイルを別途バックアップするなどの目的があるのなら、
-意味があると思いますが、
-暗号化した状態のファイルを残さないのなら単なる無駄だと思います。</p>
-
-<h2>秘密鍵の内容確認</h2>
-
-<p>秘密鍵の内容を確認することはあまりないと思いますが、
-<code>openssl rsa -in example.key -text -noout</code>
-の方法がオススメです。</p>
-
-<h3>OpenSSL</h3>
-
-<p>OpenSSL で秘密鍵の内容を確認するには <code>rsa</code> サブコマンドを使います。
-<code>-text</code> で内容全体の表示で <code>-noout</code> は <code>-----BEGIN RSA PRIVATE KEY-----</code> から <code>-----END RSA PRIVATE KEY-----</code> を表示しないという意味です。
-秘密鍵本体の前にテキストの説明がついたものも元の秘密鍵と同様に扱えるようなので、
-デフォルトでは元の内容も出力するようになっているのだと思います。</p>
-
-<figure class='code'><figcaption><span>openssl</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> openssl rsa -in example-ssl.key -text -noout
-</span><span class='line'><span class="go">Private-Key: (4096 bit)</span>
-</span><span class='line'><span class="go">modulus:</span>
-</span><span class='line'><span class="go">    00:cb:35:ec:f6:00:5a:75:d7:55:14:f8:55:91:1a:</span>
-</span><span class='line'><span class="go"> (略)</span>
-</span><span class='line'><span class="go">publicExponent: 65537 (0x10001)</span>
-</span><span class='line'><span class="go">privateExponent:</span>
-</span><span class='line'><span class="go">    4d:86:de:47:a0:2c:e2:e6:6b:2c:5b:ed:f1:35:10:</span>
-</span><span class='line'><span class="go"> (略)</span>
-</span><span class='line'><span class="go">prime1:</span>
-</span><span class='line'><span class="go">    00:ef:49:b3:f8:4c:1e:a9:13:a9:fb:86:7e:80:7a:</span>
-</span><span class='line'><span class="go"> (略)</span>
-</span><span class='line'><span class="go">prime2:</span>
-</span><span class='line'><span class="go">    00:d9:67:2f:e1:4c:13:78:fa:dd:2b:7a:3e:f5:68:</span>
-</span><span class='line'><span class="go"> (略)</span>
-</span><span class='line'><span class="go">exponent1:</span>
-</span><span class='line'><span class="go">    00:ba:18:ee:ff:a7:6b:9d:01:2f:0c:f0:0f:88:29:</span>
-</span><span class='line'><span class="go"> (略)</span>
-</span><span class='line'><span class="go">exponent2:</span>
-</span><span class='line'><span class="go">    52:93:94:27:32:5b:4f:1f:92:74:9a:39:61:c3:ae:</span>
-</span><span class='line'><span class="go"> (略)</span>
-</span><span class='line'><span class="go">coefficient:</span>
-</span><span class='line'><span class="go">    44:e9:a2:de:87:e7:2d:f0:57:58:d6:fc:85:20:df:</span>
-</span><span class='line'><span class="go"> (略)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>GnuTLS</h3>
-
-<p>GnuTLS の <code>certtool</code> で秘密鍵の内容を確認するには <code>-k</code> (<code>--key-info</code>) を使います。
-<code>openssl</code> の <code>-noout</code> 相当のオプションは見つけられませんでした。</p>
-
-<figure class='code'><figcaption><span>gnutls</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> certtool -k --infile example-tls.key
-</span><span class='line'><span class="go">Public Key Info:</span>
-</span><span class='line'><span class="go">        Public Key Algorithm: RSA</span>
-</span><span class='line'><span class="go">        Key Security Level: High</span>
-</span><span class='line'><span class="go">modulus:</span>
-</span><span class='line'><span class="go">        00:da:45:da:ca:13:ac:59:43:55:87:68:04:16:1a:</span>
-</span><span class='line'><span class="go">     (略)</span>
-</span><span class='line'><span class="go">public exponent:</span>
-</span><span class='line'><span class="go">        01:00:01:</span>
-</span><span class='line'><span class="go">private exponent:</span>
-</span><span class='line'><span class="go">        3c:5b:18:96:cc:3d:da:28:fe:5b:84:ed:ac:56:e2:</span>
-</span><span class='line'><span class="go">     (略)</span>
-</span><span class='line'><span class="go">prime1:</span>
-</span><span class='line'><span class="go">        00:dc:f3:92:13:d5:c7:cf:bc:9f:76:b3:f6:a2:60:</span>
-</span><span class='line'><span class="go">     (略)</span>
-</span><span class='line'><span class="go">prime2:</span>
-</span><span class='line'><span class="go">        00:fc:e5:83:0e:2e:d4:a1:be:37:bf:05:6e:c3:d3:</span>
-</span><span class='line'><span class="go">     (略)</span>
-</span><span class='line'><span class="go">coefficient:</span>
-</span><span class='line'><span class="go">        63:74:e3:95:9e:d6:6c:7d:d9:2d:ad:45:f8:0b:1a:</span>
-</span><span class='line'><span class="go">     (略)</span>
-</span><span class='line'><span class="go">exp1:</span>
-</span><span class='line'><span class="go">        00:a1:1d:a7:9e:79:1c:2b:da:42:79:bf:7f:10:26:</span>
-</span><span class='line'><span class="go">     (略)</span>
-</span><span class='line'><span class="go">exp2:</span>
-</span><span class='line'><span class="go">        00:b3:be:9c:ab:53:f5:a5:10:01:a7:2f:41:4e:c5:</span>
-</span><span class='line'><span class="go">     (略)</span>
-</span><span class='line'><span class="go">        c4:31:</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">Public Key ID: 45:44:BC:C4:BB:95:24:97:5D:C2:95:BF:27:95:02:2C:50:09:9E:35</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">-----BEGIN RSA PRIVATE KEY-----</span>
-</span><span class='line'><span class="go">(略)</span>
-</span><span class='line'><span class="go">-----END RSA PRIVATE KEY-----</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>CSR 作成と内容確認</h2>
-
-<p>OpenSSL は <code>openssl req</code> で作成も内容の確認も出来ます。
-GnuTLS の <code>certtool</code> は <code>-q</code> (<code>--generate-request</code>) で作成して
-<code>--crq-info</code> で内容を確認できます。</p>
-
-<p>以下の例ではそれぞれで作成して、両方で内容を確認しています。</p>
-
-<h3>OpenSSL</h3>
-
-<p>OpenSSL では <code>C</code> と <code>ST</code> と <code>O</code> にデフォルト値が入っていて、
-対話的に作成しつつ空欄にしたい時は
-別途 <code>openssl.cnf</code> を用意する必要がありそうです。</p>
-
-<figure class='code'><figcaption><span>openssl</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-<span class='line-number'>51</span>
-<span class='line-number'>52</span>
-<span class='line-number'>53</span>
-<span class='line-number'>54</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> openssl req -new -key example-ssl.key -out example-ssl.csr
-</span><span class='line'><span class="go">You are about to be asked to enter information that will be incorporated</span>
-</span><span class='line'><span class="go">into your certificate request.</span>
-</span><span class='line'><span class="go">What you are about to enter is what is called a Distinguished Name or a DN.</span>
-</span><span class='line'><span class="go">There are quite a few fields but you can leave some blank</span>
-</span><span class='line'><span class="go">For some fields there will be a default value,</span>
-</span><span class='line'><span class="go">If you enter &#39;.&#39;, the field will be left blank.</span>
-</span><span class='line'><span class="go">-----</span>
-</span><span class='line'><span class="go">Country Name (2 letter code) [AU]:JP</span>
-</span><span class='line'><span class="go">State or Province Name (full name) [Some-State]:Osaka</span>
-</span><span class='line'><span class="go">Locality Name (eg, city) []:</span>
-</span><span class='line'><span class="go">Organization Name (eg, company) [Internet Widgits Pty Ltd]:</span>
-</span><span class='line'><span class="go">Organizational Unit Name (eg, section) []:</span>
-</span><span class='line'><span class="go">Common Name (e.g. server FQDN or YOUR name) []:ssl.example.jp</span>
-</span><span class='line'><span class="go">Email Address []:</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">Please enter the following &#39;extra&#39; attributes</span>
-</span><span class='line'><span class="go">to be sent with your certificate request</span>
-</span><span class='line'><span class="go">A challenge password []:</span>
-</span><span class='line'><span class="go">An optional company name []:</span>
-</span><span class='line'><span class="gp">$</span> openssl req -in example-ssl.csr -text -noout
-</span><span class='line'><span class="go">Certificate Request:</span>
-</span><span class='line'><span class="go">    Data:</span>
-</span><span class='line'><span class="go">        Version: 0 (0x0)</span>
-</span><span class='line'><span class="go">        Subject: C=JP, ST=Osaka, O=Internet Widgits Pty Ltd, CN=ssl.example.jp</span>
-</span><span class='line'><span class="go">        Subject Public Key Info:</span>
-</span><span class='line'><span class="go">            Public Key Algorithm: rsaEncryption</span>
-</span><span class='line'><span class="go">                Public-Key: (4096 bit)</span>
-</span><span class='line'><span class="go">                Modulus:</span>
-</span><span class='line'><span class="go">                    00:cb:35:ec:f6:00:5a:75:d7:55:14:f8:55:91:1a:</span>
-</span><span class='line'><span class="go">                 (略)</span>
-</span><span class='line'><span class="go">                Exponent: 65537 (0x10001)</span>
-</span><span class='line'><span class="go">        Attributes:</span>
-</span><span class='line'><span class="go">            a0:00</span>
-</span><span class='line'><span class="go">    Signature Algorithm: sha1WithRSAEncryption</span>
-</span><span class='line'><span class="go">         4f:1a:a7:57:9f:88:f3:17:23:aa:51:12:11:ff:c0:24:31:4c:</span>
-</span><span class='line'><span class="go">      (略)</span>
-</span><span class='line'><span class="gp">$</span> certtool --crq-info --infile example-ssl.csr
-</span><span class='line'><span class="go">PKCS #10 Certificate Request Information:</span>
-</span><span class='line'><span class="go">        Version: 1</span>
-</span><span class='line'><span class="go">        Subject: C=JP,ST=Osaka,O=Internet Widgits Pty Ltd,CN=ssl.example.jp</span>
-</span><span class='line'><span class="go">        Subject Public Key Algorithm: RSA</span>
-</span><span class='line'><span class="go">                Modulus (bits 4096):</span>
-</span><span class='line'><span class="go">                        cb:35:ec:f6:00:5a:75:d7:55:14:f8:55:91:1a:9b:83</span>
-</span><span class='line'><span class="go">                     (略)</span>
-</span><span class='line'><span class="go">                Exponent:</span>
-</span><span class='line'><span class="go">                        01:00:01</span>
-</span><span class='line'><span class="go">Other Information:</span>
-</span><span class='line'><span class="go">        Public Key Id:</span>
-</span><span class='line'><span class="go">                c14459bdb79e6b71e6303e4ffd9c7ab43dc9b9df</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">-----BEGIN NEW CERTIFICATE REQUEST-----</span>
-</span><span class='line'><span class="go">(略)</span>
-</span><span class='line'><span class="go">-----END NEW CERTIFICATE REQUEST-----</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>GnuTLS</h3>
-
-<p>GnuTLS ではテンプレートファイルを作成しておいて <code>--template</code> で指定する方法が多いようですが、
-対話的にも作成できました。
-<code>Subject</code> を <code>CN</code> だけにするのは OpenSSL より簡単に出来たのですが、
-<code>Requested Extensions</code> が設定されるようなので、
-不要な場合には困りそうです。</p>
-
-<figure class='code'><figcaption><span>gnutls</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-<span class='line-number'>51</span>
-<span class='line-number'>52</span>
-<span class='line-number'>53</span>
-<span class='line-number'>54</span>
-<span class='line-number'>55</span>
-<span class='line-number'>56</span>
-<span class='line-number'>57</span>
-<span class='line-number'>58</span>
-<span class='line-number'>59</span>
-<span class='line-number'>60</span>
-<span class='line-number'>61</span>
-<span class='line-number'>62</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> certtool -q --load-privkey example-tls.key --outfile example-tls.csr
-</span><span class='line'><span class="go">Generating a PKCS #10 certificate request...</span>
-</span><span class='line'><span class="go">Country name (2 chars):</span>
-</span><span class='line'><span class="go">Organization name:</span>
-</span><span class='line'><span class="go">Organizational unit name:</span>
-</span><span class='line'><span class="go">Locality name:</span>
-</span><span class='line'><span class="go">State or province name:</span>
-</span><span class='line'><span class="go">Common name: tls.example.jp</span>
-</span><span class='line'><span class="go">UID:</span>
-</span><span class='line'><span class="go">Enter a dnsName of the subject of the certificate:</span>
-</span><span class='line'><span class="go">Enter the IP address of the subject of the certificate:</span>
-</span><span class='line'><span class="go">Enter the e-mail of the subject of the certificate:</span>
-</span><span class='line'><span class="go">Enter a challenge password:</span>
-</span><span class='line'><span class="go">Does the certificate belong to an authority? (y/N):</span>
-</span><span class='line'><span class="go">Will the certificate be used for signing (DHE and RSA-EXPORT ciphersuites)? (y/N):</span>
-</span><span class='line'><span class="go">Will the certificate be used for encryption (RSA ciphersuites)? (y/N):</span>
-</span><span class='line'><span class="go">Is this a TLS web client certificate? (y/N):</span>
-</span><span class='line'><span class="go">Is this also a TLS web server certificate? (y/N):</span>
-</span><span class='line'><span class="gp">$</span> openssl req -in example-tls.csr -text -noout
-</span><span class='line'><span class="go">Certificate Request:</span>
-</span><span class='line'><span class="go">    Data:</span>
-</span><span class='line'><span class="go">        Version: 0 (0x0)</span>
-</span><span class='line'><span class="go">        Subject: CN=tls.example.jp</span>
-</span><span class='line'><span class="go">        Subject Public Key Info:</span>
-</span><span class='line'><span class="go">            Public Key Algorithm: rsaEncryption</span>
-</span><span class='line'><span class="go">                Public-Key: (4096 bit)</span>
-</span><span class='line'><span class="go">                Modulus:</span>
-</span><span class='line'><span class="go">                    00:da:45:da:ca:13:ac:59:43:55:87:68:04:16:1a:</span>
-</span><span class='line'><span class="go">                 (略)</span>
-</span><span class='line'><span class="go">                Exponent: 65537 (0x10001)</span>
-</span><span class='line'><span class="go">        Attributes:</span>
-</span><span class='line'><span class="go">        Requested Extensions:</span>
-</span><span class='line'><span class="go">            X509v3 Basic Constraints: critical</span>
-</span><span class='line'><span class="go">                CA:FALSE</span>
-</span><span class='line'><span class="go">            X509v3 Key Usage: critical</span>
-</span><span class='line'><span class="go">                Digital Signature</span>
-</span><span class='line'><span class="go">    Signature Algorithm: sha1WithRSAEncryption</span>
-</span><span class='line'><span class="go">         cb:71:d2:c9:a2:97:14:74:f0:63:69:6b:36:31:ff:ce:f2:a0:</span>
-</span><span class='line'><span class="go">      (略)</span>
-</span><span class='line'><span class="gp">$</span> certtool --crq-info --infile example-tls.csr
-</span><span class='line'><span class="go">PKCS #10 Certificate Request Information:</span>
-</span><span class='line'><span class="go">        Version: 1</span>
-</span><span class='line'><span class="go">        Subject: CN=tls.example.jp</span>
-</span><span class='line'><span class="go">        Subject Public Key Algorithm: RSA</span>
-</span><span class='line'><span class="go">                Modulus (bits 4096):</span>
-</span><span class='line'><span class="go">                        da:45:da:ca:13:ac:59:43:55:87:68:04:16:1a:09:41</span>
-</span><span class='line'><span class="go">                     (略)</span>
-</span><span class='line'><span class="go">                Exponent:</span>
-</span><span class='line'><span class="go">                        01:00:01</span>
-</span><span class='line'><span class="go">        Attributes:</span>
-</span><span class='line'><span class="go">                Extensions:</span>
-</span><span class='line'><span class="go">                        Basic Constraints (critical):</span>
-</span><span class='line'><span class="go">                                Certificate Authority (CA): FALSE</span>
-</span><span class='line'><span class="go">                        Key Usage (critical):</span>
-</span><span class='line'><span class="go">                                Digital signature.</span>
-</span><span class='line'><span class="go">Other Information:</span>
-</span><span class='line'><span class="go">        Public Key Id:</span>
-</span><span class='line'><span class="go">                4544bcc4bb9524975dc295bf2795022c50099e35</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">-----BEGIN NEW CERTIFICATE REQUEST-----</span>
-</span><span class='line'><span class="go">(略)</span>
-</span><span class='line'><span class="go">-----END NEW CERTIFICATE REQUEST-----</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>まとめて作成</h2>
-
-<p>CSR の生成の時に秘密鍵を指定しないと、
-CSR と一緒に秘密鍵を生成できるようです。</p>
-
-<h3>OpenSSL</h3>
-
-<p><code>openssl req -new</code> で <code>-key</code> の代わりに <code>-newkey</code> などを指定すると CSR と一緒に秘密鍵も生成できます。
-この場合もそのままだとパーミッションが <code>-rw-rw-r--</code> (664) になるようなので、注意が必要です。
-<code>-nodes</code> を付けないと暗号化するためのパスフレーズを要求されます。</p>
-
-<figure class='code'><figcaption><span>openssl</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> openssl req -new -newkey rsa:4096 -nodes -keyout server.key -out server.csr
-</span><span class='line'><span class="go">Generating a 4096 bit RSA private key</span>
-</span><span class='line'><span class="go">.............................................................................................................................................................................................................................................................................................................................................++</span>
-</span><span class='line'><span class="go">......++</span>
-</span><span class='line'><span class="go">writing new private key to &#39;server.key&#39;</span>
-</span><span class='line'><span class="go">-----</span>
-</span><span class='line'><span class="go">You are about to be asked to enter information that will be incorporated</span>
-</span><span class='line'><span class="go">into your certificate request.</span>
-</span><span class='line'><span class="go">What you are about to enter is what is called a Distinguished Name or a DN.</span>
-</span><span class='line'><span class="go">There are quite a few fields but you can leave some blank</span>
-</span><span class='line'><span class="go">For some fields there will be a default value,</span>
-</span><span class='line'><span class="go">If you enter &#39;.&#39;, the field will be left blank.</span>
-</span><span class='line'><span class="go">-----</span>
-</span><span class='line'><span class="go">Country Name (2 letter code) [AU]:JP</span>
-</span><span class='line'><span class="go">State or Province Name (full name) [Some-State]:Osaka</span>
-</span><span class='line'><span class="go">Locality Name (eg, city) []:</span>
-</span><span class='line'><span class="go">Organization Name (eg, company) [Internet Widgits Pty Ltd]:</span>
-</span><span class='line'><span class="go">Organizational Unit Name (eg, section) []:</span>
-</span><span class='line'><span class="go">Common Name (e.g. server FQDN or YOUR name) []:ssl.example.jp</span>
-</span><span class='line'><span class="go">Email Address []:</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">Please enter the following &#39;extra&#39; attributes</span>
-</span><span class='line'><span class="go">to be sent with your certificate request</span>
-</span><span class='line'><span class="go">A challenge password []:</span>
-</span><span class='line'><span class="go">An optional company name []:</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>GnuTLS</h3>
-
-<p><code>certtool -q</code> で <code>--load-privkey</code> を指定しないと秘密鍵も一緒に生成するようです。
-出力は <code>--outfile</code> で指定したファイルにまとめて入ってしまって、
-使い勝手は良くないので、個別に生成した方が良さそうです。</p>
-
-<figure class='code'><figcaption><span>gnutls</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> certtool -q --outfile out.txt
-</span><span class='line'><span class="go">Generating a PKCS #10 certificate request...</span>
-</span><span class='line'><span class="go">Generating a 2432 bit RSA private key...</span>
-</span><span class='line'><span class="go">Country name (2 chars):</span>
-</span><span class='line'><span class="go">Organization name:</span>
-</span><span class='line'><span class="go">Organizational unit name:</span>
-</span><span class='line'><span class="go">Locality name:</span>
-</span><span class='line'><span class="go">State or province name:</span>
-</span><span class='line'><span class="go">Common name: tls.example.jp</span>
-</span><span class='line'><span class="go">UID:</span>
-</span><span class='line'><span class="go">Enter a dnsName of the subject of the certificate:</span>
-</span><span class='line'><span class="go">Enter the IP address of the subject of the certificate:</span>
-</span><span class='line'><span class="go">Enter the e-mail of the subject of the certificate:</span>
-</span><span class='line'><span class="go">Enter a challenge password:</span>
-</span><span class='line'><span class="go">Does the certificate belong to an authority? (y/N):</span>
-</span><span class='line'><span class="go">Will the certificate be used for signing (DHE and RSA-EXPORT ciphersuites)? (y/N):</span>
-</span><span class='line'><span class="go">Will the certificate be used for encryption (RSA ciphersuites)? (y/N):</span>
-</span><span class='line'><span class="go">Is this a TLS web client certificate? (y/N):</span>
-</span><span class='line'><span class="go">Is this also a TLS web server certificate? (y/N):</span>
-</span><span class='line'><span class="gp">$</span> cat out.txt
-</span><span class='line'><span class="go">-----BEGIN RSA PRIVATE KEY-----</span>
-</span><span class='line'><span class="go">(略)</span>
-</span><span class='line'><span class="go">-----END RSA PRIVATE KEY-----</span>
-</span><span class='line'><span class="go">PKCS #10 Certificate Request Information:</span>
-</span><span class='line'><span class="go">        Version: 1</span>
-</span><span class='line'><span class="go">        Subject: CN=tls.example.jp</span>
-</span><span class='line'><span class="go">        Subject Public Key Algorithm: RSA</span>
-</span><span class='line'><span class="go">                Modulus (bits 2432):</span>
-</span><span class='line'><span class="go">                        f4:ff:66:e8:c6:19:ab:7b:39:e3:72:ff:ee:13:fa:cf</span>
-</span><span class='line'><span class="go">                     (略)</span>
-</span><span class='line'><span class="go">                Exponent:</span>
-</span><span class='line'><span class="go">                        01:00:01</span>
-</span><span class='line'><span class="go">        Attributes:</span>
-</span><span class='line'><span class="go">                Extensions:</span>
-</span><span class='line'><span class="go">                        Basic Constraints (critical):</span>
-</span><span class='line'><span class="go">                                Certificate Authority (CA): FALSE</span>
-</span><span class='line'><span class="go">                        Key Usage (critical):</span>
-</span><span class='line'><span class="go">                                Digital signature.</span>
-</span><span class='line'><span class="go">Other Information:</span>
-</span><span class='line'><span class="go">        Public Key Id:</span>
-</span><span class='line'><span class="go">                61c9cef12d691e3373f71ad3a82d1ac4c4b71793</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">-----BEGIN NEW CERTIFICATE REQUEST-----</span>
-</span><span class='line'><span class="go">(略)</span>
-</span><span class='line'><span class="go">-----END NEW CERTIFICATE REQUEST-----</span>
-</span></code></pre></td></tr></table></div></figure>
-
 ]]></content>
   </entry>
   

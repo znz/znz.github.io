@@ -4,7 +4,7 @@
   <title><![CDATA[Category: zsh | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/zsh/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-21T12:00:16+09:00</updated>
+  <updated>2014-06-21T13:47:51+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,94 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[シェルで glob 結果を事前に確認する方法]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-21-confirm-glob.html"/>
+    <updated>2014-06-21T13:16:56+09:00</updated>
+    <id>http://blog.n-z.jp/blog/confirm-glob</id>
+    <content type="html"><![CDATA[<p><code>rm *~</code> のつもりで <code>rm * ~</code> (半角スペースが混ざっている) のように実行してしまうような間違いをすると危険です。</p>
+
+<p>その対策として <code>tcsh</code> には <code>rmstar</code> という設定があったり
+<code>zsh</code> には <code>RM_STAR_SILENT</code> や <code>RM_STAR_WAIT</code> という設定があるのですが、
+ちゃんと展開結果を確認してからコマンドを実行する方が安全です。</p>
+
+<p>また <code>rm</code> 以外でも展開結果を事前に確認できると便利なことが多いです。</p>
+
+<!--more-->
+
+
+<h2>展開結果の確認方法</h2>
+
+<p><code>bash</code> や <code>zsh</code> の一般的なキー割り当てだと <code>C-x g</code> (Control を押しながら x を押して Control を離して g) で展開結果を確認できます。</p>
+
+<p>Tab キーだとコマンドライン中に展開されてしまいますが、
+<code>C-x g</code> だと確認だけ出来ます。</p>
+
+<h3>bash の場合</h3>
+
+<p>たとえば <code>bash</code> なら以下のように展開結果が出て、
+プロンプトの行が出てきます。</p>
+
+<p>```console bash</p>
+
+<pre><code>$ echo /etc/host*&lt;C-x&gt;g
+host.conf    hostname     hosts        hosts.allow  hosts.deny
+$ echo /etc/host*
+</code></pre>
+
+<p>```</p>
+
+<h3>zsh の場合</h3>
+
+<p><code>zsh</code> ならプロンプトの行の下に展開結果が出てきます。</p>
+
+<p>```console zsh</p>
+
+<pre><code>% echo /etc/host*
+/etc/host.conf    /etc/hostname     /etc/hosts        /etc/hosts.allow  /etc/hosts.deny
+</code></pre>
+
+<p>```</p>
+
+<h2>Tab キーの動作</h2>
+
+<p>比較のため Tab キーでの動作例も載せておきます。</p>
+
+<h3>bash の場合</h3>
+
+<p>実際には同じ行でしたが、最初の展開結果に置き換わりました。</p>
+
+<p>```console bash</p>
+
+<pre><code>$ echo /etc/host*&lt;tab&gt;
+$ echo /etc/host.conf
+</code></pre>
+
+<p>```</p>
+
+<h3>zsh の場合</h3>
+
+<p>こちらも実際には同じ行ですが、すべての展開結果に置き換わりました。</p>
+
+<p>```console zsh</p>
+
+<pre><code>% echo /etc/host*&lt;tab&gt;
+% echo /etc/host.conf /etc/hostname /etc/hosts /etc/hosts.allow /etc/hosts.deny
+</code></pre>
+
+<p>```</p>
+
+<p>glob で指定しにくい一部のファイルだけ除外するなど、展開された方が便利な時は
+Tab キーで展開してからコマンドラインを編集して実行することもあります。</p>
+
+<h2>まとめ</h2>
+
+<p>一般的な bash 環境ならどこでも使えて、
+複雑な glob の展開結果の確認にも便利なので、
+<code>C-x g</code> は非常にオススメです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[hamlからslimへの移行でひっかかったこと]]></title>
@@ -604,189 +692,6 @@ fi
 
 <p>あまり変更しないファイルなら更新チェックの無駄の方が大きいかもしれないので、
 そのトレードオフは考えておく必要がありそうです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[zshでcdの履歴管理に標準添付のcdrを使う]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-12-zsh-cdr.html"/>
-    <updated>2013-11-12T01:16:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/zsh-cdr</id>
-    <content type="html"><![CDATA[<p>zsh は <code>cd -[TAB]</code> で補完できる directory stack が
-<code>setopt autopushd</code> と組み合わせていると非常に便利なので、
-<a href="https://github.com/znz/dot-shell/blob/c197f9e3232e8dca910be4ea4ae555cc60468692/profile.d/50dirstack.zsh">directory stack を自前で保存する仕組みを作った</a>り、
-GNU screen の他の WINDOW のディレクトリに移動するための
-<a href="https://github.com/znz/dot-shell/blob/523e3adaf9b776f05185acfb24bc19ef5f22c418/profile.d/70cds.zsh">cdsというコマンド</a>
-を作ったりして、
-現状でもあまり困っていませんでした。</p>
-
-<p>しかし、 <code>zshcontrib(1)</code> に入っているものも試してみるのが
-良さそうと思って試してみました。</p>
-
-<!--more-->
-
-
-<h2>ドキュメント</h2>
-
-<p>ドキュメントは
-<code>man zshcontrib</code> か、
-<code>pager $^fpath/cdr(N)</code> で読めます。</p>
-
-<h2>cdr コマンドの使い方</h2>
-
-<p><code>cdr [TAB]</code> で補完して使ったり、
-<code>cdr -l</code> で一覧を出したり、
-<code>cdr -e</code> で一覧を編集したりできます。</p>
-
-<p><code>cdr -e</code> の編集は <code>zle</code> なので、
-<code>bindkey -e</code> なら、
-普通のカーソル移動などの他に
-ただの <code>Enter</code> だと編集終了になってしまうので、
-<code>^[^M</code> (<code>ESC</code> に続けて <code>Enter</code>) で改行を入力して行を増やしたり分割したり
-出来ることを知っておけば充分だと思います。</p>
-
-<h2>設定全体</h2>
-
-<p>全体としては以下のように設定してみました。</p>
-
-<p>以降は設定内容を個別に解説していきます。</p>
-
-<p><code>sh
-if [[ -n $(echo ${^fpath}/chpwd_recent_dirs(N)) &amp;&amp; -n $(echo ${^fpath}/cdr(N)) ]]; then
-autoload -Uz chpwd_recent_dirs cdr add-zsh-hook
-  add-zsh-hook chpwd chpwd_recent_dirs
-  zstyle ':completion:*:*:cdr:*:*' menu selection
-  zstyle ':completion:*' recent-dirs-insert both
-  zstyle ':chpwd:*' recent-dirs-max 500
-  zstyle ':chpwd:*' recent-dirs-default true
-  zstyle ':chpwd:*' recent-dirs-file "${XDG_CACHE_HOME:-$HOME/.cache}/shell/chpwd-recent-dirs"
-  zstyle ':chpwd:*' recent-dirs-pushd true
-fi
-</code></p>
-
-<h2>使えるかどうかのガード条件</h2>
-
-<p>昔、
-zsh の設定を環境ごとに分岐させようとした時、
-<code>is-at-least</code> は古い zsh で使えなかったのと、
-バックポートで使える可能性があったり、
-自前の <code>fpath</code> にファイルを追加した場合などを考慮して、
-機能自体の存在をチェックするようにしています。</p>
-
-<p>ruby で推奨されているやり方として、
-<code>RUBY_VERSION</code> をチェックするのではなく、
-機能の存在をチェックするべき、
-という話があったことも影響しています。</p>
-
-<p><code>sh
-  if [[ -n $(echo ${^fpath}/chpwd_recent_dirs(N)) &amp;&amp; -n $(echo ${^fpath}/cdr(N)) ]]; then
-</code>
-Glob Qualifiers の <code>(N)</code> (<code>NULL_GLOB</code>) を使っている関係で、
-一度 <code>echo</code> してから <code>-n</code> でチェックしています。
-もっと簡潔に書ける方法があれば教えてください。</p>
-
-<h2>autoload</h2>
-
-<p><code>autoload -U</code>
-と書いてある設定例もありますが、
-ドキュメントにあったように
-<code>autoload -Uz</code>
-を使っています。</p>
-
-<p><code>-z</code>
-を付けないと
-<code>KSH_AUTOLOAD</code>
-の設定の影響を受けるそうなので、
-基本的には <code>-z</code> を明示的に付けるのがおすすめのようです。</p>
-
-<h2>add-zsh-hook</h2>
-
-<p><code>chpwd_functions</code> への追加は</p>
-
-<p><code>sh
-typeset -ga chpwd_functions
-chpwd_functions+=chpwd_recent_dirs
-</code></p>
-
-<p>としても良かったのですが、
-念のため <code>typeset</code> するのが最近の zsh しか使わないのなら無駄に感じたのと、
-<code>cdr</code> のドキュメントに書いてあったこともあり、
-<code>add-zsh-hook</code>
-を使ってみました。</p>
-
-<h2>menu selection</h2>
-
-<p>Web で設定例を見ると
-<code>zstyle ':completion:*' menu select</code>
-になっていることが多いのですが、
-基本的に menu select は使っていなかったので、
-<code>zshcontrib(1)</code> や
-<code>${^fpath}/cdr(N)</code> に書いてあった通りに
-<code>':completion:*'</code>
-ではなく
-<code>':completion:*:*:cdr:*:*'</code>
-で、
-値も
-<code>select</code>
-ではなく
-<code>selection</code>
-で設定しています。</p>
-
-<p><code>sh
-  zstyle ':completion:*:*:cdr:*:*' menu selection
-</code></p>
-
-<h2>recent-dirs-insert</h2>
-
-<p>これは
-<code>cdr [TAB]</code>
-の挙動の設定で、
-好みが分かれると思うので、
-<code>always</code>, <code>fallback</code>, <code>both</code>
-を一通り試してみるのをおすすめします。</p>
-
-<p><code>both</code> だと通常の <code>cd</code> の補完にメニューから選ぶ補完候補に履歴が入っているという感じに見えました。
-あまりうまく使えていないので、そのうち他の設定に変えて試してみようと思っています。</p>
-
-<h2>recent-dirs-max</h2>
-
-<p>設定を保存する最大数です。
-デフォルト値は 20 です。</p>
-
-<h2>recent-dirs-file</h2>
-
-<p><a href="http://standards.freedesktop.org/basedir-spec/latest/index.html">XDG Base Directory Specification</a>
-に合わせて <code>~/.cache</code> を使うようにしています。</p>
-
-<p>他の部分で既に <code>mkdir -p</code> しているので、ここでは省略しています。</p>
-
-<p><code>sh
-  #mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/shell"
-  zstyle ':chpwd:*' recent-dirs-file "${XDG_CACHE_HOME:-$HOME/.cache}/shell/chpwd-recent-dirs"
-</code></p>
-
-<p>ドキュメントにあるように、
-以下のような設定にして TTY ごとのファイルと
-グローバルのファイルにわけるのも良いかもしれません。</p>
-
-<p><code>sh
-  zstyle recent-dirs-file ':chpwd:*' ~/.chpwd-recent-dirs-${TTY##*/} +
-</code></p>
-
-<h2>recent-dirs-pushd</h2>
-
-<p>他の設定が影響していたのか、
-何が原因だったのかは追求していないのですが、
-<code>recent-dirs-pushd</code> を <code>true</code> にしないと
-最初はうまく動かなかったのですが、
-履歴がたまったからなのか、
-なぜか今はこの設定に関係なくちゃんと動いているようです。</p>
-
-<h2>recent-dirs-prune</h2>
-
-<p>recent の一覧に追加しないディレクトリのパターンなどを設定できるようですが、
-必要性を感じていないので、
-まだ何も設定していません。</p>
 ]]></content>
   </entry>
   

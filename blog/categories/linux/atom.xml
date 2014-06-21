@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-21T12:00:16+09:00</updated>
+  <updated>2014-06-21T13:47:51+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,94 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[シェルで glob 結果を事前に確認する方法]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-21-confirm-glob.html"/>
+    <updated>2014-06-21T13:16:56+09:00</updated>
+    <id>http://blog.n-z.jp/blog/confirm-glob</id>
+    <content type="html"><![CDATA[<p><code>rm *~</code> のつもりで <code>rm * ~</code> (半角スペースが混ざっている) のように実行してしまうような間違いをすると危険です。</p>
+
+<p>その対策として <code>tcsh</code> には <code>rmstar</code> という設定があったり
+<code>zsh</code> には <code>RM_STAR_SILENT</code> や <code>RM_STAR_WAIT</code> という設定があるのですが、
+ちゃんと展開結果を確認してからコマンドを実行する方が安全です。</p>
+
+<p>また <code>rm</code> 以外でも展開結果を事前に確認できると便利なことが多いです。</p>
+
+<!--more-->
+
+
+<h2>展開結果の確認方法</h2>
+
+<p><code>bash</code> や <code>zsh</code> の一般的なキー割り当てだと <code>C-x g</code> (Control を押しながら x を押して Control を離して g) で展開結果を確認できます。</p>
+
+<p>Tab キーだとコマンドライン中に展開されてしまいますが、
+<code>C-x g</code> だと確認だけ出来ます。</p>
+
+<h3>bash の場合</h3>
+
+<p>たとえば <code>bash</code> なら以下のように展開結果が出て、
+プロンプトの行が出てきます。</p>
+
+<p>```console bash</p>
+
+<pre><code>$ echo /etc/host*&lt;C-x&gt;g
+host.conf    hostname     hosts        hosts.allow  hosts.deny
+$ echo /etc/host*
+</code></pre>
+
+<p>```</p>
+
+<h3>zsh の場合</h3>
+
+<p><code>zsh</code> ならプロンプトの行の下に展開結果が出てきます。</p>
+
+<p>```console zsh</p>
+
+<pre><code>% echo /etc/host*
+/etc/host.conf    /etc/hostname     /etc/hosts        /etc/hosts.allow  /etc/hosts.deny
+</code></pre>
+
+<p>```</p>
+
+<h2>Tab キーの動作</h2>
+
+<p>比較のため Tab キーでの動作例も載せておきます。</p>
+
+<h3>bash の場合</h3>
+
+<p>実際には同じ行でしたが、最初の展開結果に置き換わりました。</p>
+
+<p>```console bash</p>
+
+<pre><code>$ echo /etc/host*&lt;tab&gt;
+$ echo /etc/host.conf
+</code></pre>
+
+<p>```</p>
+
+<h3>zsh の場合</h3>
+
+<p>こちらも実際には同じ行ですが、すべての展開結果に置き換わりました。</p>
+
+<p>```console zsh</p>
+
+<pre><code>% echo /etc/host*&lt;tab&gt;
+% echo /etc/host.conf /etc/hostname /etc/hosts /etc/hosts.allow /etc/hosts.deny
+</code></pre>
+
+<p>```</p>
+
+<p>glob で指定しにくい一部のファイルだけ除外するなど、展開された方が便利な時は
+Tab キーで展開してからコマンドラインを編集して実行することもあります。</p>
+
+<h2>まとめ</h2>
+
+<p>一般的な bash 環境ならどこでも使えて、
+複雑な glob の展開結果の確認にも便利なので、
+<code>C-x g</code> は非常にオススメです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Vagrant の Multi VM 間で IPsec を試した]]></title>
@@ -384,273 +472,6 @@ command)
 spam 対策は milter-manager だったり、
 firewall は <a href="packages.debian.org/ufw">ufw</a> だったり、
 いろいろと共通で使えるものが増えてきて楽になってきたように思います。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[VirtualBoxでdokkuを試した]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-15-dokku.html"/>
-    <updated>2013-11-15T15:35:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/dokku</id>
-    <content type="html"><![CDATA[<p>VirtualBox の中に Ubuntu 13.04 を入れて
-<a href="https://github.com/progrium/dokku">dokku</a>
-を試してみました。</p>
-
-<p><a href="http://blog.coiney.com/2013/08/10/create-my-own-heroku/">dokku + VirtualBoxで自分のHerokuを作る</a>
-を参考にしたのですが、
-情報が古いのか、
-README
-に書いてあるのとコマンドが違うところ
-(<code>gitreceive</code> が <code>sshcommand</code> になっているなど)
-があるので、
-README
-の手順を基準にするのが良さそうです。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<p>dokku の README に Ubuntu 13.10 と docker の組み合わせは
-まだ問題があり、
-13.04 が推奨と書いてあったので、
-13.04 を使いました。</p>
-
-<ul>
-<li>ホストOS : OS X 10.9</li>
-<li>VirtualBox 4.3.2</li>
-<li>ゲストOS : Ubuntu 13.04 (amd64)</li>
-<li>lxc-docker : 0.6.6</li>
-<li>dokku : 今の master ブランチ (59ef6510bc)</li>
-</ul>
-
-
-<h2>Ubuntu 13.04 (amd64) のインストール</h2>
-
-<p>OS のインストールは自分がこうしたというだけの話なので、
-興味が無ければ dokku のインストールまで飛ばしてください。</p>
-
-<p>いつものように
-<a href="http://ftp.jaist.ac.jp/pub/Linux/ubuntu-releases/">Ubuntu Releases の jaist ミラー</a>
-から
-<code>ubuntu-13.04-server-amd64.iso</code>
-をダウンロードしてインストールしました。</p>
-
-<p>最初のユーザーは <code>adminuser</code> で、
-<code>ssh</code> は後で入れるので、
-パッケージのチェックは入れずにインストールしました。
-ディスクは多めに 20GB に設定した以外はほぼデフォルトでインストールしました。</p>
-
-<h3>etckeeper の設定</h3>
-
-<ul>
-<li><code>sudo aptitude install etckeeper git</code> で <code>git</code> と一緒にインストールして <code>bzr</code> をインストールしないようにします。
-<code>bzr</code> がないので自動での <code>etckeeper init</code> は失敗するので、手動で実行します。</li>
-<li><code>EDITOR=vi sudoedit /etc/etckeeper/etckeeper.conf</code> で <code>VCS="git"</code> と <code>GIT_COMMIT_OPTIONS="-v"</code> に変更します。</li>
-<li><code>sudo etckeeper init</code> で初期化します。</li>
-<li><code>sudo etckeeper commit "Initial commit"</code> で今の状態をコミットしておきます。</li>
-<li><code>(cd /etc/ &amp;&amp; sudo git gc)</code> で <code>git gc</code> しておきます。</li>
-</ul>
-
-
-<h3>ufw の設定</h3>
-
-<ul>
-<li><code>/etc/default/ufw</code> の <code>DEFAULT_FORWARD_POLICY</code> を <code>DROP</code> から <code>ACCEPT</code> に変更しておきます。
-<code>DROP</code> のままだと後で <code>docker</code> の中から DNS の解決ができないのが原因で <code>! [remote rejected] master -&gt; master (pre-receive hook declined)</code> になります。</li>
-<li><code>sudo ufw enable</code> で有効にします。</li>
-<li><code>sudo ufw allow 22/tcp</code> で <code>ssh</code> を許可します。</li>
-<li><code>sudo ufw allow 80/tcp</code> で <code>http</code> を許可します。</li>
-<li><code>sudo etckeeper commit "enable ufw"</code> などで変更を保存します。</li>
-</ul>
-
-
-<h3>ssh の設定</h3>
-
-<ul>
-<li><code>sudo aptitude install ssh</code> でインストールします。</li>
-<li><code>/etc/hosts.deny</code> に <code>ALL: ALL</code> を追加してデフォルト拒否にします。</li>
-<li><code>/etc/hosts.allow</code> に <code>sshd: 127.0.0.1 [::1]</code>
-を追加してローカルホストからの接続を許可します。</li>
-<li><code>/etc/hosts.allow</code> に <code>sshd: 10.0.0.0/8</code> も追加して
-VirtualBox のポートフォワーディング経由の接続を許可します。</li>
-<li><code>/etc/ssh/sshd_config</code> (<code>ssh_config</code> ではない) に
-<code>AllowUsers adminuser</code> と <code>AllowUsers dokku</code> を追加して、
-特定のユーザーにだけ <code>ssh</code> で接続できるようにします。</li>
-</ul>
-
-
-<p>ホストOS側では Vagrant も使っていたので、
-ssh 用の鍵としては
-<a href="https://github.com/mitchellh/vagrant/tree/master/keys">Vagrant の Insecure Keypair</a>
-を使いました。</p>
-
-<p>そして
-ホストOS側の
-<code>~/.ssh/config</code>
-の設定としては、
-グローバルの設定も含めると以下のようにしました。</p>
-
-<p><code>
-ExitOnForwardFailure yes
-Ciphers aes256-ctr,aes192-ctr,aes128-ctr
-HashKnownHosts no
-NoHostAuthenticationForLocalhost yes
-ServerAliveInterval 30
-Host raring64
-  Ciphers arcfour256,arcfour128
-  HostName 127.0.0.1
-  User adminuser
-  Port 21304
-  UserKnownHostsFile /dev/null
-  StrictHostKeyChecking no
-  PasswordAuthentication no
-  IdentityFile ~/.vagrant.d/insecure_private_key
-  IdentitiesOnly yes
-</code></p>
-
-<p><code>Ciphers</code> はデフォルトはセキュアなものを使い、
-VM 用には速いものを使うようにしています。</p>
-
-<h2>VirtualBox のポートフォワーディング設定</h2>
-
-<p>設定のネットワークのポートフォワーディングのところで、</p>
-
-<ul>
-<li>名前:SSH, プロトコル:TCP, ホストIP:127.0.0.1, ホストポート:21304, ゲストIP:空欄, ゲストポート:22</li>
-<li>名前:Web, プロトコル:TCP, ホストIP:127.0.0.1, ホストポート:1384, ゲストIP:空欄, ゲストポート:80</li>
-</ul>
-
-
-<p>のような感じで設定しました。</p>
-
-<p>13.10 にしたら</p>
-
-<ul>
-<li>名前:SSH, プロトコル:TCP, ホストIP:127.0.0.1, ホストポート:21310, ゲストIP:空欄, ゲストポート:22</li>
-<li>名前:Web, プロトコル:TCP, ホストIP:127.0.0.1, ホストポート:1380, ゲストIP:空欄, ゲストポート:80</li>
-</ul>
-
-
-<p>とすれば良いかなと思っています。</p>
-
-<h2>dokku のインストール</h2>
-
-<p><a href="https://github.com/progrium/dokku/blob/1d3ae29ba6bed8e1c98991c15db45724508fae30/README.md">README</a>
-に書いてあるように
-<code>wget -qO- https://raw.github.com/progrium/dokku/master/bootstrap.sh | sudo bash</code>
-などでインストールできます。</p>
-
-<p>実際には、
-内容を確認したかったので、
-<code>wget</code> でダウンロードした後、
-<code>sudo bash &lt; bootstrap.sh</code>
-で実行しました。</p>
-
-<p>時間は5分程度かかると書いてありますが、
-実際には
-<code>docker</code>
-用のイメージのダウンロードに時間がかかるので、
-ネットワークの速度の影響が大きいようです。</p>
-
-<h2>dokku の設定</h2>
-
-<h3>VHOST の設定</h3>
-
-<p>参考にしたサイトと同じように <code>xip.io</code> を使いました。
-ポートフォワーディング経由にしているので、
-<code>127.0.0.1</code>
-にしています。</p>
-
-<p><code>
-echo deploy.127.0.0.1.xip.io | sudo tee /home/dokku/VHOST
-</code></p>
-
-<h3>ssh 公開鍵の追加</h3>
-
-<p><code>ssh</code>
-の接続は Vagrant と共通の鍵を使うことにしたので、
-<code>/home/adminuser/.ssh/authorized_keys</code>
-には <code>vagrant.pub</code> と同じ内容が入っています。</p>
-
-<p>この鍵をそのまま <code>dokku</code> の方に登録しました。</p>
-
-<p>ここもゲストOS側での作業になります。
-README の手順では <code>ssh</code> 経由で <code>sudo</code> を実行しています。</p>
-
-<p><code>
-cat ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
-</code></p>
-
-<p>この手順で追加した公開鍵は</p>
-
-<p><code>
-sudo sshcommand acl-remove dokku vagrant
-</code></p>
-
-<p>で削除できます。</p>
-
-<p>他の公開鍵を追加する時は <code>vagrant</code> の部分を変更しておかないと
-<code>acl-remove</code> でまとめて削除されてしまいます。</p>
-
-<h2>アプリケーションの deploy</h2>
-
-<p>問題なく設定できていれば以下で deploy できます。</p>
-
-<p>```</p>
-
-<pre><code>git clone https://github.com/heroku/node-js-sample
-cd node-js-sample
-git remote add raring64 dokku@raring64:node-js-app
-git push raring64 master
-</code></pre>
-
-<p>```</p>
-
-<p>エラーになったときはログをみたり、
-<code>dmesg</code>
-を見たりして原因を調べてください。</p>
-
-<p>正常に deploy できていれば
-<code>http://node-js-app.deploy.127.0.0.1.xip.io:1384</code>
-で <code>Hello World!</code> と表示されます。</p>
-
-<h2>リモートからの dokku コマンド</h2>
-
-<p>README には <code>$ dokku run node-js-app ls -alh</code> と書いてあり、
-ホストOS側には <code>dokku</code> コマンドはないので、
-どうすればいいのか悩んだのですが、</p>
-
-<p><code>
- ssh dokku@raring64 run node-js-app ls -alh
-</code></p>
-
-<p>のように <code>git push</code> に使う <code>ssh</code> 経由で
-<code>dokku</code> コマンドが実行されているのを使えました。</p>
-
-<p>入力待ちになってしまうようで、
-<code>control+D</code> で <code>EOF</code> を入力するなどしないと
-ホストOS側のプロンプトに戻ってこないので、
-想定された使い方ではなさそうな感じです。</p>
-
-<p>他にも</p>
-
-<p><code>
- ssh dokku@raring64 delete node-js-app
-</code></p>
-
-<p>でアプリケーションの削除もできました。
-heroku と違って確認なしにいきなり削除されてしまうので注意が必要です。</p>
-
-<p>どんなコマンドが実行できるのかは <code>dokku help</code> 相当の</p>
-
-<p><code>
- ssh dokku@raring64 help
-</code></p>
-
-<p>で一覧が出てきます。</p>
-
-<p>普段使いそうなのは <code>config</code> 関連と <code>logs</code> だと思いました。</p>
 ]]></content>
   </entry>
   
