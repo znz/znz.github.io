@@ -4,7 +4,7 @@
   <title><![CDATA[Category: osx | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/osx/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-15T00:21:45+09:00</updated>
+  <updated>2014-06-21T12:00:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,60 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 12 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-20-rubymotion-mokumoku-osaka.html"/>
+    <updated>2014-06-20T19:27:13+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
+    <content type="html"><![CDATA[<p>第 1 回から第 11 回にも参加した RubyMotion もくもく会 in Osaka の
+<a href="http://rubymotionjp.connpass.com/event/6666/">第 12 回 RubyMotion もくもく会 in Osaka</a>
+に参加してきました。</p>
+
+<p>次回の
+<a href="http://rubymotionjp.connpass.com/event/7079/">第 13 回 RubyMotion もくもく会 in Osaka</a>
+は 07/16(水) になりました。</p>
+
+<!--more-->
+
+
+<h2>メモ</h2>
+
+<ul>
+<li>一周年記念</li>
+<li>RubyMotion は Android にも対応予定</li>
+<li>RubyMotion のライセンスが expired して更新しても <code>rake</code> のときの <code>Your maintenance plan is expired. Run 'motion account' to renew it.</code> というメッセージはキャッシュの影響で 24 時間ぐらい待たないと消えないらしいという話</li>
+<li>バージョンは 2.29 が最新</li>
+<li>Swift が話題</li>
+<li><a href="http://tools.msng.info/">割り勘電卓</a></li>
+<li><a href="https://github.com/shin1x1/vagrantx">https://github.com/shin1x1/vagrantx</a> のソース公開</li>
+<li><a href="https://github.com/MacFace/MacFace/tree/v2.0">MacFace v2</a> が Swift で作り直し中</li>
+</ul>
+
+
+<h2>やったこと</h2>
+
+<p>Interface Builder と <code>gem 'ib'</code> で GUI を作り直そうとしていました。</p>
+
+<p>GUI 作成は細かいサイズを気にしなくて良い Tcl/Tk の pack 方式や
+Web での bootstrap のようなやり方の方が慣れていて、
+GUI ツールで作成するのは GTK+2 の glade ぐらいしかまともに使ったことがなかったので、
+使い方や良い感じに配置する方法で結構悩んでいました。
+悩んでいた部分は最後の成果発表の時にいろいろ教えてもらったりしました。</p>
+
+<p>コードとの組み合わせは、検索で見つけた</p>
+
+<pre><code>@mainWindowController = MainWindow.alloc.initWithWindowNibName('MainWindow')
+@mainWindowController.window.makeKeyAndOrderFront(self)
+</code></pre>
+
+<p>という方法で window は表示できたものの、
+<code>@mainWindowController.window</code> が <code>nil</code> になっていて、
+<code>makeKeyAndOrderFront</code> の呼び出しは失敗していました。</p>
+
+<p>ひとまず現状は <a href="https://github.com/znz/urltrapper/tree/ib">ib ブランチ</a> に公開しています。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 11 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -426,90 +480,6 @@ URL に <code>ownclouds://user:password@example.jp/remote.php/webdav</code> の�
 <p>前回のもくもく会でインストールして、他では使っていなかったので、
 ほぼ使っていないまま登録せず試用期限が切れてしまって、
 30分ごとに終了するようになってしまいました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[homebrew cask で sylpheed test1 をインストールした]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-04-21-brew-cask-sylpheed.html"/>
-    <updated>2014-04-21T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/brew-cask-sylpheed</id>
-    <content type="html"><![CDATA[<p><a href="http://sylpheed.sraoss.jp/ja/news.html">Sylpheed 3.4.1-test1 for Mac OS X (テスト版)</a>
-がリリースされていたので、
-homebrew cask を使ってインストールしてみました。</p>
-
-<p>dmg で配布されているアプリケーションを homebrew cask に対応させる例としても参考になると思います。</p>
-
-<!--more-->
-
-
-<h2>homebrew cask のインストール</h2>
-
-<p><a href="http://brew.sh/">Homebre</a>
-と
-<a href="https://github.com/phinze/homebrew-cask">homebrew-cask</a>
-をあらかじめインストールしておきます。</p>
-
-<h2>cask 作成</h2>
-
-<p><code>brew cask create sylpheed-test</code> で作成して、
-内容を以下のように変更しました。</p>
-
-<p><code>ruby
-class SylpheedTest &lt; Cask
-  url 'http://sylpheed.sraoss.jp/sylpheed/macosx/Sylpheed_3.4.1-test1.dmg'
-  homepage 'http://sylpheed.sraoss.jp/'
-  version '3.4.1-test1'
-  sha256 '52505ab7913fd58fa921a9c8b574286f08073321b440b7aa23dba3896b4b2ddc'
-  link 'Sylpheed.app'
-end
-</code></p>
-
-<p><code>sha256</code> は
-<a href="https://github.com/phinze/homebrew-cask/blob/master/CONTRIBUTING.md#cask-stanzas">Cask Stanzas</a>
-の説明にあるように別途 <code>url</code> に指定したファイルをダウンロードして <code>shasum -a 256 &lt;file&gt;</code> で調べました。
-もし upstream のリリースアナウンスに書いてあれば、それをそのまま使えば良いと思います。</p>
-
-<p>編集途中で閉じてしまった場合は
-<code>brew cask edit sylpheed-test</code>
-で再編集できます。</p>
-
-<p>実体は <code>$(brew --prefix)/Library/Taps/phinze-cask/Casks/sylpheed-test.rb</code> にあります。</p>
-
-<h2>インストール</h2>
-
-<p><code>sylpheed-test.rb</code> が作成できたら <code>brew cask install sylpheed-test</code> でインストールできます。</p>
-
-<p>```console
-% brew cask install sylpheed-test
-==> Downloading <a href="http://sylpheed.sraoss.jp/sylpheed/macosx/Sylpheed_3.4.1-test1.dmg">http://sylpheed.sraoss.jp/sylpheed/macosx/Sylpheed_3.4.1-test1.dmg</a></p>
-
-<h6>################################################################## 100.0%</h6>
-
-<p>==> Symlinking App &lsquo;Sylpheed.app&rsquo; to &lsquo;/Users/kazu/Applications/Sylpheed.app&rsquo;
-🍺  sylpheed-test installed to &lsquo;/opt/homebrew-cask/Caskroom/sylpheed-test/3.4.1-test1&rsquo; (314 files, 32M)
-```</p>
-
-<h2>起動</h2>
-
-<p>Launchpad から起動したり、Spotlight で検索したりして普通に起動します。</p>
-
-<p>初回起動で
-<code>~/Library/Application Support/Sylpheed/Mailboxes/Mail</code>
-を作るかきかれましたが、その時点で既に
-<code>~/Library/Application Support/Sylpheed</code>
-は作成されていました。</p>
-
-<h2>まとめ</h2>
-
-<p>テスト版なので、まだ変なところはあるようですが (Command+V がメッセージビューのトグルになってペーストできないとか)
-Mac OS X 版特有の問題があるだけのようなので、今後の正式版に期待しています。</p>
-
-<p>まだ test 版なので pull request はしていないのですが、
-正式版が出たら homebrew cask に pull request を送るかもしれません。
-beta 版なども対応するなら
-<a href="https://github.com/caskroom/homebrew-versions">homebrew-cask-versions</a>
-に pull request を送ると良さそうです。</p>
 ]]></content>
   </entry>
   
