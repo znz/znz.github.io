@@ -4,7 +4,7 @@
   <title><![CDATA[Category: debian | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/debian/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-21T22:21:43+09:00</updated>
+  <updated>2014-06-22T21:17:06+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,277 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[caffでキーサインした]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-22-key-sign-caff.html"/>
+    <updated>2014-06-22T19:07:19+09:00</updated>
+    <id>http://blog.n-z.jp/blog/key-sign-caff</id>
+    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20140622" title="第 85 回 関西 Debian 勉強会">第 85 回 関西 Debian 勉強会</a>
+で
+<a href="https://launchpad.net/~mocchi">坂本さん</a>とキーサインをしたので、そのメモです。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Ubuntu 12.04.4 LTS</li>
+<li>gnupg 1.4.11-3ubuntu2.5</li>
+<li>signing-party 1.1.4-1</li>
+</ul>
+
+
+<h2>事前準備</h2>
+
+<p>事前にキーサインをするとわかっていれば <code>gpg-key2ps</code> コマンドで fingerprint の紙を用意しておくと良いと思います。
+今回は少人数だったので、
+fingerprint は画面上で見せて確認してもらいました。</p>
+
+<h2>本人確認</h2>
+
+<p>対面で運転免許証などの写真付きの身分証明書で名前を確認して、
+それと署名対象の鍵の uid に入っている名前が一致するのを確認しておきます。
+また、後で署名するために fingerprint の情報も入手しておきます。</p>
+
+<h2>caff の設定</h2>
+
+<p>基本的には
+<a href="http://tokyodebian.alioth.debian.org/pdf/debianmeetingresume200910-presentation.pdf">Why GPG Key sign? 東京エリア Debian 勉強会 in OSC 2009 Tokyo/Fall</a>
+の PDF の内容のままです。</p>
+
+<h3>.caffrc</h3>
+
+<p>自分の鍵 ID を <code>gpg --list-secret-keys</code> で確認すると、
+<code>4096R/B4222F7A</code> とわかるので、
+<code>gpg --fingerprint B4222F7A</code>
+で fingerprint 全体を確認しておきます。
+(fingerprint の末尾が鍵 ID です。)</p>
+
+<p>spam よけのために email のところはちょっと改変していますが、
+<code>~/.caffrc</code> は以下のように設定しています。
+<code>keyid</code> は fingerprint の末尾のうち、
+設定例と同じ長さだけ普通の鍵 ID よりちょっと長めに取り出して設定しています。
+<code>owner</code> と <code>email</code> はメール送信の時に使われます。</p>
+
+<p>```perl ~/.caffrc</p>
+
+<pre><code># .caffrc -- vim:ft=perl:
+# This file is in perl(1) format - see caff(1) for details.
+
+$CONFIG{'owner'} = 'Kazuhiro NISHIYAMA';
+$CONFIG{'email'} = 'zn mbf.nifty.com';
+#$CONFIG{'reply-to'} = 'foo@bla.org';
+
+# You can get your long keyid from
+#   gpg --with-colons --list-key &lt;yourkeyid|name|emailaddress..&gt;
+#
+# If you have a v4 key, it will simply be the last 16 digits of
+# your fingerprint.
+#
+# Example:
+#   $CONFIG{'keyid'} = [ qw{FEDCBA9876543210} ];
+#  or, if you have more than one key:
+#   $CONFIG{'keyid'} = [ qw{0123456789ABCDEF 89ABCDEF76543210} ];
+$CONFIG{'keyid'} = [ qw{262ED8DBB4222F7A} ];
+
+# Select this/these keys to sign with
+#$CONFIG{'local-user'} = [ qw{EE739B28C657086C 9B585538ED7E1B73 262ED8DBB4222F7A C9429DABCB28285B} ];
+
+# Additionally encrypt messages for these keyids
+#$CONFIG{'also-encrypt-to'} = [ qw{EE739B28C657086C 9B585538ED7E1B73 262ED8DBB4222F7A C9429DABCB28285B} ];
+
+# Mail template to use for the encrypted part
+#$CONFIG{'mail-template'} = &lt;&lt; 'EOM';
+#Hi,
+#
+#please find attached the user id{(scalar @uids &gt;= 2 ? 's' : '')}
+#{foreach $uid (@uids) {
+#    $OUT .= "\t".$uid."\n";
+#};}of your key {$key} signed by me.
+#
+#If you have multiple user ids, I sent the signature for each user id
+#separately to that user id's associated email address. You can import
+#the signatures by running each through `gpg --import`.
+#
+#Note that I did not upload your key to any keyservers. If you want this
+#new signature to be available to others, please upload it yourself.
+#With GnuPG this can be done using
+#       gpg --keyserver pool.sks-keyservers.net --send-key {$key}
+#
+#If you have any questions, don't hesitate to ask.
+#
+#Regards,
+#{$owner}
+#EOM
+</code></pre>
+
+<p>```</p>
+
+<h3>~/.caff/gnupghome/gpg.conf の設定</h3>
+
+<p>以前参考にした設定のまま</p>
+
+<p><code>text ~/.caff/gnupghome/gpg.conf
+keyserver pgp.mit.edu
+cert-digest-algo SHA256
+personal-digest-preferences SHA256
+</code></p>
+
+<p>となっていました。
+PDF では SHA512 になっていたので、
+SHA256 から SHA512 に変更しました。
+今日の caff での署名した時点では SHA256 のままだったので、
+次回から変わる予定です。</p>
+
+<p><code>text ~/.caff/gnupghome/gpg.conf
+keyserver pgp.mit.edu
+cert-digest-algo SHA512
+personal-digest-preferences SHA512
+</code></p>
+
+<h2>caff -u で署名</h2>
+
+<p>spam よけのためメールアドレスの所は改変した状態のログは以下の通りです。
+「本当に署名しますか? (y/N)」のところで身分証明書と一緒に確認した fingerprint と合っているか確認します。</p>
+
+<p>最後にメールを送信して終了です。
+相手の鍵で暗号化されたメールが localhost の SMTP サーバー送信されます。</p>
+
+<p>```console</p>
+
+<pre><code>% caff -u B4222F7A D66FD341
+[INFO] Importing key 262ED8DBB4222F7A from your normal GnuPGHome.
+[INFO] fetching keys, this will take a while...
+[INFO] Sign the following keys according to your policy, then exit gpg with 'save' after signing each key
+gpg --local-user B4222F7A --homedir=/home/kazu/.caff/gnupghome --secret-keyring /home/kazu/.gnupg/secring.gpg --no-auto-check-trustdb --trust-model=always --edit 25DA5B9699F132DB74BD2270B5A586C7D66FD341 sign
+gpg (GnuPG) 1.4.11; Copyright (C) 2010 Free Software Foundation, Inc.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+
+pub  4096R/D66FD341  作成: 2014-06-22  満了: 無期限       利用法: SC
+sub  4096R/5D3BA622  作成: 2014-06-22  満了: 無期限       利用法: E
+[ unknown] (1). Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt;
+
+
+pub  4096R/D66FD341  作成: 2014-06-22  満了: 無期限       利用法: SC
+ 主鍵の指紋: 25DA 5B96 99F1 32DB 74BD  2270 B5A5 86C7 D66F D341
+
+     Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt;
+
+本当にこの鍵にあなたの鍵“Kazuhiro NISHIYAMA &lt;zn mbf.nifty.com&gt;”で署名してよいですか
+(B4222F7A)
+
+本当に署名しますか? (y/N) y
+
+次のユーザーの秘密鍵のロックを解除するには
+パスフレーズがいります:“Kazuhiro NISHIYAMA &lt;zn mbf.nifty.com&gt;”
+4096ビットRSA鍵, ID B4222F7A作成日付は2010-06-27
+
+
+gpg&gt; save
+[INFO] B5A586C7D66FD341 1 Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt; done.
+[INFO] key 25DA5B9699F132DB74BD2270B5A586C7D66FD341 done.
+Mail signature for Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt; to 'o-takashi sakamocchi.jp'? [Y/n]
+%
+</code></pre>
+
+<p>```</p>
+
+<h2>caff からのメールを受け取った相手のすべきこと</h2>
+
+<p>暗号化されたメールが届くので、
+対応する秘密鍵を使って復号してメールを確認します。
+さらにその中にある署名を自分の鍵束にインポートしてキーサーバーに送信します。</p>
+
+<p>caff のやり方はここでメールアドレスの到達性もチェックしているようなので、
+署名した側はキーサーバーに送信する必要はなさそうです。
+むしろそういうことをしないようにするために
+<code>~/.caff/gnupghome</code> に独自の鍵束を用意しているように思いました。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[第 85 回 関西 Debian 勉強会に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-22-kansai-debian-meeting.html"/>
+    <updated>2014-06-22T13:43:06+09:00</updated>
+    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
+    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20140622" title="第 85 回 関西 Debian 勉強会">第 85 回 関西 Debian 勉強会</a>
+に参加してきました。</p>
+
+<p>そのときのメモです。
+詳細は勉強会のページからリンクされている資料を参照してください。</p>
+
+<!--more-->
+
+
+<h2>Intro</h2>
+
+<ul>
+<li>MATE 1.8 が Debian に入ったという話
+
+<ul>
+<li><a href="https://www.debian.org/News/weekly/2014/10/" title="Debian Project News - June 9th, 2014">Debian Project News &ndash; June 9th, 2014</a></li>
+</ul>
+</li>
+<li>Debian 6 の LTS (long term support) の話
+
+<ul>
+<li>全パッケージが対象というわけではない</li>
+<li>たとえば rails とか chromium とかは対象外</li>
+</ul>
+</li>
+<li>Berkeley DB を post jessie で外す予定
+
+<ul>
+<li>AGPL に変わったから</li>
+</ul>
+</li>
+<li>事前課題発表と自己紹介
+
+<ul>
+<li>おすすめの IM</li>
+<li>webwml-git の運用</li>
+<li>web-mode.el (melpa にはある)</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>「Linuxのドライバメンテナになった体験記」(担当：坂本)</h2>
+
+<ul>
+<li>質問から派生して残った疑問点
+
+<ul>
+<li>character device とは何か (block device との違いは何か)</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>「Debian での systemd とのつきあい方」(担当：佐々木)</h2>
+
+<p>状況確認コマンドいろいろのメモです。
+一部のコマンドは自動で <code>$PAGER</code> を通してくれるようですが、
+<code>PAGER=lv</code> の場合は <code>LV=-c</code> がないとエスケープシーケンスが解釈されなくて読みにくくなります。</p>
+
+<ul>
+<li><code>systemd-analyze</code></li>
+<li><code>systemd-analyze blame</code></li>
+<li><code>systemd-analyze plot &gt; systemd-analyze_plot.svg</code></li>
+<li><code>systemctl list-dependencies</code></li>
+<li><code>systemctl status</code></li>
+<li><code>systemctl list-unit-files</code></li>
+<li><code>systemctl list-units</code></li>
+<li><code>sudo LV=-c journalctl</code></li>
+<li><code>systemd-cgls</code></li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Debian squeeze (6.0) LTS の使い方]]></title>
@@ -665,270 +936,6 @@ PKCS #10 Certificate Request Information:</p>
 (略)
 &mdash;&mdash;-END NEW CERTIFICATE REQUEST&mdash;&mdash;&ndash;
 ```</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[CVE-2014-0160 の OpenSSL の脆弱性対応]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-04-08-cve-2014-0160.html"/>
-    <updated>2014-04-08T13:22:28+09:00</updated>
-    <id>http://blog.n-z.jp/blog/cve-2014-0160</id>
-    <content type="html"><![CDATA[<p><a href="http://heartbleed.com/">Heartbleed</a>
-によると今回の OpenSSL の脆弱性は影響が大きそうなので、
-OpenSSL の更新をして再起動だけでも早めにした方が良さそうです。</p>
-
-<p>再起動が必要なものは Debian なら
-<a href="http://blog.n-z.jp/blog/2013-12-06-checkrestart.html">debian-goodiesのcheckrestartで再起動が必要なプロセスを調べる</a>
-のがオススメです。
-Ubuntu なら libssl の更新は OS 自体を再起動した方が良いと思います。</p>
-
-<p>秘密鍵を再生成した方が良いという話もあるようですが、
-そこまでの対処は続報を待ってからでも良いかもしれません。</p>
-
-<!--more-->
-
-
-<h2><code>mod_spdy</code> にも影響</h2>
-
-<p>(<code>mod_spdy</code> について 2014-04-09 に追記)</p>
-
-<p><a href="https://groups.google.com/forum/#!topic/mod-spdy-discuss/EwCowyS1KTU">mod_spdy</a>
-も影響を受けるので、
-<code>mod-spdy-beta</code> パッケージの <code>0.9.4.1-r397</code> 以前を入れている場合は最新版 (2014-04-09 リリースの <code>0.9.4.2-r413</code> 以降) に更新する必要があります。</p>
-
-<p><code>mod-spdy-beta</code> に含まれる <code>mod_ssl_with_npn.so</code> は改変した <code>libssl</code> を静的リンクしているようなので、
-システム側の OpenSSL が 0.9.8 系などのディストリビューション (wheezy など) でも以下のようになっていて、脆弱性の影響を受けます。</p>
-
-<p>```
-$ ldd /usr/lib/apache2/modules/mod_ssl.so</p>
-
-<pre><code>    linux-vdso.so.1 =&gt;  (0x00007fff25b9a000)
-    libssl.so.1.0.0 =&gt; /usr/lib/x86_64-linux-gnu/libssl.so.1.0.0 (0x00007f6ae2d93000)
-    libcrypto.so.1.0.0 =&gt; /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0 (0x00007f6ae299c000)
-    libpthread.so.0 =&gt; /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f6ae277f000)
-    libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6 (0x00007f6ae23f4000)
-    libdl.so.2 =&gt; /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f6ae21f0000)
-    libz.so.1 =&gt; /lib/x86_64-linux-gnu/libz.so.1 (0x00007f6ae1fd8000)
-    /lib64/ld-linux-x86-64.so.2 (0x00007f6ae322d000)
-</code></pre>
-
-<p>$ ldd /usr/lib/apache2/modules/mod_ssl_with_npn.so</p>
-
-<pre><code>    linux-vdso.so.1 =&gt;  (0x00007fff825ff000)
-    librt.so.1 =&gt; /lib/x86_64-linux-gnu/librt.so.1 (0x00007f8704d4e000)
-    libcrypt.so.1 =&gt; /lib/x86_64-linux-gnu/libcrypt.so.1 (0x00007f8704b17000)
-    libpthread.so.0 =&gt; /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f87048fa000)
-    libdl.so.2 =&gt; /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f87046f6000)
-    libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6 (0x00007f870436b000)
-    /lib64/ld-linux-x86-64.so.2 (0x00007f8705367000)
-</code></pre>
-
-<p>```</p>
-
-<h2>影響を受ける OpenSSL のバージョン</h2>
-
-<p>Heartbleed の <code>What versions of the OpenSSL are affected?</code>
-によると、影響を受けるのは OpenSSL 1.0.1 から 1.0.1f で、
-OpenSSL 1.0.0 系や OpenSSL 0.9.8 系という古いバージョンは
-影響がないようです。</p>
-
-<h2>Debian や Ubuntu への影響</h2>
-
-<p>他の OS も含めた情報は
-Heartbleed の <code>How about operating systems?</code>
-にまとまっているので、
-Debian と Ubuntu に付いてもう少し調べてみました。</p>
-
-<p>Heartbleed にも書いてありますが、
-<a href="https://www.debian.org/security/2014/dsa-2896">Debian &mdash; Security Information &mdash; DSA-2896-1 openssl</a>
-によると Debian は oldstable (squeeze) は影響がなくて、
-stable (wheezy) だと影響があるようです。
-つまりまだ wheezy に上げていないサーバーは大丈夫でした。</p>
-
-<p><a href="http://www.ubuntu.com/usn/usn-2165-1/">USN-2165-1: OpenSSL vulnerabilities | Ubuntu</a>
-によると Ubuntu は</p>
-
-<ul>
-<li>Ubuntu 13.10 (saucy)</li>
-<li>Ubuntu 12.10 (quantal)</li>
-<li>Ubuntu 12.04 LTS (precise)</li>
-</ul>
-
-
-<p>にセキュリティアップデートが出ているようです。
-10.04 LTS lucid は openssl が古いので影響がなくて、
-13.04 (raring) は
-<a href="http://www.ubuntu.com/info/release-end-of-life">サポート終了</a>
-しているので、セキュリティアップデートは出ていないようです。
-ついでに
-<a href="http://distrowatch.com/table.php?distribution=ubuntu">DistroWatch.com: Ubuntu</a>
-でもう少し調べてみると 1.0.1 になったのが 12.04 からなので、
-11.10 以前は影響がないようです。</p>
-
-<h2>攻撃を受けたかどうかの確認はできない</h2>
-
-<p>Heartbleed に
-<code>Can I detect if someone has exploited this against me?</code>
-<code>Exploitation of this bug leaves no traces of anything abnormal happening to the logs.</code>
-と書いてあって、
-「このバグを突かれても何か変なことがあったというログは残らない」
-ということのようなので、
-普通は攻撃を受けたかどうか確認できないということのようです。</p>
-
-<h2>秘密鍵は再生成するべき</h2>
-
-<p>というわけで、
-<a href="https://www.debian.org/security/2014/dsa-2896">DSA-2896</a>
-に
-<code>to the currently available information, private keys should be considered as compromised and regenerated as soon as possible.</code>
-と書いてあるように、
-秘密鍵は出来るだけ早く再生成した方が良いようです。</p>
-
-<h2>openssh-server の鍵の再生成</h2>
-
-<p>2014-04-08 追記:
-<a href="http://undeadly.org/cgi?action=article&amp;sid=20140408063423">OpenSSH は影響を受けない</a>
-ようです。
-(2014-04-09 23:55 追記: SSH の通信部分で OpenSSL を使っていないので、直接は影響を受けないというだけで、 PAM で LDAPS を使っている場合などは当然影響を受けます。)</p>
-
-<p>サーバー側では <code>/etc/ssh/ssh_host_*</code> を削除して <code>dpkg-reconfigure openssh-server</code> で再生成するのが良さそうです。</p>
-
-<p><code>
-% sudo rm /etc/ssh/ssh_host_*
-% sudo dpkg-reconfigure openssh-server
-Creating SSH2 RSA key; this may take some time ...
-Creating SSH2 DSA key; this may take some time ...
-Creating SSH2 ECDSA key; this may take some time ...
-ssh stop/waiting
-ssh start/running, process 7230
-% sudo service ssh restart
-ssh stop/waiting
-ssh start/running, process 7339
-</code></p>
-
-<p>クライアント側では、
-<code>HashKnownHosts no</code>
-を設定していれば
-<code>~/.ssh/known_hosts</code>
-ファイルを直接編集しても良いのですが、
-設定していないと、どの行がどのホストかわからないので、
-<code>ssh-keygen -R foo.example.jp</code>
-のように削除すると良さそうです。</p>
-
-<p>場合によっては
-<code>ssh-keygen -R 192.168.1.2</code>
-のように IP アドレス側の削除や
-<code>ssh-keygen -R '[foo.example.jp]:3843'</code>
-のようにポート番号付きでの指定が必要かもしれません。</p>
-
-<p><code>UserKnownHostsFile</code> で <code>known_hosts</code> ファイルを分割しているときは
-<code>ssh-keygen -R foo.example.jp -f ~/.ssh/foo.known_hosts</code> のように
-<code>UserKnownHostsFile</code> を指定する必要があります。</p>
-
-<h2>その他のサーバーの鍵の再生成</h2>
-
-<p>apache2 とかの Web サーバーなら
-初回の設定と同様に再生成すれば良さそうですが、
-証明書の再発行も必要なので、
-気軽には出来ないということで、
-しばらく様子見中です。</p>
-
-<p>OpenVPN はサーバーの鍵は再生成した方が良さそうですが、
-CA まで再生成する必要があるのかどうかがわからないので
-様子見中です。</p>
-
-<p>以前の Debian での修正ミスで脆弱な鍵しか生成できなくなっていた問題の修正のときの
-<a href="https://www.debian.org/security/key-rollover/">Debian &mdash; 鍵のロールオーバー</a>
-が参考になるかもしれませんが、
-今回はサーバー外からでも鍵が抜き出せてしまうという問題のようなので、
-LAN 内のサーバーなど、そのサーバーにアクセスできる環境に攻撃者が入れる時点で問題がある環境なら、
-アップデートを適用して再起動して今後鍵を抜き取られる可能性をなくしてから、
-ゆっくり続報を待ってから対処を考えるということでも良いと思います。</p>
-
-<h2>参考リンク</h2>
-
-<p>2014-04-09 参考リンクを追加</p>
-
-<ul>
-<li><a href="http://d.hatena.ne.jp/nekoruri/20140408/heartbleed">CVE-2014-0160 OpenSSL Heartbleed 脆弱性まとめ &ndash; めもおきば</a>
-
-<ul>
-<li>このリンク先が日本語としては一番情報がまとまっているようです。</li>
-</ul>
-</li>
-<li><a href="http://jvn.jp/vu/JVNVU94401838/">JVNVU#94401838: OpenSSL の heartbeat 拡張に情報漏えいの脆弱性</a>
-
-<ul>
-<li>ベンダ情報とか CVSS とか。</li>
-</ul>
-</li>
-<li><a href="http://heartbleed.com/">Heartbleed Bug</a>
-
-<ul>
-<li>英語だけど Google Chrome の翻訳機能でもだいたい読めます。</li>
-</ul>
-</li>
-<li><a href="http://www.exploit-db.com/exploits/32745/">OpenSSL TLS Heartbeat Extension &ndash; Memory Disclosure</a>
-
-<ul>
-<li>実際に情報が抜き出せるチェックツールで、これをみて他のツールの誤検知ではなく <code>mod_spdy</code> が原因だと気付きました。</li>
-</ul>
-</li>
-<li><a href="https://groups.google.com/forum/#!topic/mod-spdy-discuss/0yAGH8BHfQo">CVE-2014-0160 / heartbleed openssl bug &amp; mod_spdy &ndash; Google グループ</a>
-
-<ul>
-<li><code>mod_spdy</code> の対応の話 (英語) です。日本時間の 2014-04-09 02:00 時点ではまだ対応中で修正版のリリースはされていないようです。</li>
-</ul>
-</li>
-<li><a href="https://groups.google.com/forum/#!msg/mod-spdy-discuss/EwCowyS1KTU/uGm4586P_CQJ">New mod_spdy binary bugfix release (v0.9.4.2) &ndash; SECURITY FIX</a>
-
-<ul>
-<li>日本時間の 2014-04-09 09:00 時点ではリリースされていました。</li>
-</ul>
-</li>
-</ul>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 81 回 関西 Debian 勉強会に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-02-23-kansai-debian-meeting.html"/>
-    <updated>2014-02-23T14:02:06+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
-    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20140223">第 81 回 関西 Debian 勉強会</a>
-に参加してきました。</p>
-
-<!--more-->
-
-
-<h2>もくもくの会</h2>
-
-<p>今回ももくもくの会がありました。</p>
-
-<p>前回のもくもくの会の時に作っていた
-<a href="https://github.com/znz/rd2markdown-app">rd2markdown</a>
-を使って
-<a href="https://bugs.ruby-lang.org/projects/ruby/wiki">ruby-lang.org の Wiki</a>
-で RD 記法のままになっていたページの変換を試しつつ、
-うまく変換できなかった部分を修正して、
-ほぼすべてのページを変換していきました。
-最終的には家に帰ってから、
-このブログ記事を書く前に残りを変換しました。</p>
-
-<p>成果発表などの時にも変換作業をしていたので、
-他の人の話はあまり聞けなかったのですが、
-<a href="http://i3wm.org/">http://i3wm.org/</a>
-や
-<a href="https://github.com/sn0w75/MikuMikuPenguin">https://github.com/sn0w75/MikuMikuPenguin</a>
-の話などがありました。</p>
-
-<h2>LT</h2>
-
-<p><a href="http://blog.n-z.jp/blog/2014-02-23-upstart-has-missing-features.html">upstartに不足している機能</a>
-の話と
-<a href="http://blog.n-z.jp/blog/2014-02-23-boot2docker.html">boot2docker</a>
-でインストールした docker 環境でのデモをしました。</p>
 ]]></content>
   </entry>
   

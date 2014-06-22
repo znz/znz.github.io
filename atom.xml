@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-21T22:21:43+09:00</updated>
+  <updated>2014-06-22T21:17:06+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,360 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[caffでキーサインした]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-22-key-sign-caff.html"/>
+    <updated>2014-06-22T19:07:19+09:00</updated>
+    <id>http://blog.n-z.jp/blog/key-sign-caff</id>
+    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20140622" title="第 85 回 関西 Debian 勉強会">第 85 回 関西 Debian 勉強会</a>
+で
+<a href="https://launchpad.net/~mocchi">坂本さん</a>とキーサインをしたので、そのメモです。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Ubuntu 12.04.4 LTS</li>
+<li>gnupg 1.4.11-3ubuntu2.5</li>
+<li>signing-party 1.1.4-1</li>
+</ul>
+
+
+<h2>事前準備</h2>
+
+<p>事前にキーサインをするとわかっていれば <code>gpg-key2ps</code> コマンドで fingerprint の紙を用意しておくと良いと思います。
+今回は少人数だったので、
+fingerprint は画面上で見せて確認してもらいました。</p>
+
+<h2>本人確認</h2>
+
+<p>対面で運転免許証などの写真付きの身分証明書で名前を確認して、
+それと署名対象の鍵の uid に入っている名前が一致するのを確認しておきます。
+また、後で署名するために fingerprint の情報も入手しておきます。</p>
+
+<h2>caff の設定</h2>
+
+<p>基本的には
+<a href="http://tokyodebian.alioth.debian.org/pdf/debianmeetingresume200910-presentation.pdf">Why GPG Key sign? 東京エリア Debian 勉強会 in OSC 2009 Tokyo/Fall</a>
+の PDF の内容のままです。</p>
+
+<h3>.caffrc</h3>
+
+<p>自分の鍵 ID を <code>gpg --list-secret-keys</code> で確認すると、
+<code>4096R/B4222F7A</code> とわかるので、
+<code>gpg --fingerprint B4222F7A</code>
+で fingerprint 全体を確認しておきます。
+(fingerprint の末尾が鍵 ID です。)</p>
+
+<p>spam よけのために email のところはちょっと改変していますが、
+<code>~/.caffrc</code> は以下のように設定しています。
+<code>keyid</code> は fingerprint の末尾のうち、
+設定例と同じ長さだけ普通の鍵 ID よりちょっと長めに取り出して設定しています。
+<code>owner</code> と <code>email</code> はメール送信の時に使われます。</p>
+
+<figure class='code'><figcaption><span>~/.caffrc</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+</pre></td><td class='code'><pre><code class='perl'><span class='line'><span class="c1"># .caffrc -- vim:ft=perl:</span>
+</span><span class='line'><span class="c1"># This file is in perl(1) format - see caff(1) for details.</span>
+</span><span class='line'>
+</span><span class='line'><span class="nv">$CONFIG</span><span class="p">{</span><span class="s">&#39;owner&#39;</span><span class="p">}</span> <span class="o">=</span> <span class="s">&#39;Kazuhiro NISHIYAMA&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="nv">$CONFIG</span><span class="p">{</span><span class="s">&#39;email&#39;</span><span class="p">}</span> <span class="o">=</span> <span class="s">&#39;zn mbf.nifty.com&#39;</span><span class="p">;</span>
+</span><span class='line'><span class="c1">#$CONFIG{&#39;reply-to&#39;} = &#39;foo@bla.org&#39;;</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1"># You can get your long keyid from</span>
+</span><span class='line'><span class="c1">#   gpg --with-colons --list-key &lt;yourkeyid|name|emailaddress..&gt;</span>
+</span><span class='line'><span class="c1">#</span>
+</span><span class='line'><span class="c1"># If you have a v4 key, it will simply be the last 16 digits of</span>
+</span><span class='line'><span class="c1"># your fingerprint.</span>
+</span><span class='line'><span class="c1">#</span>
+</span><span class='line'><span class="c1"># Example:</span>
+</span><span class='line'><span class="c1">#   $CONFIG{&#39;keyid&#39;} = [ qw{FEDCBA9876543210} ];</span>
+</span><span class='line'><span class="c1">#  or, if you have more than one key:</span>
+</span><span class='line'><span class="c1">#   $CONFIG{&#39;keyid&#39;} = [ qw{0123456789ABCDEF 89ABCDEF76543210} ];</span>
+</span><span class='line'><span class="nv">$CONFIG</span><span class="p">{</span><span class="s">&#39;keyid&#39;</span><span class="p">}</span> <span class="o">=</span> <span class="p">[</span> <span class="sx">qw{262ED8DBB4222F7A}</span> <span class="p">];</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1"># Select this/these keys to sign with</span>
+</span><span class='line'><span class="c1">#$CONFIG{&#39;local-user&#39;} = [ qw{EE739B28C657086C 9B585538ED7E1B73 262ED8DBB4222F7A C9429DABCB28285B} ];</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1"># Additionally encrypt messages for these keyids</span>
+</span><span class='line'><span class="c1">#$CONFIG{&#39;also-encrypt-to&#39;} = [ qw{EE739B28C657086C 9B585538ED7E1B73 262ED8DBB4222F7A C9429DABCB28285B} ];</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1"># Mail template to use for the encrypted part</span>
+</span><span class='line'><span class="c1">#$CONFIG{&#39;mail-template&#39;} = &lt;&lt; &#39;EOM&#39;;</span>
+</span><span class='line'><span class="c1">#Hi,</span>
+</span><span class='line'><span class="c1">#</span>
+</span><span class='line'><span class="c1">#please find attached the user id{(scalar @uids &gt;= 2 ? &#39;s&#39; : &#39;&#39;)}</span>
+</span><span class='line'><span class="c1">#{foreach $uid (@uids) {</span>
+</span><span class='line'><span class="c1">#    $OUT .= &quot;\t&quot;.$uid.&quot;\n&quot;;</span>
+</span><span class='line'><span class="c1">#};}of your key {$key} signed by me.</span>
+</span><span class='line'><span class="c1">#</span>
+</span><span class='line'><span class="c1">#If you have multiple user ids, I sent the signature for each user id</span>
+</span><span class='line'><span class="c1">#separately to that user id&#39;s associated email address. You can import</span>
+</span><span class='line'><span class="c1">#the signatures by running each through `gpg --import`.</span>
+</span><span class='line'><span class="c1">#</span>
+</span><span class='line'><span class="c1">#Note that I did not upload your key to any keyservers. If you want this</span>
+</span><span class='line'><span class="c1">#new signature to be available to others, please upload it yourself.</span>
+</span><span class='line'><span class="c1">#With GnuPG this can be done using</span>
+</span><span class='line'><span class="c1">#       gpg --keyserver pool.sks-keyservers.net --send-key {$key}</span>
+</span><span class='line'><span class="c1">#</span>
+</span><span class='line'><span class="c1">#If you have any questions, don&#39;t hesitate to ask.</span>
+</span><span class='line'><span class="c1">#</span>
+</span><span class='line'><span class="c1">#Regards,</span>
+</span><span class='line'><span class="c1">#{$owner}</span>
+</span><span class='line'><span class="c1">#EOM</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>~/.caff/gnupghome/gpg.conf の設定</h3>
+
+<p>以前参考にした設定のまま</p>
+
+<figure class='code'><figcaption><span>~/.caff/gnupghome/gpg.conf</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>keyserver pgp.mit.edu
+</span><span class='line'>cert-digest-algo SHA256
+</span><span class='line'>personal-digest-preferences SHA256
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>となっていました。
+PDF では SHA512 になっていたので、
+SHA256 から SHA512 に変更しました。
+今日の caff での署名した時点では SHA256 のままだったので、
+次回から変わる予定です。</p>
+
+<figure class='code'><figcaption><span>~/.caff/gnupghome/gpg.conf</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>keyserver pgp.mit.edu
+</span><span class='line'>cert-digest-algo SHA512
+</span><span class='line'>personal-digest-preferences SHA512
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>caff -u で署名</h2>
+
+<p>spam よけのためメールアドレスの所は改変した状態のログは以下の通りです。
+「本当に署名しますか? (y/N)」のところで身分証明書と一緒に確認した fingerprint と合っているか確認します。</p>
+
+<p>最後にメールを送信して終了です。
+相手の鍵で暗号化されたメールが localhost の SMTP サーバー送信されます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> caff -u B4222F7A D66FD341
+</span><span class='line'><span class="go">[INFO] Importing key 262ED8DBB4222F7A from your normal GnuPGHome.</span>
+</span><span class='line'><span class="go">[INFO] fetching keys, this will take a while...</span>
+</span><span class='line'><span class="go">[INFO] Sign the following keys according to your policy, then exit gpg with &#39;save&#39; after signing each key</span>
+</span><span class='line'><span class="go">gpg --local-user B4222F7A --homedir=/home/kazu/.caff/gnupghome --secret-keyring /home/kazu/.gnupg/secring.gpg --no-auto-check-trustdb --trust-model=always --edit 25DA5B9699F132DB74BD2270B5A586C7D66FD341 sign</span>
+</span><span class='line'><span class="go">gpg (GnuPG) 1.4.11; Copyright (C) 2010 Free Software Foundation, Inc.</span>
+</span><span class='line'><span class="go">This is free software: you are free to change and redistribute it.</span>
+</span><span class='line'><span class="go">There is NO WARRANTY, to the extent permitted by law.</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="go">pub  4096R/D66FD341  作成: 2014-06-22  満了: 無期限       利用法: SC</span>
+</span><span class='line'><span class="go">sub  4096R/5D3BA622  作成: 2014-06-22  満了: 無期限       利用法: E</span>
+</span><span class='line'><span class="go">[ unknown] (1). Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt;</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="go">pub  4096R/D66FD341  作成: 2014-06-22  満了: 無期限       利用法: SC</span>
+</span><span class='line'><span class="go"> 主鍵の指紋: 25DA 5B96 99F1 32DB 74BD  2270 B5A5 86C7 D66F D341</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">     Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">本当にこの鍵にあなたの鍵“Kazuhiro NISHIYAMA &lt;zn mbf.nifty.com&gt;”で署名してよいですか</span>
+</span><span class='line'><span class="go">(B4222F7A)</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">本当に署名しますか? (y/N) y</span>
+</span><span class='line'>
+</span><span class='line'><span class="go">次のユーザーの秘密鍵のロックを解除するには</span>
+</span><span class='line'><span class="go">パスフレーズがいります:“Kazuhiro NISHIYAMA &lt;zn mbf.nifty.com&gt;”</span>
+</span><span class='line'><span class="go">4096ビットRSA鍵, ID B4222F7A作成日付は2010-06-27</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="go">gpg&gt; save</span>
+</span><span class='line'><span class="go">[INFO] B5A586C7D66FD341 1 Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt; done.</span>
+</span><span class='line'><span class="go">[INFO] key 25DA5B9699F132DB74BD2270B5A586C7D66FD341 done.</span>
+</span><span class='line'><span class="go">Mail signature for Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt; to &#39;o-takashi sakamocchi.jp&#39;? [Y/n]</span>
+</span><span class='line'><span class="gp">%</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>caff からのメールを受け取った相手のすべきこと</h2>
+
+<p>暗号化されたメールが届くので、
+対応する秘密鍵を使って復号してメールを確認します。
+さらにその中にある署名を自分の鍵束にインポートしてキーサーバーに送信します。</p>
+
+<p>caff のやり方はここでメールアドレスの到達性もチェックしているようなので、
+署名した側はキーサーバーに送信する必要はなさそうです。
+むしろそういうことをしないようにするために
+<code>~/.caff/gnupghome</code> に独自の鍵束を用意しているように思いました。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[第 85 回 関西 Debian 勉強会に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-22-kansai-debian-meeting.html"/>
+    <updated>2014-06-22T13:43:06+09:00</updated>
+    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
+    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20140622" title="第 85 回 関西 Debian 勉強会">第 85 回 関西 Debian 勉強会</a>
+に参加してきました。</p>
+
+<p>そのときのメモです。
+詳細は勉強会のページからリンクされている資料を参照してください。</p>
+
+<!--more-->
+
+
+<h2>Intro</h2>
+
+<ul>
+<li>MATE 1.8 が Debian に入ったという話
+
+<ul>
+<li><a href="https://www.debian.org/News/weekly/2014/10/" title="Debian Project News - June 9th, 2014">Debian Project News &ndash; June 9th, 2014</a></li>
+</ul>
+</li>
+<li>Debian 6 の LTS (long term support) の話
+
+<ul>
+<li>全パッケージが対象というわけではない</li>
+<li>たとえば rails とか chromium とかは対象外</li>
+</ul>
+</li>
+<li>Berkeley DB を post jessie で外す予定
+
+<ul>
+<li>AGPL に変わったから</li>
+</ul>
+</li>
+<li>事前課題発表と自己紹介
+
+<ul>
+<li>おすすめの IM</li>
+<li>webwml-git の運用</li>
+<li>web-mode.el (melpa にはある)</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>「Linuxのドライバメンテナになった体験記」(担当：坂本)</h2>
+
+<ul>
+<li>質問から派生して残った疑問点
+
+<ul>
+<li>character device とは何か (block device との違いは何か)</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>「Debian での systemd とのつきあい方」(担当：佐々木)</h2>
+
+<p>状況確認コマンドいろいろのメモです。
+一部のコマンドは自動で <code>$PAGER</code> を通してくれるようですが、
+<code>PAGER=lv</code> の場合は <code>LV=-c</code> がないとエスケープシーケンスが解釈されなくて読みにくくなります。</p>
+
+<ul>
+<li><code>systemd-analyze</code></li>
+<li><code>systemd-analyze blame</code></li>
+<li><code>systemd-analyze plot &gt; systemd-analyze_plot.svg</code></li>
+<li><code>systemctl list-dependencies</code></li>
+<li><code>systemctl status</code></li>
+<li><code>systemctl list-unit-files</code></li>
+<li><code>systemctl list-units</code></li>
+<li><code>sudo LV=-c journalctl</code></li>
+<li><code>systemd-cgls</code></li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ansible使いのためのYAML入門]]></title>
@@ -2068,356 +2422,6 @@ URL に <code>ownclouds://user:password@example.jp/remote.php/webdav</code> の�
 <p>前回のもくもく会でインストールして、他では使っていなかったので、
 ほぼ使っていないまま登録せず試用期限が切れてしまって、
 30分ごとに終了するようになってしまいました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[homebrew cask で sylpheed test1 をインストールした]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-04-21-brew-cask-sylpheed.html"/>
-    <updated>2014-04-21T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/brew-cask-sylpheed</id>
-    <content type="html"><![CDATA[<p><a href="http://sylpheed.sraoss.jp/ja/news.html">Sylpheed 3.4.1-test1 for Mac OS X (テスト版)</a>
-がリリースされていたので、
-homebrew cask を使ってインストールしてみました。</p>
-
-<p>dmg で配布されているアプリケーションを homebrew cask に対応させる例としても参考になると思います。</p>
-
-<!--more-->
-
-
-<h2>homebrew cask のインストール</h2>
-
-<p><a href="http://brew.sh/">Homebre</a>
-と
-<a href="https://github.com/phinze/homebrew-cask">homebrew-cask</a>
-をあらかじめインストールしておきます。</p>
-
-<h2>cask 作成</h2>
-
-<p><code>brew cask create sylpheed-test</code> で作成して、
-内容を以下のように変更しました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">SylpheedTest</span> <span class="o">&lt;</span> <span class="no">Cask</span>
-</span><span class='line'>  <span class="n">url</span> <span class="s1">&#39;http://sylpheed.sraoss.jp/sylpheed/macosx/Sylpheed_3.4.1-test1.dmg&#39;</span>
-</span><span class='line'>  <span class="n">homepage</span> <span class="s1">&#39;http://sylpheed.sraoss.jp/&#39;</span>
-</span><span class='line'>  <span class="n">version</span> <span class="s1">&#39;3.4.1-test1&#39;</span>
-</span><span class='line'>  <span class="n">sha256</span> <span class="s1">&#39;52505ab7913fd58fa921a9c8b574286f08073321b440b7aa23dba3896b4b2ddc&#39;</span>
-</span><span class='line'>  <span class="n">link</span> <span class="s1">&#39;Sylpheed.app&#39;</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>sha256</code> は
-<a href="https://github.com/phinze/homebrew-cask/blob/master/CONTRIBUTING.md#cask-stanzas">Cask Stanzas</a>
-の説明にあるように別途 <code>url</code> に指定したファイルをダウンロードして <code>shasum -a 256 &lt;file&gt;</code> で調べました。
-もし upstream のリリースアナウンスに書いてあれば、それをそのまま使えば良いと思います。</p>
-
-<p>編集途中で閉じてしまった場合は
-<code>brew cask edit sylpheed-test</code>
-で再編集できます。</p>
-
-<p>実体は <code>$(brew --prefix)/Library/Taps/phinze-cask/Casks/sylpheed-test.rb</code> にあります。</p>
-
-<h2>インストール</h2>
-
-<p><code>sylpheed-test.rb</code> が作成できたら <code>brew cask install sylpheed-test</code> でインストールできます。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> brew cask install sylpheed-test
-</span><span class='line'><span class="go">==&gt; Downloading http://sylpheed.sraoss.jp/sylpheed/macosx/Sylpheed_3.4.1-test1.dmg</span>
-</span><span class='line'><span class="gp">#</span><span class="c">####################################################################### 100.0%</span>
-</span><span class='line'><span class="go">==&gt; Symlinking App &#39;Sylpheed.app&#39; to &#39;/Users/kazu/Applications/Sylpheed.app&#39;</span>
-</span><span class='line'><span class="go">🍺  sylpheed-test installed to &#39;/opt/homebrew-cask/Caskroom/sylpheed-test/3.4.1-test1&#39; (314 files, 32M)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>起動</h2>
-
-<p>Launchpad から起動したり、Spotlight で検索したりして普通に起動します。</p>
-
-<p>初回起動で
-<code>~/Library/Application Support/Sylpheed/Mailboxes/Mail</code>
-を作るかきかれましたが、その時点で既に
-<code>~/Library/Application Support/Sylpheed</code>
-は作成されていました。</p>
-
-<h2>まとめ</h2>
-
-<p>テスト版なので、まだ変なところはあるようですが (Command+V がメッセージビューのトグルになってペーストできないとか)
-Mac OS X 版特有の問題があるだけのようなので、今後の正式版に期待しています。</p>
-
-<p>まだ test 版なので pull request はしていないのですが、
-正式版が出たら homebrew cask に pull request を送るかもしれません。
-beta 版なども対応するなら
-<a href="https://github.com/caskroom/homebrew-versions">homebrew-cask-versions</a>
-に pull request を送ると良さそうです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Ubuntu 14.04 で dokku を使う]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-04-18-ubuntu-1404-dokku.html"/>
-    <updated>2014-04-18T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ubuntu-1404-dokku</id>
-    <content type="html"><![CDATA[<p>Ubuntu 14.04 がリリースされたので、
-<a href="https://github.com/progrium/dokku">dokku</a>
-を Ubuntu 14.04 で試してみました。</p>
-
-<!--more-->
-
-
-<h2>dokku の Vagrantfile を確認する</h2>
-
-<p>まず dokku を clone して中の Vagrantfile をみて、
-環境変数で設定できる項目があるのを確認しておきます。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> git clone https://github.com/progrium/dokku
-</span><span class='line'><span class="gp">%</span> <span class="nb">cd </span>dokku
-</span><span class='line'><span class="gp">%</span> vi Vagrantfile
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Vagantfile を変更する</h2>
-
-<p>デフォルトの apt-line のままだとダウンロードが遅いので、
-<a href="http://mirrors.ubuntu.com/mirrors.txt">http://mirrors.ubuntu.com/mirrors.txt</a>
-からミラーサーバーを選んで (今回は jaist を選択)、
-shell provision のところで書き換えておきます。
-(関係ないところにマッチして問題が起きる可能性はほぼないので、置換元の URL の <code>.</code> はエスケープしていません。)</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gh">diff --git a/Vagrantfile b/Vagrantfile</span>
-</span><span class='line'><span class="gh">index a310f6b..7c1a133 100644</span>
-</span><span class='line'><span class="gd">--- a/Vagrantfile</span>
-</span><span class='line'><span class="gi">+++ b/Vagrantfile</span>
-</span><span class='line'><span class="gu">@@ -29,5 +29,10 @@ Vagrant::configure(&quot;2&quot;) do |config|</span>
-</span><span class='line'>     vb.customize [&quot;modifyvm&quot;, :id, &quot;--memory&quot;, BOX_MEMORY]
-</span><span class='line'>   end
-</span><span class='line'>
-</span><span class='line'><span class="gd">-  config.vm.provision :shell, :inline =&gt; &quot;apt-get -y install git &amp;&amp; cd /root/dokku &amp;&amp; #{make_cmd}&quot;</span>
-</span><span class='line'><span class="gi">+  config.vm.provision :shell, :inline =&gt; &lt;&lt;-SHELL</span>
-</span><span class='line'><span class="gi">+    sed -i~ -e &#39;s;http://archive.ubuntu.com/ubuntu;http://ftp.jaist.ac.jp/pub/Linux/ubuntu;&#39; /etc/apt/sources.list &amp;&amp;</span>
-</span><span class='line'><span class="gi">+    apt-get update &amp;&amp;</span>
-</span><span class='line'><span class="gi">+    apt-get -y install git &amp;&amp;</span>
-</span><span class='line'><span class="gi">+    cd /root/dokku &amp;&amp; #{make_cmd}</span>
-</span><span class='line'><span class="gi">+  SHELL</span>
-</span><span class='line'> end
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>初回起動</h2>
-
-<p><code>BOX_NAME</code>, <code>BOX_URI</code> に trusty を指定して、
-<code>BOX_MEMORY</code> も 512 から 2048 に増やした値を指定して起動します。</p>
-
-<p><code>node-js-sample</code> だと 512 メガでも問題ないのですが、
-Rails アプリを動かそうとするとメモリ不足で <code>bundle install</code> の途中で失敗して
-deploy できなかったので増やしています。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> <span class="nv">BOX_NAME</span><span class="o">=</span>trusty-amd64-20140418 <span class="nv">BOX_URI</span><span class="o">=</span>https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box <span class="nv">BOX_MEMORY</span><span class="o">=</span>2048 vagrant up
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>box のダウンロードとインストール、
-VM の作成などには時間がかかるので、
-他のことをしながらゆっくり待ちます。</p>
-
-<h2>二度目以降の起動</h2>
-
-<p>VM の作成ができている状態なら、
-box の設定は参照されないので省略できます。
-<code>vagrant destroy</code> した後に <code>vagrant up</code> し直したときは参照されるので、
-毎回設定していてもかまいません。</p>
-
-<p><code>BOX_MEMORY</code> は毎回設定されるので、指定を忘れると 512 に戻ってしまいます。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> <span class="nv">BOX_MEMORY</span><span class="o">=</span>2048 vagrant up
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>dokku の初期設定</h2>
-
-<p>ssh の鍵を追加します。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> vagrant ssh
-</span><span class='line'><span class="gp">vagrant@dokku:~$</span> egrep <span class="s1">&#39;^ssh&#39;</span> ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
-</span><span class='line'><span class="go">dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6</span>
-</span><span class='line'><span class="gp">vagrant@dokku:~$</span> cat ~/.ssh/authorized_keys
-</span><span class='line'><span class="gp">#</span> CLOUD_IMG: This file was created/modified by the Cloud Image build process
-</span><span class='line'><span class="go">ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key</span>
-</span><span class='line'><span class="gp">vagrant@dokku:~$</span> cat /home/dokku/.ssh/authorized_keys
-</span><span class='line'><span class="go">command=&quot;FINGERPRINT=dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6 NAME=vagrant `cat /home/dokku/.sshcommand` $SSH_ORIGINAL_COMMAND&quot;,no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>dokku の鍵追加失敗例</h2>
-
-<p><code>cat ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant</code>
-で追加してしまうと以下のように変になってしまいます。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
-</span><span class='line'>command=&quot;FINGERPRINT=is NAME=vagrant `cat /home/dokku/.sshcommand` $SSH_ORIGINAL_COMMAND&quot;,no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding # CLOUD_IMG: This file was created/modified by the Cloud Image build process
-</span><span class='line'>ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">KEY</span><span class="o">=</span><span class="k">$(</span>cat<span class="k">)</span>
-</span><span class='line'><span class="nv">FINGERPRINT</span><span class="o">=</span><span class="k">$(</span>ssh-keygen -lf /dev/stdin <span class="o">&lt;&lt;&lt;</span> <span class="k">$(</span><span class="nb">echo</span> <span class="nv">$KEY</span><span class="k">)</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="k">)</span>
-</span><span class='line'><span class="nv">KEY_PREFIX</span><span class="o">=</span><span class="s2">&quot;command=\&quot;FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\&quot;,no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding&quot;</span>
-</span><span class='line'><span class="nb">echo</span> <span class="s2">&quot;$KEY_PREFIX $KEY&quot;</span> &gt;&gt; <span class="s2">&quot;$USERHOME/.ssh/authorized_keys&quot;</span>
-</span><span class='line'><span class="nb">echo</span> <span class="nv">$FINGERPRINT</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>の部分を以下のように <code>while read</code> ループに変えた方が良いのかもしれません。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="k">while </span><span class="nb">read </span>KEY; <span class="k">do</span>
-</span><span class='line'><span class="k">  </span><span class="nv">FINGERPRINT</span><span class="o">=</span><span class="k">$(</span>ssh-keygen -lf /dev/stdin <span class="o">&lt;&lt;&lt;</span> <span class="k">$(</span><span class="nb">echo</span> <span class="nv">$KEY</span><span class="k">)</span> | awk <span class="s1">&#39;{print $2}&#39;</span><span class="k">)</span>
-</span><span class='line'>  <span class="nv">KEY_PREFIX</span><span class="o">=</span><span class="s2">&quot;command=\&quot;FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\&quot;,no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding&quot;</span>
-</span><span class='line'>  <span class="nb">echo</span> <span class="s2">&quot;$KEY_PREFIX $KEY&quot;</span> &gt;&gt; <span class="s2">&quot;$USERHOME/.ssh/authorized_keys&quot;</span>
-</span><span class='line'>  <span class="nb">echo</span> <span class="nv">$FINGERPRINT</span>
-</span><span class='line'><span class="k">done</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>node-js-sample の deploy</h2>
-
-<p><code>node-js-sample</code> を <code>deploy</code> して動作確認します。
-以下の例では <code>ssh dokku</code> で VM に接続できるように <code>~/.ssh/config</code> に設定済みです。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> git clone https://github.com/heroku/node-js-sample
-</span><span class='line'><span class="go">Cloning into &#39;node-js-sample&#39;...</span>
-</span><span class='line'><span class="go">remote: Reusing existing pack: 319, done.</span>
-</span><span class='line'><span class="go">remote: Total 319 (delta 0), reused 0 (delta 0)</span>
-</span><span class='line'><span class="go">Receiving objects: 100% (319/319), 201.92 KiB | 210.00 KiB/s, done.</span>
-</span><span class='line'><span class="go">Resolving deltas: 100% (17/17), done.</span>
-</span><span class='line'><span class="go">Checking connectivity... done.</span>
-</span><span class='line'><span class="gp">%</span> <span class="nb">cd </span>node-js-sample
-</span><span class='line'><span class="gp">%</span> git remote add dokku dokku:node-js-app
-</span><span class='line'><span class="gp">%</span>  git push --set-upstream dokku master
-</span><span class='line'><span class="go">Counting objects: 319, done.</span>
-</span><span class='line'><span class="go">Delta compression using up to 4 threads.</span>
-</span><span class='line'><span class="go">Compressing objects: 100% (274/274), done.</span>
-</span><span class='line'><span class="go">Writing objects: 100% (319/319), 201.92 KiB | 0 bytes/s, done.</span>
-</span><span class='line'><span class="go">Total 319 (delta 17), reused 319 (delta 17)</span>
-</span><span class='line'><span class="go">-----&gt; Cleaning up ...</span>
-</span><span class='line'><span class="go">remote: Cloning into &#39;/tmp/tmp.ChNvZEb5S9&#39;...</span>
-</span><span class='line'><span class="go">-----&gt; Building node-js-app ...</span>
-</span><span class='line'><span class="go">remote: warning: You appear to have cloned an empty repository.</span>
-</span><span class='line'><span class="go">remote: done.</span>
-</span><span class='line'><span class="go">remote: HEAD is now at 2e52ce7... Update documentation links</span>
-</span><span class='line'><span class="go">       Node.js app detected</span>
-</span><span class='line'><span class="go">-----&gt; Requested node range:  0.10.x</span>
-</span><span class='line'><span class="go">-----&gt; Resolved node version: 0.10.26</span>
-</span><span class='line'><span class="go">-----&gt; Downloading and installing node</span>
-</span><span class='line'><span class="go">(省略)</span>
-</span><span class='line'><span class="go">-----&gt; Discovering process types</span>
-</span><span class='line'><span class="go">       Procfile declares types -&gt; web</span>
-</span><span class='line'><span class="go">-----&gt; Releasing node-js-app ...</span>
-</span><span class='line'><span class="go">-----&gt; Deploying node-js-app ...</span>
-</span><span class='line'><span class="go">=====&gt; Application deployed:</span>
-</span><span class='line'><span class="go">       http://node-js-app.dokku.me</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">To dokku:node-js-app</span>
-</span><span class='line'><span class="go"> * [new branch]      master -&gt; master</span>
-</span><span class='line'><span class="go">Branch master set up to track remote branch master from dokku.</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Vagrantfile で guest の 80 番ポートを host の 8080 番ポートで見えるように設定されているので
-<code>http://node-js-app.dokku.me:8080/</code>
-で開くと <code>Hello World!</code> と表示されます。</p>
 ]]></content>
   </entry>
   

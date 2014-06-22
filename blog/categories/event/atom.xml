@@ -4,7 +4,7 @@
   <title><![CDATA[Category: event | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/event/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-21T22:21:43+09:00</updated>
+  <updated>2014-06-22T21:17:06+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,277 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[caffでキーサインした]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-22-key-sign-caff.html"/>
+    <updated>2014-06-22T19:07:19+09:00</updated>
+    <id>http://blog.n-z.jp/blog/key-sign-caff</id>
+    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20140622" title="第 85 回 関西 Debian 勉強会">第 85 回 関西 Debian 勉強会</a>
+で
+<a href="https://launchpad.net/~mocchi">坂本さん</a>とキーサインをしたので、そのメモです。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Ubuntu 12.04.4 LTS</li>
+<li>gnupg 1.4.11-3ubuntu2.5</li>
+<li>signing-party 1.1.4-1</li>
+</ul>
+
+
+<h2>事前準備</h2>
+
+<p>事前にキーサインをするとわかっていれば <code>gpg-key2ps</code> コマンドで fingerprint の紙を用意しておくと良いと思います。
+今回は少人数だったので、
+fingerprint は画面上で見せて確認してもらいました。</p>
+
+<h2>本人確認</h2>
+
+<p>対面で運転免許証などの写真付きの身分証明書で名前を確認して、
+それと署名対象の鍵の uid に入っている名前が一致するのを確認しておきます。
+また、後で署名するために fingerprint の情報も入手しておきます。</p>
+
+<h2>caff の設定</h2>
+
+<p>基本的には
+<a href="http://tokyodebian.alioth.debian.org/pdf/debianmeetingresume200910-presentation.pdf">Why GPG Key sign? 東京エリア Debian 勉強会 in OSC 2009 Tokyo/Fall</a>
+の PDF の内容のままです。</p>
+
+<h3>.caffrc</h3>
+
+<p>自分の鍵 ID を <code>gpg --list-secret-keys</code> で確認すると、
+<code>4096R/B4222F7A</code> とわかるので、
+<code>gpg --fingerprint B4222F7A</code>
+で fingerprint 全体を確認しておきます。
+(fingerprint の末尾が鍵 ID です。)</p>
+
+<p>spam よけのために email のところはちょっと改変していますが、
+<code>~/.caffrc</code> は以下のように設定しています。
+<code>keyid</code> は fingerprint の末尾のうち、
+設定例と同じ長さだけ普通の鍵 ID よりちょっと長めに取り出して設定しています。
+<code>owner</code> と <code>email</code> はメール送信の時に使われます。</p>
+
+<p>```perl ~/.caffrc</p>
+
+<pre><code># .caffrc -- vim:ft=perl:
+# This file is in perl(1) format - see caff(1) for details.
+
+$CONFIG{'owner'} = 'Kazuhiro NISHIYAMA';
+$CONFIG{'email'} = 'zn mbf.nifty.com';
+#$CONFIG{'reply-to'} = 'foo@bla.org';
+
+# You can get your long keyid from
+#   gpg --with-colons --list-key &lt;yourkeyid|name|emailaddress..&gt;
+#
+# If you have a v4 key, it will simply be the last 16 digits of
+# your fingerprint.
+#
+# Example:
+#   $CONFIG{'keyid'} = [ qw{FEDCBA9876543210} ];
+#  or, if you have more than one key:
+#   $CONFIG{'keyid'} = [ qw{0123456789ABCDEF 89ABCDEF76543210} ];
+$CONFIG{'keyid'} = [ qw{262ED8DBB4222F7A} ];
+
+# Select this/these keys to sign with
+#$CONFIG{'local-user'} = [ qw{EE739B28C657086C 9B585538ED7E1B73 262ED8DBB4222F7A C9429DABCB28285B} ];
+
+# Additionally encrypt messages for these keyids
+#$CONFIG{'also-encrypt-to'} = [ qw{EE739B28C657086C 9B585538ED7E1B73 262ED8DBB4222F7A C9429DABCB28285B} ];
+
+# Mail template to use for the encrypted part
+#$CONFIG{'mail-template'} = &lt;&lt; 'EOM';
+#Hi,
+#
+#please find attached the user id{(scalar @uids &gt;= 2 ? 's' : '')}
+#{foreach $uid (@uids) {
+#    $OUT .= "\t".$uid."\n";
+#};}of your key {$key} signed by me.
+#
+#If you have multiple user ids, I sent the signature for each user id
+#separately to that user id's associated email address. You can import
+#the signatures by running each through `gpg --import`.
+#
+#Note that I did not upload your key to any keyservers. If you want this
+#new signature to be available to others, please upload it yourself.
+#With GnuPG this can be done using
+#       gpg --keyserver pool.sks-keyservers.net --send-key {$key}
+#
+#If you have any questions, don't hesitate to ask.
+#
+#Regards,
+#{$owner}
+#EOM
+</code></pre>
+
+<p>```</p>
+
+<h3>~/.caff/gnupghome/gpg.conf の設定</h3>
+
+<p>以前参考にした設定のまま</p>
+
+<p><code>text ~/.caff/gnupghome/gpg.conf
+keyserver pgp.mit.edu
+cert-digest-algo SHA256
+personal-digest-preferences SHA256
+</code></p>
+
+<p>となっていました。
+PDF では SHA512 になっていたので、
+SHA256 から SHA512 に変更しました。
+今日の caff での署名した時点では SHA256 のままだったので、
+次回から変わる予定です。</p>
+
+<p><code>text ~/.caff/gnupghome/gpg.conf
+keyserver pgp.mit.edu
+cert-digest-algo SHA512
+personal-digest-preferences SHA512
+</code></p>
+
+<h2>caff -u で署名</h2>
+
+<p>spam よけのためメールアドレスの所は改変した状態のログは以下の通りです。
+「本当に署名しますか? (y/N)」のところで身分証明書と一緒に確認した fingerprint と合っているか確認します。</p>
+
+<p>最後にメールを送信して終了です。
+相手の鍵で暗号化されたメールが localhost の SMTP サーバー送信されます。</p>
+
+<p>```console</p>
+
+<pre><code>% caff -u B4222F7A D66FD341
+[INFO] Importing key 262ED8DBB4222F7A from your normal GnuPGHome.
+[INFO] fetching keys, this will take a while...
+[INFO] Sign the following keys according to your policy, then exit gpg with 'save' after signing each key
+gpg --local-user B4222F7A --homedir=/home/kazu/.caff/gnupghome --secret-keyring /home/kazu/.gnupg/secring.gpg --no-auto-check-trustdb --trust-model=always --edit 25DA5B9699F132DB74BD2270B5A586C7D66FD341 sign
+gpg (GnuPG) 1.4.11; Copyright (C) 2010 Free Software Foundation, Inc.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+
+pub  4096R/D66FD341  作成: 2014-06-22  満了: 無期限       利用法: SC
+sub  4096R/5D3BA622  作成: 2014-06-22  満了: 無期限       利用法: E
+[ unknown] (1). Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt;
+
+
+pub  4096R/D66FD341  作成: 2014-06-22  満了: 無期限       利用法: SC
+ 主鍵の指紋: 25DA 5B96 99F1 32DB 74BD  2270 B5A5 86C7 D66F D341
+
+     Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt;
+
+本当にこの鍵にあなたの鍵“Kazuhiro NISHIYAMA &lt;zn mbf.nifty.com&gt;”で署名してよいですか
+(B4222F7A)
+
+本当に署名しますか? (y/N) y
+
+次のユーザーの秘密鍵のロックを解除するには
+パスフレーズがいります:“Kazuhiro NISHIYAMA &lt;zn mbf.nifty.com&gt;”
+4096ビットRSA鍵, ID B4222F7A作成日付は2010-06-27
+
+
+gpg&gt; save
+[INFO] B5A586C7D66FD341 1 Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt; done.
+[INFO] key 25DA5B9699F132DB74BD2270B5A586C7D66FD341 done.
+Mail signature for Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt; to 'o-takashi sakamocchi.jp'? [Y/n]
+%
+</code></pre>
+
+<p>```</p>
+
+<h2>caff からのメールを受け取った相手のすべきこと</h2>
+
+<p>暗号化されたメールが届くので、
+対応する秘密鍵を使って復号してメールを確認します。
+さらにその中にある署名を自分の鍵束にインポートしてキーサーバーに送信します。</p>
+
+<p>caff のやり方はここでメールアドレスの到達性もチェックしているようなので、
+署名した側はキーサーバーに送信する必要はなさそうです。
+むしろそういうことをしないようにするために
+<code>~/.caff/gnupghome</code> に独自の鍵束を用意しているように思いました。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[第 85 回 関西 Debian 勉強会に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-22-kansai-debian-meeting.html"/>
+    <updated>2014-06-22T13:43:06+09:00</updated>
+    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
+    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20140622" title="第 85 回 関西 Debian 勉強会">第 85 回 関西 Debian 勉強会</a>
+に参加してきました。</p>
+
+<p>そのときのメモです。
+詳細は勉強会のページからリンクされている資料を参照してください。</p>
+
+<!--more-->
+
+
+<h2>Intro</h2>
+
+<ul>
+<li>MATE 1.8 が Debian に入ったという話
+
+<ul>
+<li><a href="https://www.debian.org/News/weekly/2014/10/" title="Debian Project News - June 9th, 2014">Debian Project News &ndash; June 9th, 2014</a></li>
+</ul>
+</li>
+<li>Debian 6 の LTS (long term support) の話
+
+<ul>
+<li>全パッケージが対象というわけではない</li>
+<li>たとえば rails とか chromium とかは対象外</li>
+</ul>
+</li>
+<li>Berkeley DB を post jessie で外す予定
+
+<ul>
+<li>AGPL に変わったから</li>
+</ul>
+</li>
+<li>事前課題発表と自己紹介
+
+<ul>
+<li>おすすめの IM</li>
+<li>webwml-git の運用</li>
+<li>web-mode.el (melpa にはある)</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>「Linuxのドライバメンテナになった体験記」(担当：坂本)</h2>
+
+<ul>
+<li>質問から派生して残った疑問点
+
+<ul>
+<li>character device とは何か (block device との違いは何か)</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>「Debian での systemd とのつきあい方」(担当：佐々木)</h2>
+
+<p>状況確認コマンドいろいろのメモです。
+一部のコマンドは自動で <code>$PAGER</code> を通してくれるようですが、
+<code>PAGER=lv</code> の場合は <code>LV=-c</code> がないとエスケープシーケンスが解釈されなくて読みにくくなります。</p>
+
+<ul>
+<li><code>systemd-analyze</code></li>
+<li><code>systemd-analyze blame</code></li>
+<li><code>systemd-analyze plot &gt; systemd-analyze_plot.svg</code></li>
+<li><code>systemctl list-dependencies</code></li>
+<li><code>systemctl status</code></li>
+<li><code>systemctl list-unit-files</code></li>
+<li><code>systemctl list-units</code></li>
+<li><code>sudo LV=-c journalctl</code></li>
+<li><code>systemd-cgls</code></li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 12 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -394,134 +665,6 @@ g h i
 すぐには反映されなくて、しばらく悩んでいました。</p>
 
 <p>最後の成果発表のタイミングでは反映されていて見えるようになっていました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[R と Ruby によるデータ解析入門　読書会　第2回に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-05-17-amagasakirb.html"/>
-    <updated>2014-05-17T13:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/amagasakirb</id>
-    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/event/index/168617/">5月17日 R と Ruby によるデータ解析入門　読書会　第2回(兵庫県)</a>
-に参加しました。
-今回は4章からでした。
-次回は6月28日です。</p>
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4873116155" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<p>以下今回のメモです。</p>
-
-<ul>
-<li>PDF をタブレットで読むのに <code>k2pdfopt</code> で変換すると読みやすい</li>
-<li>サンプルコード: <a href="https://github.com/setoyama60jp/everyday">https://github.com/setoyama60jp/everyday</a></li>
-<li>p.90 l.3 <code>@durarion</code> って <code>@duration</code> の typo?</li>
-<li><code>duration</code> は今何分占有しているか</li>
-<li><code>use_duration</code> は <code>Person</code> が何分占有するか</li>
-<li><code>need_to_go?</code> は必ず3回というわけではなく540分の3の確率</li>
-<li>p.91 <code>カンマ句切り</code> &ndash;> <code>カンマ区切り</code> ?</li>
-<li>Producer Consumer パターンで Enumerator を使うという話</li>
-<li><code>read.table</code> の <code>header</code> とか <code>sep</code> とか</li>
-<li><code>ggplot2</code> では <code>+</code> がオーバーロードされているという話</li>
-<li>Safari Books Online の話</li>
-<li>動画もあるという話</li>
-<li>英語だと字幕がないと厳しい話</li>
-<li>自動字幕の話</li>
-<li>図4-3 の下に書いてある横軸が1から始まっているのは間違いで実際は0からなので、最初の方以外は ASCII コードに一致</li>
-<li>ヤバイ経済学 はオススメという話 <iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4492313788" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe></li>
-<li>実装例5-3 <code>Market</code> クラスはクラスにする必要性がない書き方になっている</li>
-<li><code>pdf</code> と <code>dev.off</code> は p.52 に説明がある</li>
-<li>5章のモデルがいまいちという話</li>
-<li>実装例5-10 の最後のターンの処理ってループの外で良いのでは。</li>
-<li>全体的に Ruby コードもいまいちという話</li>
-<li><code>R</code> の <code>viewport</code> の話</li>
-<li>実装詳細と実装説明の前にどういう出力を目指しているのか概要が欲しいという話</li>
-<li>削るとか溶かすとかいう話</li>
-<li>エンロン事件のメールが公開されていてダウンロードできるのに驚いた話</li>
-<li>6章は R で頑張っている</li>
-<li>Gmail の IMAP の <code>[Gmail]/送信済みメール</code> は言語設定で変わる話</li>
-<li>ビッグデータ的な公開されているデータはどういうのがあるのかという話</li>
-<li>p.157 <code>クォーテーションを含むメールアドレスがデータ内に存在する</code> からメールアドレスは面倒という話</li>
-<li><a href="http://d.hatena.ne.jp/triadsou/20100528/1275042816">ggplot2 の自分用メモ集を作ろう &ndash; Triad sou.</a></li>
-<li>ビッグデータの話として有名な購入するデオドラントと石けんが変わって妊娠がわかったという話</li>
-<li>PDF から Web アルバムの話</li>
-</ul>
-
-
-<h2></h2>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[LILO ＆ 東海道らぐのイベントに参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-05-03-lilo-event.html"/>
-    <updated>2014-05-03T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/lilo-event</id>
-    <content type="html"><![CDATA[<p><a href="http://lilo.doorkeeper.jp/events/10790">LILO ＆ 東海道らぐ・オフラインミーティング（2014/05/03）</a> に参加しました。</p>
-
-<p>アンカンファレンス形式で発表したい人が順番に前に出て話をするという形式でした。</p>
-
-<!--more-->
-
-
-<h2>内容</h2>
-
-<p>大部分は資料を用意しての発表という形式ではなくて、
-発表のタイトルもちゃんとあるわけではなかったので、
-大雑把にこういう話でしたというメモだけです。</p>
-
-<ul>
-<li>自己紹介1</li>
-<li>しまださんの東海道らぐの紹介</li>
-<li>自分の <code>libpam-google-authenticator</code> の話</li>
-<li>自己紹介2 (後から来た人の自己紹介)</li>
-<li>えのきさんの LibreOffice の QA などの相談 (ディスカッション)</li>
-<li>さとうさんの Raspberry Pi の話</li>
-<li>矢吹さんの LXC などの話</li>
-<li>自己紹介3 (さらに後から来た人の自己紹介)
-
-<ul>
-<li>pandoc がオススメ</li>
-</ul>
-</li>
-<li>としひささんの Raspberry Pi で NTP Stratum 1 Server の話
-
-<ul>
-<li><a href="http://tosihisa.postach.io/raspberry-pi-de-ntp-stratum-1-server-wozuo-ru">Raspberry Pi で NTP Stratum-1 Server を作る． | tosihisa&rsquo;s public notebook</a></li>
-<li><a href="http://www.pool.ntp.org/scores/60.56.214.78">http://www.pool.ntp.org/scores/60.56.214.78</a></li>
-<li><code>ntpdate -quv ntp.netfort.gr.jp</code> で確認できました。</li>
-</ul>
-</li>
-<li>守屋さんの Linux の昔話とかの話</li>
-<li>こんどうさんの Flightgear の話</li>
-<li>大浦さんの 文字書き起こしツール <a href="http://sourceforge.jp/projects/smart-gs/">SMART-GS</a> の話</li>
-<li>さかもとさんのカーネルモジュールの話
-
-<ul>
-<li><a href="http://netcat.bandcamp.com/">http://netcat.bandcamp.com/</a></li>
-<li><a href="https://github.com/usrbinnc/netcat-cpi-kernel-module">https://github.com/usrbinnc/netcat-cpi-kernel-module</a></li>
-</ul>
-</li>
-</ul>
-
-
-<h2>感想</h2>
-
-<p>いろいろな内容の話が聞けて面白かったです。</p>
-
-<p>自分が話をするのは、 LILO のサーバー移行の話という案もあったのですが、
-それはちゃんとまとめる時間をとってからの方が良さそうと思って、
-事前に一度試していたことのあった <code>libpam-google-authenticator</code> を前の晩に試し直しながらデモの順番を考えて、
-その話をしました。</p>
 ]]></content>
   </entry>
   
