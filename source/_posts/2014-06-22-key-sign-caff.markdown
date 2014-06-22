@@ -5,9 +5,29 @@ date: 2014-06-22 19:07:19 +0900
 comments: true
 categories: event debian gpg
 ---
-坂本さんとキーサインをしたので、そのメモです。
+[第 85 回 関西 Debian 勉強会](https://wiki.debian.org/KansaiDebianMeeting/20140622 "第 85 回 関西 Debian 勉強会")
+で
+[坂本さん](https://launchpad.net/~mocchi)とキーサインをしたので、そのメモです。
 
 <!--more-->
+
+## 対象バージョン
+
+- Ubuntu 12.04.4 LTS
+- gnupg 1.4.11-3ubuntu2.5
+- signing-party 1.1.4-1
+
+## 事前準備
+
+事前にキーサインをするとわかっていれば `gpg-key2ps` コマンドで fingerprint の紙を用意しておくと良いと思います。
+今回は少人数だったので、
+fingerprint は画面上で見せて確認してもらいました。
+
+## 本人確認
+
+対面で運転免許証などの写真付きの身分証明書で名前を確認して、
+それと署名対象の鍵の uid に入っている名前が一致するのを確認しておきます。
+また、後で署名するために fingerprint の情報も入手しておきます。
 
 ## caff の設定
 

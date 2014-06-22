@@ -7,7 +7,9 @@ categories: event debian kansaidebian
 ---
 [第 85 回 関西 Debian 勉強会](https://wiki.debian.org/KansaiDebianMeeting/20140622 "第 85 回 関西 Debian 勉強会")
 に参加してきました。
+
 そのときのメモです。
+詳細は勉強会のページからリンクされている資料を参照してください。
 
 <!--more-->
 
@@ -20,13 +22,12 @@ categories: event debian kansaidebian
   - たとえば rails とか chromium とかは対象外
 - Berkeley DB を post jessie で外す予定
   - AGPL に変わったから
-
 - 事前課題発表と自己紹介
   - おすすめの IM
   - webwml-git の運用
   - web-mode.el (melpa にはある)
 
-## 「Linuxのドライバメンテナになった体験記」(担当：[坂本](https://launchpad.net/~mocchi))
+## 「Linuxのドライバメンテナになった体験記」(担当：坂本)
 
 - 質問から派生して残った疑問点
   - character device とは何か (block device との違いは何か)
