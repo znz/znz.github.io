@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-22T21:17:06+09:00</updated>
+  <updated>2014-06-25T22:13:34+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,82 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[環境変数にハッシュの配列を入れてみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-25-env-array-hash.html"/>
+    <updated>2014-06-25T21:37:22+09:00</updated>
+    <id>http://blog.n-z.jp/blog/env-array-hash</id>
+    <content type="html"><![CDATA[<p><a href="https://twitter.com/znz/status/481691675136245760">環境変数にハッシュを入れたいと思って、ちょっと考えてみたら LTSV を使えば良いということに気づいた</a>ので、
+実装してみました。
+実際には単独のハッシュではなくハッシュの配列がほしかったので、
+連続する数値を末尾に付けて複数受け取れるようにしています。</p>
+
+<!--more-->
+
+
+<h2>実装</h2>
+
+<p>キーワード引数を使っているので、
+以下の実装のままだと ruby 2.0.0 以降必須です。
+必要なら適当に変更して使ってください。</p>
+
+<p><div><script src='https://gist.github.com/849166c048a2117c341d.js?file=env_ltsv_each.rb'></script>
+<noscript><pre><code># -*- coding: utf-8 -*-
+# env_ltsv_each.rb
+# copyright (c) 2014 Kazuhiro NISHIYAMA
+# This software is released under the MIT License.
+# http://opensource.org/licenses/MIT
+require &#39;ostruct&#39;
+
+def env_ltsv_each(prefix, start: 0, encoding: Encoding::UTF_8, scrub: false)
+  block_given? or return enum_for(__method__)
+  i = start
+  loop do
+    ltsv = ENV[&quot;#{prefix}_#{i}&quot;]
+    i = i.succ
+    break unless ltsv
+    h = OpenStruct.new
+    ltsv.split(/\t/).each do |pair|
+      key, value = pair.split(&#39;:&#39;, 2)
+      value.force_encoding(encoding)
+      value.scrub! if scrub
+      h[key] = value
+    end
+    yield h
+  end
+  nil
+end
+
+if __FILE__ == $0
+  ENV[&#39;NAVI_0&#39;] = &#39;icon:top	label:Top	uri:/&#39;
+  ENV[&#39;NAVI_1&#39;] = &#39;icon:posts	label:Listing Posts	uri:/posts&#39;
+  ENV[&#39;NAVI_2&#39;] = &#39;icon:users	label:Listing Users	uri:/users&#39;
+  env_ltsv_each(&#39;NAVI&#39;) do |h|
+    puts %Q(&lt;a href=&quot;#{h.uri}&quot;&gt;&lt;img src=&quot;#{h.icon}.png&quot; alt=&quot;#{h.label}&quot;&gt;&lt;/a&gt;)
+    #=&gt;
+    # &lt;a href=&quot;/&quot;&gt;&lt;img src=&quot;top.png&quot; alt=&quot;Top&quot;&gt;&lt;/a&gt;
+    # &lt;a href=&quot;/posts&quot;&gt;&lt;img src=&quot;posts.png&quot; alt=&quot;Listing Posts&quot;&gt;&lt;/a&gt;
+    # &lt;a href=&quot;/users&quot;&gt;&lt;img src=&quot;users.png&quot; alt=&quot;Listing Users&quot;&gt;&lt;/a&gt;
+  end
+end
+</code></pre></noscript></div>
+</p>
+
+<h2>詳細</h2>
+
+<p><code>String#scrub!</code> は 2.1.0 以降か
+<a href="https://rubygems.org/gems/string-scrub">string-scrub gem</a>
+が必要なのでデフォルトでは呼ばないようにしています。</p>
+
+<p><code>Hash</code> だと取り出すのが面倒だったので、
+<code>OpenStruct</code> を使ってみました。
+メソッド名として問題がある場合は
+<code>h['send']</code> のように普通の <code>Hash</code> のように取り出せます。</p>
+
+<p>添字をまわすのに <code>succ</code> を使っているので <code>FOO_A</code>, <code>FOO_B</code>, &hellip; のような使い方も出来ると思います。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 12 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -326,70 +402,6 @@ Jenkins 側の設定は変更していません。</p>
 すぐには反映されなくて、しばらく悩んでいました。</p>
 
 <p>最後の成果発表のタイミングでは反映されていて見えるようになっていました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[R と Ruby によるデータ解析入門　読書会　第2回に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-05-17-amagasakirb.html"/>
-    <updated>2014-05-17T13:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/amagasakirb</id>
-    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/event/index/168617/">5月17日 R と Ruby によるデータ解析入門　読書会　第2回(兵庫県)</a>
-に参加しました。
-今回は4章からでした。
-次回は6月28日です。</p>
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4873116155" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<p>以下今回のメモです。</p>
-
-<ul>
-<li>PDF をタブレットで読むのに <code>k2pdfopt</code> で変換すると読みやすい</li>
-<li>サンプルコード: <a href="https://github.com/setoyama60jp/everyday">https://github.com/setoyama60jp/everyday</a></li>
-<li>p.90 l.3 <code>@durarion</code> って <code>@duration</code> の typo?</li>
-<li><code>duration</code> は今何分占有しているか</li>
-<li><code>use_duration</code> は <code>Person</code> が何分占有するか</li>
-<li><code>need_to_go?</code> は必ず3回というわけではなく540分の3の確率</li>
-<li>p.91 <code>カンマ句切り</code> &ndash;> <code>カンマ区切り</code> ?</li>
-<li>Producer Consumer パターンで Enumerator を使うという話</li>
-<li><code>read.table</code> の <code>header</code> とか <code>sep</code> とか</li>
-<li><code>ggplot2</code> では <code>+</code> がオーバーロードされているという話</li>
-<li>Safari Books Online の話</li>
-<li>動画もあるという話</li>
-<li>英語だと字幕がないと厳しい話</li>
-<li>自動字幕の話</li>
-<li>図4-3 の下に書いてある横軸が1から始まっているのは間違いで実際は0からなので、最初の方以外は ASCII コードに一致</li>
-<li>ヤバイ経済学 はオススメという話 <iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4492313788" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe></li>
-<li>実装例5-3 <code>Market</code> クラスはクラスにする必要性がない書き方になっている</li>
-<li><code>pdf</code> と <code>dev.off</code> は p.52 に説明がある</li>
-<li>5章のモデルがいまいちという話</li>
-<li>実装例5-10 の最後のターンの処理ってループの外で良いのでは。</li>
-<li>全体的に Ruby コードもいまいちという話</li>
-<li><code>R</code> の <code>viewport</code> の話</li>
-<li>実装詳細と実装説明の前にどういう出力を目指しているのか概要が欲しいという話</li>
-<li>削るとか溶かすとかいう話</li>
-<li>エンロン事件のメールが公開されていてダウンロードできるのに驚いた話</li>
-<li>6章は R で頑張っている</li>
-<li>Gmail の IMAP の <code>[Gmail]/送信済みメール</code> は言語設定で変わる話</li>
-<li>ビッグデータ的な公開されているデータはどういうのがあるのかという話</li>
-<li>p.157 <code>クォーテーションを含むメールアドレスがデータ内に存在する</code> からメールアドレスは面倒という話</li>
-<li><a href="http://d.hatena.ne.jp/triadsou/20100528/1275042816">ggplot2 の自分用メモ集を作ろう &ndash; Triad sou.</a></li>
-<li>ビッグデータの話として有名な購入するデオドラントと石けんが変わって妊娠がわかったという話</li>
-<li>PDF から Web アルバムの話</li>
-</ul>
-
-
-<h2></h2>
 ]]></content>
   </entry>
   

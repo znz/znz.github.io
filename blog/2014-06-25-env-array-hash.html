@@ -5,11 +5,14 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: nadoka - @znz blog</title>
+  <title>環境変数にハッシュの配列を入れてみた - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Category: nadoka">
+  <meta name="description" content="環境変数にハッシュを入れたいと思って、ちょっと考えてみたら LTSV を使えば良いということに気づいたので、
+実装してみました。
+実際には単独のハッシュではなくハッシュの配列がほしかったので、
+連続する数値を末尾に付けて複数受け取れるようにしています。 実装 キーワード引数を使っているので、 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +21,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jpblog/categories/nadoka/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-06-25-env-array-hash.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,36 +79,176 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: nadoka</h1>
+    
+      <h1 class="entry-title">環境変数にハッシュの配列を入れてみた</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-06-25T21:37:22+09:00" pubdate data-updated="true">2014-06-25 (Wed)</time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
+<div class="entry-content"><p><a href="https://twitter.com/znz/status/481691675136245760">環境変数にハッシュを入れたいと思って、ちょっと考えてみたら LTSV を使えば良いということに気づいた</a>ので、
+実装してみました。
+実際には単独のハッシュではなくハッシュの配列がほしかったので、
+連続する数値を末尾に付けて複数受け取れるようにしています。</p>
 
-  
-  <h2>2013</h2>
-
-<article>
-  
-<h1><a href="/blog/2013-11-29-nadoka-086-released.html">nadokaさんの0.8.6をリリースした関連の話</a></h1>
-<time datetime="2013-11-29T23:30:00+09:00" pubdate><span class='month'>Nov</span> <span class='day'>29</span> <span class='year'>2013</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/ansible/'>ansible</a>, <a class='category' href='/blog/categories/community/'>community</a>, <a class='category' href='/blog/categories/github/'>github</a>, <a class='category' href='/blog/categories/nadoka/'>nadoka</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a></span>
-</footer>
+<!--more-->
 
 
-</article>
+<h2>実装</h2>
 
+<p>キーワード引数を使っているので、
+以下の実装のままだと ruby 2.0.0 以降必須です。
+必要なら適当に変更して使ってください。</p>
+
+<div><script src='https://gist.github.com/849166c048a2117c341d.js?file=env_ltsv_each.rb'></script>
+<noscript><pre><code># -*- coding: utf-8 -*-
+# env_ltsv_each.rb
+# copyright (c) 2014 Kazuhiro NISHIYAMA
+# This software is released under the MIT License.
+# http://opensource.org/licenses/MIT
+require &#39;ostruct&#39;
+
+def env_ltsv_each(prefix, start: 0, encoding: Encoding::UTF_8, scrub: false)
+  block_given? or return enum_for(__method__)
+  i = start
+  loop do
+    ltsv = ENV[&quot;#{prefix}_#{i}&quot;]
+    i = i.succ
+    break unless ltsv
+    h = OpenStruct.new
+    ltsv.split(/\t/).each do |pair|
+      key, value = pair.split(&#39;:&#39;, 2)
+      value.force_encoding(encoding)
+      value.scrub! if scrub
+      h[key] = value
+    end
+    yield h
+  end
+  nil
+end
+
+if __FILE__ == $0
+  ENV[&#39;NAVI_0&#39;] = &#39;icon:top label:Top   uri:/&#39;
+  ENV[&#39;NAVI_1&#39;] = &#39;icon:posts   label:Listing Posts uri:/posts&#39;
+  ENV[&#39;NAVI_2&#39;] = &#39;icon:users   label:Listing Users uri:/users&#39;
+  env_ltsv_each(&#39;NAVI&#39;) do |h|
+    puts %Q(&lt;a href=&quot;#{h.uri}&quot;&gt;&lt;img src=&quot;#{h.icon}.png&quot; alt=&quot;#{h.label}&quot;&gt;&lt;/a&gt;)
+    #=&gt;
+    # &lt;a href=&quot;/&quot;&gt;&lt;img src=&quot;top.png&quot; alt=&quot;Top&quot;&gt;&lt;/a&gt;
+    # &lt;a href=&quot;/posts&quot;&gt;&lt;img src=&quot;posts.png&quot; alt=&quot;Listing Posts&quot;&gt;&lt;/a&gt;
+    # &lt;a href=&quot;/users&quot;&gt;&lt;img src=&quot;users.png&quot; alt=&quot;Listing Users&quot;&gt;&lt;/a&gt;
+  end
+end
+</code></pre></noscript></div>
+
+
+<h2>詳細</h2>
+
+<p><code>String#scrub!</code> は 2.1.0 以降か
+<a href="https://rubygems.org/gems/string-scrub">string-scrub gem</a>
+が必要なのでデフォルトでは呼ばないようにしています。</p>
+
+<p><code>Hash</code> だと取り出すのが面倒だったので、
+<code>OpenStruct</code> を使ってみました。
+メソッド名として問題がある場合は
+<code>h['send']</code> のように普通の <code>Hash</code> のように取り出せます。</p>
+
+<p>添字をまわすのに <code>succ</code> を使っているので <code>FOO_A</code>, <code>FOO_B</code>, &hellip; のような使い方も出来ると思います。</p>
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-06-25T21:37:22+09:00" pubdate data-updated="true">2014-06-25 (Wed)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2014-06-25-env-array-hash.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2014-06-25-env-array-hash.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2014-06-25-env-array-hash.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014-06-22-key-sign-caff.html" title="Previous Post: caffでキーサインした">&laquo; caffでキーサインした</a>
+      
+      
+    </p>
+  </footer>
 </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -219,7 +362,10 @@
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-06-25-env-array-hash.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-06-25-env-array-hash.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-22T21:17:06+09:00</updated>
+  <updated>2014-06-25T22:13:34+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,82 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[環境変数にハッシュの配列を入れてみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-06-25-env-array-hash.html"/>
+    <updated>2014-06-25T21:37:22+09:00</updated>
+    <id>http://blog.n-z.jp/blog/env-array-hash</id>
+    <content type="html"><![CDATA[<p><a href="https://twitter.com/znz/status/481691675136245760">環境変数にハッシュを入れたいと思って、ちょっと考えてみたら LTSV を使えば良いということに気づいた</a>ので、
+実装してみました。
+実際には単独のハッシュではなくハッシュの配列がほしかったので、
+連続する数値を末尾に付けて複数受け取れるようにしています。</p>
+
+<!--more-->
+
+
+<h2>実装</h2>
+
+<p>キーワード引数を使っているので、
+以下の実装のままだと ruby 2.0.0 以降必須です。
+必要なら適当に変更して使ってください。</p>
+
+<div><script src='https://gist.github.com/849166c048a2117c341d.js?file=env_ltsv_each.rb'></script>
+<noscript><pre><code># -*- coding: utf-8 -*-
+# env_ltsv_each.rb
+# copyright (c) 2014 Kazuhiro NISHIYAMA
+# This software is released under the MIT License.
+# http://opensource.org/licenses/MIT
+require &#39;ostruct&#39;
+
+def env_ltsv_each(prefix, start: 0, encoding: Encoding::UTF_8, scrub: false)
+  block_given? or return enum_for(__method__)
+  i = start
+  loop do
+    ltsv = ENV[&quot;#{prefix}_#{i}&quot;]
+    i = i.succ
+    break unless ltsv
+    h = OpenStruct.new
+    ltsv.split(/\t/).each do |pair|
+      key, value = pair.split(&#39;:&#39;, 2)
+      value.force_encoding(encoding)
+      value.scrub! if scrub
+      h[key] = value
+    end
+    yield h
+  end
+  nil
+end
+
+if __FILE__ == $0
+  ENV[&#39;NAVI_0&#39;] = &#39;icon:top label:Top   uri:/&#39;
+  ENV[&#39;NAVI_1&#39;] = &#39;icon:posts   label:Listing Posts uri:/posts&#39;
+  ENV[&#39;NAVI_2&#39;] = &#39;icon:users   label:Listing Users uri:/users&#39;
+  env_ltsv_each(&#39;NAVI&#39;) do |h|
+    puts %Q(&lt;a href=&quot;#{h.uri}&quot;&gt;&lt;img src=&quot;#{h.icon}.png&quot; alt=&quot;#{h.label}&quot;&gt;&lt;/a&gt;)
+    #=&gt;
+    # &lt;a href=&quot;/&quot;&gt;&lt;img src=&quot;top.png&quot; alt=&quot;Top&quot;&gt;&lt;/a&gt;
+    # &lt;a href=&quot;/posts&quot;&gt;&lt;img src=&quot;posts.png&quot; alt=&quot;Listing Posts&quot;&gt;&lt;/a&gt;
+    # &lt;a href=&quot;/users&quot;&gt;&lt;img src=&quot;users.png&quot; alt=&quot;Listing Users&quot;&gt;&lt;/a&gt;
+  end
+end
+</code></pre></noscript></div>
+
+
+<h2>詳細</h2>
+
+<p><code>String#scrub!</code> は 2.1.0 以降か
+<a href="https://rubygems.org/gems/string-scrub">string-scrub gem</a>
+が必要なのでデフォルトでは呼ばないようにしています。</p>
+
+<p><code>Hash</code> だと取り出すのが面倒だったので、
+<code>OpenStruct</code> を使ってみました。
+メソッド名として問題がある場合は
+<code>h['send']</code> のように普通の <code>Hash</code> のように取り出せます。</p>
+
+<p>添字をまわすのに <code>succ</code> を使っているので <code>FOO_A</code>, <code>FOO_B</code>, &hellip; のような使い方も出来ると思います。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[caffでキーサインした]]></title>
@@ -2362,66 +2438,6 @@ URL に <code>ownclouds://user:password@example.jp/remote.php/webdav</code> の�
 サーバーなどのコマンドラインのみの環境でも <code>owncloud</code> との同期が出来ることがわかりました。</p>
 
 <p>しかし、クライアントの出来がまだあまりよくないので、使い勝手は良くないということもわかりました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 10 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-04-23-rubymotion-mokumoku.html"/>
-    <updated>2014-04-23T19:16:51+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku</id>
-    <content type="html"><![CDATA[<p>第 1 回から第 9 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://connpass.com/event/5674/">第 10 回 RubyMotion もくもく会 in Osaka</a>
-に参加してきました。</p>
-
-<p>次回の
-<a href="http://connpass.com/event/6116/">第 11 回 RubyMotion もくもく会 in Osaka &ndash; connpass</a>
-は 05/28(水) になりました。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<ul>
-<li><a href="https://itunes.apple.com/jp/app/bokosuka!mogurando/id845835380?mt=8">ボコスカ！モグランド</a></li>
-<li><a href="http://www.amazon.co.jp/gp/product/4873116678/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116678&amp;linkCode=as2&amp;tag=znz-22">AngularJSアプリケーション開発ガイド</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116678" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" /> が発売されているという話</li>
-<li><a href="http://www.pixate.com/">Pixate</a></li>
-<li>MacFace</li>
-<li><a href="https://github.com/HipByte/RubyMotionSamples/issues/31">osx/Tweets app crashes on launch</a></li>
-<li><a href="http://www.impress-plus.co.jp/">http://www.impress-plus.co.jp/</a></li>
-</ul>
-
-
-<h2>調査続き</h2>
-
-<p>引き続き初回起動時の URL の受け取り方を調べていました。</p>
-
-<ul>
-<li><a href="http://questbeat.hatenablog.jp/entry/2014/04/19/123207">「ログイン時に起動」を実装する</a> はあんまり関係なかった。</li>
-<li>GitHub で <code>LSSetDefaultHandlerForURLScheme</code> を検索
-
-<ul>
-<li><a href="https://github.com/s-faychatelard/Helm/blob/2c85b303781fa430432c17ed9848a0b252c82eae/sources/others/mac/mac.mm">https://github.com/s-faychatelard/Helm/blob/2c85b303781fa430432c17ed9848a0b252c82eae/sources/others/mac/mac.mm</a> : Qt で実装していて URL を受け取っている部分がわからず (Qt のイベントに変換されたものを受け取っている?)</li>
-<li><a href="https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/misc/osx/osx_browsers.rb">https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/misc/osx/osx_browsers.rb</a> : ブラウザーの一覧の取得など</li>
-<li><a href="https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/app/osx/app.rb">https://github.com/bigbearlabs/MotionKit/blob/51f46c14b52819b709c57d6e1c954d84c852e48b/lib/motion-kit/app/osx/app.rb</a> : <code>application:openFile:</code> や <code>application:openFiles:</code> で受け取っているように見えるが試してみても呼ばれない。</li>
-<li><a href="https://github.com/gnyrd/WebEx/blob/0ea21241591e496d1d702c45768400fa14d75662/URLHandler.m">https://github.com/gnyrd/WebEx/blob/0ea21241591e496d1d702c45768400fa14d75662/URLHandler.m</a> : <code>kAEGetURL</code> の登録に <code>handleGetURLEvent:withReplyEvent:</code> (2引数) ではなく <code>getURL:</code> (1引数) を使っている。</li>
-</ul>
-</li>
-</ul>
-
-
-<p>前回までの試行錯誤の途中で <code>setEventHandler</code> の呼び出しを <code>applicationDidFinishLaunching:</code> から <code>initialize</code> に移動していたのと <code>getURL:</code> への変更の組み合わせで、やっと初回起動時にも URL が受け取れるようになって、
-さらに <code>rake clean</code> したり一度デフォルトブラウザーを他のブラウザーに設定し直したりしていたら、
-<code>handleGetURLEvent:withReplyEvent:</code> に戻しても初回起動時に受け取れるようになっていました。</p>
-
-<p>原因がはっきりしないのが嫌な感じですが、何か設定が中途半端に残っているとうまく動かなかったようです。</p>
-
-<h2>RubyMine</h2>
-
-<p>前回のもくもく会でインストールして、他では使っていなかったので、
-ほぼ使っていないまま登録せず試用期限が切れてしまって、
-30分ごとに終了するようになってしまいました。</p>
 ]]></content>
   </entry>
   
