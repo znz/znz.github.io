@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-06-29T00:15:05+09:00</updated>
+  <updated>2014-07-05T10:55:39+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,166 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[GOPATHとghqの設定を変更した話とgitconfigのコマンドでの設定の話]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-05-ghq-gitconfig.html"/>
+    <updated>2014-07-05T09:55:07+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ghq-gitconfig</id>
+    <content type="html"><![CDATA[<p><a href="http://blog.kentarok.org/entry/2014/06/03/135300" title="ghqを使ったローカルリポジトリの統一的・効率的な管理について - delirious thoughts">ghqを使ったローカルリポジトリの統一的・効率的な管理について &ndash; delirious thoughts</a>
+を参考にして、
+go と ghq で同じディレクトリを使っていたのですが、
+go で自動で追加ダウンロードされたものと
+自分でダウンロードしたものが混ざるとわかりにくいと思ったので、
+分けることにしました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>go version go1.3 darwin/amd64</li>
+<li>git verseion 2.0.0</li>
+<li>Mercurial Distributed SCM (version 3.0.1)</li>
+<li>ghq version HEAD (2014-06-27 が最新コミットの状態)</li>
+</ul>
+
+
+<h2>go などのインストール</h2>
+
+<p><a href="http://brew.sh/">Homebrew</a> を使って
+<code>brew install go --cross-compile-common</code>
+でインストールしました。</p>
+
+<p>git と mercurial もインストールしておきました。</p>
+
+<h2>シェルの設定 (GOPATH など)</h2>
+
+<p>bash と zsh の共通の設定として
+<a href="https://github.com/znz/dot-shell/blob/bb84c5aefc83eab5ce1841508abd726ee9db6577/profile.d/50gopath.sh" title="50gopath.sh">50gopath.sh</a>
+で以下のように設定しています。</p>
+
+<p>統合している時は go とか git とかの意味をかねて g だけにしていましたが、
+今は go 専用にしています。</p>
+
+<figure class='code'><figcaption><span>50gopath.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;${GOPATH:-}&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+</span><span class='line'><span class="k">    </span><span class="nb">export </span><span class="nv">GOPATH</span><span class="o">=</span><span class="nv">$HOME</span>/g
+</span><span class='line'>    <span class="nv">PATH</span><span class="o">=</span><span class="nv">$PATH</span>:<span class="nv">$GOPATH</span>/bin
+</span><span class='line'><span class="k">fi</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>その後に zsh 専用の追加設定で
+<a href="https://github.com/znz/dot-shell/blob/bb84c5aefc83eab5ce1841508abd726ee9db6577/profile.d/50gopath.zsh" title="50gopath.zsh">50gopath.zsh</a>
+で以下のように設定しています。</p>
+
+<p>GOPATH が PATH のように <code>:</code> 区切りで複数になる可能性を考慮してしまったのですが、
+<a href="http://golang.org/doc/code.html#GOPATH" title="The GOPATH environment variable">The GOPATH environment variable</a>
+をみるとそういうことはなさそうなので、
+<code>${^${(s/:/)GOPATH}}</code> は単純に <code>${GOPATH}</code> でも良さそうです。</p>
+
+<p>そして fpath に <code>_ghq</code> のパスを追加して <code>ghq</code> の引数を補完できるようにしています。</p>
+
+<figure class='code'><figcaption><span>50gopath.zsh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">path</span><span class="o">=(</span> <span class="nv">$path</span> <span class="k">${</span><span class="p">^</span><span class="k">${</span><span class="p">(s/:/)GOPATH</span><span class="k">}}</span>/bin<span class="o">(</span>N<span class="o">)</span> <span class="o">)</span>
+</span><span class='line'><span class="nv">fpath</span><span class="o">=(</span> <span class="nv">$fpath</span> <span class="k">${</span><span class="p">^</span><span class="k">${</span><span class="p">(s/:/)GOPATH</span><span class="k">}}</span>/src/*/*/ghq/zsh<span class="o">(</span>N<span class="o">)</span> <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>ghq のインストール</h2>
+
+<p><code>go get -v github.com/motemen/ghq</code>
+でインストールしました。</p>
+
+<h3><code>https://</code> の要不要</h3>
+
+<p><code>ghq get</code> では <code>github.com</code> から書く時は <code>https://</code> が必須なのですが、
+こちらは <code>https://</code> は不要というか、
+むしろ付けるとエラーになりました。</p>
+
+<h2>.gitconfig の設定</h2>
+
+<p><a href="https://github.com/znz/dot-shell/blob/bb84c5aefc83eab5ce1841508abd726ee9db6577/git-config.sh" title="git-config.sh">git-config.sh</a>
+で <code>user.name</code> や <code>user.email</code> 以外の共通のものはまとめて設定しています。</p>
+
+<h3>コマンドでの設定の追加削除</h3>
+
+<p>詳細はドキュメントをみてもらうとして、まとめておくと以下のようになります。</p>
+
+<ul>
+<li>単独の設定 : <code>git config --global section.key value</code></li>
+<li>複数設定 : <code>git config --global section.key value</code> の後で <code>git config --global --add section.key value</code></li>
+<li>複数設定削除 : <code>git config --global --unset-all section.key</code> (ただしセクションが空になっても残る)</li>
+<li>セクションごと削除 : <code>git config --global --remove-section セクション</code></li>
+</ul>
+
+
+<h3>ghq の設定</h3>
+
+<p><code>ghq.root</code> を <code>--unset-all</code> だけすると git-config.sh を実行する度に
+ghq セクション、つまり <code>[ghq]</code> の行が増えていってしまったので、
+<code>--remove-section</code> を使いました。
+他に <code>ghq</code> セクションに設定を入れていたら、
+それも消えてしまうので注意してください。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="c"># ghq section</span>
+</span><span class='line'>git config --global --remove-section <span class="s2">&quot;ghq&quot;</span> <span class="o">||</span> :
+</span><span class='line'><span class="nv">GHQ_ROOT</span><span class="o">=</span><span class="s2">&quot;ghq.root&quot;</span>
+</span><span class='line'><span class="c">#git config --global --unset-all &quot;$GHQ_ROOT&quot; || :</span>
+</span><span class='line'>git config --global <span class="s2">&quot;$GHQ_ROOT&quot;</span> <span class="s2">&quot;$HOME/s&quot;</span>
+</span><span class='line'>git config --global --add <span class="s2">&quot;$GHQ_ROOT&quot;</span> <span class="s2">&quot;$HOME/g/src&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>これで <code>ghq get</code> は <code>$HOME/s</code> に入って
+<code>ghq look</code> では両方見えるようになりました。</p>
+
+<h3>github の URL 統一の話</h3>
+
+<p>github の URL は https に統一して、
+gitconfig の設定で
+push は ssh プロトコル、
+pull などは git プロトコル (昔は Git Read-Only と書いてあった URL)
+を使うようにしています。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="c"># github upload</span>
+</span><span class='line'><span class="nv">GITHUB_URL_PREFIX</span><span class="o">=</span><span class="s2">&quot;url.git@github.com:&quot;</span>
+</span><span class='line'>git config --global --remove-section <span class="s2">&quot;$GITHUB_URL_PREFIX&quot;</span> <span class="o">||</span> :
+</span><span class='line'>git config --global <span class="s2">&quot;$GITHUB_URL_PREFIX&quot;</span>.pushInsteadOf <span class="s2">&quot;git://github.com/&quot;</span>
+</span><span class='line'>git config --global --add <span class="s2">&quot;$GITHUB_URL_PREFIX&quot;</span>.pushInsteadOf <span class="s2">&quot;https://github.com/&quot;</span>
+</span><span class='line'><span class="c"># gist upload</span>
+</span><span class='line'>git config --global <span class="s2">&quot;url.git@gist.github.com:&quot;</span>.pushInsteadOf <span class="s2">&quot;https://gist.github.com/$(git config github.user)/&quot;</span>
+</span><span class='line'><span class="c"># github download</span>
+</span><span class='line'>git config --global url.<span class="s2">&quot;git://github.com/&quot;</span>.insteadOf <span class="s2">&quot;https://github.com/&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>詳細は
+<a href="http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html" title="githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法">githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法</a>
+を参照してください。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Amagasakirb特別編 須藤さん関連プロダクツ勉強会に参加した]]></title>
@@ -2329,70 +2489,6 @@ master に戻った状態で <code>unpin</code> してしまっても
 
 
 <h2></h2>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[LILO ＆ 東海道らぐのイベントに参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-05-03-lilo-event.html"/>
-    <updated>2014-05-03T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/lilo-event</id>
-    <content type="html"><![CDATA[<p><a href="http://lilo.doorkeeper.jp/events/10790">LILO ＆ 東海道らぐ・オフラインミーティング（2014/05/03）</a> に参加しました。</p>
-
-<p>アンカンファレンス形式で発表したい人が順番に前に出て話をするという形式でした。</p>
-
-<!--more-->
-
-
-<h2>内容</h2>
-
-<p>大部分は資料を用意しての発表という形式ではなくて、
-発表のタイトルもちゃんとあるわけではなかったので、
-大雑把にこういう話でしたというメモだけです。</p>
-
-<ul>
-<li>自己紹介1</li>
-<li>しまださんの東海道らぐの紹介</li>
-<li>自分の <code>libpam-google-authenticator</code> の話</li>
-<li>自己紹介2 (後から来た人の自己紹介)</li>
-<li>えのきさんの LibreOffice の QA などの相談 (ディスカッション)</li>
-<li>さとうさんの Raspberry Pi の話</li>
-<li>矢吹さんの LXC などの話</li>
-<li>自己紹介3 (さらに後から来た人の自己紹介)
-
-<ul>
-<li>pandoc がオススメ</li>
-</ul>
-</li>
-<li>としひささんの Raspberry Pi で NTP Stratum 1 Server の話
-
-<ul>
-<li><a href="http://tosihisa.postach.io/raspberry-pi-de-ntp-stratum-1-server-wozuo-ru">Raspberry Pi で NTP Stratum-1 Server を作る． | tosihisa&rsquo;s public notebook</a></li>
-<li><a href="http://www.pool.ntp.org/scores/60.56.214.78">http://www.pool.ntp.org/scores/60.56.214.78</a></li>
-<li><code>ntpdate -quv ntp.netfort.gr.jp</code> で確認できました。</li>
-</ul>
-</li>
-<li>守屋さんの Linux の昔話とかの話</li>
-<li>こんどうさんの Flightgear の話</li>
-<li>大浦さんの 文字書き起こしツール <a href="http://sourceforge.jp/projects/smart-gs/">SMART-GS</a> の話</li>
-<li>さかもとさんのカーネルモジュールの話
-
-<ul>
-<li><a href="http://netcat.bandcamp.com/">http://netcat.bandcamp.com/</a></li>
-<li><a href="https://github.com/usrbinnc/netcat-cpi-kernel-module">https://github.com/usrbinnc/netcat-cpi-kernel-module</a></li>
-</ul>
-</li>
-</ul>
-
-
-<h2>感想</h2>
-
-<p>いろいろな内容の話が聞けて面白かったです。</p>
-
-<p>自分が話をするのは、 LILO のサーバー移行の話という案もあったのですが、
-それはちゃんとまとめる時間をとってからの方が良さそうと思って、
-事前に一度試していたことのあった <code>libpam-google-authenticator</code> を前の晩に試し直しながらデモの順番を考えて、
-その話をしました。</p>
 ]]></content>
   </entry>
   

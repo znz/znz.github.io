@@ -1,0 +1,501 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>GOPATHとghqの設定を変更した話とgitconfigのコマンドでの設定の話 - @znz blog</title>
+  <meta name="author" content="Kazuhiro NISHIYAMA">
+
+  
+  <meta name="description" content="ghqを使ったローカルリポジトリの統一的・効率的な管理について &ndash; delirious thoughts
+を参考にして、
+go と ghq で同じディレクトリを使っていたのですが、
+go で自動で追加ダウンロードされたものと
+自分でダウンロードしたものが混ざるとわかりにくいと思ったので &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-07-05-ghq-gitconfig.html">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-43859023-1', 'n-z.jp');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">@znz blog</a></h1>
+  
+    <h2>ZnZ の memo のようなもの</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://www.google.co.jp/cse" id="cse-search-box">
+  <div>
+    <input type="hidden" name="cx" value="partner-pub-4711975605457723:5173725094" />
+    <input type="hidden" name="ie" value="UTF-8" />
+    <input type="text" name="q" size="40" />
+    <input type="submit" name="sa" value="検索" />
+  </div>
+</form>
+
+<script type="text/javascript" src="http://www.google.co.jp/coop/cse/brand?form=cse-search-box&amp;lang=ja"></script>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">GOPATHとghqの設定を変更した話とgitconfigのコマンドでの設定の話</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-07-05T09:55:07+09:00" pubdate data-updated="true">2014-07-05 (Sat)</time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p><a href="http://blog.kentarok.org/entry/2014/06/03/135300" title="ghqを使ったローカルリポジトリの統一的・効率的な管理について - delirious thoughts">ghqを使ったローカルリポジトリの統一的・効率的な管理について &ndash; delirious thoughts</a>
+を参考にして、
+go と ghq で同じディレクトリを使っていたのですが、
+go で自動で追加ダウンロードされたものと
+自分でダウンロードしたものが混ざるとわかりにくいと思ったので、
+分けることにしました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>go version go1.3 darwin/amd64</li>
+<li>git verseion 2.0.0</li>
+<li>Mercurial Distributed SCM (version 3.0.1)</li>
+<li>ghq version HEAD (2014-06-27 が最新コミットの状態)</li>
+</ul>
+
+
+<h2>go などのインストール</h2>
+
+<p><a href="http://brew.sh/">Homebrew</a> を使って
+<code>brew install go --cross-compile-common</code>
+でインストールしました。</p>
+
+<p>git と mercurial もインストールしておきました。</p>
+
+<h2>シェルの設定 (GOPATH など)</h2>
+
+<p>bash と zsh の共通の設定として
+<a href="https://github.com/znz/dot-shell/blob/bb84c5aefc83eab5ce1841508abd726ee9db6577/profile.d/50gopath.sh" title="50gopath.sh">50gopath.sh</a>
+で以下のように設定しています。</p>
+
+<p>統合している時は go とか git とかの意味をかねて g だけにしていましたが、
+今は go 専用にしています。</p>
+
+<figure class='code'><figcaption><span>50gopath.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;${GOPATH:-}&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+</span><span class='line'><span class="k">    </span><span class="nb">export </span><span class="nv">GOPATH</span><span class="o">=</span><span class="nv">$HOME</span>/g
+</span><span class='line'>    <span class="nv">PATH</span><span class="o">=</span><span class="nv">$PATH</span>:<span class="nv">$GOPATH</span>/bin
+</span><span class='line'><span class="k">fi</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>その後に zsh 専用の追加設定で
+<a href="https://github.com/znz/dot-shell/blob/bb84c5aefc83eab5ce1841508abd726ee9db6577/profile.d/50gopath.zsh" title="50gopath.zsh">50gopath.zsh</a>
+で以下のように設定しています。</p>
+
+<p>GOPATH が PATH のように <code>:</code> 区切りで複数になる可能性を考慮してしまったのですが、
+<a href="http://golang.org/doc/code.html#GOPATH" title="The GOPATH environment variable">The GOPATH environment variable</a>
+をみるとそういうことはなさそうなので、
+<code>${^${(s/:/)GOPATH}}</code> は単純に <code>${GOPATH}</code> でも良さそうです。</p>
+
+<p>そして fpath に <code>_ghq</code> のパスを追加して <code>ghq</code> の引数を補完できるようにしています。</p>
+
+<figure class='code'><figcaption><span>50gopath.zsh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">path</span><span class="o">=(</span> <span class="nv">$path</span> <span class="k">${</span><span class="p">^</span><span class="k">${</span><span class="p">(s/:/)GOPATH</span><span class="k">}}</span>/bin<span class="o">(</span>N<span class="o">)</span> <span class="o">)</span>
+</span><span class='line'><span class="nv">fpath</span><span class="o">=(</span> <span class="nv">$fpath</span> <span class="k">${</span><span class="p">^</span><span class="k">${</span><span class="p">(s/:/)GOPATH</span><span class="k">}}</span>/src/*/*/ghq/zsh<span class="o">(</span>N<span class="o">)</span> <span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>ghq のインストール</h2>
+
+<p><code>go get -v github.com/motemen/ghq</code>
+でインストールしました。</p>
+
+<h3><code>https://</code> の要不要</h3>
+
+<p><code>ghq get</code> では <code>github.com</code> から書く時は <code>https://</code> が必須なのですが、
+こちらは <code>https://</code> は不要というか、
+むしろ付けるとエラーになりました。</p>
+
+<h2>.gitconfig の設定</h2>
+
+<p><a href="https://github.com/znz/dot-shell/blob/bb84c5aefc83eab5ce1841508abd726ee9db6577/git-config.sh" title="git-config.sh">git-config.sh</a>
+で <code>user.name</code> や <code>user.email</code> 以外の共通のものはまとめて設定しています。</p>
+
+<h3>コマンドでの設定の追加削除</h3>
+
+<p>詳細はドキュメントをみてもらうとして、まとめておくと以下のようになります。</p>
+
+<ul>
+<li>単独の設定 : <code>git config --global section.key value</code></li>
+<li>複数設定 : <code>git config --global section.key value</code> の後で <code>git config --global --add section.key value</code></li>
+<li>複数設定削除 : <code>git config --global --unset-all section.key</code> (ただしセクションが空になっても残る)</li>
+<li>セクションごと削除 : <code>git config --global --remove-section セクション</code></li>
+</ul>
+
+
+<h3>ghq の設定</h3>
+
+<p><code>ghq.root</code> を <code>--unset-all</code> だけすると git-config.sh を実行する度に
+ghq セクション、つまり <code>[ghq]</code> の行が増えていってしまったので、
+<code>--remove-section</code> を使いました。
+他に <code>ghq</code> セクションに設定を入れていたら、
+それも消えてしまうので注意してください。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="c"># ghq section</span>
+</span><span class='line'>git config --global --remove-section <span class="s2">&quot;ghq&quot;</span> <span class="o">||</span> :
+</span><span class='line'><span class="nv">GHQ_ROOT</span><span class="o">=</span><span class="s2">&quot;ghq.root&quot;</span>
+</span><span class='line'><span class="c">#git config --global --unset-all &quot;$GHQ_ROOT&quot; || :</span>
+</span><span class='line'>git config --global <span class="s2">&quot;$GHQ_ROOT&quot;</span> <span class="s2">&quot;$HOME/s&quot;</span>
+</span><span class='line'>git config --global --add <span class="s2">&quot;$GHQ_ROOT&quot;</span> <span class="s2">&quot;$HOME/g/src&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>これで <code>ghq get</code> は <code>$HOME/s</code> に入って
+<code>ghq look</code> では両方見えるようになりました。</p>
+
+<h3>github の URL 統一の話</h3>
+
+<p>github の URL は https に統一して、
+gitconfig の設定で
+push は ssh プロトコル、
+pull などは git プロトコル (昔は Git Read-Only と書いてあった URL)
+を使うようにしています。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="c"># github upload</span>
+</span><span class='line'><span class="nv">GITHUB_URL_PREFIX</span><span class="o">=</span><span class="s2">&quot;url.git@github.com:&quot;</span>
+</span><span class='line'>git config --global --remove-section <span class="s2">&quot;$GITHUB_URL_PREFIX&quot;</span> <span class="o">||</span> :
+</span><span class='line'>git config --global <span class="s2">&quot;$GITHUB_URL_PREFIX&quot;</span>.pushInsteadOf <span class="s2">&quot;git://github.com/&quot;</span>
+</span><span class='line'>git config --global --add <span class="s2">&quot;$GITHUB_URL_PREFIX&quot;</span>.pushInsteadOf <span class="s2">&quot;https://github.com/&quot;</span>
+</span><span class='line'><span class="c"># gist upload</span>
+</span><span class='line'>git config --global <span class="s2">&quot;url.git@gist.github.com:&quot;</span>.pushInsteadOf <span class="s2">&quot;https://gist.github.com/$(git config github.user)/&quot;</span>
+</span><span class='line'><span class="c"># github download</span>
+</span><span class='line'>git config --global url.<span class="s2">&quot;git://github.com/&quot;</span>.insteadOf <span class="s2">&quot;https://github.com/&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>詳細は
+<a href="http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html" title="githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法">githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法</a>
+を参照してください。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-07-05T09:55:07+09:00" pubdate data-updated="true">2014-07-05 (Sat)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ghq/'>ghq</a>, <a class='category' href='/blog/categories/git/'>git</a>, <a class='category' href='/blog/categories/go/'>go</a>, <a class='category' href='/blog/categories/shell/'>shell</a>, <a class='category' href='/blog/categories/zsh/'>zsh</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://blog.n-z.jp/blog/2014-07-05-ghq-gitconfig.html" data-via="znz" data-counturl="http://blog.n-z.jp/blog/2014-07-05-ghq-gitconfig.html" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  <a href="http://b.hatena.ne.jp/entry/http://blog.n-z.jp/blog/2014-07-05-ghq-gitconfig.html" class="hatena-bookmark-button" data-hatena-bookmark-layout="simple-balloon" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014-06-28-amagasakirb.html" title="Previous Post: Amagasakirb特別編 須藤さん関連プロダクツ勉強会に参加した">&laquo; Amagasakirb特別編 須藤さん関連プロダクツ勉強会に参加した</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- sidebar -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:160px;height:600px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4210402292"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+<section>
+  <h1>About Me</h1>
+  <img src="/favicon.png" style="float:right">
+  <p>
+    <a href="http://rubycommitters.org/">Ruby のコミッター</a>とかやってます。
+    フルスタックエンジニア(って何?)かもしれません。
+  </p>
+<script data-gittip-username="znz"
+        data-gittip-widget="button"
+        src="//gttp.co/v1.js"></script>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014-07-05-ghq-gitconfig.html">GOPATHとghqの設定を変更した話とgitconfigのコマンドでの設定の話</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-06-28-amagasakirb.html">Amagasakirb特別編 須藤さん関連プロダクツ勉強会に参加した</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-06-25-env-array-hash.html">環境変数にハッシュの配列を入れてみた</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-06-22-key-sign-caff.html">caffでキーサインした</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-06-22-kansai-debian-meeting.html">第 85 回 関西 Debian 勉強会に参加した</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>Tag Cloud</h1>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 102.5%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 108.75%'>amagasakirb(7)</a> <a href='/blog/categories/ansible' style='font-size: 110.0%'>ansible(8)</a> <a href='/blog/categories/anyenv' style='font-size: 101.25%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.25%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 101.25%'>boot2docker(1)</a> <a href='/blog/categories/bootstrap' style='font-size: 101.25%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 101.25%'>bts(1)</a> <a href='/blog/categories/certification' style='font-size: 101.25%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 102.5%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 103.75%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 122.5%'>debian(18)</a> <a href='/blog/categories/devise' style='font-size: 102.5%'>devise(2)</a> <a href='/blog/categories/dkms' style='font-size: 101.25%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 111.25%'>docker(9)</a> <a href='/blog/categories/dokku' style='font-size: 102.5%'>dokku(2)</a> <a href='/blog/categories/doorkeeper' style='font-size: 101.25%'>doorkeeper(1)</a> <a href='/blog/categories/drb' style='font-size: 101.25%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.25%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 110.0%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 141.25%'>event(33)</a> <a href='/blog/categories/fluentd' style='font-size: 101.25%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 105.0%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 101.25%'>ghq(1)</a> <a href='/blog/categories/git' style='font-size: 106.25%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 107.5%'>github(6)</a> <a href='/blog/categories/go' style='font-size: 101.25%'>go(1)</a> <a href='/blog/categories/gpg' style='font-size: 101.25%'>gpg(1)</a> <a href='/blog/categories/haml' style='font-size: 101.25%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 101.25%'>heroku(1)</a> <a href='/blog/categories/homebrew' style='font-size: 108.75%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 103.75%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 103.75%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 101.25%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 101.25%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.25%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 105.0%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 101.25%'>jenkins(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 102.5%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.25%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.5%'>jus(2)</a> <a href='/blog/categories/k-of' style='font-size: 101.25%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 106.25%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.25%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.25%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 105.0%'>land-of-lisp(4)</a> <a href='/blog/categories/lilo' style='font-size: 101.25%'>lilo(1)</a> <a href='/blog/categories/linux' style='font-size: 110.0%'>linux(8)</a> <a href='/blog/categories/lxc' style='font-size: 101.25%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.25%'>lxcjp(1)</a> <a href='/blog/categories/mail' style='font-size: 101.25%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 102.5%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 105.0%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.25%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.25%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.25%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 102.5%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.25%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 101.25%'>oauth2(1)</a> <a href='/blog/categories/octopress' style='font-size: 106.25%'>octopress(5)</a> <a href='/blog/categories/omniauth' style='font-size: 101.25%'>omniauth(1)</a> <a href='/blog/categories/openssl' style='font-size: 102.5%'>openssl(2)</a> <a href='/blog/categories/osx' style='font-size: 131.25%'>osx(25)</a> <a href='/blog/categories/owncloud' style='font-size: 101.25%'>owncloud(1)</a> <a href='/blog/categories/packer' style='font-size: 101.25%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.25%'>passenger(1)</a> <a href='/blog/categories/postfix' style='font-size: 102.5%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 102.5%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.25%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.25%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 102.5%'>r(2)</a> <a href='/blog/categories/rabbit' style='font-size: 102.5%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 131.25%'>rails(25)</a> <a href='/blog/categories/ransack' style='font-size: 101.25%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 105.0%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.25%'>redmine(1)</a> <a href='/blog/categories/rspec' style='font-size: 101.25%'>rspec(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.25%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(48)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.25%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 102.5%'>rubykansai(2)</a> <a href='/blog/categories/rubymotion' style='font-size: 115.0%'>rubymotion(12)</a> <a href='/blog/categories/security' style='font-size: 103.75%'>security(3)</a> <a href='/blog/categories/shell' style='font-size: 103.75%'>shell(3)</a> <a href='/blog/categories/slim' style='font-size: 101.25%'>slim(1)</a> <a href='/blog/categories/sylpheed' style='font-size: 101.25%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.25%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 105.0%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 122.5%'>ubuntu(18)</a> <a href='/blog/categories/upstart' style='font-size: 102.5%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 101.25%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 102.5%'>vagrant(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 102.5%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 101.25%'>weechat(1)</a> <a href='/blog/categories/yaml' style='font-size: 101.25%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.25%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 108.75%'>zsh(7)</a> </span>
+</section>
+<section class="clearfix">
+<h1><a href="https://coderwall.com/">coderwall.com</a></h1>
+<link href="http://coderwall.com/stylesheets/jquery.coderwall.css" media="all" rel="stylesheet" type="text/css">
+<script src="http://coderwall.com/javascripts/jquery.coderwall.js"></script>
+<section class="coderwall" data-coderwall-username="znz" data-coderwall-orientation="vertical" style="width:80%"></section>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/znz">@znz</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'znz',
+            count: 3,
+            skip_forks: false,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Kazuhiro NISHIYAMA -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'znzblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-07-05-ghq-gitconfig.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-07-05-ghq-gitconfig.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+<script type="text/javascript" src="http://b.st-hatena.com/js/bookmark_button.js" charset="utf-8" async="async"></script>
+
+
+</body>
+</html>
