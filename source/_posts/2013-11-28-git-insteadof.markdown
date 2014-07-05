@@ -113,3 +113,7 @@ git 1.8.4.3 の `git config --help` に
 まとめてみました。
 
 そして github 以外でも使えるという話も付け加えておきました。
+
+2014-07-05 追記:
+[GOPATHとghqの設定を変更した話とgitconfigのコマンドでの設定の話](http://blog.n-z.jp/blog/2014-07-05-ghq-gitconfig.html "GOPATHとghqの設定を変更した話とgitconfigのコマンドでの設定の話")
+に関連する話を書きました。
