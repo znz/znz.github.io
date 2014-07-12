@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-07-12T09:38:02+09:00</updated>
+  <updated>2014-07-12T09:48:07+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -130,6 +130,611 @@ User モデルにいろんな情報を入れているなら、
 
 
 <p>を用意しています。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[devise で通常ログイン出来るユーザーが他の複数サービス連携でログインできるようにした]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-08-devise-omniauth.html"/>
+    <updated>2014-07-08T08:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/devise-omniauth</id>
+    <content type="html"><![CDATA[<p><code>devise</code> でデータベース認証を実装している Rails アプリに Twitter などでもログインできるように
+実装を追加してみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>ruby 2.1.2</li>
+<li>rails 4.1.4</li>
+<li>devise 3.2.4</li>
+<li>omniauth 1.2.1</li>
+<li>omniauth-facebook 1.6.0</li>
+<li>omniauth-github 1.1.2</li>
+<li>omniauth-google-oauth2 0.2.4</li>
+<li>omniauth-twitter 1.0.1</li>
+<li>(dotenv 0.11.1) (key と secret の管理)</li>
+<li>(font-awesome-sass 4.1.0) (view での <code>icon</code> メソッド)</li>
+</ul>
+
+
+<h2>前提条件</h2>
+
+<ul>
+<li>devise で通常の User モデルにメールアドレスとパスワードによる認証は実装されている。</li>
+<li>複数サービスとの連携をするために User モデルには連携サービスの情報は直接持たずに UserAuth モデルに分ける。</li>
+<li>連携対象サービスは Facebook, GitHub, Google+, Twitter</li>
+<li>連携サービスからの追加情報はメールアドレスなども含めて一切とらずに認証だけに利用する。</li>
+<li>どの連携サービス (provider) かと識別するための ID だけ保存する。</li>
+<li>key や secret は環境変数で渡す。 (今回は dotenv を使ったが、 config/secrets.yml 経由でも良さそう)</li>
+<li>今回はテストは未実装 (連携部分のテストの書き方をまだ調べていないため)</li>
+<li>今回の実装範囲では I18n は使わずにメッセージは日本語固定</li>
+</ul>
+
+
+<h2>実装</h2>
+
+<p>今回は以下のように実装を追加すると連携サービスでログインできるようになりました。</p>
+
+<h3>Gemfile</h3>
+
+<p>OmniAuth と使用するサービスを追加します。</p>
+
+<figure class='code'><figcaption><span>Gemfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">gem</span> <span class="s1">&#39;omniauth&#39;</span>
+</span><span class='line'><span class="n">gem</span> <span class="s1">&#39;omniauth-facebook&#39;</span>
+</span><span class='line'><span class="n">gem</span> <span class="s1">&#39;omniauth-github&#39;</span>
+</span><span class='line'><span class="n">gem</span> <span class="s1">&#39;omniauth-google-oauth2&#39;</span>
+</span><span class='line'><span class="n">gem</span> <span class="s1">&#39;omniauth-twitter&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>initializer 追加</h3>
+
+<p>key と secret があれば provider 登録するようにしました。</p>
+
+<p>view で使うために、
+登録されている provider の情報の取り方がわからなかったのと
+追加で名前や Font Awesome のアイコン名も入れたかったので、
+<code>AUTH_PROVIDERS</code> という配列にハッシュを入れるようにしています。</p>
+
+<figure class='code'><figcaption><span>config/initializers/omniauth.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">AUTH_PROVIDERS</span> <span class="o">=</span> <span class="o">[]</span>
+</span><span class='line'>
+</span><span class='line'><span class="no">Rails</span><span class="o">.</span><span class="n">application</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">middleware</span><span class="o">.</span><span class="n">use</span> <span class="ss">OmniAuth</span><span class="p">:</span><span class="ss">:Builder</span> <span class="k">do</span>
+</span><span class='line'>  <span class="n">key</span><span class="p">,</span> <span class="n">secret</span> <span class="o">=</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;FACEBOOK_KEY&#39;</span><span class="o">]</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;FACEBOOK_SECRET&#39;</span><span class="o">]</span>
+</span><span class='line'>  <span class="k">if</span> <span class="n">key</span> <span class="o">&amp;&amp;</span> <span class="n">secret</span>
+</span><span class='line'>    <span class="n">provider</span> <span class="ss">:facebook</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">secret</span>
+</span><span class='line'>    <span class="no">AUTH_PROVIDERS</span> <span class="o">&lt;&lt;</span> <span class="p">{</span>
+</span><span class='line'>      <span class="ss">provider</span><span class="p">:</span> <span class="ss">:facebook</span><span class="p">,</span>
+</span><span class='line'>      <span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;Facebook&#39;</span><span class="p">,</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">key</span><span class="p">,</span> <span class="n">secret</span> <span class="o">=</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;GITHUB_CONSUMER_KEY&#39;</span><span class="o">]</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;GITHUB_CONSUMER_SECRET&#39;</span><span class="o">]</span>
+</span><span class='line'>  <span class="k">if</span> <span class="n">key</span> <span class="o">&amp;&amp;</span> <span class="n">secret</span>
+</span><span class='line'>    <span class="n">provider</span> <span class="ss">:github</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">secret</span>
+</span><span class='line'>    <span class="no">AUTH_PROVIDERS</span> <span class="o">&lt;&lt;</span> <span class="p">{</span>
+</span><span class='line'>      <span class="ss">provider</span><span class="p">:</span> <span class="ss">:github</span><span class="p">,</span>
+</span><span class='line'>      <span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;GitHub&#39;</span><span class="p">,</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">key</span><span class="p">,</span> <span class="n">secret</span> <span class="o">=</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;GOOGLE_CLIENT_ID&#39;</span><span class="o">]</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;GOOGLE_CLIENT_SECRET&#39;</span><span class="o">]</span>
+</span><span class='line'>  <span class="k">if</span> <span class="n">key</span> <span class="o">&amp;&amp;</span> <span class="n">secret</span>
+</span><span class='line'>    <span class="n">provider</span> <span class="ss">:google_oauth2</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">secret</span>
+</span><span class='line'>    <span class="no">AUTH_PROVIDERS</span> <span class="o">&lt;&lt;</span> <span class="p">{</span>
+</span><span class='line'>      <span class="ss">provider</span><span class="p">:</span> <span class="ss">:google_oauth2</span><span class="p">,</span>
+</span><span class='line'>      <span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;Google&#39;</span><span class="p">,</span>
+</span><span class='line'>      <span class="ss">icon</span><span class="p">:</span> <span class="ss">:google</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">key</span><span class="p">,</span> <span class="n">secret</span> <span class="o">=</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;TWITTER_CONSUMER_KEY&#39;</span><span class="o">]</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;TWITTER_CONSUMER_SECRET&#39;</span><span class="o">]</span>
+</span><span class='line'>  <span class="k">if</span> <span class="n">key</span> <span class="o">&amp;&amp;</span> <span class="n">secret</span>
+</span><span class='line'>    <span class="n">provider</span> <span class="ss">:twitter</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">secret</span>
+</span><span class='line'>    <span class="no">AUTH_PROVIDERS</span> <span class="o">&lt;&lt;</span> <span class="p">{</span>
+</span><span class='line'>      <span class="ss">provider</span><span class="p">:</span> <span class="ss">:twitter</span><span class="p">,</span>
+</span><span class='line'>      <span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;Twitter&#39;</span><span class="p">,</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="no">AUTH_PROVIDERS</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">provider</span><span class="o">|</span>
+</span><span class='line'>    <span class="n">provider</span><span class="o">[</span><span class="ss">:icon</span><span class="o">]</span> <span class="o">||=</span> <span class="n">provider</span><span class="o">[</span><span class="ss">:provider</span><span class="o">]</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>UserAuth モデル作成</h3>
+
+<p><code>rails g model UserAuth user:references uid:string provider:string</code> で作成します。</p>
+
+<p>モデルクラスは生成されたまま使いましたが、
+validation を追加した方が良さそうです。</p>
+
+<figure class='code'><figcaption><span>app/models/user_auth.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">UserAuth</span> <span class="o">&lt;</span> <span class="ss">ActiveRecord</span><span class="p">:</span><span class="ss">:Base</span>
+</span><span class='line'>  <span class="n">belongs_to</span> <span class="ss">:user</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>データベースの方は <code>null: false</code> や index を追加しました。</p>
+
+<figure class='code'><figcaption><span>db/migrate/*_create_user_auths.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">CreateUserAuths</span> <span class="o">&lt;</span> <span class="ss">ActiveRecord</span><span class="p">:</span><span class="ss">:Migration</span>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">change</span>
+</span><span class='line'>    <span class="n">create_table</span> <span class="ss">:user_auths</span> <span class="k">do</span> <span class="o">|</span><span class="n">t</span><span class="o">|</span>
+</span><span class='line'>      <span class="n">t</span><span class="o">.</span><span class="n">references</span> <span class="ss">:user</span><span class="p">,</span> <span class="ss">index</span><span class="p">:</span> <span class="kp">true</span><span class="p">,</span> <span class="ss">null</span><span class="p">:</span> <span class="kp">false</span>
+</span><span class='line'>      <span class="n">t</span><span class="o">.</span><span class="n">string</span> <span class="ss">:uid</span><span class="p">,</span> <span class="ss">null</span><span class="p">:</span> <span class="kp">false</span>
+</span><span class='line'>      <span class="n">t</span><span class="o">.</span><span class="n">string</span> <span class="ss">:provider</span><span class="p">,</span> <span class="ss">null</span><span class="p">:</span> <span class="kp">false</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="n">t</span><span class="o">.</span><span class="n">timestamps</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">add_index</span> <span class="ss">:user_auths</span><span class="p">,</span> <span class="o">[</span><span class="ss">:uid</span><span class="p">,</span> <span class="ss">:provider</span><span class="o">]</span><span class="p">,</span> <span class="ss">unique</span><span class="p">:</span> <span class="kp">true</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3><code>rake db:migrate</code></h3>
+
+<p><code>rake db:migrate</code> で反映しておきます。</p>
+
+<h3>User クラス側</h3>
+
+<p><code>has_many</code> を追加しておきます。</p>
+
+<figure class='code'><figcaption><span>app/models/user.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">has_many</span> <span class="ss">:user_auths</span><span class="p">,</span> <span class="ss">dependent</span><span class="p">:</span> <span class="ss">:destroy</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>ルーティング追加</h3>
+
+<p>まず、どう使われるのか把握するためにルーティングを追加します。</p>
+
+<p><code>auth_help</code> は後でプライバシーポリシーなどを書いています。</p>
+
+<figure class='code'><figcaption><span>config/routes.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">get</span> <span class="s1">&#39;/auth/help&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;auth#help&#39;</span><span class="p">,</span> <span class="ss">as</span><span class="p">:</span> <span class="ss">:auth_help</span>
+</span><span class='line'>  <span class="n">get</span> <span class="s1">&#39;/auth/:provider/callback&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;auth#create&#39;</span>
+</span><span class='line'>  <span class="n">delete</span> <span class="s1">&#39;/auth/destroy/:provider&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;auth#destroy&#39;</span><span class="p">,</span> <span class="ss">as</span><span class="p">:</span> <span class="ss">:destroy_connection</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ここには出てきていませんが、
+OmniAuth で <code>/auth/:provider</code> がルーティングされるようです。</p>
+
+<h3>AuthController 実装</h3>
+
+<p>参考サイトの実装例を参考にして AuthController を実装しました。</p>
+
+<p>help は静的な情報を表示するだけなので、実装は空です。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># -*- coding: utf-8 -*-</span>
+</span><span class='line'><span class="k">class</span> <span class="nc">AuthController</span> <span class="o">&lt;</span> <span class="no">ApplicationController</span>
+</span><span class='line'>  <span class="n">skip_before_filter</span> <span class="ss">:authenticate_user!</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">create</span>
+</span><span class='line'>    <span class="n">auth</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">env</span><span class="o">[</span><span class="s1">&#39;omniauth.auth&#39;</span><span class="o">]</span>
+</span><span class='line'>    <span class="n">uid</span> <span class="o">=</span> <span class="n">auth</span><span class="o">[</span><span class="s1">&#39;uid&#39;</span><span class="o">]</span>
+</span><span class='line'>    <span class="n">provider</span> <span class="o">=</span> <span class="n">auth</span><span class="o">[</span><span class="s1">&#39;provider&#39;</span><span class="o">]</span>
+</span><span class='line'>    <span class="n">auth</span> <span class="o">=</span> <span class="no">UserAuth</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="ss">uid</span><span class="p">:</span> <span class="n">uid</span><span class="p">,</span> <span class="ss">provider</span><span class="p">:</span> <span class="n">provider</span><span class="p">)</span><span class="o">.</span><span class="n">first</span>
+</span><span class='line'>    <span class="k">if</span> <span class="n">auth</span>
+</span><span class='line'>      <span class="n">flash</span><span class="o">[</span><span class="ss">:notice</span><span class="o">]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">provider</span><span class="si">}</span><span class="s2">でログインしました。&quot;</span>
+</span><span class='line'>      <span class="n">sign_in_and_redirect</span> <span class="n">auth</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="ss">event</span><span class="p">:</span> <span class="ss">:authentication</span>
+</span><span class='line'>    <span class="k">else</span>
+</span><span class='line'>      <span class="n">authenticate_user!</span>
+</span><span class='line'>      <span class="no">UserAuth</span><span class="o">.</span><span class="n">create!</span><span class="p">(</span><span class="ss">uid</span><span class="p">:</span> <span class="n">uid</span><span class="p">,</span> <span class="ss">provider</span><span class="p">:</span> <span class="n">provider</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="n">current_user</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">redirect_to</span> <span class="n">root_url</span><span class="p">,</span> <span class="ss">notice</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">provider</span><span class="si">}</span><span class="s2">と連携しました。&quot;</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">destroy</span>
+</span><span class='line'>    <span class="n">provider</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">require</span><span class="p">(</span><span class="ss">:provider</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">authenticate_user!</span>
+</span><span class='line'>    <span class="n">auth</span> <span class="o">=</span> <span class="no">UserAuth</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="ss">provider</span><span class="p">:</span> <span class="n">provider</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="n">current_user</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span>
+</span><span class='line'>    <span class="n">auth</span><span class="o">.</span><span class="n">destroy</span> <span class="k">if</span> <span class="n">auth</span>
+</span><span class='line'>    <span class="n">redirect_to</span> <span class="n">root_url</span><span class="p">,</span> <span class="ss">notice</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">provider</span><span class="si">}</span><span class="s2">と連携解除しました。&quot;</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">help</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>まだ連携を登録していない状態で</p>
+
+<ul>
+<li>ログアウト状態</li>
+<li>連携サービスで認証・連携許可</li>
+<li>戻ってきて通常ログイン</li>
+<li><code>auth/failure</code> に飛ばされる</li>
+</ul>
+
+
+<p>ということがおきているのですが、
+<code>auth/failure</code>
+を実装していないので、デフォルトの 404 エラー画面になってしまいます。</p>
+
+<h3>view helpers 実装</h3>
+
+<p>以前から使っていた <code>link_to_sign_in_or_out</code> の実装も同じファイルに持ってきて、
+<code>link_to_provider</code> という汎用的なメソッドを実装しました。
+使い方は後述します。</p>
+
+<p><code>AUTH_PROVIDERS</code> のハッシュはここで使っています。</p>
+
+<figure class='code'><figcaption><span>app/helpers/link_to_auth_helper.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># -*- coding: utf-8 -*-</span>
+</span><span class='line'><span class="k">module</span> <span class="nn">LinkToAuthHelper</span>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">link_to_sign_in_or_out</span><span class="p">(</span><span class="n">html_options</span><span class="o">=</span><span class="p">{})</span>
+</span><span class='line'>    <span class="k">if</span> <span class="n">user_signed_in?</span>
+</span><span class='line'>      <span class="n">body</span> <span class="o">=</span> <span class="n">icon</span><span class="p">(</span><span class="ss">:&#39;sign-out&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">t</span><span class="p">(</span><span class="ss">:&quot;devise.shared.links.sign_out&quot;</span><span class="p">,</span> <span class="ss">default</span><span class="p">:</span> <span class="s2">&quot;Sign out&quot;</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">html_options</span> <span class="o">=</span> <span class="p">{</span> <span class="nb">method</span><span class="p">:</span> <span class="ss">:delete</span> <span class="p">}</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">html_options</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">link_to</span> <span class="n">body</span><span class="p">,</span> <span class="ss">:destroy_user_session</span><span class="p">,</span> <span class="n">html_options</span>
+</span><span class='line'>    <span class="k">else</span>
+</span><span class='line'>      <span class="n">body</span> <span class="o">=</span> <span class="n">icon</span><span class="p">(</span><span class="ss">:&#39;sign-in&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">t</span><span class="p">(</span><span class="ss">:&quot;devise.shared.links.sign_in&quot;</span><span class="p">,</span> <span class="ss">default</span><span class="p">:</span> <span class="s2">&quot;Sign in&quot;</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">link_to</span> <span class="n">body</span><span class="p">,</span> <span class="ss">:new_user_session</span><span class="p">,</span> <span class="n">html_options</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">link_to_provider</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="n">html_options</span><span class="o">=</span><span class="p">{})</span>
+</span><span class='line'>    <span class="k">if</span> <span class="n">current_user</span>
+</span><span class='line'>      <span class="k">if</span> <span class="no">UserAuth</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="n">current_user</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="ss">provider</span><span class="p">:</span> <span class="n">provider</span><span class="o">[</span><span class="ss">:provider</span><span class="o">]</span><span class="p">)</span><span class="o">.</span><span class="n">exists?</span>
+</span><span class='line'>        <span class="n">html_options</span> <span class="o">=</span> <span class="p">{</span> <span class="nb">method</span><span class="p">:</span> <span class="ss">:delete</span> <span class="p">}</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">html_options</span><span class="p">)</span>
+</span><span class='line'>        <span class="n">link_to</span> <span class="n">icon</span><span class="p">(</span><span class="n">provider</span><span class="o">[</span><span class="ss">:icon</span><span class="o">]</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="si">#{</span><span class="n">provider</span><span class="o">[</span><span class="ss">:name</span><span class="o">]</span><span class="si">}</span><span class="s2">との連携を解除&quot;</span><span class="p">,</span> <span class="n">destroy_connection_path</span><span class="p">(</span><span class="ss">provider</span><span class="p">:</span> <span class="n">provider</span><span class="o">[</span><span class="ss">:provider</span><span class="o">]</span><span class="p">),</span> <span class="n">html_options</span>
+</span><span class='line'>      <span class="k">else</span>
+</span><span class='line'>        <span class="n">link_to</span> <span class="n">icon</span><span class="p">(</span><span class="n">provider</span><span class="o">[</span><span class="ss">:icon</span><span class="o">]</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="si">#{</span><span class="n">provider</span><span class="o">[</span><span class="ss">:name</span><span class="o">]</span><span class="si">}</span><span class="s2">と連携&quot;</span><span class="p">,</span> <span class="s2">&quot;/auth/</span><span class="si">#{</span><span class="n">provider</span><span class="o">[</span><span class="ss">:provider</span><span class="o">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">html_options</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>    <span class="k">else</span>
+</span><span class='line'>      <span class="n">link_to</span> <span class="n">icon</span><span class="p">(</span><span class="n">provider</span><span class="o">[</span><span class="ss">:icon</span><span class="o">]</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="si">#{</span><span class="n">provider</span><span class="o">[</span><span class="ss">:name</span><span class="o">]</span><span class="si">}</span><span class="s2">でログイン&quot;</span><span class="p">,</span> <span class="s2">&quot;/auth/</span><span class="si">#{</span><span class="n">provider</span><span class="o">[</span><span class="ss">:provider</span><span class="o">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">html_options</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>view に追加</h3>
+
+<p>ナビゲーションに以下のように追加しました。
+認証連携がないときは従来のログイン・ログアウトだけ表示しています。</p>
+
+<p><code>AUTH_PROVIDERS</code> に登録されているときだけ連携のリンクを表示するようにしています。</p>
+
+<figure class='code'><figcaption><span>app/views/layouts/_navigation.html.slim</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>    li.dropdown
+</span><span class='line'>      a.dropdown-toggle data-toggle=&quot;dropdown&quot;
+</span><span class='line'>        = icon(:user) + &#39;ログイン管理&#39;
+</span><span class='line'>        b.caret
+</span><span class='line'>      ul.dropdown-menu
+</span><span class='line'>        li= link_to_sign_in_or_out
+</span><span class='line'>        - unless AUTH_PROVIDERS.empty?
+</span><span class='line'>          li= link_to icon(:info)+&quot;認証連携のヘルプ&quot;, auth_help_path
+</span><span class='line'>        - AUTH_PROVIDERS.each do |provider|
+</span><span class='line'>          li= link_to_provider(provider)
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>twitter 連携</h3>
+
+<p>Twitter は複数アカウントを使うことも通常の使用範囲として想定されていて、
+アプリ専用のアカウントもとりやすいので、
+Twitter 連携から試してみました。</p>
+
+<p><a href="https://apps.twitter.com/">https://apps.twitter.com/</a> から <code>Create New App</code> で作成します。</p>
+
+<ul>
+<li>Name: Twitter 全体で一意になるアプリケーションの ID 的にも使われるもの。ツイートの時にツイートしたアプリ名としても埋め込まれるが、今回は認証のみなので、他とぶつからないような名前という以上はこだわらなかった。</li>
+<li>Description: 認証のときに出てくる説明。</li>
+<li>Website: たとえば <code>http://app.127.0.0.1.xip.io:3000/</code> など</li>
+<li>Callback URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/auth/twitter/callback</code> のように <code>/auth/twitter/callback</code> にする。実サイトなら <code>https</code> にすべき。</li>
+</ul>
+
+
+<p>作成後には <code>Allow this application to be used to Sign in with Twitter</code> のチェックを入れておきます。
+チェックがないと Twitter 連携でのログインがうまくいかないようです。</p>
+
+<p>アイコンや Organization なども必要に応じて変更します。</p>
+
+<p>API keys タブで key と secret を取得します。</p>
+
+<ul>
+<li>API key : 環境変数 <code>TWITTER_CONSUMER_KEY</code> に設定</li>
+<li>API secret : 環境変数 <code>TWITTER_CONSUMER_SECRET</code> に設定</li>
+</ul>
+
+
+<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
+ランダムな文字列のように見えます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>TWITTER_CONSUMER_KEY=&quot;xxxxXXxxXxXxXXXxXxXXXXxxx&quot;
+</span><span class='line'>TWITTER_CONSUMER_SECRET=&quot;xxXXxXXxxxxxxXXXXXxXxXXxxXXXxXXxxxxXXxxXxxXXxxXxxx&quot;
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>動作確認</h3>
+
+<ul>
+<li>通常のログインをした状態で「Twitter と連携」で Twitter の許可画面に飛びます。</li>
+<li>許可すると「Twitter 側に許可情報」と「UserAuth に連携情報」が保存されます。</li>
+<li>「Twitter との連携を解除」で「UserAuth が削除」されます。</li>
+<li>「ログアウト」して「Twitter でログイン」すると「ログイン画面」に戻ります。</li>
+<li>ログインすると <code>auth/failure</code> が 404 エラーになります。ここは後で実装する予定です。</li>
+<li>再度ログイン後の画面を直接開きます。</li>
+<li>再度「Twitter と連携」で「UserAuth に連携情報」が保存されます。「Twitter 側の許可情報」は古いままです。</li>
+<li>「ログアウト」して「Twitter でログイン」でログインできます。</li>
+<li><a href="https://twitter.com/settings/applications">https://twitter.com/settings/applications</a> で許可を取り消します。</li>
+<li>「ログアウト」して「Twitter でログイン」で Twitter の許可画面に飛びます。</li>
+<li>許可すると「Twitter 側に許可情報」が保存されて、「UserAuth」は残っているので、そのままログインできます。</li>
+</ul>
+
+
+<h3>GitHub 連携</h3>
+
+<p>GitHub 連携は作成後にすぐに使えるので、アプリケーション作成に使っても良いアカウントがあれば一番簡単です。</p>
+
+<p><a href="https://github.com/settings/applications">https://github.com/settings/applications</a> から <code>Register new application</code> で作成します。</p>
+
+<ul>
+<li>Application name: 適切な名前を設定</li>
+<li>Homepage URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/</code> など</li>
+<li>Application description: ユーザーが許可するときにわかりやすい説明</li>
+<li>Authorization callback URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/auth/github/callback</code> のように <code>/auth/github/callback</code> にする。実サイトなら <code>https</code> にすべき。</li>
+</ul>
+
+
+<p>右上に見えている Client ID と Client Secret を使います。</p>
+
+<ul>
+<li>Client ID : 環境変数 <code>GITHUB_CONSUMER_KEY</code> に設定</li>
+<li>Client Secret : 環境変数 <code>GITHUB_CONSUMER_SECRET</code> に設定</li>
+</ul>
+
+
+<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
+十六進数の数字のように見えます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>GITHUB_CONSUMER_KEY=&quot;xxxxxxxxxxxxxxxxxxxx&quot;
+</span><span class='line'>GITHUB_CONSUMER_SECRET=&quot;xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx&quot;
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Facebook 連携</h2>
+
+<p><a href="https://developers.facebook.com/">https://developers.facebook.com/</a> から上の <code>Apps</code> の中にある <code>Craete a New App</code> で作成します。
+最初は作成前に開発者関連の規約などに同意する必要があるようです。</p>
+
+<ul>
+<li>Display Name: 適切な名前を設定します。</li>
+<li>Namespace: optional なので空欄のままで良いようです。</li>
+<li>カテゴリ: 適当に選択します。</li>
+</ul>
+
+
+<p>セキュリティチェックがあるので、入力すると作成できます。</p>
+
+<p>右上に見えている App ID と App Secret (Show を押すとパスワード認証の後に内容表示) を使います。</p>
+
+<ul>
+<li>App ID : 環境変数 <code>FACEBOOK_KEY</code> に設定</li>
+<li>App Secret : 環境変数 <code>FACEBOOK_SECRET</code> に設定</li>
+</ul>
+
+
+<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
+十進数と十六進数の数字のように見えます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>FACEBOOK_KEY=&quot;xxxxxxxxxxxxxxx&quot;
+</span><span class='line'>FACEBOOK_SECRET=&quot;xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx&quot;
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>Settings</code> の <code>Add Platform</code> で <code>Website</code> を選んで追加します。</p>
+
+<ul>
+<li>Site URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/</code> など</li>
+<li>Mobile Site URL: 空欄のまま</li>
+</ul>
+
+
+<p>callback URL は設定が不要だったので、
+Site URL の下ならどこでも良さそうです。</p>
+
+<h3><code>google_oauth2</code> 連携</h3>
+
+<p><a href="https://github.com/zquestz/omniauth-google-oauth2">https://github.com/zquestz/omniauth-google-oauth2</a> に書いてあるように
+<a href="https://code.google.com/apis/console/">https://code.google.com/apis/console/</a> を開きます。</p>
+
+<p>飛ばされる先で <code>API &amp; AUTH</code> の中の <code>Credentials</code> で <code>Create new Client ID</code> で作成します。</p>
+
+<ul>
+<li>Application type : Web application</li>
+<li>Authorized JavaScript origins : たとえば <code>http://app.127.0.0.1.xip.io:3000</code> など</li>
+<li>Authorized redirect URI : たとえば <code>http://app.127.0.0.1.xip.io:3000/auth/google_oauth2/callback</code> のように <code>/auth/google_oauth2/callback</code> にする。実サイトなら <code>https</code> にすべき。</li>
+</ul>
+
+
+<p>右に見えている Client ID と Client secret を使います。</p>
+
+<ul>
+<li>Client ID : 環境変数 <code>GOOGLE_CLIENT_ID</code> に設定</li>
+<li>Client secret : 環境変数 <code>GOOGLE_CLIENT_SECRET</code> に設定</li>
+</ul>
+
+
+<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
+ドメインっぽい文字列とランダムな文字列のように見えます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>GOOGLE_CLIENT_ID=&quot;xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com&quot;
+</span><span class='line'>GOOGLE_CLIENT_SECRET=&quot;XXxxxXxXxxxXXxXXxXxXXxxX&quot;
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>さらに <code>Consent screen</code> での設定が必要です。
+しかも全アプリ共通のようなので、名前を分けたい場合はグーグルアカウントごと違うものにしないといけないように見えました。</p>
+
+<ul>
+<li>Email address : グーグルアカウントのアドレス選択</li>
+<li>Product name : 適切な名前を設定</li>
+<li>Homepage URL 以下 : 必要に応じて設定</li>
+</ul>
+
+
+<p>さらにエラーメッセージ (<code>"Access Not Configured. Please use Google Developers Console to activate the API for your project."</code>) で検索してわかったのですが、
+<a href="http://qiita.com/aikyo02/items/459d03af304e1188f110" title="Google OAuth 2.0 loginが2014年9月に使えなくなる(Googleアカウントからのユーザ登録機能がある場合は注意)">Google OAuth 2.0 loginが2014年9月に使えなくなる(Googleアカウントからのユーザ登録機能がある場合は注意)</a>
+に書いてあるように、
+APIs で <code>Google+ API</code> も有効にする必要がありました。</p>
+
+<h2>参考サイト</h2>
+
+<ul>
+<li><a href="http://xoyip.hatenablog.com/entry/2013/12/20/212109" title="Railsでログインとは別に複数のサービスとの連携を行う方法 - PILOG">Railsでログインとは別に複数のサービスとの連携を行う方法 &ndash; PILOG</a>
+と<a href="https://github.com/xoyip/multi-oauth">その実装</a>は非常に参考になりました。</li>
+<li><a href="http://qiita.com/aikyo02/items/459d03af304e1188f110" title="Google OAuth 2.0 loginが2014年9月に使えなくなる(Googleアカウントからのユーザ登録機能がある場合は注意)">Google OAuth 2.0 loginが2014年9月に使えなくなる(Googleアカウントからのユーザ登録機能がある場合は注意)</a></li>
+</ul>
+
 ]]></content>
   </entry>
   
@@ -2372,68 +2977,6 @@ components が別の行になっているものもあったのですが、
 </span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">multiverse</span>
 </span></code></pre></td></tr></table></div></figure>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[ansible で ppa を追加する]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-05-20-ansible-add-ppa.html"/>
-    <updated>2014-05-20T22:47:22+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ansible-add-ppa</id>
-    <content type="html"><![CDATA[<p>サーバーとしてインストールした Ubuntu だと
-<code>add-apt-repository</code> コマンドが入っている
-<code>python-software-properties</code> パッケージが入っていなくて
-<code>ppa</code> の追加に困ることがありますが、
-ansible を使えばサーバー自体に余計なパッケージを入れなくても
-<code>ppa</code> の apt 設定を追加できました。</p>
-
-<!--more-->
-
-
-<h2>動作確認バージョン</h2>
-
-<ul>
-<li>クライアント側 ansible 1.6.1</li>
-<li>サーバー側 Ubuntu 12.04</li>
-</ul>
-
-
-<h2>ansible コマンド直接</h2>
-
-<p><code>apt_repository</code> モジュールの引数の <code>repo</code> に <code>ppa</code> を指定するだけです。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">ansible all -s -K -i ./inventory_hosts -m apt_repository -a &quot;repo=&#39;ppa:chris-lea/node.js&#39;&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>playbook.yml に書く</h2>
-
-<p><code>- apt_repository: repo='ppa:chris-lea/node.js'</code>
-のように書くだけです。
-普通にインストールすればサーバーでも入っていると思うのですが、
-<code>python-apt</code> に依存しているので、
-<code>- apt: pkg=python-apt</code>
-も書いておくと良いかもしれません。</p>
-
-<p><a href="https://github.com/znz/ansible-playbook-passenger/blob/master/provisioning/roles/passenger/tasks/nodejs-ppa.yml">nodejs-ppa.yml</a>
-が実際の使用例です。</p>
-
-<figure class='code'><figcaption><span>nodejs-ppa.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">apt</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">pkg=python-apt</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">apt_repository</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">repo=&#39;ppa:chris-lea/node.js&#39;</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">when</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">ansible_distribution_release == &quot;precise&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Debian の場合や ubuntu 14.04 の場合は除外しても良いかと思って、
-ubuntu 12.04 の時だけ実行するために
-<code>when: ansible_distribution_release == "precise"</code>
-で実行する環境を制限しています。</p>
 ]]></content>
   </entry>
   

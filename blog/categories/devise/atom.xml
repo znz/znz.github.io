@@ -4,7 +4,7 @@
   <title><![CDATA[Category: devise | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/devise/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-07-12T09:38:02+09:00</updated>
+  <updated>2014-07-12T09:48:07+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -125,6 +125,507 @@ User モデルにいろんな情報を入れているなら、
 
 
 <p>を用意しています。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[devise で通常ログイン出来るユーザーが他の複数サービス連携でログインできるようにした]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-08-devise-omniauth.html"/>
+    <updated>2014-07-08T08:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/devise-omniauth</id>
+    <content type="html"><![CDATA[<p><code>devise</code> でデータベース認証を実装している Rails アプリに Twitter などでもログインできるように
+実装を追加してみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>ruby 2.1.2</li>
+<li>rails 4.1.4</li>
+<li>devise 3.2.4</li>
+<li>omniauth 1.2.1</li>
+<li>omniauth-facebook 1.6.0</li>
+<li>omniauth-github 1.1.2</li>
+<li>omniauth-google-oauth2 0.2.4</li>
+<li>omniauth-twitter 1.0.1</li>
+<li>(dotenv 0.11.1) (key と secret の管理)</li>
+<li>(font-awesome-sass 4.1.0) (view での <code>icon</code> メソッド)</li>
+</ul>
+
+
+<h2>前提条件</h2>
+
+<ul>
+<li>devise で通常の User モデルにメールアドレスとパスワードによる認証は実装されている。</li>
+<li>複数サービスとの連携をするために User モデルには連携サービスの情報は直接持たずに UserAuth モデルに分ける。</li>
+<li>連携対象サービスは Facebook, GitHub, Google+, Twitter</li>
+<li>連携サービスからの追加情報はメールアドレスなども含めて一切とらずに認証だけに利用する。</li>
+<li>どの連携サービス (provider) かと識別するための ID だけ保存する。</li>
+<li>key や secret は環境変数で渡す。 (今回は dotenv を使ったが、 config/secrets.yml 経由でも良さそう)</li>
+<li>今回はテストは未実装 (連携部分のテストの書き方をまだ調べていないため)</li>
+<li>今回の実装範囲では I18n は使わずにメッセージは日本語固定</li>
+</ul>
+
+
+<h2>実装</h2>
+
+<p>今回は以下のように実装を追加すると連携サービスでログインできるようになりました。</p>
+
+<h3>Gemfile</h3>
+
+<p>OmniAuth と使用するサービスを追加します。</p>
+
+<p>```ruby Gemfile</p>
+
+<pre><code>gem 'omniauth'
+gem 'omniauth-facebook'
+gem 'omniauth-github'
+gem 'omniauth-google-oauth2'
+gem 'omniauth-twitter'
+</code></pre>
+
+<p>```</p>
+
+<h3>initializer 追加</h3>
+
+<p>key と secret があれば provider 登録するようにしました。</p>
+
+<p>view で使うために、
+登録されている provider の情報の取り方がわからなかったのと
+追加で名前や Font Awesome のアイコン名も入れたかったので、
+<code>AUTH_PROVIDERS</code> という配列にハッシュを入れるようにしています。</p>
+
+<p>```ruby config/initializers/omniauth.rb</p>
+
+<pre><code>AUTH_PROVIDERS = []
+
+Rails.application.config.middleware.use OmniAuth::Builder do
+  key, secret = ENV['FACEBOOK_KEY'], ENV['FACEBOOK_SECRET']
+  if key &amp;&amp; secret
+    provider :facebook, key, secret
+    AUTH_PROVIDERS &lt;&lt; {
+      provider: :facebook,
+      name: 'Facebook',
+    }
+  end
+
+  key, secret = ENV['GITHUB_CONSUMER_KEY'], ENV['GITHUB_CONSUMER_SECRET']
+  if key &amp;&amp; secret
+    provider :github, key, secret
+    AUTH_PROVIDERS &lt;&lt; {
+      provider: :github,
+      name: 'GitHub',
+    }
+  end
+
+  key, secret = ENV['GOOGLE_CLIENT_ID'], ENV['GOOGLE_CLIENT_SECRET']
+  if key &amp;&amp; secret
+    provider :google_oauth2, key, secret
+    AUTH_PROVIDERS &lt;&lt; {
+      provider: :google_oauth2,
+      name: 'Google',
+      icon: :google
+    }
+  end
+
+  key, secret = ENV['TWITTER_CONSUMER_KEY'], ENV['TWITTER_CONSUMER_SECRET']
+  if key &amp;&amp; secret
+    provider :twitter, key, secret
+    AUTH_PROVIDERS &lt;&lt; {
+      provider: :twitter,
+      name: 'Twitter',
+    }
+  end
+
+  AUTH_PROVIDERS.each do |provider|
+    provider[:icon] ||= provider[:provider]
+  end
+end
+</code></pre>
+
+<p>```</p>
+
+<h3>UserAuth モデル作成</h3>
+
+<p><code>rails g model UserAuth user:references uid:string provider:string</code> で作成します。</p>
+
+<p>モデルクラスは生成されたまま使いましたが、
+validation を追加した方が良さそうです。</p>
+
+<p>```ruby app/models/user_auth.rb</p>
+
+<pre><code>class UserAuth &lt; ActiveRecord::Base
+  belongs_to :user
+end
+</code></pre>
+
+<p>```</p>
+
+<p>データベースの方は <code>null: false</code> や index を追加しました。</p>
+
+<p>```ruby db/migrate/*_create_user_auths.rb</p>
+
+<pre><code>class CreateUserAuths &lt; ActiveRecord::Migration
+  def change
+    create_table :user_auths do |t|
+      t.references :user, index: true, null: false
+      t.string :uid, null: false
+      t.string :provider, null: false
+
+      t.timestamps
+    end
+
+    add_index :user_auths, [:uid, :provider], unique: true
+  end
+end
+</code></pre>
+
+<p>```</p>
+
+<h3><code>rake db:migrate</code></h3>
+
+<p><code>rake db:migrate</code> で反映しておきます。</p>
+
+<h3>User クラス側</h3>
+
+<p><code>has_many</code> を追加しておきます。</p>
+
+<p>```ruby app/models/user.rb</p>
+
+<pre><code>  has_many :user_auths, dependent: :destroy
+</code></pre>
+
+<p>```</p>
+
+<h3>ルーティング追加</h3>
+
+<p>まず、どう使われるのか把握するためにルーティングを追加します。</p>
+
+<p><code>auth_help</code> は後でプライバシーポリシーなどを書いています。</p>
+
+<p>```ruby config/routes.rb</p>
+
+<pre><code>  get '/auth/help' =&gt; 'auth#help', as: :auth_help
+  get '/auth/:provider/callback' =&gt; 'auth#create'
+  delete '/auth/destroy/:provider' =&gt; 'auth#destroy', as: :destroy_connection
+</code></pre>
+
+<p>```</p>
+
+<p>ここには出てきていませんが、
+OmniAuth で <code>/auth/:provider</code> がルーティングされるようです。</p>
+
+<h3>AuthController 実装</h3>
+
+<p>参考サイトの実装例を参考にして AuthController を実装しました。</p>
+
+<p>help は静的な情報を表示するだけなので、実装は空です。</p>
+
+<p>```ruby</p>
+
+<pre><code># -*- coding: utf-8 -*-
+class AuthController &lt; ApplicationController
+  skip_before_filter :authenticate_user!
+
+  def create
+    auth = request.env['omniauth.auth']
+    uid = auth['uid']
+    provider = auth['provider']
+    auth = UserAuth.where(uid: uid, provider: provider).first
+    if auth
+      flash[:notice] = "#{provider}でログインしました。"
+      sign_in_and_redirect auth.user, event: :authentication
+    else
+      authenticate_user!
+      UserAuth.create!(uid: uid, provider: provider, user_id: current_user.id)
+      redirect_to root_url, notice: "#{provider}と連携しました。"
+    end
+  end
+
+  def destroy
+    provider = params.require(:provider)
+    authenticate_user!
+    auth = UserAuth.where(provider: provider, user_id: current_user.id).first
+    auth.destroy if auth
+    redirect_to root_url, notice: "#{provider}と連携解除しました。"
+  end
+
+  def help
+  end
+end
+</code></pre>
+
+<p>```</p>
+
+<p>まだ連携を登録していない状態で</p>
+
+<ul>
+<li>ログアウト状態</li>
+<li>連携サービスで認証・連携許可</li>
+<li>戻ってきて通常ログイン</li>
+<li><code>auth/failure</code> に飛ばされる</li>
+</ul>
+
+
+<p>ということがおきているのですが、
+<code>auth/failure</code>
+を実装していないので、デフォルトの 404 エラー画面になってしまいます。</p>
+
+<h3>view helpers 実装</h3>
+
+<p>以前から使っていた <code>link_to_sign_in_or_out</code> の実装も同じファイルに持ってきて、
+<code>link_to_provider</code> という汎用的なメソッドを実装しました。
+使い方は後述します。</p>
+
+<p><code>AUTH_PROVIDERS</code> のハッシュはここで使っています。</p>
+
+<p>```ruby app/helpers/link_to_auth_helper.rb</p>
+
+<pre><code># -*- coding: utf-8 -*-
+module LinkToAuthHelper
+  def link_to_sign_in_or_out(html_options={})
+    if user_signed_in?
+      body = icon(:'sign-out') + t(:"devise.shared.links.sign_out", default: "Sign out")
+      html_options = { method: :delete }.merge(html_options)
+      link_to body, :destroy_user_session, html_options
+    else
+      body = icon(:'sign-in') + t(:"devise.shared.links.sign_in", default: "Sign in")
+      link_to body, :new_user_session, html_options
+    end
+  end
+
+  def link_to_provider(provider, html_options={})
+    if current_user
+      if UserAuth.where(user_id: current_user.id, provider: provider[:provider]).exists?
+        html_options = { method: :delete }.merge(html_options)
+        link_to icon(provider[:icon])+"#{provider[:name]}との連携を解除", destroy_connection_path(provider: provider[:provider]), html_options
+      else
+        link_to icon(provider[:icon])+"#{provider[:name]}と連携", "/auth/#{provider[:provider]}", html_options
+      end
+    else
+      link_to icon(provider[:icon])+"#{provider[:name]}でログイン", "/auth/#{provider[:provider]}", html_options
+    end
+  end
+end
+</code></pre>
+
+<p>```</p>
+
+<h3>view に追加</h3>
+
+<p>ナビゲーションに以下のように追加しました。
+認証連携がないときは従来のログイン・ログアウトだけ表示しています。</p>
+
+<p><code>AUTH_PROVIDERS</code> に登録されているときだけ連携のリンクを表示するようにしています。</p>
+
+<p>```text app/views/layouts/_navigation.html.slim</p>
+
+<pre><code>    li.dropdown
+      a.dropdown-toggle data-toggle="dropdown"
+        = icon(:user) + 'ログイン管理'
+        b.caret
+      ul.dropdown-menu
+        li= link_to_sign_in_or_out
+        - unless AUTH_PROVIDERS.empty?
+          li= link_to icon(:info)+"認証連携のヘルプ", auth_help_path
+        - AUTH_PROVIDERS.each do |provider|
+          li= link_to_provider(provider)
+</code></pre>
+
+<p>```</p>
+
+<h3>twitter 連携</h3>
+
+<p>Twitter は複数アカウントを使うことも通常の使用範囲として想定されていて、
+アプリ専用のアカウントもとりやすいので、
+Twitter 連携から試してみました。</p>
+
+<p><a href="https://apps.twitter.com/">https://apps.twitter.com/</a> から <code>Create New App</code> で作成します。</p>
+
+<ul>
+<li>Name: Twitter 全体で一意になるアプリケーションの ID 的にも使われるもの。ツイートの時にツイートしたアプリ名としても埋め込まれるが、今回は認証のみなので、他とぶつからないような名前という以上はこだわらなかった。</li>
+<li>Description: 認証のときに出てくる説明。</li>
+<li>Website: たとえば <code>http://app.127.0.0.1.xip.io:3000/</code> など</li>
+<li>Callback URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/auth/twitter/callback</code> のように <code>/auth/twitter/callback</code> にする。実サイトなら <code>https</code> にすべき。</li>
+</ul>
+
+
+<p>作成後には <code>Allow this application to be used to Sign in with Twitter</code> のチェックを入れておきます。
+チェックがないと Twitter 連携でのログインがうまくいかないようです。</p>
+
+<p>アイコンや Organization なども必要に応じて変更します。</p>
+
+<p>API keys タブで key と secret を取得します。</p>
+
+<ul>
+<li>API key : 環境変数 <code>TWITTER_CONSUMER_KEY</code> に設定</li>
+<li>API secret : 環境変数 <code>TWITTER_CONSUMER_SECRET</code> に設定</li>
+</ul>
+
+
+<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
+ランダムな文字列のように見えます。</p>
+
+<p>```text</p>
+
+<pre><code>TWITTER_CONSUMER_KEY="xxxxXXxxXxXxXXXxXxXXXXxxx"
+TWITTER_CONSUMER_SECRET="xxXXxXXxxxxxxXXXXXxXxXXxxXXXxXXxxxxXXxxXxxXXxxXxxx"
+</code></pre>
+
+<p>```</p>
+
+<h3>動作確認</h3>
+
+<ul>
+<li>通常のログインをした状態で「Twitter と連携」で Twitter の許可画面に飛びます。</li>
+<li>許可すると「Twitter 側に許可情報」と「UserAuth に連携情報」が保存されます。</li>
+<li>「Twitter との連携を解除」で「UserAuth が削除」されます。</li>
+<li>「ログアウト」して「Twitter でログイン」すると「ログイン画面」に戻ります。</li>
+<li>ログインすると <code>auth/failure</code> が 404 エラーになります。ここは後で実装する予定です。</li>
+<li>再度ログイン後の画面を直接開きます。</li>
+<li>再度「Twitter と連携」で「UserAuth に連携情報」が保存されます。「Twitter 側の許可情報」は古いままです。</li>
+<li>「ログアウト」して「Twitter でログイン」でログインできます。</li>
+<li><a href="https://twitter.com/settings/applications">https://twitter.com/settings/applications</a> で許可を取り消します。</li>
+<li>「ログアウト」して「Twitter でログイン」で Twitter の許可画面に飛びます。</li>
+<li>許可すると「Twitter 側に許可情報」が保存されて、「UserAuth」は残っているので、そのままログインできます。</li>
+</ul>
+
+
+<h3>GitHub 連携</h3>
+
+<p>GitHub 連携は作成後にすぐに使えるので、アプリケーション作成に使っても良いアカウントがあれば一番簡単です。</p>
+
+<p><a href="https://github.com/settings/applications">https://github.com/settings/applications</a> から <code>Register new application</code> で作成します。</p>
+
+<ul>
+<li>Application name: 適切な名前を設定</li>
+<li>Homepage URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/</code> など</li>
+<li>Application description: ユーザーが許可するときにわかりやすい説明</li>
+<li>Authorization callback URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/auth/github/callback</code> のように <code>/auth/github/callback</code> にする。実サイトなら <code>https</code> にすべき。</li>
+</ul>
+
+
+<p>右上に見えている Client ID と Client Secret を使います。</p>
+
+<ul>
+<li>Client ID : 環境変数 <code>GITHUB_CONSUMER_KEY</code> に設定</li>
+<li>Client Secret : 環境変数 <code>GITHUB_CONSUMER_SECRET</code> に設定</li>
+</ul>
+
+
+<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
+十六進数の数字のように見えます。</p>
+
+<p>```text</p>
+
+<pre><code>GITHUB_CONSUMER_KEY="xxxxxxxxxxxxxxxxxxxx"
+GITHUB_CONSUMER_SECRET="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+</code></pre>
+
+<p>```</p>
+
+<h2>Facebook 連携</h2>
+
+<p><a href="https://developers.facebook.com/">https://developers.facebook.com/</a> から上の <code>Apps</code> の中にある <code>Craete a New App</code> で作成します。
+最初は作成前に開発者関連の規約などに同意する必要があるようです。</p>
+
+<ul>
+<li>Display Name: 適切な名前を設定します。</li>
+<li>Namespace: optional なので空欄のままで良いようです。</li>
+<li>カテゴリ: 適当に選択します。</li>
+</ul>
+
+
+<p>セキュリティチェックがあるので、入力すると作成できます。</p>
+
+<p>右上に見えている App ID と App Secret (Show を押すとパスワード認証の後に内容表示) を使います。</p>
+
+<ul>
+<li>App ID : 環境変数 <code>FACEBOOK_KEY</code> に設定</li>
+<li>App Secret : 環境変数 <code>FACEBOOK_SECRET</code> に設定</li>
+</ul>
+
+
+<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
+十進数と十六進数の数字のように見えます。</p>
+
+<p>```text</p>
+
+<pre><code>FACEBOOK_KEY="xxxxxxxxxxxxxxx"
+FACEBOOK_SECRET="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+</code></pre>
+
+<p>```</p>
+
+<p><code>Settings</code> の <code>Add Platform</code> で <code>Website</code> を選んで追加します。</p>
+
+<ul>
+<li>Site URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/</code> など</li>
+<li>Mobile Site URL: 空欄のまま</li>
+</ul>
+
+
+<p>callback URL は設定が不要だったので、
+Site URL の下ならどこでも良さそうです。</p>
+
+<h3><code>google_oauth2</code> 連携</h3>
+
+<p><a href="https://github.com/zquestz/omniauth-google-oauth2">https://github.com/zquestz/omniauth-google-oauth2</a> に書いてあるように
+<a href="https://code.google.com/apis/console/">https://code.google.com/apis/console/</a> を開きます。</p>
+
+<p>飛ばされる先で <code>API &amp; AUTH</code> の中の <code>Credentials</code> で <code>Create new Client ID</code> で作成します。</p>
+
+<ul>
+<li>Application type : Web application</li>
+<li>Authorized JavaScript origins : たとえば <code>http://app.127.0.0.1.xip.io:3000</code> など</li>
+<li>Authorized redirect URI : たとえば <code>http://app.127.0.0.1.xip.io:3000/auth/google_oauth2/callback</code> のように <code>/auth/google_oauth2/callback</code> にする。実サイトなら <code>https</code> にすべき。</li>
+</ul>
+
+
+<p>右に見えている Client ID と Client secret を使います。</p>
+
+<ul>
+<li>Client ID : 環境変数 <code>GOOGLE_CLIENT_ID</code> に設定</li>
+<li>Client secret : 環境変数 <code>GOOGLE_CLIENT_SECRET</code> に設定</li>
+</ul>
+
+
+<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
+ドメインっぽい文字列とランダムな文字列のように見えます。</p>
+
+<p>```text</p>
+
+<pre><code>GOOGLE_CLIENT_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="XXxxxXxXxxxXXxXXxXxXXxxX"
+</code></pre>
+
+<p>```</p>
+
+<p>さらに <code>Consent screen</code> での設定が必要です。
+しかも全アプリ共通のようなので、名前を分けたい場合はグーグルアカウントごと違うものにしないといけないように見えました。</p>
+
+<ul>
+<li>Email address : グーグルアカウントのアドレス選択</li>
+<li>Product name : 適切な名前を設定</li>
+<li>Homepage URL 以下 : 必要に応じて設定</li>
+</ul>
+
+
+<p>さらにエラーメッセージ (<code>"Access Not Configured. Please use Google Developers Console to activate the API for your project."</code>) で検索してわかったのですが、
+<a href="http://qiita.com/aikyo02/items/459d03af304e1188f110" title="Google OAuth 2.0 loginが2014年9月に使えなくなる(Googleアカウントからのユーザ登録機能がある場合は注意)">Google OAuth 2.0 loginが2014年9月に使えなくなる(Googleアカウントからのユーザ登録機能がある場合は注意)</a>
+に書いてあるように、
+APIs で <code>Google+ API</code> も有効にする必要がありました。</p>
+
+<h2>参考サイト</h2>
+
+<ul>
+<li><a href="http://xoyip.hatenablog.com/entry/2013/12/20/212109" title="Railsでログインとは別に複数のサービスとの連携を行う方法 - PILOG">Railsでログインとは別に複数のサービスとの連携を行う方法 &ndash; PILOG</a>
+と<a href="https://github.com/xoyip/multi-oauth">その実装</a>は非常に参考になりました。</li>
+<li><a href="http://qiita.com/aikyo02/items/459d03af304e1188f110" title="Google OAuth 2.0 loginが2014年9月に使えなくなる(Googleアカウントからのユーザ登録機能がある場合は注意)">Google OAuth 2.0 loginが2014年9月に使えなくなる(Googleアカウントからのユーザ登録機能がある場合は注意)</a></li>
+</ul>
+
 ]]></content>
   </entry>
   
