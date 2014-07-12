@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: live | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/live/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-07-12T11:25:31+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Debian 7 (wheezy) の RubyLive をカスタマイズ中]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-12-debian-ruby-live.html"/>
+    <updated>2014-07-12T10:08:26+09:00</updated>
+    <id>http://blog.n-z.jp/blog/debian-ruby-live</id>
+    <content type="html"><![CDATA[<p>今年の
+<a href="https://k-of.jp/2014/" title="KOF 2014：関西オープンフォーラム2014">KOF 2014：関西オープンフォーラム2014</a>
+に向けて
+<a href="https://github.com/znz/rubylive" title="RubyLive">RubyLive</a>
+を作成しています。
+fork 元の <a href="https://github.com/no6v/rubylive">no6v 版</a> との違いをまとめていきます。</p>
+
+<!--more-->
+
+
+<h2>カスタマイズの基本</h2>
+
+<p>README から今回に関係する部分を引用しておくと以下のようになっています。</p>
+
+<ul>
+<li>config/hooks/
+
+<ul>
+<li>インストールの最後の方で実行するフックスクリプトを置くディレクトリ。</li>
+<li>拡張子を .chroot にして実行権限を付けておく。</li>
+</ul>
+</li>
+<li>config/includes.chroot/
+
+<ul>
+<li>このディレクトリを root に見立てて LiveCD 環境にコピーしたいファイルを置くディレクトリ。</li>
+</ul>
+</li>
+<li>config/package-lists/
+
+<ul>
+<li>特別にインストールしたいパッケージのリストを置くディレクトリ。</li>
+<li>拡張子を .list.chroot にしてパッケージ名を列挙する。</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>壁紙などの変更</h2>
+
+<p><code>resources.yml</code> で設定されたファイルは <code>url</code> から自動ダウンロードして <code>path</code> に置くようになっています。</p>
+
+<p><code>size</code> と <code>sha256sum</code> をチェックするだけで違っていても削除はしないようなので、
+ダウンロードに失敗した時は<code>path</code> のファイルは手動で削除する必要がありました。</p>
+
+<p><code>path</code> を変更した時も古いファイルが残ってしまうので、削除する必要がありました。</p>
+
+<h2>dconf の設定</h2>
+
+<p><code>config/includes.chroot/etc/skel/.config/dconf/user</code>
+に設定変更後のバイナリが置かれていて、
+これはひどいと思ったので、
+<code>config/includes.chroot/etc/skel/.gnomerc</code>
+で <code>gsettings set</code> を使って設定するようにしました。</p>
+
+<h3>壁紙の変更</h3>
+
+<p>起動後の <code>dconf-editor</code> で選択肢を確認しつつ、
+<code>gsettings set org.gnome.desktop.background picture-options centered</code>
+にしたり、
+<code>gsettings set org.gnome.desktop.background picture-uri 'file:///usr/share/images/desktop-base/RubyKaigi2014-commonLogo.svg</code>
+にしたりしました。</p>
+
+<h3>デスクトップのアイコン</h3>
+
+<p>以前は <code>gnome-panel</code> (上のバーのところ) に起動用のアイコンを追加していたようですが、
+<code>gsettings set</code> で設定しようとすると
+<code>org.gnome.gnome-panel.layout object-id-list</code> の他に
+<code>org.gnome.gnome-panel.layout.objects.object-0</code> や
+<code>org.gnome.gnome-panel.layout.objects.object-0.instance-config</code> などの
+複数設定が必要で管理の手間もかかりそうだったので、
+<code>gsettings set org.gnome.desktop.background show-desktop-icons true</code>
+でデスクトップのアイコンが見えるように変更しました。</p>
+
+<h3>スクリーンセーバーの停止</h3>
+
+<p><code>gsettings set org.gnome.desktop.screensaver idle-activation-enabled false</code>
+で止めました。</p>
+
+<h2>chm の変更</h2>
+
+<p><a href="http://ruby.morphball.net/refm-remix.html" title="Rubyリファレンスマニュアル chm版リミックス">Rubyリファレンスマニュアル chm版リミックス</a>
+の標準テーマのRuby 2.1.0向け chm に差し替えました。
+zip ファイルなので、先ほどの <code>.gnomerc</code> でデスクトップに展開するようにしました。</p>
+
+<p>xCHM v. 1.20 で背景画像や色とかがつかないようなので、サイズが小さい標準を選びました。</p>
+
+<h2>パッケージ変更</h2>
+
+<p><code>jfbterm</code> の代わりに <code>fbterm</code> にしたり、
+<code>ruby-build</code> でビルドに必要なパッケージを追加したり、
+<code>config/includes.chroot/etc/iceweasel/profile/prefs.js</code> の代わりに <code>iceweasel-l10n-ja</code> を追加したり、
+<code>bash-completion</code> などを追加したりしました。</p>
+
+<h2>ruby-build で ruby 2.1.2 のインストール</h2>
+
+<p><a href="http://qiita.com/takahashim/items/406421d515ef1d4f1189" title="[ReVIEW Tips] DockerでRe:VIEW - Qiita">[ReVIEW Tips] DockerでRe:VIEW &ndash; Qiita</a>
+を参考にして rbenv は使わずに ruby-build だけ使って <code>/usr/local</code> に ruby 2.1.2 をインストールしました。</p>
+
+<h2>localepurge</h2>
+
+<p>locale の設定は live-config で起動時にやっていて hook の中で
+<code>DEBIAN_FRONTEND=noninteractive dpkg-reconfigure localepurge</code>
+としても起動後と違って ja locale の設定がなかったので、
+起動後や設定した後に <code>debconf-show localepurge</code> で確認した値を使って、
+<code>localepurge/nopurge</code> が <code>NEEDSCONFIGFIRST</code> のままなら
+<code>echo localepurge localepurge/nopurge string "ja, ja_JP.UTF-8" | debconf-set-selections</code>
+で設定することにしました。</p>
+
+<p>これで約 200MB ぐらい小さくなりました。</p>
+]]></content>
+  </entry>
+  
+</feed>
