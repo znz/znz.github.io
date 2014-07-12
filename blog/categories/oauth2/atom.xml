@@ -4,7 +4,7 @@
   <title><![CDATA[Category: oauth2 | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/oauth2/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-07-05T19:39:30+09:00</updated>
+  <updated>2014-07-12T09:38:02+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,121 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Rails 4.1 で Doorkeeper を使った OAuth2 Provider のサンプルを実装した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-11-doorkeeper-provider-example-app.html"/>
+    <updated>2014-07-11T23:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/doorkeeper-provider-example-app</id>
+    <content type="html"><![CDATA[<p>ソースは github の
+<a href="https://github.com/znz/doorkeeper-provider-app" title="znz/doorkeeper-provider-app">znz/doorkeeper-provider-app</a>
+で公開しています。</p>
+
+<p>基本的にはソースをみて参考にしてもらうと良いと思いますが、
+説明が必要な部分を続きに書いてみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>ruby 2.1.2</li>
+<li>rails 4.1.4</li>
+<li>bootstrap 3.2.0</li>
+<li>devise 3.2.4</li>
+<li>devise-i18n-views 0.2.8</li>
+<li>doorkeeper 1.3.1</li>
+<li>cancancan 1.8.4</li>
+<li>rolify 3.4.0</li>
+<li>rspec-rails 3.0.1</li>
+</ul>
+
+
+<h2>試し方</h2>
+
+<p>README に書いたようにローカルで動かすか heroku に deploy して
+<a href="https://github.com/doorkeeper-gem/doorkeeper/wiki/Example-Applications" title="Example Applications">Example Applications</a>
+にある Client examples の Sinatra and OAuth2 gem の
+<a href="https://github.com/doorkeeper-gem/doorkeeper-sinatra-client" title="Doorkeeper Sinatra Client">Doorkeeper Sinatra Client</a>
+を使って試しました。</p>
+
+<h2>初期設定</h2>
+
+<p>devise, doorkeeper, cancancan, rolify, rspec の個別の初期設定は普通に <code>rails generate</code> を使いました。</p>
+
+<h2>ユーザー情報追加</h2>
+
+<p>とれる情報を増やすために <code>User</code> に <code>name</code> を追加しました。
+<code>devise-i18n-views</code> を使っている関係で view のカスタマイズはしていないので、
+<code>rake db:seed</code> で設定したユーザーだけ <code>name</code> が設定されています。</p>
+
+<p>必要に応じて view もカスタマイズしてください。</p>
+
+<p>また <code>devise-i18n</code> の ja.yml を devise.ja.yml として入れています。
+これは flash のメッセージやメールのメッセージなど、
+<code>app/views</code> 以外の翻訳になるようです。</p>
+
+<p><code>devise-i18n-views</code> は <code>app/views</code> を翻訳可能な view にするプロジェクトです。
+なぜ <code>devise</code> とは別プロジェクトでやっているのかはよくわかりません。</p>
+
+<h2><code>I18n.available_locales</code></h2>
+
+<p><code>devise-i18n-views</code> を入れてしまうと <code>I18n.available_locales</code> が増えてしまうので、
+困るのなら、カスタマイズ用の view を generate して、必要な言語だけ取り込んで
+<code>Gemfile</code> から外してしまうのが良いと思います。</p>
+
+<p>今回はそのまま残して右上の <code>Locale</code> で選択できるようにしています。
+選択肢の翻訳は Wikipedia の左や www.debian.org の下などを参考にしたのですが <code>es-AR</code> はわからなかったので、
+<code>es</code> と同じになってしまっています。</p>
+
+<h2><code>/oauth/applications</code> のアクセス制限</h2>
+
+<p><code>cancancan</code> と <code>rolify</code> を使って admin role があるユーザーだけに制限しています。
+secret も見えてしまうので、 read 権限までしっかり制限する必要があるようです。</p>
+
+<p><code>load_and_authorize_resource</code> でのロードと親クラス (<code>Doorkeeper::ApplicationsController</code>) の中でのロードでモデルの読み込みが二重になってしまうのですが、変更を少なくするためにそこは許容しました。</p>
+
+<h2><code>GET /api/v1/me.json</code></h2>
+
+<p>Doorkeeper gem の Wiki の例にあるようにユーザー情報をとれるようにしています。
+制限していないと以下のような情報がとれました。</p>
+
+<p><code>json
+{ "id": 1,
+  "email": "admin@example.com",
+  "created_at": "2014-07-11T06:32:22.077Z",
+  "updated_at": "2014-07-11T09:33:42.143Z",
+  "name": "admin" }
+</code></p>
+
+<p>制限したり関連するモデルの情報を増やしたりするなら
+<a href="http://sugamasao.hatenablog.com/entry/20100914/1284415669" title="Rails のモデル関係と to_json(to_xml) - すがブロ">Rails のモデル関係と to_json(to_xml) &ndash; すがブロ</a>
+に書いてあるように <code>respond_with</code> に <code>:only</code> をつけたり <code>:include</code> をつけたりすると出来るようです。</p>
+
+<p>入ったり入らなかったりする条件がよくわからなかったのですが、
+<code>devise</code> 関連では <code>authentication_token</code> が入っていることがあったので、
+User モデルにいろんな情報を入れているなら、
+きちんと制限した方が良さそうに思いました。</p>
+
+<h2>microposts</h2>
+
+<p><a href="http://railstutorial.jp/" title="Ruby on Rails チュートリアル：実例を使って Rails を学ぼう">Ruby on Rails チュートリアル：実例を使って Rails を学ぼう</a>
+のように <code>Micropost</code> モデルを作成して、 API からも投稿できるようにしました。</p>
+
+<p>投稿は scope で制限していて、デフォルトの <code>public</code> のみでは書き込めずに <code>write</code> も必要にしています。</p>
+
+<p>API としては</p>
+
+<ul>
+<li><code>GET /api/v1/microposts</code> で投稿一覧</li>
+<li><code>POST /api/v1/microposts</code> で新規投稿</li>
+</ul>
+
+
+<p>を用意しています。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[doorkeeper gem の API のクライアント]]></title>
