@@ -52,6 +52,11 @@ README から今回に関係する部分を引用しておくと以下のよう�
 `gsettings set org.gnome.desktop.background picture-uri 'file:///usr/share/images/desktop-base/RubyKaigi2014-commonLogo.svg`
 にしたりしました。
 
+2014-07-13 追記:
+生成後のイメージに CC-BY 3.0 の説明がないのは良くないと思って、
+`config/includes.chroot/etc/skel/README.txt`
+に説明を追加することにしました。
+
 ### デスクトップのアイコン
 
 以前は `gnome-panel` (上のバーのところ) に起動用のアイコンを追加していたようですが、
