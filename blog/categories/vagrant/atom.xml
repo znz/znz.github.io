@@ -4,7 +4,7 @@
   <title><![CDATA[Category: vagrant | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/vagrant/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-07-13T10:53:39+09:00</updated>
+  <updated>2014-07-15T00:49:52+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,89 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[apt-cacher-ngでliveイメージ作成を繰り返す時の無駄なダウンロードを減らす]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-14-apt-cacher-ng.html"/>
+    <updated>2014-07-14T23:53:14+09:00</updated>
+    <id>http://blog.n-z.jp/blog/apt-cacher-ng</id>
+    <content type="html"><![CDATA[<p><a href="https://github.com/znz/rubylive-builder" title="rubylive-builder">rubylive-builder</a>
+で
+<a href="https://github.com/znz/rubylive" title="RubyLive">RubyLive</a>
+という Debian wheezy ベースの Live イメージを作成するときに
+<code>apt-get update</code> などで何度も無駄にダウンロードしてしまうので、
+<code>apt-cacher-ng</code> で Live イメージ作成を繰り返す時の無駄なダウンロードを減らすことにしました。</p>
+
+<!--more-->
+
+
+<h2>Vagrant の provision でインストール</h2>
+
+<p>Vagrantfile では</p>
+
+<p>```ruby Vagrantfile
+  config.vm.provision :shell do |shell|</p>
+
+<pre><code>shell.path = "provision.sh"
+</code></pre>
+
+<p>  end
+```</p>
+
+<p>のようにシェルスクリプトでプロビジョニングしているだけだったので、
+その中で以下のようにインストールして設定するようにしました。</p>
+
+<p><code>bash provision.sh
+apt-get install -y apt-cacher-ng
+echo 'Acquire::http::Proxy "http://localhost:3142/";' &gt;/etc/apt/apt.conf.d/02proxy
+</code></p>
+
+<p>Vagrantfile で以下のようにポートフォワーディングを設定していれば
+<a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0315" title="第315回　apt-cacher-ngを使ってAPT用キャッシュプロキシの構築：Ubuntu Weekly Recipe｜gihyo.jp … 技術評論社">第315回　apt-cacher-ngを使ってAPT用キャッシュプロキシの構築：Ubuntu Weekly Recipe｜gihyo.jp … 技術評論社</a>
+の2ページ目に説明があるようにヒット率などを確認できます。</p>
+
+<p><code>ruby Vagrantfile
+  # apt-cacher-ng
+  config.vm.network "forwarded_port", guest: 3142, host: 3142
+</code></p>
+
+<h2>rake コマンドで環境変数を渡す</h2>
+
+<p><code>APT_HTTP_PROXY=http://localhost:3142 rake</code> でも良かったのですが、
+rake コマンドは引数の <code>FOO=bar</code> を <code>ENV</code> に設定してくれるので、
+<code>rake APT_HTTP_PROXY=http://localhost:3142</code> で渡して、
+Rakefile の中では以下のように受け取って <code>lb config</code> に渡しました。</p>
+
+<p>```ruby Rakefile
+desc &ldquo;config RubyLive&rdquo;
+task :config => [:clean] do
+  sh &lsquo;lb config&rsquo;
+  if ENV[&lsquo;APT_HTTP_PROXY&rsquo;]</p>
+
+<pre><code>sh "lb config --apt-http-proxy #{ENV['APT_HTTP_PROXY']}"
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<h2>live-build で apt-cacher-ng を使う</h2>
+
+<p>既に出てきたように
+<code>lb config</code> の <code>--apt-http-proxy</code> オプションや <code>--apt-ftp-proxy</code> オプションで指定すると
+Live イメージ作成の時に proxy を使ってくれるようになります。
+今回は apt-line に <code>http</code> しか使っていないので
+<code>--apt-http-proxy</code> だけ指定しています。</p>
+
+<p>もちろん、作成後の Live イメージには proxy 設定は残りません。</p>
+
+<h2>感想</h2>
+
+<p>live-build は cache ディレクトリにも、かなりキャッシュしてくれるのですが、
+<code>apt-get update</code> などの proxy じゃないとキャッシュしにくいものもあるので、
+どんな場合でもダウンロード量削減に役に立ちそうだと思いました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[RubyLiveを仮想環境で作成]]></title>

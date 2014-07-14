@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-07-13T10:53:39+09:00</updated>
+  <updated>2014-07-15T00:49:52+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,89 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[apt-cacher-ngでliveイメージ作成を繰り返す時の無駄なダウンロードを減らす]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-14-apt-cacher-ng.html"/>
+    <updated>2014-07-14T23:53:14+09:00</updated>
+    <id>http://blog.n-z.jp/blog/apt-cacher-ng</id>
+    <content type="html"><![CDATA[<p><a href="https://github.com/znz/rubylive-builder" title="rubylive-builder">rubylive-builder</a>
+で
+<a href="https://github.com/znz/rubylive" title="RubyLive">RubyLive</a>
+という Debian wheezy ベースの Live イメージを作成するときに
+<code>apt-get update</code> などで何度も無駄にダウンロードしてしまうので、
+<code>apt-cacher-ng</code> で Live イメージ作成を繰り返す時の無駄なダウンロードを減らすことにしました。</p>
+
+<!--more-->
+
+
+<h2>Vagrant の provision でインストール</h2>
+
+<p>Vagrantfile では</p>
+
+<p>```ruby Vagrantfile
+  config.vm.provision :shell do |shell|</p>
+
+<pre><code>shell.path = "provision.sh"
+</code></pre>
+
+<p>  end
+```</p>
+
+<p>のようにシェルスクリプトでプロビジョニングしているだけだったので、
+その中で以下のようにインストールして設定するようにしました。</p>
+
+<p><code>bash provision.sh
+apt-get install -y apt-cacher-ng
+echo 'Acquire::http::Proxy "http://localhost:3142/";' &gt;/etc/apt/apt.conf.d/02proxy
+</code></p>
+
+<p>Vagrantfile で以下のようにポートフォワーディングを設定していれば
+<a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0315" title="第315回　apt-cacher-ngを使ってAPT用キャッシュプロキシの構築：Ubuntu Weekly Recipe｜gihyo.jp … 技術評論社">第315回　apt-cacher-ngを使ってAPT用キャッシュプロキシの構築：Ubuntu Weekly Recipe｜gihyo.jp … 技術評論社</a>
+の2ページ目に説明があるようにヒット率などを確認できます。</p>
+
+<p><code>ruby Vagrantfile
+  # apt-cacher-ng
+  config.vm.network "forwarded_port", guest: 3142, host: 3142
+</code></p>
+
+<h2>rake コマンドで環境変数を渡す</h2>
+
+<p><code>APT_HTTP_PROXY=http://localhost:3142 rake</code> でも良かったのですが、
+rake コマンドは引数の <code>FOO=bar</code> を <code>ENV</code> に設定してくれるので、
+<code>rake APT_HTTP_PROXY=http://localhost:3142</code> で渡して、
+Rakefile の中では以下のように受け取って <code>lb config</code> に渡しました。</p>
+
+<p>```ruby Rakefile
+desc &ldquo;config RubyLive&rdquo;
+task :config => [:clean] do
+  sh &lsquo;lb config&rsquo;
+  if ENV[&lsquo;APT_HTTP_PROXY&rsquo;]</p>
+
+<pre><code>sh "lb config --apt-http-proxy #{ENV['APT_HTTP_PROXY']}"
+</code></pre>
+
+<p>  end
+end
+```</p>
+
+<h2>live-build で apt-cacher-ng を使う</h2>
+
+<p>既に出てきたように
+<code>lb config</code> の <code>--apt-http-proxy</code> オプションや <code>--apt-ftp-proxy</code> オプションで指定すると
+Live イメージ作成の時に proxy を使ってくれるようになります。
+今回は apt-line に <code>http</code> しか使っていないので
+<code>--apt-http-proxy</code> だけ指定しています。</p>
+
+<p>もちろん、作成後の Live イメージには proxy 設定は残りません。</p>
+
+<h2>感想</h2>
+
+<p>live-build は cache ディレクトリにも、かなりキャッシュしてくれるのですが、
+<code>apt-get update</code> などの proxy じゃないとキャッシュしにくいものもあるので、
+どんな場合でもダウンロード量削減に役に立ちそうだと思いました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Debian 7 (wheezy) の RubyLive をカスタマイズ中]]></title>
@@ -825,60 +908,6 @@ end
 <code>h['send']</code> のように普通の <code>Hash</code> のように取り出せます。</p>
 
 <p>添字をまわすのに <code>succ</code> を使っているので <code>FOO_A</code>, <code>FOO_B</code>, &hellip; のような使い方も出来ると思います。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 12 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-06-20-rubymotion-mokumoku-osaka.html"/>
-    <updated>2014-06-20T19:27:13+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
-    <content type="html"><![CDATA[<p>第 1 回から第 11 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://rubymotionjp.connpass.com/event/6666/">第 12 回 RubyMotion もくもく会 in Osaka</a>
-に参加してきました。</p>
-
-<p>次回の
-<a href="http://rubymotionjp.connpass.com/event/7079/">第 13 回 RubyMotion もくもく会 in Osaka</a>
-は 07/16(水) になりました。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<ul>
-<li>一周年記念</li>
-<li>RubyMotion は Android にも対応予定</li>
-<li>RubyMotion のライセンスが expired して更新しても <code>rake</code> のときの <code>Your maintenance plan is expired. Run 'motion account' to renew it.</code> というメッセージはキャッシュの影響で 24 時間ぐらい待たないと消えないらしいという話</li>
-<li>バージョンは 2.29 が最新</li>
-<li>Swift が話題</li>
-<li><a href="http://tools.msng.info/">割り勘電卓</a></li>
-<li><a href="https://github.com/shin1x1/vagrantx">https://github.com/shin1x1/vagrantx</a> のソース公開</li>
-<li><a href="https://github.com/MacFace/MacFace/tree/v2.0">MacFace v2</a> が Swift で作り直し中</li>
-</ul>
-
-
-<h2>やったこと</h2>
-
-<p>Interface Builder と <code>gem 'ib'</code> で GUI を作り直そうとしていました。</p>
-
-<p>GUI 作成は細かいサイズを気にしなくて良い Tcl/Tk の pack 方式や
-Web での bootstrap のようなやり方の方が慣れていて、
-GUI ツールで作成するのは GTK+2 の glade ぐらいしかまともに使ったことがなかったので、
-使い方や良い感じに配置する方法で結構悩んでいました。
-悩んでいた部分は最後の成果発表の時にいろいろ教えてもらったりしました。</p>
-
-<p>コードとの組み合わせは、検索で見つけた</p>
-
-<pre><code>@mainWindowController = MainWindow.alloc.initWithWindowNibName('MainWindow')
-@mainWindowController.window.makeKeyAndOrderFront(self)
-</code></pre>
-
-<p>という方法で window は表示できたものの、
-<code>@mainWindowController.window</code> が <code>nil</code> になっていて、
-<code>makeKeyAndOrderFront</code> の呼び出しは失敗していました。</p>
-
-<p>ひとまず現状は <a href="https://github.com/znz/urltrapper/tree/ib">ib ブランチ</a> に公開しています。</p>
 ]]></content>
   </entry>
   
