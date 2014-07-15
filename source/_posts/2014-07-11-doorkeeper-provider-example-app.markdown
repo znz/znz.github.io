@@ -18,7 +18,7 @@ categories: ruby rails doorkeeper devise oauth2
 
 - ruby 2.1.2
 - rails 4.1.4
-- bootstrap 3.2.0
+- bootstrap-sass 3.2.0.0
 - devise 3.2.4
 - devise-i18n-views 0.2.8
 - doorkeeper 1.3.1
