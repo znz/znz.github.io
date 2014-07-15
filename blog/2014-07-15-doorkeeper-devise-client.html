@@ -1,0 +1,838 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>doorkeeper providerサンプルアプリに対応するOAuthクライアントをdeviseで作成した - @znz blog</title>
+  <meta name="author" content="Kazuhiro NISHIYAMA">
+
+  
+  <meta name="description" content="doorkeeper providerサンプルアプリに対応するOAuthクライアントをdeviseで作成した 2014-07-15 (Tue) | <a href="#disqus_thread" data-disqus-identifier="http://blog.n-z.jp"> &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-07-15-doorkeeper-devise-client.html">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-43859023-1', 'n-z.jp');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">@znz blog</a></h1>
+  
+    <h2>ZnZ の memo のようなもの</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://www.google.co.jp/cse" id="cse-search-box">
+  <div>
+    <input type="hidden" name="cx" value="partner-pub-4711975605457723:5173725094" />
+    <input type="hidden" name="ie" value="UTF-8" />
+    <input type="text" name="q" size="40" />
+    <input type="submit" name="sa" value="検索" />
+  </div>
+</form>
+
+<script type="text/javascript" src="http://www.google.co.jp/coop/cse/brand?form=cse-search-box&amp;lang=ja"></script>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      
+      <!-- zenback_title_begin -->
+      
+      <h1 class="entry-title">doorkeeper providerサンプルアプリに対応するOAuthクライアントをdeviseで作成した</h1>
+      
+      <!-- zenback_title_end -->
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-07-15T18:50:40+09:00" pubdate data-updated="true">2014-07-15 (Tue)</time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+
+<!-- zenback_body_begin -->
+
+<div class="entry-content"><p><a href="https://github.com/znz/doorkeeper-provider-app">doorkeeper-provider-app</a>
+を使って SSO (Single Sign On) のように使うクライアントアプリを作成しました。
+<a href="https://github.com/znz/doorkeeper-devise-client-app">doorkeeper-devise-client-app</a>
+で公開しています。</p>
+
+<p>SSO は OAuth 2.0 の本来の使い方ではないので、不便な部分もありますが、
+クライアント側の例として参考になると思います。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>ruby 2.1.2</li>
+<li>rails 4.1.4</li>
+<li>bootstrap 3.2.0</li>
+<li>devise 3.2.4</li>
+<li>omniauth 1.2.2</li>
+<li>omniauth-oauth2 1.2.0</li>
+<li>bootstrap-sass 3.2.0.0</li>
+<li>dotenv-rails 0.11.1</li>
+</ul>
+
+
+<h2>簡単な役割解説</h2>
+
+<p>provider は doorkeeper gem を入れている rails アプリ側で認証や認可を受け持ちます。
+(OAuth の仕様的には認証と認可が別々のサーバーのこともあります。)</p>
+
+<p>ここでいう OAuth クライアントは devise + omniauth + omniauth-oauth2 を使った rails アプリのことです。
+ブラウザーなどのユーザー側にあるクライアントではなく、ユーザーから見れば、これもサーバーです。</p>
+
+<p>詳しいことは OAuth 2.0 の仕様を調べてください。</p>
+
+<h2>大まかな流れ</h2>
+
+<ol>
+<li><code>lib/omniauth/strategies/doorkeeper.rb</code> 作成</li>
+<li><code>config/initializers/devise.rb</code> で <code>config.omniauth :doorkeeper, ...</code></li>
+<li><code>app/controllers/users/omniauth_callbacks_controller.rb</code> 作成
+(<code>uid</code> でユーザーを自動作成したり、 <code>access_token</code> (<code>credentials.token</code>) を保存したり)</li>
+<li><code>config/routes.rb</code> に設定</li>
+<li><code>user</code> に <code>provider</code> を追加</li>
+<li><code>app/models/user.rb</code> で <code>devise :omniauthable</code> や <code>uid</code> を使った処理を実装</li>
+<li><code>OAuth2::AccessToken</code> を生成</li>
+<li>それを使って API アクセス</li>
+</ol>
+
+
+<p><code>access_token</code> を session に保存するかデータベースに保存するかは
+アプリケーションのポリシー次第になります。
+このアプリでは session に保存しています。</p>
+
+<p>別途 callback uri として <code>http://localhost:3000/users/auth/doorkeeper/callback</code> のような URL を指定して
+doorkeeper 側の <code>oauth/applications</code> に登録しておく必要があります。</p>
+
+<h2><code>lib/omniauth/strategies/doorkeeper.rb</code> 作成</h2>
+
+<p>例として
+<a href="https://github.com/doorkeeper-gem/doorkeeper-devise-client" title="Dookreeper Devise+Omniauth Client">Dookreeper Devise+Omniauth Client</a>
+と比較して <code>info</code> に <code>name</code> を増やしています。</p>
+
+<p>コントローラーを <code>users</code> の下の <code>Users::OmniauthCallbacksController</code> にしたので、
+戻り先の <code>authorize_path</code> は <code>'/oauth/authorize'</code> ではなく <code>'/users/oauth/authorize'</code> になっています。</p>
+
+<p>info のハッシュはサーバーから受け取れていて、後の処理でもっと欲しい情報があれば自由に増やせます。</p>
+
+<figure class='code'><figcaption><span>lib/omniauth/strategies/doorkeeper.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">module</span> <span class="nn">OmniAuth</span>
+</span><span class='line'>  <span class="k">module</span> <span class="nn">Strategies</span>
+</span><span class='line'>    <span class="k">class</span> <span class="nc">Doorkeeper</span> <span class="o">&lt;</span> <span class="ss">OmniAuth</span><span class="p">:</span><span class="ss">:Strategies</span><span class="o">::</span><span class="no">OAuth2</span>
+</span><span class='line'>      <span class="n">option</span> <span class="ss">:name</span><span class="p">,</span> <span class="ss">:doorkeeper</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="n">option</span> <span class="ss">:client_options</span><span class="p">,</span> <span class="p">{</span>
+</span><span class='line'>        <span class="ss">site</span><span class="p">:</span> <span class="s1">&#39;http://localhost:4000&#39;</span><span class="p">,</span>
+</span><span class='line'>        <span class="n">authorize_path</span><span class="p">:</span> <span class="s1">&#39;/users/oauth/authorize&#39;</span>
+</span><span class='line'>      <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="n">uid</span> <span class="k">do</span>
+</span><span class='line'>        <span class="n">raw_info</span><span class="o">[</span><span class="s1">&#39;id&#39;</span><span class="o">]</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="n">info</span> <span class="k">do</span>
+</span><span class='line'>        <span class="p">{</span>
+</span><span class='line'>          <span class="ss">email</span><span class="p">:</span> <span class="n">raw_info</span><span class="o">[</span><span class="s1">&#39;email&#39;</span><span class="o">]</span><span class="p">,</span>
+</span><span class='line'>          <span class="nb">name</span><span class="p">:</span> <span class="n">raw_info</span><span class="o">[</span><span class="s1">&#39;name&#39;</span><span class="o">]</span><span class="p">,</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="k">def</span> <span class="nf">raw_info</span>
+</span><span class='line'>        <span class="vi">@raw_info</span> <span class="o">||=</span> <span class="n">access_token</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/api/v1/me.json&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">parsed</span> <span class="o">||</span> <span class="p">{}</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2><code>config/initializers/devise.rb</code> で設定</h2>
+
+<p><a href="https://github.com/doorkeeper-gem/doorkeeper-devise-client">サンプルアプリ</a>
+では</p>
+
+<figure class='code'><figcaption><span>config/initializers/devise.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">omniauth</span> <span class="ss">:doorkeeper</span><span class="p">,</span>  <span class="no">DOORKEEPER_APP_ID</span><span class="p">,</span> <span class="no">DOORKEEPER_APP_SECRET</span><span class="p">,</span> <span class="ss">:client_options</span> <span class="o">=&gt;</span>  <span class="p">{</span><span class="ss">:site</span> <span class="o">=&gt;</span> <span class="no">DOORKEEPER_APP_URL</span><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>となっていました。</p>
+
+<p><code>scope</code> も追加すると以下のようになります。
+<code>dotenv</code> を使って <code>ENV</code> から取るようにしました。</p>
+
+<figure class='code'><figcaption><span>config/initializers/devise.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">omniauth</span> <span class="ss">:doorkeeper</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_ID&#39;</span><span class="o">]</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_SECRET&#39;</span><span class="o">]</span><span class="p">,</span> <span class="n">client_options</span><span class="p">:</span> <span class="p">{</span><span class="ss">site</span><span class="p">:</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_URL&#39;</span><span class="o">]</span> <span class="p">},</span> <span class="ss">scope</span><span class="p">:</span> <span class="s1">&#39;public write&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>scope</code> は <code>'public,write'</code> だと <code>The requested scope is invalid, unknown, or malformed.</code> というエラーになってしまったので、
+<code>,</code> 区切りではなくスペース区切りにしています。</p>
+
+<h2><code>app/controllers/users/omniauth_callbacks_controller.rb</code> 作成</h2>
+
+<p>callback で認証結果を受け取る部分を作成します。
+ここで認証結果を受け取って、ユーザーを必要に応じてひも付けたり、
+後で API アクセスに使うアクセストークンを保存したりします。</p>
+
+<p>認証に失敗した時はログイン画面 (あれば) か <code>root_path</code> に戻すようにしています。</p>
+
+<figure class='code'><figcaption><span>app/controllers/users/omniauth_callbacks_controller.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">Users</span><span class="o">::</span><span class="no">OmniauthCallbacksController</span> <span class="o">&lt;</span> <span class="ss">Devise</span><span class="p">:</span><span class="ss">:OmniauthCallbacksController</span>
+</span><span class='line'>  <span class="c1"># https://github.com/plataformatec/devise/issues/2432</span>
+</span><span class='line'>  <span class="n">protect_from_forgery</span> <span class="ss">except</span><span class="p">:</span> <span class="ss">:doorkeeper</span>
+</span><span class='line'>  <span class="n">skip_filter</span> <span class="ss">:auto_authenticate_omniauth_user!</span><span class="p">,</span> <span class="ss">only</span><span class="p">:</span> <span class="ss">:doorkeeper</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">doorkeeper</span>
+</span><span class='line'>    <span class="c1"># You need to implement the method below in your model (e.g. app/models/user.rb)</span>
+</span><span class='line'>    <span class="n">oauth_data</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">env</span><span class="o">[</span><span class="s1">&#39;omniauth.auth&#39;</span><span class="o">]</span>
+</span><span class='line'>    <span class="vi">@user</span> <span class="o">=</span> <span class="no">User</span><span class="o">.</span><span class="n">find_or_create_for_doorkeeper_oauth</span><span class="p">(</span><span class="n">oauth_data</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">session</span><span class="o">[</span><span class="ss">:doorkeeper_token</span><span class="o">]</span> <span class="o">=</span> <span class="n">oauth_data</span><span class="o">[</span><span class="s1">&#39;credentials&#39;</span><span class="o">][</span><span class="s1">&#39;token&#39;</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">if</span> <span class="vi">@user</span><span class="o">.</span><span class="n">persisted?</span>
+</span><span class='line'>      <span class="n">sign_in_and_redirect</span> <span class="vi">@user</span><span class="p">,</span> <span class="ss">:event</span> <span class="o">=&gt;</span> <span class="ss">:authentication</span> <span class="c1">#this will throw if @user is not activated</span>
+</span><span class='line'>      <span class="k">if</span> <span class="n">is_navigational_format?</span>
+</span><span class='line'>        <span class="n">set_flash_message</span><span class="p">(</span><span class="ss">:notice</span><span class="p">,</span> <span class="ss">:success</span><span class="p">,</span> <span class="ss">kind</span><span class="p">:</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_NAME&#39;</span><span class="o">]</span> <span class="o">||</span> <span class="s1">&#39;Doorkeeper&#39;</span><span class="p">)</span>
+</span><span class='line'>        <span class="c1"># hide flash message after auto sign in</span>
+</span><span class='line'>        <span class="c1">#flash.delete(:notice)</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>    <span class="k">else</span>
+</span><span class='line'>      <span class="n">session</span><span class="o">[</span><span class="s1">&#39;devise.doorkeeper_data&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">env</span><span class="o">[</span><span class="s1">&#39;omniauth.auth&#39;</span><span class="o">]</span>
+</span><span class='line'>      <span class="k">if</span> <span class="nb">respond_to?</span><span class="p">(</span><span class="ss">:new_user_registration_url</span><span class="p">)</span>
+</span><span class='line'>        <span class="n">redirect_to</span> <span class="n">new_user_registration_url</span>
+</span><span class='line'>      <span class="k">else</span>
+</span><span class='line'>        <span class="n">redirect_to</span> <span class="n">root_url</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">after_omniauth_failure_path_for</span><span class="p">(</span><span class="n">scope</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">if</span> <span class="nb">respond_to?</span><span class="p">(</span><span class="ss">:new_session_path</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">new_session_path</span><span class="p">(</span><span class="n">scope</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">else</span>
+</span><span class='line'>      <span class="n">root_path</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>自動ログイン後のメッセージが不要なら <code>set_flash_message</code> の部分を <code>flash.delete(:notice)</code> に置き換えます。
+「Doorkeeper でログインしました」だとどのサイトか区別がつかないので、
+<code>ENV['DOORKEEPER_APP_NAME']</code> で表示用の名前を設定できるようにしています。</p>
+
+<h2><code>config/routes.rb</code> に設定</h2>
+
+<p><code>config/routes.rb</code> で <code>omniauth_callbacks</code> として独自のものを使うように設定します。</p>
+
+<p>今回は認証必須なので不要ですが、
+例として <code>sign_in</code> と <code>sign_out</code> の URL も入れました。
+実際に試してみるとすぐに自動ログインで再ログインしてしまいます。</p>
+
+<p><code>sign_out</code> が <code>get</code> か <code>delete</code> か違うことがあるので、
+<code>sign_out_via</code> を使ってどちらでも対応できるようにしました。</p>
+
+<figure class='code'><figcaption><span>config/routes.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">devise_for</span> <span class="ss">:users</span><span class="p">,</span> <span class="ss">controllers</span><span class="p">:</span> <span class="p">{</span> <span class="n">omniauth_callbacks</span><span class="p">:</span> <span class="s1">&#39;users/omniauth_callbacks&#39;</span> <span class="p">}</span>
+</span><span class='line'>  <span class="n">devise_scope</span> <span class="ss">:user</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">get</span> <span class="s1">&#39;sign_in&#39;</span><span class="p">,</span>  <span class="ss">to</span><span class="p">:</span> <span class="s1">&#39;devise/sessions#new&#39;</span><span class="p">,</span>     <span class="ss">as</span><span class="p">:</span> <span class="ss">:new_user_session</span>
+</span><span class='line'>    <span class="nb">__send__</span> <span class="no">Devise</span><span class="o">.</span><span class="n">sign_out_via</span><span class="p">,</span> <span class="s1">&#39;sign_out&#39;</span><span class="p">,</span> <span class="ss">to</span><span class="p">:</span> <span class="s1">&#39;devise/sessions#destroy&#39;</span><span class="p">,</span> <span class="ss">as</span><span class="p">:</span> <span class="ss">:destroy_user_session</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>timeoutable 設定</h2>
+
+<p>SSO 的に使うのは
+OAuth 2.0 の本来の目的ではないので、
+ログアウトは難しい問題です。
+たとえば
+doorkeeper
+と連携するアプリが複数あるときにまとめてログアウト出来ないなどの問題があります。</p>
+
+<p>そのため、このアプリでは一定時間で再ログインが必要になるように <code>timeoutable</code> を使って、
+こまめに認証し直すようにしてログアウト問題を緩和しています。</p>
+
+<p>その副作用として入力に時間のかかるフォームがあると入力途中でタイムアウトしてしまって
+投稿に失敗するなどの問題も起きるので、その点を考慮しておく必要があります。</p>
+
+<figure class='code'><figcaption><span>config/initializers/devise.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="c1"># Default is 30 minutes.</span>
+</span><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">timeout_in</span> <span class="o">=</span> <span class="mi">1</span><span class="o">.</span><span class="n">minutes</span> <span class="k">if</span> <span class="no">Rails</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">development?</span>
+</span><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">expire_auth_token_on_timeout</span> <span class="o">=</span> <span class="kp">true</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>app/models/user.rb に実装</h2>
+
+<p><code>find_or_create_for_doorkeeper_oauth</code> の実装は <code>concerns</code> に分けてみました。
+<code>omniauthable</code> に <code>omniauth_providers</code> も設定して余計な route が生成されないようにしています。
+<code>timeoutable</code> も入れています。</p>
+
+<figure class='code'><figcaption><span>app/models/user.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">devise</span> <span class="ss">:omniauthable</span><span class="p">,</span> <span class="n">omniauth_providers</span><span class="p">:</span> <span class="o">[</span><span class="ss">:doorkeeper</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">devise</span> <span class="ss">:timeoutable</span>
+</span><span class='line'>  <span class="kp">include</span> <span class="no">DoorkeeperOauthFinder</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ログインしたときに <code>name</code> や <code>email</code> が変わっていたら反映するようにしています。</p>
+
+<p><code>id</code> を統一したいのなら、 <code>create</code> のときに <code>id</code> まで指定すると
+doorkeeper gem による OAuth provider 側とユーザーの ID を統一できます。</p>
+
+<p>SSO 的に使うのならパスワードは不要なので、
+ここではコメントアウトしています。</p>
+
+<figure class='code'><figcaption><span>app/models/concerns/doorkeeper_oauth_finder.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">module</span> <span class="nn">DoorkeeperOauthFinder</span>
+</span><span class='line'>  <span class="kp">extend</span> <span class="ss">ActiveSupport</span><span class="p">:</span><span class="ss">:Concern</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">module</span> <span class="nn">ClassMethods</span>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">find_or_create_for_doorkeeper_oauth</span><span class="p">(</span><span class="n">oauth_data</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">uid</span> <span class="o">=</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">to_s</span>
+</span><span class='line'>      <span class="nb">id</span> <span class="o">=</span> <span class="n">uid</span><span class="o">.</span><span class="n">to_i</span>
+</span><span class='line'>      <span class="n">user</span> <span class="o">=</span> <span class="nb">self</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="ss">provider</span><span class="p">:</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">provider</span><span class="p">,</span> <span class="ss">uid</span><span class="p">:</span> <span class="n">uid</span><span class="p">)</span><span class="o">.</span><span class="n">first</span>
+</span><span class='line'>      <span class="k">if</span> <span class="n">user</span>
+</span><span class='line'>        <span class="n">user</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">name</span>
+</span><span class='line'>        <span class="n">user</span><span class="o">.</span><span class="n">email</span> <span class="o">=</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">email</span>
+</span><span class='line'>        <span class="n">user</span><span class="o">.</span><span class="n">save!</span> <span class="k">if</span> <span class="n">user</span><span class="o">.</span><span class="n">changed?</span>
+</span><span class='line'>      <span class="k">else</span>
+</span><span class='line'>        <span class="n">user</span> <span class="o">=</span> <span class="nb">self</span><span class="o">.</span><span class="n">create!</span><span class="p">({</span>
+</span><span class='line'>          <span class="nb">id</span><span class="p">:</span> <span class="nb">id</span><span class="p">,</span> <span class="c1"># use same id</span>
+</span><span class='line'>          <span class="nb">name</span><span class="p">:</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+</span><span class='line'>          <span class="ss">provider</span><span class="p">:</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">provider</span><span class="p">,</span>
+</span><span class='line'>          <span class="ss">uid</span><span class="p">:</span> <span class="n">uid</span><span class="p">,</span>
+</span><span class='line'>          <span class="ss">email</span><span class="p">:</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">email</span><span class="p">,</span>
+</span><span class='line'>          <span class="c1">#password: Devise.friendly_token[0,20]</span>
+</span><span class='line'>        <span class="p">})</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>      <span class="n">user</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>データベースの migration の方でも削除して unique index の制約なども不要なものは外しておきます。</p>
+
+<figure class='code'><figcaption><span>db/migrate/*_devise_create_users.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="c1">## Database authenticatable</span>
+</span><span class='line'>  <span class="n">t</span><span class="o">.</span><span class="n">string</span> <span class="ss">:email</span><span class="p">,</span>              <span class="ss">null</span><span class="p">:</span> <span class="kp">false</span><span class="p">,</span> <span class="ss">default</span><span class="p">:</span> <span class="s2">&quot;&quot;</span>
+</span><span class='line'>  <span class="c1"># t.string :encrypted_password, null: false, default: &quot;&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>代わりに <code>provider</code> と <code>uid</code> と <code>name</code> を追加しました。
+このアプリは Doorkeeper 専用なので、直接 <code>users</code> に追加していますが、
+複数プロバイダに対応するには <code>provider</code> と <code>uid</code> の組を別テーブルにします。</p>
+
+<figure class='code'><figcaption><span>db/migrate/*_add_omniauth_columns_to_users.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">AddOmniauthColumnsToUsers</span> <span class="o">&lt;</span> <span class="ss">ActiveRecord</span><span class="p">:</span><span class="ss">:Migration</span>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">change</span>
+</span><span class='line'>    <span class="n">add_column</span> <span class="ss">:users</span><span class="p">,</span> <span class="ss">:provider</span><span class="p">,</span> <span class="ss">:string</span>
+</span><span class='line'>    <span class="n">add_column</span> <span class="ss">:users</span><span class="p">,</span> <span class="ss">:uid</span><span class="p">,</span> <span class="ss">:string</span>
+</span><span class='line'>    <span class="n">add_column</span> <span class="ss">:users</span><span class="p">,</span> <span class="ss">:name</span><span class="p">,</span> <span class="ss">:string</span>
+</span><span class='line'>    <span class="n">add_index</span> <span class="ss">:users</span><span class="p">,</span> <span class="o">[</span><span class="ss">:provider</span><span class="p">,</span> <span class="ss">:uid</span><span class="o">]</span><span class="p">,</span> <span class="ss">unique</span><span class="p">:</span> <span class="kp">true</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2><code>OAuth2::AccessToken</code> を生成</h2>
+
+<p><code>OAuth2::Client</code> と保存しておいた <code>access_token</code> を引数にして <code>OAuth2::AccessToken</code> を生成します。
+ここでは <code>concerns</code> に分けて必要なコントローラーでだけ <code>include DoorkeeperApiV1</code> するようにしました。
+全体で使いたいのなら <code>ApplicationController</code> に <code>include</code> すれば良いと思います。</p>
+
+<figure class='code'><figcaption><span>app/controllers/concerns/doorkeeper_api_v1.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">module</span> <span class="nn">DoorkeeperApiV1</span>
+</span><span class='line'>  <span class="kp">private</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">access_token</span>
+</span><span class='line'>    <span class="k">return</span> <span class="vi">@access_token</span> <span class="k">if</span> <span class="n">defined?</span><span class="p">(</span><span class="vi">@access_token</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">config</span> <span class="o">=</span> <span class="no">Devise</span><span class="o">.</span><span class="n">omniauth_configs</span><span class="o">[</span><span class="ss">:doorkeeper</span><span class="o">]</span>
+</span><span class='line'>    <span class="n">strategy</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">strategy_class</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="o">*</span><span class="n">config</span><span class="o">.</span><span class="n">args</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">token</span> <span class="o">=</span> <span class="n">session</span><span class="o">[</span><span class="ss">:doorkeeper_token</span><span class="o">]</span>
+</span><span class='line'>    <span class="vi">@access_token</span> <span class="o">=</span> <span class="ss">OAuth2</span><span class="p">:</span><span class="ss">:AccessToken</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">strategy</span><span class="o">.</span><span class="n">client</span><span class="p">,</span> <span class="n">token</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">get_me</span>
+</span><span class='line'>    <span class="n">access_token</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/v1/me.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parsed</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">get_microposts</span>
+</span><span class='line'>    <span class="n">access_token</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/v1/microposts.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parsed</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="no">MICROPOST_CONTENT_MAX_LENGTH</span> <span class="o">=</span> <span class="mi">140</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">post_micropost</span><span class="p">(</span><span class="n">micropost</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">micropost</span><span class="o">[</span><span class="ss">:content</span><span class="o">]</span> <span class="o">=</span> <span class="n">micropost</span><span class="o">[</span><span class="ss">:content</span><span class="o">].</span><span class="n">truncate</span><span class="p">(</span><span class="no">MICROPOST_CONTENT_MAX_LENGTH</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">access_token</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/api/v1/microposts&quot;</span><span class="p">,</span> <span class="ss">params</span><span class="p">:</span> <span class="p">{</span> <span class="ss">micropost</span><span class="p">:</span> <span class="n">micropost</span> <span class="p">})</span><span class="o">.</span><span class="n">parsed</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>使い方は <code>get_me</code> などを呼び出すだけなので省略します。</p>
+
+<h2>ログインを強制する</h2>
+
+<p>常に Doorkeeper の方でログインさせておきたいアプリの場合は、
+User クラスを使っている場合の devise での戻り先の <code>session[:user_return_to]</code> に URL を保存しておいて、
+<code>user_omniauth_authorize_path(:doorkeeper)</code> に強制的にリダイレクトしています。
+<code>main_app.</code> をつけているのは route で mount している engine の中で問題が起きたことがあったためです。</p>
+
+<figure class='code'><figcaption><span>app/controllers/application_controller.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="kp">include</span> <span class="no">AuthDoorkeeper</span>
+</span><span class='line'>  <span class="n">before_action</span> <span class="ss">:auto_authenticate_omniauth_user!</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span>app/controllers/concerns/auth_doorkeeper.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">module</span> <span class="nn">AuthDoorkeeper</span>
+</span><span class='line'>  <span class="kp">private</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">auto_authenticate_omniauth_user!</span>
+</span><span class='line'>    <span class="k">return</span> <span class="k">if</span> <span class="n">current_user</span>
+</span><span class='line'>    <span class="n">session</span><span class="o">[</span><span class="ss">:user_return_to</span><span class="o">]</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">original_url</span>
+</span><span class='line'>    <span class="n">redirect_to</span> <span class="n">main_app</span><span class="o">.</span><span class="n">user_omniauth_authorize_path</span><span class="p">(</span><span class="ss">:doorkeeper</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>テストについて</h2>
+
+<p>API 呼び出しの部分の対処が出来ていなくて、まだテストが通る状態には出来ていません。</p>
+</div>
+
+<!-- zenback_body_end -->
+
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-07-15T18:50:40+09:00" pubdate data-updated="true">2014-07-15 (Tue)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/devise/'>devise</a>, <a class='category' href='/blog/categories/doorkeeper/'>doorkeeper</a>, <a class='category' href='/blog/categories/oauth2/'>oauth2</a>, <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014-07-14-apt-cacher-ng.html" title="Previous Post: apt-cacher-ngでliveイメージ作成を繰り返す時の無駄なダウンロードを減らす">&laquo; apt-cacher-ngでliveイメージ作成を繰り返す時の無駄なダウンロードを減らす</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+<section>
+  <!-- X:S ZenBackWidget --><div id="zenback-widget-loader"></div><script type="text/javascript">!function(d,i){if(!d.getElementById(i)){var r=Math.ceil((new Date()*1)*Math.random());var j=d.createElement("script");j.id=i;j.async=true;j.src="//w.zenback.jp/v1/?base_uri=http%3A//blog.n-z.jp/&nsid=122901358100652638%3A%3A122901381991399941&rand="+r;d.body.appendChild(j);}}(document,"zenback-widget-js");</script><!-- X:E ZenBackWidget -->
+
+</section>
+
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- sidebar -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:160px;height:600px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4210402292"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+<section>
+  <h1>About Me</h1>
+  <img src="/favicon.png" style="float:right">
+  <p>
+    <a href="http://rubycommitters.org/">Ruby のコミッター</a>とかやってます。
+    フルスタックエンジニア(って何?)かもしれません。
+  </p>
+<script data-gittip-username="znz"
+        data-gittip-widget="button"
+        src="//gttp.co/v1.js"></script>
+</section>
+<script language="javascript" type="text/javascript" src="http://b.hatena.ne.jp/js/widget.js" charset="utf-8"></script>
+<script language="javascript" type="text/javascript">
+Hatena.BookmarkWidget.url   = "http://blog.n-z.jp/";
+Hatena.BookmarkWidget.title = "人気エントリー";
+Hatena.BookmarkWidget.sort  = "count";
+Hatena.BookmarkWidget.width = 0;
+Hatena.BookmarkWidget.num   = 6;
+Hatena.BookmarkWidget.theme = "default";
+Hatena.BookmarkWidget.load();
+</script>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014-07-15-doorkeeper-devise-client.html">doorkeeper providerサンプルアプリに対応するOAuthクライアントをdeviseで作成した</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-07-14-apt-cacher-ng.html">apt-cacher-ngでliveイメージ作成を繰り返す時の無駄なダウンロードを減らす</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-07-13-build-rubylive-on-vm.html">RubyLiveを仮想環境で作成</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-07-12-debian-ruby-live.html">Debian 7 (wheezy) の RubyLive をカスタマイズ中</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-07-11-doorkeeper-provider-example-app.html">Rails 4.1 で Doorkeeper を使った OAuth2 Provider のサンプルを実装した</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>Tag Cloud</h1>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 102.26415094339623%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 107.9245283018868%'>amagasakirb(7)</a> <a href='/blog/categories/ansible' style='font-size: 109.05660377358491%'>ansible(8)</a> <a href='/blog/categories/anyenv' style='font-size: 101.13207547169812%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.13207547169812%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 101.13207547169812%'>boot2docker(1)</a> <a href='/blog/categories/bootstrap' style='font-size: 101.13207547169812%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 101.13207547169812%'>bts(1)</a> <a href='/blog/categories/certification' style='font-size: 101.13207547169812%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 102.26415094339623%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 103.39622641509433%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 122.64150943396226%'>debian(20)</a> <a href='/blog/categories/devise' style='font-size: 105.66037735849056%'>devise(5)</a> <a href='/blog/categories/dkms' style='font-size: 101.13207547169812%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 111.32075471698113%'>docker(10)</a> <a href='/blog/categories/dokku' style='font-size: 102.26415094339623%'>dokku(2)</a> <a href='/blog/categories/doorkeeper' style='font-size: 103.39622641509433%'>doorkeeper(3)</a> <a href='/blog/categories/drb' style='font-size: 101.13207547169812%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.13207547169812%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 109.05660377358491%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 138.49056603773585%'>event(34)</a> <a href='/blog/categories/fluentd' style='font-size: 101.13207547169812%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 104.52830188679245%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 101.13207547169812%'>ghq(1)</a> <a href='/blog/categories/git' style='font-size: 105.66037735849056%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 106.79245283018868%'>github(6)</a> <a href='/blog/categories/go' style='font-size: 101.13207547169812%'>go(1)</a> <a href='/blog/categories/gpg' style='font-size: 101.13207547169812%'>gpg(1)</a> <a href='/blog/categories/haml' style='font-size: 101.13207547169812%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 101.13207547169812%'>heroku(1)</a> <a href='/blog/categories/homebrew' style='font-size: 107.9245283018868%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 103.39622641509433%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 103.39622641509433%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 101.13207547169812%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 101.13207547169812%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.13207547169812%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 104.52830188679245%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 101.13207547169812%'>jenkins(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 102.26415094339623%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.13207547169812%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.26415094339623%'>jus(2)</a> <a href='/blog/categories/k-of' style='font-size: 101.13207547169812%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 105.66037735849056%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.13207547169812%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.13207547169812%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 104.52830188679245%'>land-of-lisp(4)</a> <a href='/blog/categories/lilo' style='font-size: 101.13207547169812%'>lilo(1)</a> <a href='/blog/categories/linux' style='font-size: 109.05660377358491%'>linux(8)</a> <a href='/blog/categories/live' style='font-size: 103.39622641509433%'>live(3)</a> <a href='/blog/categories/lxc' style='font-size: 101.13207547169812%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.13207547169812%'>lxcjp(1)</a> <a href='/blog/categories/mail' style='font-size: 101.13207547169812%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 102.26415094339623%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 104.52830188679245%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.13207547169812%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.13207547169812%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.13207547169812%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 102.26415094339623%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.13207547169812%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 104.52830188679245%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 105.66037735849056%'>octopress(5)</a> <a href='/blog/categories/omniauth' style='font-size: 102.26415094339623%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 102.26415094339623%'>openssl(2)</a> <a href='/blog/categories/osx' style='font-size: 128.30188679245282%'>osx(25)</a> <a href='/blog/categories/owncloud' style='font-size: 101.13207547169812%'>owncloud(1)</a> <a href='/blog/categories/packer' style='font-size: 101.13207547169812%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.13207547169812%'>passenger(1)</a> <a href='/blog/categories/postfix' style='font-size: 102.26415094339623%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 102.26415094339623%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.13207547169812%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.13207547169812%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 102.26415094339623%'>r(2)</a> <a href='/blog/categories/rabbit' style='font-size: 102.26415094339623%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 132.83018867924528%'>rails(29)</a> <a href='/blog/categories/ransack' style='font-size: 101.13207547169812%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 104.52830188679245%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.13207547169812%'>redmine(1)</a> <a href='/blog/categories/rspec' style='font-size: 101.13207547169812%'>rspec(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.13207547169812%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(53)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.13207547169812%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 102.26415094339623%'>rubykansai(2)</a> <a href='/blog/categories/rubymotion' style='font-size: 113.58490566037736%'>rubymotion(12)</a> <a href='/blog/categories/security' style='font-size: 103.39622641509433%'>security(3)</a> <a href='/blog/categories/shell' style='font-size: 103.39622641509433%'>shell(3)</a> <a href='/blog/categories/slim' style='font-size: 101.13207547169812%'>slim(1)</a> <a href='/blog/categories/sylpheed' style='font-size: 101.13207547169812%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.13207547169812%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 104.52830188679245%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 121.50943396226415%'>ubuntu(19)</a> <a href='/blog/categories/upstart' style='font-size: 102.26415094339623%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 101.13207547169812%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 104.52830188679245%'>vagrant(4)</a> <a href='/blog/categories/virtualbox' style='font-size: 102.26415094339623%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 101.13207547169812%'>weechat(1)</a> <a href='/blog/categories/yaml' style='font-size: 101.13207547169812%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.13207547169812%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 107.9245283018868%'>zsh(7)</a> </span>
+</section>
+<section class="clearfix">
+<h1><a href="https://coderwall.com/">coderwall.com</a></h1>
+<link href="http://coderwall.com/stylesheets/jquery.coderwall.css" media="all" rel="stylesheet" type="text/css">
+<script src="http://coderwall.com/javascripts/jquery.coderwall.js"></script>
+<section class="coderwall" data-coderwall-username="znz" data-coderwall-orientation="vertical" style="width:80%"></section>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/znz">@znz</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'znz',
+            count: 3,
+            skip_forks: false,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Kazuhiro NISHIYAMA -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'znzblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-07-15-doorkeeper-devise-client.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-07-15-doorkeeper-devise-client.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" src="http://b.st-hatena.com/js/bookmark_button.js" charset="utf-8" async="async"></script>
+
+
+</body>
+</html>

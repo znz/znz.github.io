@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-07-15T18:37:40+09:00</updated>
+  <updated>2014-07-15T23:27:54+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,512 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[doorkeeper providerサンプルアプリに対応するOAuthクライアントをdeviseで作成した]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-15-doorkeeper-devise-client.html"/>
+    <updated>2014-07-15T18:50:40+09:00</updated>
+    <id>http://blog.n-z.jp/blog/doorkeeper-devise-client</id>
+    <content type="html"><![CDATA[<p><a href="https://github.com/znz/doorkeeper-provider-app">doorkeeper-provider-app</a>
+を使って SSO (Single Sign On) のように使うクライアントアプリを作成しました。
+<a href="https://github.com/znz/doorkeeper-devise-client-app">doorkeeper-devise-client-app</a>
+で公開しています。</p>
+
+<p>SSO は OAuth 2.0 の本来の使い方ではないので、不便な部分もありますが、
+クライアント側の例として参考になると思います。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>ruby 2.1.2</li>
+<li>rails 4.1.4</li>
+<li>bootstrap 3.2.0</li>
+<li>devise 3.2.4</li>
+<li>omniauth 1.2.2</li>
+<li>omniauth-oauth2 1.2.0</li>
+<li>bootstrap-sass 3.2.0.0</li>
+<li>dotenv-rails 0.11.1</li>
+</ul>
+
+
+<h2>簡単な役割解説</h2>
+
+<p>provider は doorkeeper gem を入れている rails アプリ側で認証や認可を受け持ちます。
+(OAuth の仕様的には認証と認可が別々のサーバーのこともあります。)</p>
+
+<p>ここでいう OAuth クライアントは devise + omniauth + omniauth-oauth2 を使った rails アプリのことです。
+ブラウザーなどのユーザー側にあるクライアントではなく、ユーザーから見れば、これもサーバーです。</p>
+
+<p>詳しいことは OAuth 2.0 の仕様を調べてください。</p>
+
+<h2>大まかな流れ</h2>
+
+<ol>
+<li><code>lib/omniauth/strategies/doorkeeper.rb</code> 作成</li>
+<li><code>config/initializers/devise.rb</code> で <code>config.omniauth :doorkeeper, ...</code></li>
+<li><code>app/controllers/users/omniauth_callbacks_controller.rb</code> 作成
+(<code>uid</code> でユーザーを自動作成したり、 <code>access_token</code> (<code>credentials.token</code>) を保存したり)</li>
+<li><code>config/routes.rb</code> に設定</li>
+<li><code>user</code> に <code>provider</code> を追加</li>
+<li><code>app/models/user.rb</code> で <code>devise :omniauthable</code> や <code>uid</code> を使った処理を実装</li>
+<li><code>OAuth2::AccessToken</code> を生成</li>
+<li>それを使って API アクセス</li>
+</ol>
+
+
+<p><code>access_token</code> を session に保存するかデータベースに保存するかは
+アプリケーションのポリシー次第になります。
+このアプリでは session に保存しています。</p>
+
+<p>別途 callback uri として <code>http://localhost:3000/users/auth/doorkeeper/callback</code> のような URL を指定して
+doorkeeper 側の <code>oauth/applications</code> に登録しておく必要があります。</p>
+
+<h2><code>lib/omniauth/strategies/doorkeeper.rb</code> 作成</h2>
+
+<p>例として
+<a href="https://github.com/doorkeeper-gem/doorkeeper-devise-client" title="Dookreeper Devise+Omniauth Client">Dookreeper Devise+Omniauth Client</a>
+と比較して <code>info</code> に <code>name</code> を増やしています。</p>
+
+<p>コントローラーを <code>users</code> の下の <code>Users::OmniauthCallbacksController</code> にしたので、
+戻り先の <code>authorize_path</code> は <code>'/oauth/authorize'</code> ではなく <code>'/users/oauth/authorize'</code> になっています。</p>
+
+<p>info のハッシュはサーバーから受け取れていて、後の処理でもっと欲しい情報があれば自由に増やせます。</p>
+
+<figure class='code'><figcaption><span>lib/omniauth/strategies/doorkeeper.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">module</span> <span class="nn">OmniAuth</span>
+</span><span class='line'>  <span class="k">module</span> <span class="nn">Strategies</span>
+</span><span class='line'>    <span class="k">class</span> <span class="nc">Doorkeeper</span> <span class="o">&lt;</span> <span class="ss">OmniAuth</span><span class="p">:</span><span class="ss">:Strategies</span><span class="o">::</span><span class="no">OAuth2</span>
+</span><span class='line'>      <span class="n">option</span> <span class="ss">:name</span><span class="p">,</span> <span class="ss">:doorkeeper</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="n">option</span> <span class="ss">:client_options</span><span class="p">,</span> <span class="p">{</span>
+</span><span class='line'>        <span class="ss">site</span><span class="p">:</span> <span class="s1">&#39;http://localhost:4000&#39;</span><span class="p">,</span>
+</span><span class='line'>        <span class="n">authorize_path</span><span class="p">:</span> <span class="s1">&#39;/users/oauth/authorize&#39;</span>
+</span><span class='line'>      <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="n">uid</span> <span class="k">do</span>
+</span><span class='line'>        <span class="n">raw_info</span><span class="o">[</span><span class="s1">&#39;id&#39;</span><span class="o">]</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="n">info</span> <span class="k">do</span>
+</span><span class='line'>        <span class="p">{</span>
+</span><span class='line'>          <span class="ss">email</span><span class="p">:</span> <span class="n">raw_info</span><span class="o">[</span><span class="s1">&#39;email&#39;</span><span class="o">]</span><span class="p">,</span>
+</span><span class='line'>          <span class="nb">name</span><span class="p">:</span> <span class="n">raw_info</span><span class="o">[</span><span class="s1">&#39;name&#39;</span><span class="o">]</span><span class="p">,</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>      <span class="k">def</span> <span class="nf">raw_info</span>
+</span><span class='line'>        <span class="vi">@raw_info</span> <span class="o">||=</span> <span class="n">access_token</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/api/v1/me.json&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">parsed</span> <span class="o">||</span> <span class="p">{}</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2><code>config/initializers/devise.rb</code> で設定</h2>
+
+<p><a href="https://github.com/doorkeeper-gem/doorkeeper-devise-client">サンプルアプリ</a>
+では</p>
+
+<figure class='code'><figcaption><span>config/initializers/devise.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">omniauth</span> <span class="ss">:doorkeeper</span><span class="p">,</span>  <span class="no">DOORKEEPER_APP_ID</span><span class="p">,</span> <span class="no">DOORKEEPER_APP_SECRET</span><span class="p">,</span> <span class="ss">:client_options</span> <span class="o">=&gt;</span>  <span class="p">{</span><span class="ss">:site</span> <span class="o">=&gt;</span> <span class="no">DOORKEEPER_APP_URL</span><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>となっていました。</p>
+
+<p><code>scope</code> も追加すると以下のようになります。
+<code>dotenv</code> を使って <code>ENV</code> から取るようにしました。</p>
+
+<figure class='code'><figcaption><span>config/initializers/devise.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">omniauth</span> <span class="ss">:doorkeeper</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_ID&#39;</span><span class="o">]</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_SECRET&#39;</span><span class="o">]</span><span class="p">,</span> <span class="n">client_options</span><span class="p">:</span> <span class="p">{</span><span class="ss">site</span><span class="p">:</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_URL&#39;</span><span class="o">]</span> <span class="p">},</span> <span class="ss">scope</span><span class="p">:</span> <span class="s1">&#39;public write&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>scope</code> は <code>'public,write'</code> だと <code>The requested scope is invalid, unknown, or malformed.</code> というエラーになってしまったので、
+<code>,</code> 区切りではなくスペース区切りにしています。</p>
+
+<h2><code>app/controllers/users/omniauth_callbacks_controller.rb</code> 作成</h2>
+
+<p>callback で認証結果を受け取る部分を作成します。
+ここで認証結果を受け取って、ユーザーを必要に応じてひも付けたり、
+後で API アクセスに使うアクセストークンを保存したりします。</p>
+
+<p>認証に失敗した時はログイン画面 (あれば) か <code>root_path</code> に戻すようにしています。</p>
+
+<figure class='code'><figcaption><span>app/controllers/users/omniauth_callbacks_controller.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">Users</span><span class="o">::</span><span class="no">OmniauthCallbacksController</span> <span class="o">&lt;</span> <span class="ss">Devise</span><span class="p">:</span><span class="ss">:OmniauthCallbacksController</span>
+</span><span class='line'>  <span class="c1"># https://github.com/plataformatec/devise/issues/2432</span>
+</span><span class='line'>  <span class="n">protect_from_forgery</span> <span class="ss">except</span><span class="p">:</span> <span class="ss">:doorkeeper</span>
+</span><span class='line'>  <span class="n">skip_filter</span> <span class="ss">:auto_authenticate_omniauth_user!</span><span class="p">,</span> <span class="ss">only</span><span class="p">:</span> <span class="ss">:doorkeeper</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">doorkeeper</span>
+</span><span class='line'>    <span class="c1"># You need to implement the method below in your model (e.g. app/models/user.rb)</span>
+</span><span class='line'>    <span class="n">oauth_data</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">env</span><span class="o">[</span><span class="s1">&#39;omniauth.auth&#39;</span><span class="o">]</span>
+</span><span class='line'>    <span class="vi">@user</span> <span class="o">=</span> <span class="no">User</span><span class="o">.</span><span class="n">find_or_create_for_doorkeeper_oauth</span><span class="p">(</span><span class="n">oauth_data</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">session</span><span class="o">[</span><span class="ss">:doorkeeper_token</span><span class="o">]</span> <span class="o">=</span> <span class="n">oauth_data</span><span class="o">[</span><span class="s1">&#39;credentials&#39;</span><span class="o">][</span><span class="s1">&#39;token&#39;</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">if</span> <span class="vi">@user</span><span class="o">.</span><span class="n">persisted?</span>
+</span><span class='line'>      <span class="n">sign_in_and_redirect</span> <span class="vi">@user</span><span class="p">,</span> <span class="ss">:event</span> <span class="o">=&gt;</span> <span class="ss">:authentication</span> <span class="c1">#this will throw if @user is not activated</span>
+</span><span class='line'>      <span class="k">if</span> <span class="n">is_navigational_format?</span>
+</span><span class='line'>        <span class="n">set_flash_message</span><span class="p">(</span><span class="ss">:notice</span><span class="p">,</span> <span class="ss">:success</span><span class="p">,</span> <span class="ss">kind</span><span class="p">:</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_NAME&#39;</span><span class="o">]</span> <span class="o">||</span> <span class="s1">&#39;Doorkeeper&#39;</span><span class="p">)</span>
+</span><span class='line'>        <span class="c1"># hide flash message after auto sign in</span>
+</span><span class='line'>        <span class="c1">#flash.delete(:notice)</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>    <span class="k">else</span>
+</span><span class='line'>      <span class="n">session</span><span class="o">[</span><span class="s1">&#39;devise.doorkeeper_data&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">env</span><span class="o">[</span><span class="s1">&#39;omniauth.auth&#39;</span><span class="o">]</span>
+</span><span class='line'>      <span class="k">if</span> <span class="nb">respond_to?</span><span class="p">(</span><span class="ss">:new_user_registration_url</span><span class="p">)</span>
+</span><span class='line'>        <span class="n">redirect_to</span> <span class="n">new_user_registration_url</span>
+</span><span class='line'>      <span class="k">else</span>
+</span><span class='line'>        <span class="n">redirect_to</span> <span class="n">root_url</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">after_omniauth_failure_path_for</span><span class="p">(</span><span class="n">scope</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">if</span> <span class="nb">respond_to?</span><span class="p">(</span><span class="ss">:new_session_path</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">new_session_path</span><span class="p">(</span><span class="n">scope</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">else</span>
+</span><span class='line'>      <span class="n">root_path</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>自動ログイン後のメッセージが不要なら <code>set_flash_message</code> の部分を <code>flash.delete(:notice)</code> に置き換えます。
+「Doorkeeper でログインしました」だとどのサイトか区別がつかないので、
+<code>ENV['DOORKEEPER_APP_NAME']</code> で表示用の名前を設定できるようにしています。</p>
+
+<h2><code>config/routes.rb</code> に設定</h2>
+
+<p><code>config/routes.rb</code> で <code>omniauth_callbacks</code> として独自のものを使うように設定します。</p>
+
+<p>今回は認証必須なので不要ですが、
+例として <code>sign_in</code> と <code>sign_out</code> の URL も入れました。
+実際に試してみるとすぐに自動ログインで再ログインしてしまいます。</p>
+
+<p><code>sign_out</code> が <code>get</code> か <code>delete</code> か違うことがあるので、
+<code>sign_out_via</code> を使ってどちらでも対応できるようにしました。</p>
+
+<figure class='code'><figcaption><span>config/routes.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">devise_for</span> <span class="ss">:users</span><span class="p">,</span> <span class="ss">controllers</span><span class="p">:</span> <span class="p">{</span> <span class="n">omniauth_callbacks</span><span class="p">:</span> <span class="s1">&#39;users/omniauth_callbacks&#39;</span> <span class="p">}</span>
+</span><span class='line'>  <span class="n">devise_scope</span> <span class="ss">:user</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">get</span> <span class="s1">&#39;sign_in&#39;</span><span class="p">,</span>  <span class="ss">to</span><span class="p">:</span> <span class="s1">&#39;devise/sessions#new&#39;</span><span class="p">,</span>     <span class="ss">as</span><span class="p">:</span> <span class="ss">:new_user_session</span>
+</span><span class='line'>    <span class="nb">__send__</span> <span class="no">Devise</span><span class="o">.</span><span class="n">sign_out_via</span><span class="p">,</span> <span class="s1">&#39;sign_out&#39;</span><span class="p">,</span> <span class="ss">to</span><span class="p">:</span> <span class="s1">&#39;devise/sessions#destroy&#39;</span><span class="p">,</span> <span class="ss">as</span><span class="p">:</span> <span class="ss">:destroy_user_session</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>timeoutable 設定</h2>
+
+<p>SSO 的に使うのは
+OAuth 2.0 の本来の目的ではないので、
+ログアウトは難しい問題です。
+たとえば
+doorkeeper
+と連携するアプリが複数あるときにまとめてログアウト出来ないなどの問題があります。</p>
+
+<p>そのため、このアプリでは一定時間で再ログインが必要になるように <code>timeoutable</code> を使って、
+こまめに認証し直すようにしてログアウト問題を緩和しています。</p>
+
+<p>その副作用として入力に時間のかかるフォームがあると入力途中でタイムアウトしてしまって
+投稿に失敗するなどの問題も起きるので、その点を考慮しておく必要があります。</p>
+
+<figure class='code'><figcaption><span>config/initializers/devise.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="c1"># Default is 30 minutes.</span>
+</span><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">timeout_in</span> <span class="o">=</span> <span class="mi">1</span><span class="o">.</span><span class="n">minutes</span> <span class="k">if</span> <span class="no">Rails</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">development?</span>
+</span><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">expire_auth_token_on_timeout</span> <span class="o">=</span> <span class="kp">true</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>app/models/user.rb に実装</h2>
+
+<p><code>find_or_create_for_doorkeeper_oauth</code> の実装は <code>concerns</code> に分けてみました。
+<code>omniauthable</code> に <code>omniauth_providers</code> も設定して余計な route が生成されないようにしています。
+<code>timeoutable</code> も入れています。</p>
+
+<figure class='code'><figcaption><span>app/models/user.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">devise</span> <span class="ss">:omniauthable</span><span class="p">,</span> <span class="n">omniauth_providers</span><span class="p">:</span> <span class="o">[</span><span class="ss">:doorkeeper</span><span class="o">]</span>
+</span><span class='line'>  <span class="n">devise</span> <span class="ss">:timeoutable</span>
+</span><span class='line'>  <span class="kp">include</span> <span class="no">DoorkeeperOauthFinder</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ログインしたときに <code>name</code> や <code>email</code> が変わっていたら反映するようにしています。</p>
+
+<p><code>id</code> を統一したいのなら、 <code>create</code> のときに <code>id</code> まで指定すると
+doorkeeper gem による OAuth provider 側とユーザーの ID を統一できます。</p>
+
+<p>SSO 的に使うのならパスワードは不要なので、
+ここではコメントアウトしています。</p>
+
+<figure class='code'><figcaption><span>app/models/concerns/doorkeeper_oauth_finder.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">module</span> <span class="nn">DoorkeeperOauthFinder</span>
+</span><span class='line'>  <span class="kp">extend</span> <span class="ss">ActiveSupport</span><span class="p">:</span><span class="ss">:Concern</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">module</span> <span class="nn">ClassMethods</span>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">find_or_create_for_doorkeeper_oauth</span><span class="p">(</span><span class="n">oauth_data</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">uid</span> <span class="o">=</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">to_s</span>
+</span><span class='line'>      <span class="nb">id</span> <span class="o">=</span> <span class="n">uid</span><span class="o">.</span><span class="n">to_i</span>
+</span><span class='line'>      <span class="n">user</span> <span class="o">=</span> <span class="nb">self</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="ss">provider</span><span class="p">:</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">provider</span><span class="p">,</span> <span class="ss">uid</span><span class="p">:</span> <span class="n">uid</span><span class="p">)</span><span class="o">.</span><span class="n">first</span>
+</span><span class='line'>      <span class="k">if</span> <span class="n">user</span>
+</span><span class='line'>        <span class="n">user</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">name</span>
+</span><span class='line'>        <span class="n">user</span><span class="o">.</span><span class="n">email</span> <span class="o">=</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">email</span>
+</span><span class='line'>        <span class="n">user</span><span class="o">.</span><span class="n">save!</span> <span class="k">if</span> <span class="n">user</span><span class="o">.</span><span class="n">changed?</span>
+</span><span class='line'>      <span class="k">else</span>
+</span><span class='line'>        <span class="n">user</span> <span class="o">=</span> <span class="nb">self</span><span class="o">.</span><span class="n">create!</span><span class="p">({</span>
+</span><span class='line'>          <span class="nb">id</span><span class="p">:</span> <span class="nb">id</span><span class="p">,</span> <span class="c1"># use same id</span>
+</span><span class='line'>          <span class="nb">name</span><span class="p">:</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+</span><span class='line'>          <span class="ss">provider</span><span class="p">:</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">provider</span><span class="p">,</span>
+</span><span class='line'>          <span class="ss">uid</span><span class="p">:</span> <span class="n">uid</span><span class="p">,</span>
+</span><span class='line'>          <span class="ss">email</span><span class="p">:</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">email</span><span class="p">,</span>
+</span><span class='line'>          <span class="c1">#password: Devise.friendly_token[0,20]</span>
+</span><span class='line'>        <span class="p">})</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>      <span class="n">user</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>データベースの migration の方でも削除して unique index の制約なども不要なものは外しておきます。</p>
+
+<figure class='code'><figcaption><span>db/migrate/*_devise_create_users.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="c1">## Database authenticatable</span>
+</span><span class='line'>  <span class="n">t</span><span class="o">.</span><span class="n">string</span> <span class="ss">:email</span><span class="p">,</span>              <span class="ss">null</span><span class="p">:</span> <span class="kp">false</span><span class="p">,</span> <span class="ss">default</span><span class="p">:</span> <span class="s2">&quot;&quot;</span>
+</span><span class='line'>  <span class="c1"># t.string :encrypted_password, null: false, default: &quot;&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>代わりに <code>provider</code> と <code>uid</code> と <code>name</code> を追加しました。
+このアプリは Doorkeeper 専用なので、直接 <code>users</code> に追加していますが、
+複数プロバイダに対応するには <code>provider</code> と <code>uid</code> の組を別テーブルにします。</p>
+
+<figure class='code'><figcaption><span>db/migrate/*_add_omniauth_columns_to_users.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">AddOmniauthColumnsToUsers</span> <span class="o">&lt;</span> <span class="ss">ActiveRecord</span><span class="p">:</span><span class="ss">:Migration</span>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">change</span>
+</span><span class='line'>    <span class="n">add_column</span> <span class="ss">:users</span><span class="p">,</span> <span class="ss">:provider</span><span class="p">,</span> <span class="ss">:string</span>
+</span><span class='line'>    <span class="n">add_column</span> <span class="ss">:users</span><span class="p">,</span> <span class="ss">:uid</span><span class="p">,</span> <span class="ss">:string</span>
+</span><span class='line'>    <span class="n">add_column</span> <span class="ss">:users</span><span class="p">,</span> <span class="ss">:name</span><span class="p">,</span> <span class="ss">:string</span>
+</span><span class='line'>    <span class="n">add_index</span> <span class="ss">:users</span><span class="p">,</span> <span class="o">[</span><span class="ss">:provider</span><span class="p">,</span> <span class="ss">:uid</span><span class="o">]</span><span class="p">,</span> <span class="ss">unique</span><span class="p">:</span> <span class="kp">true</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2><code>OAuth2::AccessToken</code> を生成</h2>
+
+<p><code>OAuth2::Client</code> と保存しておいた <code>access_token</code> を引数にして <code>OAuth2::AccessToken</code> を生成します。
+ここでは <code>concerns</code> に分けて必要なコントローラーでだけ <code>include DoorkeeperApiV1</code> するようにしました。
+全体で使いたいのなら <code>ApplicationController</code> に <code>include</code> すれば良いと思います。</p>
+
+<figure class='code'><figcaption><span>app/controllers/concerns/doorkeeper_api_v1.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">module</span> <span class="nn">DoorkeeperApiV1</span>
+</span><span class='line'>  <span class="kp">private</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">access_token</span>
+</span><span class='line'>    <span class="k">return</span> <span class="vi">@access_token</span> <span class="k">if</span> <span class="n">defined?</span><span class="p">(</span><span class="vi">@access_token</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">config</span> <span class="o">=</span> <span class="no">Devise</span><span class="o">.</span><span class="n">omniauth_configs</span><span class="o">[</span><span class="ss">:doorkeeper</span><span class="o">]</span>
+</span><span class='line'>    <span class="n">strategy</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">strategy_class</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="o">*</span><span class="n">config</span><span class="o">.</span><span class="n">args</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">token</span> <span class="o">=</span> <span class="n">session</span><span class="o">[</span><span class="ss">:doorkeeper_token</span><span class="o">]</span>
+</span><span class='line'>    <span class="vi">@access_token</span> <span class="o">=</span> <span class="ss">OAuth2</span><span class="p">:</span><span class="ss">:AccessToken</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">strategy</span><span class="o">.</span><span class="n">client</span><span class="p">,</span> <span class="n">token</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">get_me</span>
+</span><span class='line'>    <span class="n">access_token</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/v1/me.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parsed</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">get_microposts</span>
+</span><span class='line'>    <span class="n">access_token</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/v1/microposts.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parsed</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="no">MICROPOST_CONTENT_MAX_LENGTH</span> <span class="o">=</span> <span class="mi">140</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">post_micropost</span><span class="p">(</span><span class="n">micropost</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">micropost</span><span class="o">[</span><span class="ss">:content</span><span class="o">]</span> <span class="o">=</span> <span class="n">micropost</span><span class="o">[</span><span class="ss">:content</span><span class="o">].</span><span class="n">truncate</span><span class="p">(</span><span class="no">MICROPOST_CONTENT_MAX_LENGTH</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">access_token</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/api/v1/microposts&quot;</span><span class="p">,</span> <span class="ss">params</span><span class="p">:</span> <span class="p">{</span> <span class="ss">micropost</span><span class="p">:</span> <span class="n">micropost</span> <span class="p">})</span><span class="o">.</span><span class="n">parsed</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>使い方は <code>get_me</code> などを呼び出すだけなので省略します。</p>
+
+<h2>ログインを強制する</h2>
+
+<p>常に Doorkeeper の方でログインさせておきたいアプリの場合は、
+User クラスを使っている場合の devise での戻り先の <code>session[:user_return_to]</code> に URL を保存しておいて、
+<code>user_omniauth_authorize_path(:doorkeeper)</code> に強制的にリダイレクトしています。
+<code>main_app.</code> をつけているのは route で mount している engine の中で問題が起きたことがあったためです。</p>
+
+<figure class='code'><figcaption><span>app/controllers/application_controller.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="kp">include</span> <span class="no">AuthDoorkeeper</span>
+</span><span class='line'>  <span class="n">before_action</span> <span class="ss">:auto_authenticate_omniauth_user!</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span>app/controllers/concerns/auth_doorkeeper.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">module</span> <span class="nn">AuthDoorkeeper</span>
+</span><span class='line'>  <span class="kp">private</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">auto_authenticate_omniauth_user!</span>
+</span><span class='line'>    <span class="k">return</span> <span class="k">if</span> <span class="n">current_user</span>
+</span><span class='line'>    <span class="n">session</span><span class="o">[</span><span class="ss">:user_return_to</span><span class="o">]</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">original_url</span>
+</span><span class='line'>    <span class="n">redirect_to</span> <span class="n">main_app</span><span class="o">.</span><span class="n">user_omniauth_authorize_path</span><span class="p">(</span><span class="ss">:doorkeeper</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>テストについて</h2>
+
+<p>API 呼び出しの部分の対処が出来ていなくて、まだテストが通る状態には出来ていません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[apt-cacher-ngでliveイメージ作成を繰り返す時の無駄なダウンロードを減らす]]></title>
@@ -381,7 +887,7 @@ zip ファイルなので、先ほどの <code>.gnomerc</code> でデスクト�
 <ul>
 <li>ruby 2.1.2</li>
 <li>rails 4.1.4</li>
-<li>bootstrap 3.2.0</li>
+<li>bootstrap-sass 3.2.0.0</li>
 <li>devise 3.2.4</li>
 <li>devise-i18n-views 0.2.8</li>
 <li>doorkeeper 1.3.1</li>
@@ -3017,89 +3523,6 @@ Edit &ndash;> Preferences &ndash;> Protocols &ndash;> ISAKMP &ndash;> IKEv1 Decr
 に設定すれば良いはずなのですが、試したところ decrypt されなかったので、
 あっているのかどうかはわかりませんでした。
 cookie の方は他のログなどで確認できたので、あっているはずです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[ansible-galaxy を使ってみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-06-02-ansible-galaxy.html"/>
-    <updated>2014-06-02T22:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ansible-galaxy</id>
-    <content type="html"><![CDATA[<p>ansible の複数の playbook で role を共有するのに
-<a href="https://galaxy.ansible.com/">Ansible Galaxy</a>
-はどうだろうと思って登録してみました。</p>
-
-<!--more-->
-
-
-<h2>動作確認バージョン</h2>
-
-<ul>
-<li>ansible 1.6.2</li>
-</ul>
-
-
-<h2>アカウント登録</h2>
-
-<p>後で github から role を import するということもあって、
-github 連携でアカウントを登録しました。</p>
-
-<p>アカウントは4文字以上必須ということで <code>znzj</code> にしました。
-(<a href="https://index.docker.io/">docker index</a> とか
-<a href="https://vagrantcloud.com/">Vagrant Cloud</a> とか
-最近は4文字以上必須が多いのでしょうか?)</p>
-
-<h2>role を github に公開</h2>
-
-<p><code>ansible-galaxy init ansible-role-ja_jp</code> でひな形を作成して、
-<code>provisioning/roles/ja_jp</code> というディレクトリの中身だったものを移行して
-<a href="https://github.com/znz/ansible-role-ja_jp">https://github.com/znz/ansible-role-ja_jp</a> として公開しました。</p>
-
-<p>apt のミラーサイトとして日本のミラーを使ったり、日本語 locale にしたり、タイムゾーンを JST にしたりする role です。</p>
-
-<h2>Ansbile Galaxy に role を追加</h2>
-
-<p>ログインした状態だと右上の方に出てくる <code>Add a Role</code> というリンクから登録します。</p>
-
-<ul>
-<li>Github Username/Account : znz</li>
-<li>Github Repository : ansible-role-ja_jp</li>
-<li>Alternate Name : ja_jp</li>
-</ul>
-
-
-<p>という内容で登録したところ、
-<a href="https://galaxy.ansible.com/list#/roles/967">https://galaxy.ansible.com/list#/roles/967</a>
-で見えるようになりました。</p>
-
-<p>URL をみるとわかるように JavaScript オフだと個別の role は見えません。
-ちょっと試した感じだと代用の URL も見つけられませんでした。</p>
-
-<h2>動作確認</h2>
-
-<p><code>ansible-galaxy install znzj.ja_jp</code> だと <code>/usr/local/etc/ansible/roles/znzj.ja_jp</code> にインストールされてしまった (Homebrew でインストールした ansible を使っている場合) ので、
-<code>ansible-galaxy install --roles-path ./roles znzj.ja_jp</code>
-でカレントディレクトリの中にインストールし直しました。</p>
-
-<h2>感想</h2>
-
-<p>これだけだと git submodule に比べて利点が見えてこないのですが、
-依存関係やバージョン指定をちゃんと使えれば便利そうに思いました。</p>
-
-<p>自分が登録した role にバージョンを指定する方法がわからず、
-今のところバージョンなしのままなので、どうにかしたいです。</p>
-
-<h2>参考サイト</h2>
-
-<ul>
-<li><a href="http://qiita.com/kiri/items/f329a35543022d6e45d0">AnsibleWorks Galaxyにroleを登録してみる &ndash; Qiita</a>
-
-<ul>
-<li>スクリーンショットをみると AnsibleWorks Galaxy になっているところが今は Ansible Galaxy なので、いつの間にか名前が変わっているようです。</li>
-</ul>
-</li>
-</ul>
-
 ]]></content>
   </entry>
   
