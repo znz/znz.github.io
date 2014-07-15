@@ -50,6 +50,7 @@ scalar-export-unique-special
 1. `NULL_GLOB` の `N` を使って存在しないディレクトリを除外
 2. `-/` を使ってシンボリックリンクの場合のリンク先もチェックした上でディレクトリのみ残す
 3. `^W` で world-writable という実行ファイルのパスとしては危険なパーミッションになっているディレクトリを除外
+4. `${^spec}` で `RC_EXPAND_PARAM` を有効にしてパスすべてに適用
 
 Glob Qualifiers なので `PATH` ではなく `path` を使ってフィルタリングしています。
 
@@ -57,9 +58,19 @@ Glob Qualifiers なので `PATH` ではなく `path` を使ってフィルタリ
 path=(
     # allow directories only (-/)
     # reject world-writable directories (^W)
-    $path(N-/^W)
+    ${^path}(N-/^W)
 )
 ```
+
+## `RC_EXPAND_PARAM` (2014-07-16 追記)
+
+`$path(N)` のような書き方だと配列の最後の要素だけ `(N)` が適用されていて、
+意図した挙動になっていませんでした。
+
+`${^path}(N)` のように `RC_EXPAND_PARAM` を使うとすべての要素に Glob Qualifiers が付きます。
+
+これを応用して `${^fpath}/cdr(N)` で `fpath` から `cdr` コマンドを探したり、
+`${^path}/ruby(N)` で `path` 全部から `ruby` コマンドを `type -a ruby` のように全部探したりできます。
 
 ## まとめ
 
