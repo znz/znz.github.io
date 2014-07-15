@@ -105,3 +105,22 @@ API としては
 - `POST /api/v1/microposts` で新規投稿
 
 を用意しています。
+
+### `Can't verify CSRF token authenticity`
+
+(2014-07-15 追記)
+
+新規投稿の `POST` は `CSRF` チェックにひっかかってしまうので、
+`skip_before_action :verify_authenticity_token`
+を入れました。
+
+以前から doorkeeper gem を使っているアプリでは
+`Can't verify CSRF token authenticity`
+というメッセージが出るだけで投稿自体は出来ていたのですが、
+サンプルアプリでは投稿できなかったので、
+`skip_before_action` を入れました。
+(Rails 4 なので `skip_before_filter` ではなく `skip_before_action`)
+
+## その後の変更点 (2014-07-15 追記)
+
+その後 `kaminari` 対応などを入れました。
