@@ -65,6 +65,8 @@ doorkeeper 側の `oauth/applications` に登録しておく必要がありま�
 コントローラーを `users` の下の `Users::OmniauthCallbacksController` にしたので、
 戻り先の `authorize_path` は `'/oauth/authorize'` ではなく `'/users/oauth/authorize'` になっています。
 
+info のハッシュはサーバーから受け取れていて、後の処理でもっと欲しい情報があれば自由に増やせます。
+
 ```ruby lib/omniauth/strategies/doorkeeper.rb
 module OmniAuth
   module Strategies
@@ -107,6 +109,7 @@ end
 となっていました。
 
 `scope` も追加すると以下のようになります。
+`dotenv` を使って `ENV` から取るようにしました。
 
 ```ruby config/initializers/devise.rb
   config.omniauth :doorkeeper, ENV['DOORKEEPER_APP_ID'], ENV['DOORKEEPER_APP_SECRET'], client_options: {site: ENV['DOORKEEPER_APP_URL'] }, scope: 'public write'
@@ -121,7 +124,7 @@ callback で認証結果を受け取る部分を作成します。
 ここで認証結果を受け取って、ユーザーを必要に応じてひも付けたり、
 後で API アクセスに使うアクセストークンを保存したりします。
 
-認証に失敗した時はログイン画面か `root_path` に戻すようにしています。
+認証に失敗した時はログイン画面 (あれば) か `root_path` に戻すようにしています。
 
 ```ruby app/controllers/users/omniauth_callbacks_controller.rb
 class Users::OmniauthCallbacksController < Devise::OmniauthCallbacksController
