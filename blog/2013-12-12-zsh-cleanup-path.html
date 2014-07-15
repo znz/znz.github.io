@@ -165,6 +165,7 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
 <li><code>NULL_GLOB</code> の <code>N</code> を使って存在しないディレクトリを除外</li>
 <li><code>-/</code> を使ってシンボリックリンクの場合のリンク先もチェックした上でディレクトリのみ残す</li>
 <li><code>^W</code> で world-writable という実行ファイルのパスとしては危険なパーミッションになっているディレクトリを除外</li>
+<li><code>${^spec}</code> で <code>RC_EXPAND_PARAM</code> を有効にしてパスすべてに適用</li>
 </ol>
 
 
@@ -178,9 +179,19 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
 </pre></td><td class='code'><pre><code class=''><span class='line'>path=(
 </span><span class='line'>    # allow directories only (-/)
 </span><span class='line'>    # reject world-writable directories (^W)
-</span><span class='line'>    $path(N-/^W)
+</span><span class='line'>    ${^path}(N-/^W)
 </span><span class='line'>)</span></code></pre></td></tr></table></div></figure>
 
+
+<h2><code>RC_EXPAND_PARAM</code> (2014-07-16 追記)</h2>
+
+<p><code>$path(N)</code> のような書き方だと配列の最後の要素だけ <code>(N)</code> が適用されていて、
+意図した挙動になっていませんでした。</p>
+
+<p><code>${^path}(N)</code> のように <code>RC_EXPAND_PARAM</code> を使うとすべての要素に Glob Qualifiers が付きます。</p>
+
+<p>これを応用して <code>${^fpath}/cdr(N)</code> で <code>fpath</code> から <code>cdr</code> コマンドを探したり、
+<code>${^path}/ruby(N)</code> で <code>path</code> 全部から <code>ruby</code> コマンドを <code>type -a ruby</code> のように全部探したりできます。</p>
 
 <h2>まとめ</h2>
 

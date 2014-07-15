@@ -4,7 +4,7 @@
   <title><![CDATA[Category: zsh | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/zsh/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-07-15T23:27:54+09:00</updated>
+  <updated>2014-07-16T07:55:11+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -756,6 +756,7 @@ scalar-export-unique-special
 <li><code>NULL_GLOB</code> の <code>N</code> を使って存在しないディレクトリを除外</li>
 <li><code>-/</code> を使ってシンボリックリンクの場合のリンク先もチェックした上でディレクトリのみ残す</li>
 <li><code>^W</code> で world-writable という実行ファイルのパスとしては危険なパーミッションになっているディレクトリを除外</li>
+<li><code>${^spec}</code> で <code>RC_EXPAND_PARAM</code> を有効にしてパスすべてに適用</li>
 </ol>
 
 
@@ -766,11 +767,21 @@ path=(</p>
 
 <pre><code># allow directories only (-/)
 # reject world-writable directories (^W)
-$path(N-/^W)
+${^path}(N-/^W)
 </code></pre>
 
 <p>)
 ```</p>
+
+<h2><code>RC_EXPAND_PARAM</code> (2014-07-16 追記)</h2>
+
+<p><code>$path(N)</code> のような書き方だと配列の最後の要素だけ <code>(N)</code> が適用されていて、
+意図した挙動になっていませんでした。</p>
+
+<p><code>${^path}(N)</code> のように <code>RC_EXPAND_PARAM</code> を使うとすべての要素に Glob Qualifiers が付きます。</p>
+
+<p>これを応用して <code>${^fpath}/cdr(N)</code> で <code>fpath</code> から <code>cdr</code> コマンドを探したり、
+<code>${^path}/ruby(N)</code> で <code>path</code> 全部から <code>ruby</code> コマンドを <code>type -a ruby</code> のように全部探したりできます。</p>
 
 <h2>まとめ</h2>
 
