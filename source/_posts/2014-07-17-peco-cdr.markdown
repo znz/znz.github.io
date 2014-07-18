@@ -1,0 +1,104 @@
+---
+layout: post
+title: "pecoとcdrなどを組み合わせてみた"
+date: 2014-07-17 23:30:00 +0900
+comments: true
+categories: peco cdr zsh ghq
+---
+自作の cd 履歴管理が `~/VirtualBox VMs` という空白入りのディレクトリ名の扱いに対応していなかったので、
+せっかくなので独自で頑張るのは止めて、
+cdr の履歴を使うことにしました。
+
+さらに選択部分は peco と組み合わせて `ghq` や `cdpath` にも対応してみました。
+
+<!--more-->
+
+## 動作確認バージョン
+
+- peco 0.2.0
+- zsh 5.0.2
+
+## peco のインストール
+
+Homebrew でインストールするなら `brew install peco/peco/peco` か
+
+    brew tap peco/peco
+    brew install peco
+
+です。
+
+アンインストールは
+
+    brew uninstall peco
+    brew untap peco/peco
+
+です。
+
+`go get` でインストールするなら `GOPATH` を設定して
+`go get github.com/peco/peco/cmd/peco`
+です。
+アンインストールは `GOPATH` にあるインストールされたファイルを消すしかなさそうです。
+
+## peco の設定
+
+[pecoを使い始めた - $shibayu36-&gt;blog;](http://shibayu36.hatenablog.com/entry/2014/06/27/223538 "pecoを使い始めた - $shibayu36-&gt;blog;")
+はいろいろキーバインドを設定していますが、
+デフォルトのまま使っています。
+
+## zsh の設定
+
+[50peco.zsh](https://github.com/znz/dot-shell/blob/4ee27990e8de4b3c089442c0d997ad3fc836b96a/profile.d/50peco.zsh "50peco.zsh")
+の `peco-go-to-dir` のように設定して `M-g` で使えるようにしました。
+
+以下に該当部分を抜き出しておきます。
+
+```sh 50peco.zsh
+if (( ${+commands[peco]} )); then
+  peco-go-to-dir () {
+    local line
+    local selected="$(
+      {
+        (
+          autoload -Uz chpwd_recent_filehandler
+          chpwd_recent_filehandler && for line in $reply; do
+            if [[ -d "$line" ]]; then
+              echo "$line"
+            fi
+          done
+        )
+        ghq list --full-path
+        for line in *(-/) ${^cdpath}/*(N-/); do echo "$line"; done | sort -u
+      } | peco --query "$LBUFFER"
+    )"
+    if [ -n "$selected" ]; then
+      BUFFER="cd ${(q)selected}"
+      zle accept-line
+    fi
+    zle clear-screen
+  }
+  zle -N peco-go-to-dir
+  bindkey '^[g' peco-go-to-dir
+fi
+```
+
+まず `(( ${+commands[peco]} ))` で `peco` コマンドの存在チェックをしています。
+zsh スクリプトの中では `type peco >/dev/null 2>&1` のようなチェック方法の代わりに使えます。
+
+次にカレントディレクトリと `$cdpath` の処理に使っている `line` をローカル変数にしています。
+
+次がメイン部分で
+
+1. `cdr` のディレクトリ一覧
+2. `ghq` のディレクトリ一覧
+3. カレントディレクトリと `$cdpath` の中のディレクトリ一覧
+
+を `peco` に渡して選択しています。
+順番や何を選択肢に入れるかなどは好みで調節してください。
+
+最後に参考にした記事と同じように、選択されていたら `cd` コマンドを実行しています。
+
+## 空白ディレクトリ対応
+
+`selected=$()` を `selected="$()"` に変更するなど適切にクオートした上で、
+さらに最後の `cd` コマンドに渡す部分では `q` という Parameter Expansion Flag (`${(q)var}` の部分) を使って
+適切にエスケープしています。
