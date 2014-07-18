@@ -4,7 +4,7 @@
   <title><![CDATA[Category: heroku | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/heroku/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-07-18T19:34:42+09:00</updated>
+  <updated>2014-07-18T19:42:08+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,91 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[rsyslogでherokuのログを記録する]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-18-heroku-rsyslog.html"/>
+    <updated>2014-07-18T19:37:27+09:00</updated>
+    <id>http://blog.n-z.jp/blog/heroku-rsyslog</id>
+    <content type="html"><![CDATA[<p>heroku のログは何も設定していないと最近のログしか残らないので、
+VPS で動かしている Ubuntu の rsyslog で受け取って好きなだけ
+残せるように設定してみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Ubuntu 12.04 LTS</li>
+<li>rsyslog 5.8.6-1ubuntu8.6</li>
+</ul>
+
+
+<h2>rsyslog の設定</h2>
+
+<p>rsyslog でリモートからのログを受け取って <code>/var/log/remote</code> 以下に記録する設定をします。</p>
+
+<p>ポート番号は外からの攻撃を減らすためや rsyslog の起動時に root 権限を不要にするために、
+デフォルトの 514 ではなく適当なポート番号に変更しました。</p>
+
+<p>リモートからのログはここで日付とホスト名から決まるファイル名のログに記録して、
+ローカルのログと混ざらないようにしています。</p>
+
+<p>ファイル名は日付を前にするか、送信元ホスト名を前にするかは好みで決めると良いと思います。</p>
+
+<p>```text /etc/rsyslog.d/10-local.conf</p>
+
+<h1>provides UDP syslog reception</h1>
+
+<p>$ModLoad imudp
+$UDPServerRun 51514</p>
+
+<h1>provides TCP syslog reception</h1>
+
+<p>$ModLoad imtcp
+$InputTCPServerRun 51514</p>
+
+<p>$template RemoteLog,&ldquo;/var/log/remote/%$year%%$month%%$day%_%hostname%.log&rdquo;
+:fromhost-ip,!isequal,&ldquo;127.0.0.1&rdquo; ?RemoteLog
+&amp; ~
+```</p>
+
+<h2><code>/var/log/remote</code> 作成</h2>
+
+<p>ディレクトリを自動で作成はしてくれないので、あらかじめ作成しておきます。
+同じ理由でログファイルをディレクトリ分けすることは出来ませんでした。</p>
+
+<p>syslog ユーザーが書き込めて adm グループで読めるようにしました。</p>
+
+<pre><code>sudo install -o syslog -g adm -m 2750 -d /var/log/remote
+</code></pre>
+
+<h2>ufw 設定</h2>
+
+<p><code>ufw allow 51514</code> で外から udp も tcp も受け付けるようにします。</p>
+
+<h2>heroku からの送信設定</h2>
+
+<p><code>heroku drains</code> コマンドで設定しました。</p>
+
+<p>Heroku 側のドキュメントは
+<a href="https://devcenter.heroku.com/articles/logging#syslog-drains" title="Syslog drains">Syslog drains</a>
+にありますが、情報が少ないので、同様のログを蓄積するアドオンの設定を参考にするのが良いようです。</p>
+
+<p><code>console
+% heroku drains
+No drains for this app
+% heroku drains:add
+ !    Usage: heroku drains:add URL
+zsh: exit 1     heroku drains:add
+% heroku drains:add syslog://syslog.example.jp:51514
+Successfully added drain syslog://syslog.example.jp:51514
+% heroku drains
+syslog://syslog.example.jp:51514 (d.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+</code></p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[heroku で passenger を使うようにした]]></title>

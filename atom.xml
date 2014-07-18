@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-07-18T19:34:42+09:00</updated>
+  <updated>2014-07-18T19:42:08+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,108 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[rsyslogでherokuのログを記録する]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-18-heroku-rsyslog.html"/>
+    <updated>2014-07-18T19:37:27+09:00</updated>
+    <id>http://blog.n-z.jp/blog/heroku-rsyslog</id>
+    <content type="html"><![CDATA[<p>heroku のログは何も設定していないと最近のログしか残らないので、
+VPS で動かしている Ubuntu の rsyslog で受け取って好きなだけ
+残せるように設定してみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Ubuntu 12.04 LTS</li>
+<li>rsyslog 5.8.6-1ubuntu8.6</li>
+</ul>
+
+
+<h2>rsyslog の設定</h2>
+
+<p>rsyslog でリモートからのログを受け取って <code>/var/log/remote</code> 以下に記録する設定をします。</p>
+
+<p>ポート番号は外からの攻撃を減らすためや rsyslog の起動時に root 権限を不要にするために、
+デフォルトの 514 ではなく適当なポート番号に変更しました。</p>
+
+<p>リモートからのログはここで日付とホスト名から決まるファイル名のログに記録して、
+ローカルのログと混ざらないようにしています。</p>
+
+<p>ファイル名は日付を前にするか、送信元ホスト名を前にするかは好みで決めると良いと思います。</p>
+
+<figure class='code'><figcaption><span>/etc/rsyslog.d/10-local.conf</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'># provides UDP syslog reception
+</span><span class='line'>$ModLoad imudp
+</span><span class='line'>$UDPServerRun 51514
+</span><span class='line'>
+</span><span class='line'># provides TCP syslog reception
+</span><span class='line'>$ModLoad imtcp
+</span><span class='line'>$InputTCPServerRun 51514
+</span><span class='line'>
+</span><span class='line'>$template RemoteLog,&quot;/var/log/remote/%$year%%$month%%$day%_%hostname%.log&quot;
+</span><span class='line'>:fromhost-ip,!isequal,&quot;127.0.0.1&quot; ?RemoteLog
+</span><span class='line'>&amp; ~
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2><code>/var/log/remote</code> 作成</h2>
+
+<p>ディレクトリを自動で作成はしてくれないので、あらかじめ作成しておきます。
+同じ理由でログファイルをディレクトリ分けすることは出来ませんでした。</p>
+
+<p>syslog ユーザーが書き込めて adm グループで読めるようにしました。</p>
+
+<pre><code>sudo install -o syslog -g adm -m 2750 -d /var/log/remote
+</code></pre>
+
+<h2>ufw 設定</h2>
+
+<p><code>ufw allow 51514</code> で外から udp も tcp も受け付けるようにします。</p>
+
+<h2>heroku からの送信設定</h2>
+
+<p><code>heroku drains</code> コマンドで設定しました。</p>
+
+<p>Heroku 側のドキュメントは
+<a href="https://devcenter.heroku.com/articles/logging#syslog-drains" title="Syslog drains">Syslog drains</a>
+にありますが、情報が少ないので、同様のログを蓄積するアドオンの設定を参考にするのが良いようです。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> heroku drains
+</span><span class='line'><span class="go">No drains for this app</span>
+</span><span class='line'><span class="gp">%</span> heroku drains:add
+</span><span class='line'><span class="go"> !    Usage: heroku drains:add URL</span>
+</span><span class='line'><span class="go">zsh: exit 1     heroku drains:add</span>
+</span><span class='line'><span class="gp">%</span> heroku drains:add syslog://syslog.example.jp:51514
+</span><span class='line'><span class="go">Successfully added drain syslog://syslog.example.jp:51514</span>
+</span><span class='line'><span class="gp">%</span> heroku drains
+</span><span class='line'><span class="go">syslog://syslog.example.jp:51514 (d.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[pecoとcdrなどを組み合わせてみた]]></title>
@@ -3396,96 +3498,6 @@ Google 電卓で検算できるのが便利でした。</p>
 <li><a href="http://docs.ruby-lang.org/en/2.1.0/DRb.html#module-DRb-label-Security">RDoc の DRb の Security の説明</a> (英語)</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[ci_reporter から rspec_junit_formatter に移行した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-06-13-ci-reporter-to-rspec-junit-formatter.html"/>
-    <updated>2014-06-13T22:33:12+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ci-reporter-to-rspec-junit-formatter</id>
-    <content type="html"><![CDATA[<p>rspec 2 から rpsec 3 への移行で <code>ci_reporter</code> がうまく動かなくなって困っていたら、
-<code>rspec_junit_formatter</code> というのを<a href="https://twitter.com/joker1007/status/477372843601055744">教えてもらった</a>ので、
-移行してみました。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li><code>ruby</code> 2.1.2</li>
-<li><code>rails</code> 3.2.18</li>
-<li><code>rspec-rails</code> 3.0.1</li>
-<li><code>rspec_junit_formatter</code> 0.2.0</li>
-</ul>
-
-
-<h2>Gemfile の変更</h2>
-
-<p><code>group :test</code> の <code>gem 'ci_reporter', require: false</code> を <code>gem 'rspec_junit_formatter'</code> に変更しました。</p>
-
-<h2>jenkins で実行しているシェルスクリプトの変更</h2>
-
-<p><code>bundle exec rake -f $(bundle show ci_reporter)/stub.rake ci:setup:rspec default SPEC_OPTS=--no-drb COVERAGE=on</code>
-のように実行していたのを</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>rm -rf spec/reports
-</span><span class='line'>cat &gt;.rspec &lt;&lt;EOF
-</span><span class='line'>--format RspecJunitFormatter
-</span><span class='line'>--out spec/reports/rspec.xml
-</span><span class='line'>EOF
-</span><span class='line'>bundle exec rake COVERAGE=on</span></code></pre></td></tr></table></div></figure>
-
-
-<p>に変更しました。
-<code>spec/reports</code> は自動で作成してくれるようで、事前に作成しておく必要はないようです。
-<code>ci_reporter</code> はタスクの最初の方で <code>spec/reports</code> を削除していたので、同様に削除するようにしました。</p>
-
-<p><code>COVERAGE=on</code> は <code>simplecov</code>, <code>simplecov-rcov</code> を有効にするかどうかのフラグとして使っているので今回の移行とは無関係です。</p>
-
-<p><a href="https://github.com/sj26/rspec_junit_formatter">RSpec JUnit Formatter の README</a> に書いてある
-<code>rspec --format RspecJunitFormatter --out rspec.xml</code>
-という実行方法だとテスト用データベースの初期化関連で問題がおきたので、
-<code>rspec</code> コマンド直接ではなく <code>rake</code> コマンドのデフォルトタスクで実行するために、
-<code>.rspec</code> ファイルを書き換えるようにしました。
-<code>SPEC_OPTS</code> で指定する方法でも良かったかもしれません。</p>
-
-<h2>Jenkins の設定</h2>
-
-<p><code>ci_reporter</code> の設定のときに
-<code>ビルド後の処理</code> で <code>JUnitテスト結果の集計</code> を追加していて、
-<code>テスト結果XML</code> は <code>spec/reports/**/*.xml</code> という設定にしていて、
-<code>RspecJunitFormatter</code> の出力先の方をそちらにあわせたので、
-Jenkins 側の設定は変更していません。</p>
-
-<h2>テスト結果</h2>
-
-<p>Jenkins のテスト結果の表示では <code>spec.controllers</code> や <code>spec.models</code> などがパッケージになっていました。</p>
-
-<p><code>spec/support/*.rb</code> で <code>shared_examples</code> を定義していたら、
-<code>spec.support</code> がパッケージになってしまっているのが気になりましたが、
-<code>ci_reporter</code> のときはほぼすべてが <code>(root)</code> というパッケージになっていたのに比べると
-便利になったように思います。</p>
-
-<h2><code>RSpec::Core::DeprecationError</code></h2>
-
-<p><code>RSpec.configure do |config|</code> で <code>config.raise_errors_for_deprecations!</code> を実行していると</p>
-
-<pre><code>.../gems/rspec-core-3.0.1/lib/rspec/core/formatters/deprecation_formatter.rb:186:in `puts': Treating `metadata[:execution_result]` as a hash is deprecated. Use the attributes methods to access the data instead. Called from .../rspec_junit_formatter-0.2.0/lib/rspec_junit_formatter/rspec3.rb:43:in `result_of'. (RSpec::Core::DeprecationError)`
-</code></pre>
-
-<p>というエラーになったので、
-<code>config.raise_errors_for_deprecations!</code>
-を外しました。</p>
-
-<p><a href="https://github.com/sj26/rspec_junit_formatter/commit/96f0115f7dabbea623f04b60dc23519683f39cfa">github の master では直っている</a>ので、次のバージョンがリリースされたら解決しそうです。</p>
 ]]></content>
   </entry>
   
