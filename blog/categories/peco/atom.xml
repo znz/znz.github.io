@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: peco | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/peco/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-07-18T19:34:42+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[pecoとcdrなどを組み合わせてみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-17-peco-cdr.html"/>
+    <updated>2014-07-17T23:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/peco-cdr</id>
+    <content type="html"><![CDATA[<p>自作の cd 履歴管理が <code>~/VirtualBox VMs</code> という空白入りのディレクトリ名の扱いに対応していなかったので、
+せっかくなので独自で頑張るのは止めて、
+cdr の履歴を使うことにしました。</p>
+
+<p>さらに選択部分は peco と組み合わせて <code>ghq</code> や <code>cdpath</code> にも対応してみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>peco 0.2.0</li>
+<li>zsh 5.0.2</li>
+</ul>
+
+
+<h2>peco のインストール</h2>
+
+<p>Homebrew でインストールするなら <code>brew install peco/peco/peco</code> か</p>
+
+<pre><code>brew tap peco/peco
+brew install peco
+</code></pre>
+
+<p>です。</p>
+
+<p>アンインストールは</p>
+
+<pre><code>brew uninstall peco
+brew untap peco/peco
+</code></pre>
+
+<p>です。</p>
+
+<p><code>go get</code> でインストールするなら <code>GOPATH</code> を設定して
+<code>go get github.com/peco/peco/cmd/peco</code>
+です。
+アンインストールは <code>GOPATH</code> にあるインストールされたファイルを消すしかなさそうです。</p>
+
+<h2>peco の設定</h2>
+
+<p><a href="http://shibayu36.hatenablog.com/entry/2014/06/27/223538" title="pecoを使い始めた - $shibayu36-&gt;blog;">pecoを使い始めた &ndash; $shibayu36-&gt;blog;</a>
+はいろいろキーバインドを設定していますが、
+デフォルトのまま使っています。</p>
+
+<h2>zsh の設定</h2>
+
+<p><a href="https://github.com/znz/dot-shell/blob/4ee27990e8de4b3c089442c0d997ad3fc836b96a/profile.d/50peco.zsh" title="50peco.zsh">50peco.zsh</a>
+の <code>peco-go-to-dir</code> のように設定して <code>M-g</code> で使えるようにしました。</p>
+
+<p>以下に該当部分を抜き出しておきます。</p>
+
+<p>```sh 50peco.zsh
+if (( ${+commands[peco]} )); then
+  peco-go-to-dir () {</p>
+
+<pre><code>local line
+local selected="$(
+  {
+    (
+      autoload -Uz chpwd_recent_filehandler
+      chpwd_recent_filehandler &amp;&amp; for line in $reply; do
+        if [[ -d "$line" ]]; then
+          echo "$line"
+        fi
+      done
+    )
+    ghq list --full-path
+    for line in *(-/) ${^cdpath}/*(N-/); do echo "$line"; done | sort -u
+  } | peco --query "$LBUFFER"
+)"
+if [ -n "$selected" ]; then
+  BUFFER="cd ${(q)selected}"
+  zle accept-line
+fi
+zle clear-screen
+</code></pre>
+
+<p>  }
+  zle -N peco-go-to-dir
+  bindkey &lsquo;^[g&rsquo; peco-go-to-dir
+fi
+```</p>
+
+<p>まず <code>(( ${+commands[peco]} ))</code> で <code>peco</code> コマンドの存在チェックをしています。
+zsh スクリプトの中では <code>type peco &gt;/dev/null 2&gt;&amp;1</code> のようなチェック方法の代わりに使えます。</p>
+
+<p>次にカレントディレクトリと <code>$cdpath</code> の処理に使っている <code>line</code> をローカル変数にしています。</p>
+
+<p>次がメイン部分で</p>
+
+<ol>
+<li><code>cdr</code> のディレクトリ一覧</li>
+<li><code>ghq</code> のディレクトリ一覧</li>
+<li>カレントディレクトリと <code>$cdpath</code> の中のディレクトリ一覧</li>
+</ol>
+
+
+<p>を <code>peco</code> に渡して選択しています。
+順番や何を選択肢に入れるかなどは好みで調節してください。</p>
+
+<p>最後に参考にした記事と同じように、選択されていたら <code>cd</code> コマンドを実行しています。</p>
+
+<h2>空白ディレクトリ対応</h2>
+
+<p><code>selected=$()</code> を <code>selected="$()"</code> に変更するなど適切にクオートした上で、
+さらに最後の <code>cd</code> コマンドに渡す部分では <code>q</code> という Parameter Expansion Flag (<code>${(q)var}</code> の部分) を使って
+適切にエスケープしています。</p>
+]]></content>
+  </entry>
+  
+</feed>

@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-07-16T23:56:24+09:00</updated>
+  <updated>2014-07-18T19:34:42+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,146 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[pecoとcdrなどを組み合わせてみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-17-peco-cdr.html"/>
+    <updated>2014-07-17T23:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/peco-cdr</id>
+    <content type="html"><![CDATA[<p>自作の cd 履歴管理が <code>~/VirtualBox VMs</code> という空白入りのディレクトリ名の扱いに対応していなかったので、
+せっかくなので独自で頑張るのは止めて、
+cdr の履歴を使うことにしました。</p>
+
+<p>さらに選択部分は peco と組み合わせて <code>ghq</code> や <code>cdpath</code> にも対応してみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>peco 0.2.0</li>
+<li>zsh 5.0.2</li>
+</ul>
+
+
+<h2>peco のインストール</h2>
+
+<p>Homebrew でインストールするなら <code>brew install peco/peco/peco</code> か</p>
+
+<pre><code>brew tap peco/peco
+brew install peco
+</code></pre>
+
+<p>です。</p>
+
+<p>アンインストールは</p>
+
+<pre><code>brew uninstall peco
+brew untap peco/peco
+</code></pre>
+
+<p>です。</p>
+
+<p><code>go get</code> でインストールするなら <code>GOPATH</code> を設定して
+<code>go get github.com/peco/peco/cmd/peco</code>
+です。
+アンインストールは <code>GOPATH</code> にあるインストールされたファイルを消すしかなさそうです。</p>
+
+<h2>peco の設定</h2>
+
+<p><a href="http://shibayu36.hatenablog.com/entry/2014/06/27/223538" title="pecoを使い始めた - $shibayu36-&gt;blog;">pecoを使い始めた &ndash; $shibayu36-&gt;blog;</a>
+はいろいろキーバインドを設定していますが、
+デフォルトのまま使っています。</p>
+
+<h2>zsh の設定</h2>
+
+<p><a href="https://github.com/znz/dot-shell/blob/4ee27990e8de4b3c089442c0d997ad3fc836b96a/profile.d/50peco.zsh" title="50peco.zsh">50peco.zsh</a>
+の <code>peco-go-to-dir</code> のように設定して <code>M-g</code> で使えるようにしました。</p>
+
+<p>以下に該当部分を抜き出しておきます。</p>
+
+<figure class='code'><figcaption><span>50peco.zsh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="k">if</span> <span class="o">((</span> <span class="k">${</span><span class="p">+commands[peco]</span><span class="k">}</span> <span class="o">))</span>; <span class="k">then</span>
+</span><span class='line'><span class="k">  </span>peco-go-to-dir <span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>    <span class="nb">local </span>line
+</span><span class='line'>    <span class="nb">local </span><span class="nv">selected</span><span class="o">=</span><span class="s2">&quot;$(</span>
+</span><span class='line'><span class="s2">      {</span>
+</span><span class='line'><span class="s2">        (</span>
+</span><span class='line'><span class="s2">          autoload -Uz chpwd_recent_filehandler</span>
+</span><span class='line'><span class="s2">          chpwd_recent_filehandler &amp;&amp; for line in $reply; do</span>
+</span><span class='line'><span class="s2">            if [[ -d &quot;</span><span class="nv">$line</span><span class="s2">&quot; ]]; then</span>
+</span><span class='line'><span class="s2">              echo &quot;</span><span class="nv">$line</span><span class="s2">&quot;</span>
+</span><span class='line'><span class="s2">            fi</span>
+</span><span class='line'><span class="s2">          done</span>
+</span><span class='line'><span class="s2">        )</span>
+</span><span class='line'><span class="s2">        ghq list --full-path</span>
+</span><span class='line'><span class="s2">        for line in *(-/) ${^cdpath}/*(N-/); do echo &quot;</span><span class="nv">$line</span><span class="s2">&quot;; done | sort -u</span>
+</span><span class='line'><span class="s2">      } | peco --query &quot;</span><span class="nv">$LBUFFER</span><span class="s2">&quot;</span>
+</span><span class='line'><span class="s2">    )&quot;</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$selected&quot;</span> <span class="o">]</span>; <span class="k">then</span>
+</span><span class='line'><span class="k">      </span><span class="nv">BUFFER</span><span class="o">=</span><span class="s2">&quot;cd ${(q)selected}&quot;</span>
+</span><span class='line'>      zle accept-line
+</span><span class='line'>    <span class="k">fi</span>
+</span><span class='line'><span class="k">    </span>zle clear-screen
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>  zle -N peco-go-to-dir
+</span><span class='line'>  bindkey <span class="s1">&#39;^[g&#39;</span> peco-go-to-dir
+</span><span class='line'><span class="k">fi</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>まず <code>(( ${+commands[peco]} ))</code> で <code>peco</code> コマンドの存在チェックをしています。
+zsh スクリプトの中では <code>type peco &gt;/dev/null 2&gt;&amp;1</code> のようなチェック方法の代わりに使えます。</p>
+
+<p>次にカレントディレクトリと <code>$cdpath</code> の処理に使っている <code>line</code> をローカル変数にしています。</p>
+
+<p>次がメイン部分で</p>
+
+<ol>
+<li><code>cdr</code> のディレクトリ一覧</li>
+<li><code>ghq</code> のディレクトリ一覧</li>
+<li>カレントディレクトリと <code>$cdpath</code> の中のディレクトリ一覧</li>
+</ol>
+
+
+<p>を <code>peco</code> に渡して選択しています。
+順番や何を選択肢に入れるかなどは好みで調節してください。</p>
+
+<p>最後に参考にした記事と同じように、選択されていたら <code>cd</code> コマンドを実行しています。</p>
+
+<h2>空白ディレクトリ対応</h2>
+
+<p><code>selected=$()</code> を <code>selected="$()"</code> に変更するなど適切にクオートした上で、
+さらに最後の <code>cd</code> コマンドに渡す部分では <code>q</code> という Parameter Expansion Flag (<code>${(q)var}</code> の部分) を使って
+適切にエスケープしています。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 13 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -3346,95 +3486,6 @@ Jenkins 側の設定は変更していません。</p>
 を外しました。</p>
 
 <p><a href="https://github.com/sj26/rspec_junit_formatter/commit/96f0115f7dabbea623f04b60dc23519683f39cfa">github の master では直っている</a>ので、次のバージョンがリリースされたら解決しそうです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Debian squeeze (6.0) LTS の使い方]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-06-06-squeeze-lts.html"/>
-    <updated>2014-06-06T14:07:35+09:00</updated>
-    <id>http://blog.n-z.jp/blog/squeeze-lts</id>
-    <content type="html"><![CDATA[<p>OpenSSL の脆弱性
-(<a href="http://ccsinjection.lepidum.co.jp/ja.html">CCS Injection</a>,<a href="https://security-tracker.debian.org/tracker/CVE-2014-0224">CVE-2014-0224</a>)
-の修正が
-<a href="https://lists.debian.org/debian-lts-announce/2014/06/msg00002.html">squeeze の LTS に入ったというアナウンス</a>
-があったのに、
-今まで通り使っている squeeze には修正が入らないと思って調べてみたところ、
-<a href="https://wiki.debian.org/LTS/Using#Add_squeeze-lts_to_your_sources.list">apt-line の追加</a>
-が必要でした。</p>
-
-<!--more-->
-
-
-<h2>追加する apt-line</h2>
-
-<p>既存の <code>/etc/apt/sources.list</code> に</p>
-
-<pre><code>deb http://ftp.jp.debian.org/debian squeeze main non-free contrib
-deb-src http://ftp.jp.debian.org/debian squeeze main non-free contrib
-
-deb http://security.debian.org/ squeeze/updates main contrib non-free
-deb-src http://security.debian.org/ squeeze/updates main contrib non-free
-
-# squeeze-updates, previously known as 'volatile'
-deb http://ftp.jp.debian.org/debian squeeze-updates main contrib non-free
-deb-src http://ftp.jp.debian.org/debian squeeze-updates main contrib non-free
-</code></pre>
-
-<p>という apt-line を設定したとすると、</p>
-
-<pre><code>deb http://ftp.jp.debian.org/debian squeeze-lts main non-free contrib
-deb-src http://ftp.jp.debian.org/debian squeeze-lts main non-free contrib
-</code></pre>
-
-<p>を <strong>追加</strong> します。</p>
-
-<p>ネタ元の Debian Wiki に書いてあるように適切に使うには squeeze と squeeze security の apt-line も残した上で squeeze lts の apt-line を <strong>追加</strong> する必要があります。</p>
-
-<h2>apt pinning を使っている時の注意点</h2>
-
-<p><code>/etc/apt/apt.conf</code> で</p>
-
-<pre><code>APT::Default-Release "squeeze";
-</code></pre>
-
-<p>のように設定している場合はコメントアウトするか</p>
-
-<pre><code>APT::Default-Release "squeeze-lts";
-</code></pre>
-
-<p>に書き換える必要があります。</p>
-
-<h2>更新の反映</h2>
-
-<p>いつも通り <code>apt-get update</code> と <code>apt-get upgrade</code> で更新できます。</p>
-
-<h2>サポート対象外のパッケージを調べる</h2>
-
-<p><code>squeeze-lts</code> の apt-line を追加すると <code>debian-security-support</code> というパッケージがインストールできるようになります。</p>
-
-<p><code>debian-security-support</code> パッケージをインストール中にサポート対象外のパッケージについての情報が表示されます。
-インストール後は <code>check-support-status</code> で同じ内容が表示できます。</p>
-
-<p>Ubuntu には <code>ubuntu-support-status</code> というコマンドがあるので、似たようなものが Debian にもできたということでしょうか。
-<code>debian-security-support</code> パッケージは今のところ <code>sid</code> と <code>squeeze-lts</code> にだけあるようです。</p>
-
-<h2>aptitude 検索パターンで LTS に収録されているパッケージ一覧</h2>
-
-<p><code>aptitude search '~A squeeze-lts'</code> で <code>squeeze-lts</code> に収録されているパッケージ一覧が調べられます。</p>
-
-<p>今のところ、</p>
-
-<ul>
-<li><code>chkrootkit</code></li>
-<li><code>debian-security-support</code></li>
-<li><code>gnutls</code> 関係</li>
-<li><code>hello</code></li>
-<li><code>openssl</code> 関係</li>
-</ul>
-
-
-<p>がありました。</p>
 ]]></content>
   </entry>
   
