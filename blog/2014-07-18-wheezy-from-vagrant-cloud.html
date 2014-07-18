@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>ansibleで1ファイルのplaybookからroleに書き換える方法 - @znz blog</title>
+  <title>Vagrant CloudからWheezyを入れてみた - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="ansibleで1ファイルのplaybookからroleに書き換える方法 2013-12-07 (Sat) | <a href="#disqus_thread" data-disqus-identifier="http://blog.n-z.jp">Comments ansible &hellip;">
+  <meta name="description" content="Vagrant CloudからWheezyを入れてみた 2014-07-18 (Fri) | <a href="#disqus_thread" data-disqus-identifier="http://blog.n-z.jp">Comments Debian 7.6 がリリースされたので、 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-12-07-ansible-split-playbook.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-07-18-wheezy-from-vagrant-cloud.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -83,7 +83,7 @@
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">ansibleで1ファイルのplaybookからroleに書き換える方法</h1>
+      <h1 class="entry-title">Vagrant CloudからWheezyを入れてみた</h1>
       
       <!-- zenback_title_end -->
       
@@ -102,7 +102,7 @@
   
 
 
-<time datetime="2013-12-07T01:30:00+09:00" pubdate data-updated="true">2013-12-07 (Sat)</time>
+<time datetime="2014-07-18T21:30:25+09:00" pubdate data-updated="true">2014-07-18 (Fri)</time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -115,137 +115,56 @@
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><code>ansible</code> を使い始める時は1個の YAML ファイルから始めるのが手軽で良いのですが、
-それを
-<a href="http://www.ansibleworks.com/docs/playbooks_best_practices.html">Best Practices</a>
-にあわせて <code>roles</code> にしようとしたら、
-対応がよくわからなくて困ったことがあったので、
-書き換え方をまとめてみました。</p>
-
-<p>この投稿は
-<a href="http://qiita.com/advent-calendar/2013/ansible">Ansible Advent Calendar 2013</a>
-の7日目の記事です。</p>
+<div class="entry-content"><p>Debian 7.6 がリリースされたので、新しい box がないか探してみたところ、
+<a href="http://www.vagrantbox.es/" title="A list of base boxes for Vagrant - Vagrantbox.es">A list of base boxes for Vagrant &ndash; Vagrantbox.es</a>
+から探すのではなく
+<a href="https://vagrantcloud.com/">Vagrant Cloud</a>
+を使えば良いということがわかりました。</p>
 
 <!--more-->
 
 
-<p>全体的に動作確認せずに以前使ったファイルを参考にしているので、
-間違っている部分があるかもしれないので、その時はコメントなどで
-教えてください。</p>
-
-<h2>1個の YAML ファイルの例</h2>
-
-<p>仮にこんな感じの <code>playbook.yml</code> があって、
-これを <code>roles</code> にしたいとします。</p>
-
-<figure class='code'><figcaption><span>playbook.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">hosts</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">foo-servers</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">sudo</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">yes</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">vars</span><span class="p-Indicator">:</span>
-</span><span class='line'>    <span class="l-Scalar-Plain">adminuser</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">vagrant</span>
-</span><span class='line'>    <span class="l-Scalar-Plain">admingroup</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">vagrant</span>
-</span><span class='line'>    <span class="l-Scalar-Plain">homedir</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/vagrant</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">tasks</span><span class="p-Indicator">:</span>
-</span><span class='line'>  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">apt</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">pkg=zsh</span>
-</span><span class='line'>  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">src=zshrc dest=/.zshrc owner= group= mode=0644</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>この例だとテンプレートファイルとして <code>zshrc</code> ファイルが同じディレクトリにあります。</p>
-
-<h2>role 作成</h2>
-
-<p>ここでは role の名前を <code>zsh</code> にしてみます。</p>
-
-<p>元の <code>playbook.yml</code> と <code>zshrc</code> から</p>
+<h2>動作確認バージョン</h2>
 
 <ul>
-<li><code>roles/zsh/tasks/main.yml</code></li>
-<li><code>roles/zsh/templates/zshrc.j2</code></li>
-<li><code>roles/zsh/vars/main.yml</code></li>
+<li>VirtualBox 4.3.12</li>
+<li>Vagrant 1.6.3</li>
+<li><a href="https://vagrantcloud.com/ffuenf/debian-7.6.0-amd64" title="Debian Wheezy 7.6.0 x86_64">Debian Wheezy 7.6.0 x86_64</a> 0.0.27</li>
 </ul>
 
 
-<p>というファイルを作ることになります。</p>
+<h2>書き換え</h2>
 
-<h3>roles/zsh/tasks/main.yml</h3>
+<p>古い box は</p>
 
-<p>処理のメイン部分です。
-元の <code>playbook.yml</code> の <code>tasks</code> の値に並んでいた配列を書きます。</p>
-
-<figure class='code'><figcaption><span>roles/zsh/tasks/main.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">apt</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">pkg=zsh</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">src=zshrc dest=/.zshrc owner= group= mode=0644</span>
-</span></code></pre></td></tr></table></div></figure>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  config.vm.box = ENV["VM_BOX"] || "opscode_debian-7.4_chef-provisionerless"
+</span><span class='line'>  config.vm.box_url = ENV["VM_BOX_URL"] || "http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_debian-7.4_chef-provisionerless.box"</span></code></pre></td></tr></table></div></figure>
 
 
-<h3>roles/zsh/templates/zshrc.j2</h3>
+<p>と指定していたのを
+<a href="https://github.com/ffuenf/vagrant-boxes" title="ffuenf/vagrant-boxes">ffuenf/vagrant-boxes</a>
+からリンクされている
+<a href="https://vagrantcloud.com/ffuenf/debian-7.6.0-amd64" title="ffuenf/debian-7.6.0-amd64">ffuenf/debian-7.6.0-amd64</a>
+の説明通り <code>vagrant init ffuenf/debian-7.6.0-amd64</code> で作成された
+<code>Vagrantfile</code> を参考にして、</p>
 
-<p>元の <code>zshrc</code> にテンプレート言語がわかりやすいように拡張子を付けただけです。
-例として <code>zshrc</code> にしてしまっただけなので、
-本来は <code>vars</code> の変数を展開したいファイルを使うことになると思います。</p>
-
-<h3>roles/zsh/vars/main.yml</h3>
-
-<p>変数の定義部分です。
-元の <code>playbook.yml</code> の <code>vars</code> の値に並んでいたハッシュを書きます。</p>
-
-<figure class='code'><figcaption><span>roles/zsh/vars/main.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
-</span><span class='line'><span class="l-Scalar-Plain">adminuser</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">vagrant</span>
-</span><span class='line'><span class="l-Scalar-Plain">admingroup</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">vagrant</span>
-</span><span class='line'><span class="l-Scalar-Plain">homedir</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/vagrant</span>
-</span></code></pre></td></tr></table></div></figure>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  config.vm.box = "ffuenf/debian-7.6.0-amd64"</span></code></pre></td></tr></table></div></figure>
 
 
-<h3>その他</h3>
+<p>に書き換えました。</p>
 
-<p><code>roles/zsh/handleres/main.yml</code> のような他のディレクトリとか、
-<code>main.yml</code> 以外の <code>*.yml</code> ファイルとかも使えますが、
-一番最初の段階では知らなくても大丈夫だと思います。</p>
+<p>以前の box を使っている 古い VM を <code>vagrant destroy</code> ですべて破棄した後、
+<code>vagrant box remove opscode_debian-7.4_chef-provisionerless</code>
+で box も削除しました。</p>
 
-<h2>読み込み側 YAML</h2>
+<h2>余談</h2>
 
-<p><code>vars</code> とか <code>tasks</code> を並べていた代わりに <code>roles</code> を使って読み込みます。
-今回は <code>role: zsh</code> で読み込みましたが、他の例をみてみると <code>- zsh</code> だけでも良さそうです。</p>
-
-<figure class='code'><figcaption><span>site.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">hosts</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">foo-servers</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">sudo</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">yes</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">roles</span><span class="p-Indicator">:</span>
-</span><span class='line'>    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">role</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">zsh</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>まとめ</h2>
-
-<p>最初は 1ファイルの YAML と roles 用の複数の YAML ファイルの対応関係がよくわからなくて、
-roles 用の YAML ファイルに余計な記述をしてここでは使えないと言われたりして悩んだので、
-簡単に対応関係をまとめてみました。</p>
-
-<p>まだあまり使っていなくて、間違っているところもあるかもしれないので、
-何かあればコメントなどで指摘してもらえるとありがたいです。</p>
+<p><code>vagrant box outdated</code> や <code>vagrant box update</code> の使い方がわからなかったのですが、
+<code>box_url</code> でダウンロードしてきた box で使うものではなく Vagrant Cloud から
+ダウンロードしてきた box で使うものだったようです。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -271,12 +190,12 @@ roles 用の YAML ファイルに余計な記述をしてここでは使えな�
   
 
 
-<time datetime="2013-12-07T01:30:00+09:00" pubdate data-updated="true">2013-12-07 (Sat)</time>
+<time datetime="2014-07-18T21:30:25+09:00" pubdate data-updated="true">2014-07-18 (Fri)</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/ansible/'>ansible</a>
+    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/vagrant/'>vagrant</a>
   
 </span>
 
@@ -303,10 +222,8 @@ roles 用の YAML ファイルに余計な記述をしてここでは使えな�
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-12-06-checkrestart.html" title="Previous Post: debian-goodiesのcheckrestartで再起動が必要なプロセスを調べる">&laquo; debian-goodiesのcheckrestartで再起動が必要なプロセスを調べる</a>
+        <a class="basic-alignment left" href="/blog/2014-07-18-heroku-rsyslog.html" title="Previous Post: rsyslogでherokuのログを記録する">&laquo; rsyslogでherokuのログを記録する</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-12-08-cache-digests.html" title="Next Post: Rail 3.2でcache_digestsを使ってみた">Rail 3.2でcache_digestsを使ってみた &raquo;</a>
       
     </p>
   </footer>
@@ -447,8 +364,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-12-07-ansible-split-playbook.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-12-07-ansible-split-playbook.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-07-18-wheezy-from-vagrant-cloud.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-07-18-wheezy-from-vagrant-cloud.html';
         var disqus_script = 'embed.js';
       
     (function () {

