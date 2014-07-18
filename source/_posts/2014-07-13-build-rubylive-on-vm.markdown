@@ -3,7 +3,7 @@ layout: post
 title: "RubyLiveを仮想環境で作成"
 date: 2014-07-13 09:35:02 +0900
 comments: true
-categories: live vagrant docker
+categories: live debian vagrant docker
 ---
 最近流行りの仮想環境を使ってクリーンな wheezy 環境で RubyLive を作成できるようにしました。
 
