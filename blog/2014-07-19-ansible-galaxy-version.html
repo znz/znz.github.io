@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Ruby 2.1.0の新機能のException#cause - @znz blog</title>
+  <title>ansible-galaxy用のroleにversionを付ける - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Ruby 2.1.0の新機能のException#cause 2013-12-03 (Tue) | <a href="#disqus_thread" data-disqus-identifier="http://blog.n-z.jp">Comments Ruby 2.1.0-preview2 &hellip;">
+  <meta name="description" content="ansible-galaxy用のroleにversionを付ける 2014-07-19 (Sat) | <a href="#disqus_thread" data-disqus-identifier="http://blog.n-z.jp">Comments Ansible Galaxy &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-12-03-ruby-exception-cause.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-07-19-ansible-galaxy-version.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -83,7 +83,7 @@
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">Ruby 2.1.0の新機能のException#cause</h1>
+      <h1 class="entry-title">ansible-galaxy用のroleにversionを付ける</h1>
       
       <!-- zenback_title_end -->
       
@@ -102,7 +102,7 @@
   
 
 
-<time datetime="2013-12-03T00:00:00+09:00" pubdate data-updated="true">2013-12-03 (Tue)</time>
+<time datetime="2014-07-19T23:30:00+09:00" pubdate data-updated="true">2014-07-19 (Sat)</time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -115,135 +115,31 @@
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><a href="https://www.ruby-lang.org/ja/news/2013/11/22/ruby-2-1-0-preview2-is-released/">Ruby 2.1.0-preview2 リリース</a>
-では
-<a href="http://d.hatena.ne.jp/nagachika/20131110/ruby_trunk_changes_43615_43636">2013-11-10 の大きめの変更</a>
-が気になっていて、
-ここでは
-<code>Exception#cause</code>
-というメソッドを紹介します。</p>
-
-<p><code>"literal"f</code> のように書く freeze された文字列リテラル機能が
-2.1.0-preview1 には入っていたのですが、それが削除されて
-<code>"literal".freeze</code> がコンパイル時に特別扱いされるようになった、
-というのも気になっています。</p>
-
-<p>この投稿は
-<a href="http://qiita.com/advent-calendar/2013/ruby">Ruby Advent Calendar 2013</a>
-の3日目の記事です。</p>
+<div class="entry-content"><p><a href="https://galaxy.ansible.com/" title="Ansible Galaxy">Ansible Galaxy</a>
+に登録されている role を使う時にバージョンを指定する方法は書いてあるのに、
+自分で登録した role にバージョンを付ける方法がわからなかったので、
+既にバージョンが付いているものを参考にして調べてみました。</p>
 
 <!--more-->
 
 
-<h2>Exception#cause の例</h2>
+<h2>結論</h2>
 
-<p>Ruby 2.0.0 までは <code>rescue</code> や <code>ensure</code> の中で別の例外が発生すると、
-別途保存しておかない限り、
-以前に発生した例外がわからなくなってしまっていましたが、
-Ruby 2.1.0(-preview2) からは別の例外を <code>raise</code> した時に
-以前の例外が自動で保存されて
-<code>Exception#cause</code> でたどれるようになりました。
-<code>cause</code> は <code>raise</code> のタイミングで設定されるので、
-例外オブジェクト自体は <code>rescue</code> や <code>ensure</code>
-の外で生成していても良いようです。</p>
+<p><a href="https://galaxy.ansible.com/intro">Ansible Galaxy の intro</a>
+の最後の方に
+「If you have applied any tags in your repo, Ansible Galaxy will automatically make a “version” object for each tag. This means users will be able to choose which version (tag) to download.」
+と書いてあるように github で tag (release) を作るだけでした。</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1">#!/usr/bin/env ruby</span>
-</span><span class='line'><span class="k">def</span> <span class="nf">foo</span>
-</span><span class='line'>  <span class="k">raise</span> <span class="s2">&quot;foo&quot;</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">def</span> <span class="nf">bar</span>
-</span><span class='line'>  <span class="n">e</span> <span class="o">=</span> <span class="no">Exception</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">&quot;bar&quot;</span><span class="p">)</span>
-</span><span class='line'>  <span class="n">foo</span>
-</span><span class='line'><span class="k">rescue</span>
-</span><span class='line'>  <span class="k">raise</span> <span class="n">e</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">def</span> <span class="nf">baz</span>
-</span><span class='line'>  <span class="n">bar</span>
-</span><span class='line'><span class="k">ensure</span>
-</span><span class='line'>  <span class="k">raise</span> <span class="s2">&quot;baz&quot;</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">begin</span>
-</span><span class='line'>  <span class="n">baz</span>
-</span><span class='line'><span class="k">rescue</span>
-</span><span class='line'>  <span class="nb">p</span> <span class="vg">$!</span>                   <span class="c1">#=&gt; #&lt;RuntimeError: baz&gt;</span>
-</span><span class='line'>  <span class="nb">p</span> <span class="vg">$!</span><span class="o">.</span><span class="n">cause</span>             <span class="c1">#=&gt; #&lt;Exception: bar&gt;</span>
-</span><span class='line'>  <span class="nb">p</span> <span class="vg">$!</span><span class="o">.</span><span class="n">cause</span><span class="o">.</span><span class="n">cause</span>       <span class="c1">#=&gt; #&lt;RuntimeError: foo&gt;</span>
-</span><span class='line'>  <span class="nb">p</span> <span class="vg">$!</span><span class="o">.</span><span class="n">cause</span><span class="o">.</span><span class="n">cause</span><span class="o">.</span><span class="n">cause</span> <span class="c1">#=&gt; nil</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
+<h2>バージョンの命名規則</h2>
 
+<p>同じページのバージョン指定の例が</p>
 
-<h2>終了時のバックトレース</h2>
+<pre><code>user1.role1,v1.0.0
+user2.role2,v0.5
+...
+</code></pre>
 
-<p>ちなみに、例外が保存されていても
-<code>rescue</code> せずにプログラムが終了した時のバックトレースは
-今まで通り最後の例外だけ表示されるようです。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> cat t.rb
-</span><span class='line'><span class="gp">#</span>!/usr/bin/env ruby
-</span><span class='line'><span class="go">def foo</span>
-</span><span class='line'><span class="go">  raise &quot;foo&quot;</span>
-</span><span class='line'><span class="go">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">def bar</span>
-</span><span class='line'><span class="go">  foo</span>
-</span><span class='line'><span class="go">rescue</span>
-</span><span class='line'><span class="go">  raise &quot;bar&quot;</span>
-</span><span class='line'><span class="go">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">bar</span>
-</span><span class='line'><span class="gp">%</span> ruby t.rb
-</span><span class='line'><span class="go">t.rb:9:in `rescue in bar&#39;: bar (RuntimeError)</span>
-</span><span class='line'><span class="go"> from t.rb:7:in `bar&#39;</span>
-</span><span class='line'><span class="go"> from t.rb:12:in `&lt;main&gt;&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<p>となっているので、頭に <code>v</code> を付けて <code>v0.1.2</code> のようなバージョンの付け方にするのが良さそうです。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -269,12 +165,12 @@ Ruby 2.1.0(-preview2) からは別の例外を <code>raise</code> した時に
   
 
 
-<time datetime="2013-12-03T00:00:00+09:00" pubdate data-updated="true">2013-12-03 (Tue)</time>
+<time datetime="2014-07-19T23:30:00+09:00" pubdate data-updated="true">2014-07-19 (Sat)</time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/ruby/'>ruby</a>
+    <a class='category' href='/blog/categories/ansible/'>ansible</a>, <a class='category' href='/blog/categories/github/'>github</a>
   
 </span>
 
@@ -301,10 +197,8 @@ Ruby 2.1.0(-preview2) からは別の例外を <code>raise</code> した時に
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-11-29-nadoka-086-released.html" title="Previous Post: nadokaさんの0.8.6をリリースした関連の話">&laquo; nadokaさんの0.8.6をリリースした関連の話</a>
+        <a class="basic-alignment left" href="/blog/2014-07-18-wheezy-from-vagrant-cloud.html" title="Previous Post: Vagrant CloudからWheezyを入れてみた">&laquo; Vagrant CloudからWheezyを入れてみた</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-12-04-aptitude-search-pattern.html" title="Next Post: aptitude検索パターンの紹介">aptitude検索パターンの紹介 &raquo;</a>
       
     </p>
   </footer>
@@ -439,8 +333,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-12-03-ruby-exception-cause.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-12-03-ruby-exception-cause.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-07-19-ansible-galaxy-version.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-07-19-ansible-galaxy-version.html';
         var disqus_script = 'embed.js';
       
     (function () {

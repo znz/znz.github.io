@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ansible | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ansible/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-07-18T22:21:47+09:00</updated>
+  <updated>2014-07-20T11:09:48+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,39 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ansible-galaxy用のroleにversionを付ける]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-19-ansible-galaxy-version.html"/>
+    <updated>2014-07-19T23:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ansible-galaxy-version</id>
+    <content type="html"><![CDATA[<p><a href="https://galaxy.ansible.com/" title="Ansible Galaxy">Ansible Galaxy</a>
+に登録されている role を使う時にバージョンを指定する方法は書いてあるのに、
+自分で登録した role にバージョンを付ける方法がわからなかったので、
+既にバージョンが付いているものを参考にして調べてみました。</p>
+
+<!--more-->
+
+
+<h2>結論</h2>
+
+<p><a href="https://galaxy.ansible.com/intro">Ansible Galaxy の intro</a>
+の最後の方に
+「If you have applied any tags in your repo, Ansible Galaxy will automatically make a “version” object for each tag. This means users will be able to choose which version (tag) to download.」
+と書いてあるように github で tag (release) を作るだけでした。</p>
+
+<h2>バージョンの命名規則</h2>
+
+<p>同じページのバージョン指定の例が</p>
+
+<pre><code>user1.role1,v1.0.0
+user2.role2,v0.5
+...
+</code></pre>
+
+<p>となっているので、頭に <code>v</code> を付けて <code>v0.1.2</code> のようなバージョンの付け方にするのが良さそうです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ansible使いのためのYAML入門]]></title>
@@ -497,66 +530,6 @@ apt_ubuntu_components:
 &ndash; universe
 &ndash; multiverse
 ```</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[ansible で ppa を追加する]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-05-20-ansible-add-ppa.html"/>
-    <updated>2014-05-20T22:47:22+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ansible-add-ppa</id>
-    <content type="html"><![CDATA[<p>サーバーとしてインストールした Ubuntu だと
-<code>add-apt-repository</code> コマンドが入っている
-<code>python-software-properties</code> パッケージが入っていなくて
-<code>ppa</code> の追加に困ることがありますが、
-ansible を使えばサーバー自体に余計なパッケージを入れなくても
-<code>ppa</code> の apt 設定を追加できました。</p>
-
-<!--more-->
-
-
-<h2>動作確認バージョン</h2>
-
-<ul>
-<li>クライアント側 ansible 1.6.1</li>
-<li>サーバー側 Ubuntu 12.04</li>
-</ul>
-
-
-<h2>ansible コマンド直接</h2>
-
-<p><code>apt_repository</code> モジュールの引数の <code>repo</code> に <code>ppa</code> を指定するだけです。</p>
-
-<p><code>console
-ansible all -s -K -i ./inventory_hosts -m apt_repository -a "repo='ppa:chris-lea/node.js'"
-</code></p>
-
-<h2>playbook.yml に書く</h2>
-
-<p><code>- apt_repository: repo='ppa:chris-lea/node.js'</code>
-のように書くだけです。
-普通にインストールすればサーバーでも入っていると思うのですが、
-<code>python-apt</code> に依存しているので、
-<code>- apt: pkg=python-apt</code>
-も書いておくと良いかもしれません。</p>
-
-<p><a href="https://github.com/znz/ansible-playbook-passenger/blob/master/provisioning/roles/passenger/tasks/nodejs-ppa.yml">nodejs-ppa.yml</a>
-が実際の使用例です。</p>
-
-<h2>```yaml nodejs-ppa.yml</h2>
-
-<ul>
-<li>apt: pkg=python-apt</li>
-<li>apt_repository: repo=&lsquo;ppa:chris-lea/node.js&rsquo;
-when: ansible_distribution_release == &ldquo;precise&rdquo;
-```</li>
-</ul>
-
-
-<p>Debian の場合や ubuntu 14.04 の場合は除外しても良いかと思って、
-ubuntu 12.04 の時だけ実行するために
-<code>when: ansible_distribution_release == "precise"</code>
-で実行する環境を制限しています。</p>
 ]]></content>
   </entry>
   
