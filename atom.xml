@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-07-20T11:09:48+09:00</updated>
+  <updated>2014-07-21T16:51:25+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,85 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Vagrant Cloudでboxを公開してみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-21-vagrantcloud-box.html"/>
+    <updated>2014-07-21T15:52:35+09:00</updated>
+    <id>http://blog.n-z.jp/blog/vagrantcloud-box</id>
+    <content type="html"><![CDATA[<p><a href="http://blog.n-z.jp/blog/2014-07-18-wheezy-from-vagrant-cloud.html" title="Vagrant CloudからWheezyを入れてみた">Vagrant CloudからWheezyを入れてみた</a>で公開されているものを使ってみたので、
+今回は
+<a href="https://vagrantcloud.com/">Vagrant Cloud</a>
+で日本語で日本向けの Box の公開も試してみました。</p>
+
+<!--more-->
+
+
+<h2>手順概要</h2>
+
+<ol>
+<li><a href="https://vagrantcloud.com/">https://vagrantcloud.com/</a> にログイン</li>
+<li><a href="https://vagrantcloud.com/boxes/new">Create Box</a> で作成</li>
+<li>Create new version でバージョンを作成</li>
+<li>Create new provider でバージョンに対応する provider を作成</li>
+<li>無料アカウントだと Upload は使えないようなので URL を指定</li>
+<li>バージョンの編集で Release すると公開</li>
+</ol>
+
+
+<h2>登録される情報</h2>
+
+<p>ユーザーアカウントに複数の Box が対応していて、
+Box に複数のバージョンが対応していて、
+バージョンに複数の provider (VirtualBox とか VMware とか) が対応している、
+という構造になっているようです。</p>
+
+<p>バージョンは Release するまでは公開されないようです。</p>
+
+<p>古いバージョンは Revoke で破棄できるようなので、
+box を置く URL を使い回すなら Revoke してから
+ファイルを置き換えて新しいバージョンを登録するのが
+良さそうに思いました。</p>
+
+<h2>作成した box の packer テンプレート</h2>
+
+<p><a href="https://github.com/znz/packer-templates">packer-templates</a>
+で公開しています。</p>
+
+<p>使い方は</p>
+
+<pre><code>git clone https://github.com/znz/packer-templates
+cd debian-7.6.0-amd64-ja_jp
+packer build debian-7.6.0-amd64-ja_jp.json
+</code></pre>
+
+<p>で <code>debian-7.6.0-amd64-ja_jp_virtualbox.box</code> が作成できます。
+試した環境では1時間ぐらいかかりました。</p>
+
+<h2>使用方法</h2>
+
+<p><code>vagrant init znzj/debian-7.6.0-amd64-ja_jp</code>
+のように <code>vagrant init</code> の引数に <code>ユーザー名/BOX名</code> を指定して
+<code>Vagrantfile</code> を作成すると
+<code>config.vm.box = "znzj/debian-7.6.0-amd64-ja_jp"</code>
+と指定されていて <code>vagrant up</code> で自動ダウンロードされて使えます。</p>
+
+<h2>登録した URL の扱い</h2>
+
+<p>box は URL で登録したので、
+<code>https://vagrantcloud.com/znzj/debian-7.6.0-amd64-ja_jp/version/1/provider/virtualbox.box</code>
+のように <code>vagrantcloud.com</code> の URL に見えるところからダウンロードしようとした時、
+リダイレクトされて登録した URL からのダウンロードになるようです。</p>
+
+<p><code>vagrantcloud</code> 側でキャッシュなどをしてくれるわけではないようなので、
+置き場所には注意する必要がありそうです。</p>
+
+<p>今回は需要も多くなさそうで、
+日本向けということで
+さくらのVPS
+に置いてみました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ansible-galaxy用のroleにversionを付ける]]></title>
@@ -3163,60 +3242,6 @@ Tab キーで展開してからコマンドラインを編集して実行する�
 <p>一般的な bash 環境ならどこでも使えて、
 複雑な glob の展開結果の確認にも便利なので、
 <code>C-x g</code> は非常にオススメです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 12 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-06-20-rubymotion-mokumoku-osaka.html"/>
-    <updated>2014-06-20T19:27:13+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
-    <content type="html"><![CDATA[<p>第 1 回から第 11 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://rubymotionjp.connpass.com/event/6666/">第 12 回 RubyMotion もくもく会 in Osaka</a>
-に参加してきました。</p>
-
-<p>次回の
-<a href="http://rubymotionjp.connpass.com/event/7079/">第 13 回 RubyMotion もくもく会 in Osaka</a>
-は 07/16(水) になりました。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<ul>
-<li>一周年記念</li>
-<li>RubyMotion は Android にも対応予定</li>
-<li>RubyMotion のライセンスが expired して更新しても <code>rake</code> のときの <code>Your maintenance plan is expired. Run 'motion account' to renew it.</code> というメッセージはキャッシュの影響で 24 時間ぐらい待たないと消えないらしいという話</li>
-<li>バージョンは 2.29 が最新</li>
-<li>Swift が話題</li>
-<li><a href="http://tools.msng.info/">割り勘電卓</a></li>
-<li><a href="https://github.com/shin1x1/vagrantx">https://github.com/shin1x1/vagrantx</a> のソース公開</li>
-<li><a href="https://github.com/MacFace/MacFace/tree/v2.0">MacFace v2</a> が Swift で作り直し中</li>
-</ul>
-
-
-<h2>やったこと</h2>
-
-<p>Interface Builder と <code>gem 'ib'</code> で GUI を作り直そうとしていました。</p>
-
-<p>GUI 作成は細かいサイズを気にしなくて良い Tcl/Tk の pack 方式や
-Web での bootstrap のようなやり方の方が慣れていて、
-GUI ツールで作成するのは GTK+2 の glade ぐらいしかまともに使ったことがなかったので、
-使い方や良い感じに配置する方法で結構悩んでいました。
-悩んでいた部分は最後の成果発表の時にいろいろ教えてもらったりしました。</p>
-
-<p>コードとの組み合わせは、検索で見つけた</p>
-
-<pre><code>@mainWindowController = MainWindow.alloc.initWithWindowNibName('MainWindow')
-@mainWindowController.window.makeKeyAndOrderFront(self)
-</code></pre>
-
-<p>という方法で window は表示できたものの、
-<code>@mainWindowController.window</code> が <code>nil</code> になっていて、
-<code>makeKeyAndOrderFront</code> の呼び出しは失敗していました。</p>
-
-<p>ひとまず現状は <a href="https://github.com/znz/urltrapper/tree/ib">ib ブランチ</a> に公開しています。</p>
 ]]></content>
   </entry>
   

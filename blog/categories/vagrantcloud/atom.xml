@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: vagrantcloud | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/vagrantcloud/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-07-21T16:51:25+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Vagrant Cloudでboxを公開してみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-21-vagrantcloud-box.html"/>
+    <updated>2014-07-21T15:52:35+09:00</updated>
+    <id>http://blog.n-z.jp/blog/vagrantcloud-box</id>
+    <content type="html"><![CDATA[<p><a href="http://blog.n-z.jp/blog/2014-07-18-wheezy-from-vagrant-cloud.html" title="Vagrant CloudからWheezyを入れてみた">Vagrant CloudからWheezyを入れてみた</a>で公開されているものを使ってみたので、
+今回は
+<a href="https://vagrantcloud.com/">Vagrant Cloud</a>
+で日本語で日本向けの Box の公開も試してみました。</p>
+
+<!--more-->
+
+
+<h2>手順概要</h2>
+
+<ol>
+<li><a href="https://vagrantcloud.com/">https://vagrantcloud.com/</a> にログイン</li>
+<li><a href="https://vagrantcloud.com/boxes/new">Create Box</a> で作成</li>
+<li>Create new version でバージョンを作成</li>
+<li>Create new provider でバージョンに対応する provider を作成</li>
+<li>無料アカウントだと Upload は使えないようなので URL を指定</li>
+<li>バージョンの編集で Release すると公開</li>
+</ol>
+
+
+<h2>登録される情報</h2>
+
+<p>ユーザーアカウントに複数の Box が対応していて、
+Box に複数のバージョンが対応していて、
+バージョンに複数の provider (VirtualBox とか VMware とか) が対応している、
+という構造になっているようです。</p>
+
+<p>バージョンは Release するまでは公開されないようです。</p>
+
+<p>古いバージョンは Revoke で破棄できるようなので、
+box を置く URL を使い回すなら Revoke してから
+ファイルを置き換えて新しいバージョンを登録するのが
+良さそうに思いました。</p>
+
+<h2>作成した box の packer テンプレート</h2>
+
+<p><a href="https://github.com/znz/packer-templates">packer-templates</a>
+で公開しています。</p>
+
+<p>使い方は</p>
+
+<pre><code>git clone https://github.com/znz/packer-templates
+cd debian-7.6.0-amd64-ja_jp
+packer build debian-7.6.0-amd64-ja_jp.json
+</code></pre>
+
+<p>で <code>debian-7.6.0-amd64-ja_jp_virtualbox.box</code> が作成できます。
+試した環境では1時間ぐらいかかりました。</p>
+
+<h2>使用方法</h2>
+
+<p><code>vagrant init znzj/debian-7.6.0-amd64-ja_jp</code>
+のように <code>vagrant init</code> の引数に <code>ユーザー名/BOX名</code> を指定して
+<code>Vagrantfile</code> を作成すると
+<code>config.vm.box = "znzj/debian-7.6.0-amd64-ja_jp"</code>
+と指定されていて <code>vagrant up</code> で自動ダウンロードされて使えます。</p>
+
+<h2>登録した URL の扱い</h2>
+
+<p>box は URL で登録したので、
+<code>https://vagrantcloud.com/znzj/debian-7.6.0-amd64-ja_jp/version/1/provider/virtualbox.box</code>
+のように <code>vagrantcloud.com</code> の URL に見えるところからダウンロードしようとした時、
+リダイレクトされて登録した URL からのダウンロードになるようです。</p>
+
+<p><code>vagrantcloud</code> 側でキャッシュなどをしてくれるわけではないようなので、
+置き場所には注意する必要がありそうです。</p>
+
+<p>今回は需要も多くなさそうで、
+日本向けということで
+さくらのVPS
+に置いてみました。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Vagrant CloudからWheezyを入れてみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-18-wheezy-from-vagrant-cloud.html"/>
+    <updated>2014-07-18T21:30:25+09:00</updated>
+    <id>http://blog.n-z.jp/blog/wheezy-from-vagrant-cloud</id>
+    <content type="html"><![CDATA[<p>Debian 7.6 がリリースされたので、新しい box がないか探してみたところ、
+<a href="http://www.vagrantbox.es/" title="A list of base boxes for Vagrant - Vagrantbox.es">A list of base boxes for Vagrant &ndash; Vagrantbox.es</a>
+から探すのではなく
+<a href="https://vagrantcloud.com/">Vagrant Cloud</a>
+を使えば良いということがわかりました。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>VirtualBox 4.3.12</li>
+<li>Vagrant 1.6.3</li>
+<li><a href="https://vagrantcloud.com/ffuenf/debian-7.6.0-amd64" title="Debian Wheezy 7.6.0 x86_64">Debian Wheezy 7.6.0 x86_64</a> 0.0.27</li>
+</ul>
+
+
+<h2>書き換え</h2>
+
+<p>古い box は</p>
+
+<p><code>
+  config.vm.box = ENV["VM_BOX"] || "opscode_debian-7.4_chef-provisionerless"
+  config.vm.box_url = ENV["VM_BOX_URL"] || "http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_debian-7.4_chef-provisionerless.box"
+</code></p>
+
+<p>と指定していたのを
+<a href="https://github.com/ffuenf/vagrant-boxes" title="ffuenf/vagrant-boxes">ffuenf/vagrant-boxes</a>
+からリンクされている
+<a href="https://vagrantcloud.com/ffuenf/debian-7.6.0-amd64" title="ffuenf/debian-7.6.0-amd64">ffuenf/debian-7.6.0-amd64</a>
+の説明通り <code>vagrant init ffuenf/debian-7.6.0-amd64</code> で作成された
+<code>Vagrantfile</code> を参考にして、</p>
+
+<p><code>
+  config.vm.box = "ffuenf/debian-7.6.0-amd64"
+</code></p>
+
+<p>に書き換えました。</p>
+
+<p>以前の box を使っている 古い VM を <code>vagrant destroy</code> ですべて破棄した後、
+<code>vagrant box remove opscode_debian-7.4_chef-provisionerless</code>
+で box も削除しました。</p>
+
+<h2>余談</h2>
+
+<p><code>vagrant box outdated</code> や <code>vagrant box update</code> の使い方がわからなかったのですが、
+<code>box_url</code> でダウンロードしてきた box で使うものではなく Vagrant Cloud から
+ダウンロードしてきた box で使うものだったようです。</p>
+]]></content>
+  </entry>
+  
+</feed>
