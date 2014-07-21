@@ -3,7 +3,7 @@ layout: post
 title: "Vagrant CloudからWheezyを入れてみた"
 date: 2014-07-18 21:30:25 +0900
 comments: true
-categories: vagrant debian
+categories: vagrant vagrantcloud debian
 ---
 Debian 7.6 がリリースされたので、新しい box がないか探してみたところ、
 [A list of base boxes for Vagrant - Vagrantbox.es](http://www.vagrantbox.es/ "A list of base boxes for Vagrant - Vagrantbox.es")
