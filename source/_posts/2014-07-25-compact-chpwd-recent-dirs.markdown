@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "zshの機能のみで既に存在しないディレクトリを cdrのリストから削除する"
+title: "zshの機能のみで既に存在しないディレクトリをcdrのリストから削除する"
 date: 2014-07-25 21:54:57 +0900
 comments: true
 categories: zsh cdr
