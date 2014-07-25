@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: coffeescript - @znz blog</title>
+  <title>zshの機能のみで既に存在しないディレクトリを cdrのリストから削除する - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Category: coffeescript">
+  <meta name="description" content="zshの機能のみで既に存在しないディレクトリを cdrのリストから削除する 2014-07-25 (Fri) | <a href="#disqus_thread" data-disqus-identifier="http://blog.n-z.jp">Comments &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jpblog/categories/coffeescript/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-07-25-compact-chpwd-recent-dirs.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,54 +76,189 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: coffeescript</h1>
+    
+      
+      <!-- zenback_title_begin -->
+      
+      <h1 class="entry-title">zshの機能のみで既に存在しないディレクトリを cdrのリストから削除する</h1>
+      
+      <!-- zenback_title_end -->
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-07-25T21:54:57+09:00" pubdate data-updated="true">2014-07-25 (Fri)</time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
 
-  
-  <h2>2014</h2>
+<!-- zenback_body_begin -->
 
-<article>
-  
-<h1><a href="/blog/2014-03-03-auto-change-background.html">ページの切り替わりごとに背景の自動変更</a></h1>
-<time datetime="2014-03-03T23:25:01+09:00" pubdate><span class='month'>Mar</span> <span class='day'>03</span> <span class='year'>2014</span></time>
+<div class="entry-content"><p><a href="http://d.hatena.ne.jp/syohex/20140425/1398394421" title="既に存在しないディレクトリを cdrのリストから削除する - Life is very short">既に存在しないディレクトリを cdrのリストから削除する &ndash; Life is very short</a>
+をみて perl を使っていて、
+ファイル名の変更にも対応していなくてポータブルではないと思ったので、
+zsh の機能のみで実装してみました。</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/coffeescript/'>coffeescript</a>, <a class='category' href='/blog/categories/html5/'>html5</a>, <a class='category' href='/blog/categories/javascript/'>javascript</a>, <a class='category' href='/blog/categories/rails/'>rails</a></span>
-</footer>
+<!--more-->
 
 
-</article>
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>zsh 5.0.2</li>
+</ul>
 
 
+<h2>実装</h2>
 
-  
-  <h2>2013</h2>
+<p>cdr の実装の中の
+<code>chpwd_recent_add</code>
+<code>chpwd_recent_dirs</code>
+<code>chpwd_recent_filehandler</code>
+の中を良くみてみると
+引数なしで <code>chpwd_recent_filehandler</code> を呼び出すと
+<code>$reply</code> に配列でディレクトリ一覧を返してくれて、
+引数を渡すとファイルに保存してくれるとわかりました。</p>
 
-<article>
-  
-<h1><a href="/blog/2013-09-18-auto-open-autocomplete.html">jQuery UI Autocomplete を自動で開く</a></h1>
-<time datetime="2013-09-18T15:43:00+09:00" pubdate><span class='month'>Sep</span> <span class='day'>18</span> <span class='year'>2013</span></time>
+<p>そこで、その間で <code>(N)</code> を使って存在しないディレクトリを除外すれば良いということで
+以下の実装になりました。
+<code>emulate -L zsh</code> などは参考にした部分にあったので、そのまま使っています。</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/coffeescript/'>coffeescript</a>, <a class='category' href='/blog/categories/html5/'>html5</a>, <a class='category' href='/blog/categories/javascript/'>javascript</a>, <a class='category' href='/blog/categories/jquery-ui/'>jquery-ui</a>, <a class='category' href='/blog/categories/rails/'>rails</a></span>
-</footer>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>my-compact-chpwd-recent-dirs <span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>    emulate -L zsh
+</span><span class='line'>    setopt extendedglob
+</span><span class='line'>    <span class="nb">local</span> -aU reply
+</span><span class='line'>    integer history_size
+</span><span class='line'>    autoload -Uz chpwd_recent_filehandler
+</span><span class='line'>    chpwd_recent_filehandler
+</span><span class='line'>    <span class="nv">history_size</span><span class="o">=</span><span class="nv">$#reply</span>
+</span><span class='line'>    <span class="nv">reply</span><span class="o">=(</span><span class="k">${</span><span class="p">^reply</span><span class="k">}</span><span class="o">(</span>N<span class="o">))</span>
+</span><span class='line'>    <span class="o">((</span> <span class="nv">$history_size</span> <span class="o">==</span> <span class="nv">$#reply</span> <span class="o">))</span> <span class="o">||</span> chpwd_recent_filehandler <span class="nv">$reply</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
 
-</article>
+<p>使い方としては</p>
 
+<ul>
+<li>必要に応じて手で <code>my-compact-chpwd-recent-dirs</code> を呼び出す</li>
+<li><code>.zshrc</code> から起動時に <code>my-compact-chpwd-recent-dirs</code> を実行</li>
+<li><code>add-zsh-hook chpwd my-compact-chpwd-recent-dirs</code> で毎回実行</li>
+</ul>
+
+
+<p>などが考えられます。</p>
+
+<p><a href="http://blog.n-z.jp/blog/2014-07-17-peco-cdr.html" title="pecoとcdrなどを組み合わせてみた">pecoとcdrなどを組み合わせてみた</a>ときに、
+<code>peco</code> に渡す前のところで <code>(N-/)</code> でフィルタリングしていたので、
+個人的には必要に応じて手で呼び出す使い方にしようと思っています。</p>
 </div>
 
+<!-- zenback_body_end -->
+
+
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-07-25T21:54:57+09:00" pubdate data-updated="true">2014-07-25 (Fri)</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/cdr/'>cdr</a>, <a class='category' href='/blog/categories/zsh/'>zsh</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014-07-21-vagrantcloud-box.html" title="Previous Post: Vagrant Cloudでboxを公開してみた">&laquo; Vagrant Cloudでboxを公開してみた</a>
+      
+      
+    </p>
+  </footer>
 </article>
 
+<section>
+  <!-- X:S ZenBackWidget --><div id="zenback-widget-loader"></div><script type="text/javascript">!function(d,i){if(!d.getElementById(i)){var r=Math.ceil((new Date()*1)*Math.random());var j=d.createElement("script");j.id=i;j.async=true;j.src="//w.zenback.jp/v1/?base_uri=http%3A//blog.n-z.jp/&nsid=122901358100652638%3A%3A122901381991399941&rand="+r;d.body.appendChild(j);}}(document,"zenback-widget-js");</script><!-- X:E ZenBackWidget -->
+
+</section>
+
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -241,7 +376,10 @@ Hatena.BookmarkWidget.load();
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-07-25-compact-chpwd-recent-dirs.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-07-25-compact-chpwd-recent-dirs.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

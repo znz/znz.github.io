@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-07-21T16:51:25+09:00</updated>
+  <updated>2014-07-25T21:59:24+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,83 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[zshの機能のみで既に存在しないディレクトリを cdrのリストから削除する]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-07-25-compact-chpwd-recent-dirs.html"/>
+    <updated>2014-07-25T21:54:57+09:00</updated>
+    <id>http://blog.n-z.jp/blog/compact-chpwd-recent-dirs</id>
+    <content type="html"><![CDATA[<p><a href="http://d.hatena.ne.jp/syohex/20140425/1398394421" title="既に存在しないディレクトリを cdrのリストから削除する - Life is very short">既に存在しないディレクトリを cdrのリストから削除する &ndash; Life is very short</a>
+をみて perl を使っていて、
+ファイル名の変更にも対応していなくてポータブルではないと思ったので、
+zsh の機能のみで実装してみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>zsh 5.0.2</li>
+</ul>
+
+
+<h2>実装</h2>
+
+<p>cdr の実装の中の
+<code>chpwd_recent_add</code>
+<code>chpwd_recent_dirs</code>
+<code>chpwd_recent_filehandler</code>
+の中を良くみてみると
+引数なしで <code>chpwd_recent_filehandler</code> を呼び出すと
+<code>$reply</code> に配列でディレクトリ一覧を返してくれて、
+引数を渡すとファイルに保存してくれるとわかりました。</p>
+
+<p>そこで、その間で <code>(N)</code> を使って存在しないディレクトリを除外すれば良いということで
+以下の実装になりました。
+<code>emulate -L zsh</code> などは参考にした部分にあったので、そのまま使っています。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>my-compact-chpwd-recent-dirs <span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>    emulate -L zsh
+</span><span class='line'>    setopt extendedglob
+</span><span class='line'>    <span class="nb">local</span> -aU reply
+</span><span class='line'>    integer history_size
+</span><span class='line'>    autoload -Uz chpwd_recent_filehandler
+</span><span class='line'>    chpwd_recent_filehandler
+</span><span class='line'>    <span class="nv">history_size</span><span class="o">=</span><span class="nv">$#reply</span>
+</span><span class='line'>    <span class="nv">reply</span><span class="o">=(</span><span class="k">${</span><span class="p">^reply</span><span class="k">}</span><span class="o">(</span>N<span class="o">))</span>
+</span><span class='line'>    <span class="o">((</span> <span class="nv">$history_size</span> <span class="o">==</span> <span class="nv">$#reply</span> <span class="o">))</span> <span class="o">||</span> chpwd_recent_filehandler <span class="nv">$reply</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>使い方としては</p>
+
+<ul>
+<li>必要に応じて手で <code>my-compact-chpwd-recent-dirs</code> を呼び出す</li>
+<li><code>.zshrc</code> から起動時に <code>my-compact-chpwd-recent-dirs</code> を実行</li>
+<li><code>add-zsh-hook chpwd my-compact-chpwd-recent-dirs</code> で毎回実行</li>
+</ul>
+
+
+<p>などが考えられます。</p>
+
+<p><a href="http://blog.n-z.jp/blog/2014-07-17-peco-cdr.html" title="pecoとcdrなどを組み合わせてみた">pecoとcdrなどを組み合わせてみた</a>ときに、
+<code>peco</code> に渡す前のところで <code>(N-/)</code> でフィルタリングしていたので、
+個人的には必要に応じて手で呼び出す使い方にしようと思っています。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Vagrant Cloudでboxを公開してみた]]></title>
@@ -3157,91 +3234,6 @@ ansible の設定ファイルでは使ったことがありません。</p>
 
 <p>ansible の設定ファイルを書く時に、自分が困ったり悩んだことを中心にまとめてみました。
 同じようなことで悩んだり、どうすればいいのか困った時に参考にしてみてください。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[シェルで glob 結果を事前に確認する方法]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-06-21-confirm-glob.html"/>
-    <updated>2014-06-21T13:16:56+09:00</updated>
-    <id>http://blog.n-z.jp/blog/confirm-glob</id>
-    <content type="html"><![CDATA[<p><code>rm *~</code> のつもりで <code>rm * ~</code> (半角スペースが混ざっている) のように実行してしまうような間違いをすると危険です。</p>
-
-<p>その対策として <code>tcsh</code> には <code>rmstar</code> という設定があったり
-<code>zsh</code> には <code>RM_STAR_SILENT</code> や <code>RM_STAR_WAIT</code> という設定があるのですが、
-ちゃんと展開結果を確認してからコマンドを実行する方が安全です。</p>
-
-<p>また <code>rm</code> 以外でも展開結果を事前に確認できると便利なことが多いです。</p>
-
-<!--more-->
-
-
-<h2>展開結果の確認方法</h2>
-
-<p><code>bash</code> や <code>zsh</code> の一般的なキー割り当てだと <code>C-x g</code> (Control を押しながら x を押して Control を離して g) で展開結果を確認できます。</p>
-
-<p>Tab キーだとコマンドライン中に展開されてしまいますが、
-<code>C-x g</code> だと確認だけ出来ます。</p>
-
-<h3>bash の場合</h3>
-
-<p>たとえば <code>bash</code> なら以下のように展開結果が出て、
-プロンプトの行が出てきます。</p>
-
-<figure class='code'><figcaption><span>bash</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> <span class="nb">echo</span> /etc/host*&lt;C-x&gt;g
-</span><span class='line'><span class="go">host.conf    hostname     hosts        hosts.allow  hosts.deny</span>
-</span><span class='line'><span class="gp">$</span> <span class="nb">echo</span> /etc/host*
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>zsh の場合</h3>
-
-<p><code>zsh</code> ならプロンプトの行の下に展開結果が出てきます。</p>
-
-<figure class='code'><figcaption><span>zsh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> <span class="nb">echo</span> /etc/host*
-</span><span class='line'><span class="go">/etc/host.conf    /etc/hostname     /etc/hosts        /etc/hosts.allow  /etc/hosts.deny</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Tab キーの動作</h2>
-
-<p>比較のため Tab キーでの動作例も載せておきます。</p>
-
-<h3>bash の場合</h3>
-
-<p>実際には同じ行でしたが、最初の展開結果に置き換わりました。</p>
-
-<figure class='code'><figcaption><span>bash</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">$</span> <span class="nb">echo</span> /etc/host*&lt;tab&gt;
-</span><span class='line'><span class="gp">$</span> <span class="nb">echo</span> /etc/host.conf
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>zsh の場合</h3>
-
-<p>こちらも実際には同じ行ですが、すべての展開結果に置き換わりました。</p>
-
-<figure class='code'><figcaption><span>zsh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> <span class="nb">echo</span> /etc/host*&lt;tab&gt;
-</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> /etc/host.conf /etc/hostname /etc/hosts /etc/hosts.allow /etc/hosts.deny
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>glob で指定しにくい一部のファイルだけ除外するなど、展開された方が便利な時は
-Tab キーで展開してからコマンドラインを編集して実行することもあります。</p>
-
-<h2>まとめ</h2>
-
-<p>一般的な bash 環境ならどこでも使えて、
-複雑な glob の展開結果の確認にも便利なので、
-<code>C-x g</code> は非常にオススメです。</p>
 ]]></content>
   </entry>
   
