@@ -6,7 +6,7 @@ comments: true
 categories: event ruby rubykansai
 ---
 [62nd Ruby/Rails勉強会@関西](http://rubykansai.doorkeeper.jp/events/13160 "62nd Ruby/Rails勉強会@関西")
-に参加しました。
+に参加したので、そのメモです。
 
 <!--more-->
 
@@ -74,8 +74,6 @@ GitLab Flow は git flow を知っている人向けに大雑把に説明する�
 多重代入について深入りすると大変そうなので、さらっと流したのはありだと思いました。
 
 ## @IT Rails4 入門記事をツッコもう
-
-ここはメモを取っていました。
 
 - [開発現場でちゃんと使えるRails 4入門（1）：簡単インストールから始める初心者のためのRuby on Railsチュートリアル (2/3) - ＠IT](http://www.atmarkit.co.jp/ait/articles/1402/28/news047_2.html "開発現場でちゃんと使えるRails 4入門（1）：簡単インストールから始める初心者のためのRuby on Railsチュートリアル (2/3) - ＠IT")
 - rbenv 対 RVM
