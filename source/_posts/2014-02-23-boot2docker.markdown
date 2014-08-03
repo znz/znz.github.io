@@ -18,6 +18,11 @@ boot2docker で最新の docker を試してみました。
 - boot2docker 0.6.0
 - docker 0.8.1
 
+014-08-03 追記: 追記部分の確認バージョン
+
+- boot2docker 1.1.2
+- docker 1.1.2
+
 ## VirtualBox
 
 あらかじめ VirtualBox をインストールしておきます。
@@ -40,9 +45,19 @@ http://docs.docker.io/en/latest/installation/mac/ の手順に従って
 
 この段階でのアンインストールは `boot2docker` を削除するだけです。
 
+(2014-08-03 追記:
+Mac OS X なら
+`brew install boot2docker`
+などでもインストールできます。)
+
 ### VM イメージの作成
 
 初回は `./boot2docker init` を実行して iso のダウンロードと VM の作成をします。
+
+(2014-08-03 追記:
+ISO のダウンロードだけなら `boot2docker download` で、
+既に ISO があっても最新にするなら `boot2docker upgrade` で
+ダウンロードできます。)
 
 ```
 % ./boot2docker init
@@ -111,6 +126,11 @@ export DOCKER_HOST=tcp://localhost:4243
 ユーザーは `docker` でパスワードは `tcuser` です。
 Tiny Core Linux ベースなので、こういうパスワードになっているのだと思います。
 
+(2014-08-03 追記:
+最近の boot2docker では、
+ssh でのログインや sudo はパスワードなしで出来るようになっているようです。
+`su - docker` で確認したところ、パスワードは `tcuser` のままでした。)
+
 ```
 % ./boot2docker ssh
 docker@localhost's password:
@@ -154,6 +174,11 @@ docker のサーバーとの接続がうまくいかない場合はここでエ�
 
 まず VM の外の Homebrew でインストールした docker コマンドから確認しました。
 ここでバージョンが古かったので、後は ssh で入った VM の中で docker コマンドを使うことにしました。
+
+(2014-08-03 追記:
+最近のバージョンでは `boot2docker up` の時に
+`export DOCKER_HOST=tcp://192.168.59.103:2375`
+のようなメッセージが出てくるように docker の接続に使う IP アドレスとポート番号が変わっています。)
 
 ```
 % export DOCKER_HOST=tcp://127.0.0.1:4243
@@ -246,6 +271,12 @@ docker@boot2docker:~$
 
 ちょっと試すだけなら `-rm` オプションを付けて自動削除するのが良さそうです。
 
+(2014-08-03 追記:
+最近の `docker` では `-rm` ではなく `--rm` を使うように警告
+「`Warning: '-rm' is deprecated, it will be replaced by '--rm' soon. See usage.`」
+が出てくるので、
+将来のバージョンでは長いオプションには `-` 2個が必須になるようです。)
+
 ```
 docker@boot2docker:~$ docker run -i -t -rm ubuntu /bin/bash
 root@f810cbccf394:/# exit
@@ -253,7 +284,3 @@ exit
 docker@boot2docker:~$ docker ps -a -q
 docker@boot2docker:~$
 ```
-
-## つづく
-
-`docker pull` に時間がかかって、すぐにはいろいろ試せないようなので、別の記事に続きます。
