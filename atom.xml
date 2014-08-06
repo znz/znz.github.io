@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-03T12:32:03+09:00</updated>
+  <updated>2014-08-07T00:26:11+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,360 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[boot2docker で VM のファイルをコンテナやホストと共有する]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-08-06-docker-volume.html"/>
+    <updated>2014-08-06T23:17:27+09:00</updated>
+    <id>http://blog.n-z.jp/blog/docker-volume</id>
+    <content type="html"><![CDATA[<p>Mac OS X 上の <code>boot2docker</code> でホストとコンテナでファイルを共有する方法を試してみました。
+さらに <code>boot2docker ssh</code> で入ったときにも見えるような設定でも試してみました。</p>
+
+<!--more-->
+
+
+<h2>参考</h2>
+
+<ul>
+<li><a href="http://qiita.com/numa08/items/e52bd18611ac159af1ac" title="boot2dockerでコンテナからホストのファイルを参照する - Qiita">boot2dockerでコンテナからホストのファイルを参照する &ndash; Qiita</a></li>
+<li><a href="https://github.com/boot2docker/boot2docker#folder-sharing" title="Folder sharing">Folder sharing</a></li>
+<li><a href="https://docs.docker.com/userguide/dockervolumes/" title="Managing data in containers - Docker Documentation">Managing data in containers &ndash; Docker Documentation</a></li>
+</ul>
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Mac OS X 10.9.4</li>
+<li>VirtualBox 4.3.14</li>
+<li>docker 1.1.2</li>
+<li>boot2docker 1.1.2</li>
+</ul>
+
+
+<h2>実行コマンド</h2>
+
+<ul>
+<li><code>docker run -v /mnt/sda1/data:/data --name my-data busybox true</code> で共有ボリューム用コンテナ作成</li>
+<li><code>docker run --rm -v /usr/local/bin/docker:/docker -v /var/run/docker.sock:/docker.sock svendowideit/samba my-data</code> で samba 起動</li>
+<li><code>docker run -it --rm --volumes-from my-data ubuntu /bin/bash</code> で確認</li>
+</ul>
+
+
+<h3>共有ボリューム用コンテナ作成</h3>
+
+<p><a href="http://blog.n-z.jp/blog/2013-12-24-docker-rm.html" title="Dockerで不要になったコンテナやイメージを削除する">Dockerで不要になったコンテナやイメージを削除する</a>
+のように <code>docker ps -a -q | xargs docker rm</code> などで停止しているコンテナを削除してしまうと
+<code>my-data</code> という名前を付けたデータ保存用のコンテナも消えてしまうので、
+<code>boot2docker</code> では永続化されているパーティションの <code>/mnt/sda1</code> に <code>data</code> をおくことにしました。</p>
+
+<p>run の時点で <code>/mnt/sda1/data</code> は自動作成されるので、
+あらかじめ作っておく必要はありません。</p>
+
+<p>間違えてコンテナを削除してしまった場合は
+<code>docker run -v /mnt/sda1/data:/data --name my-data busybox true</code>
+で作成し直せばデータは残ったまま <code>my-data</code> コンテナを再作成できます。</p>
+
+<p>このやり方は docker を動かすホストに依存してしまうので、
+一般には標準のボリュームコンテナを作成する方法の方がおすすめのようです。</p>
+
+<h3>共有ボリューム用コンテナ再作成 (標準の方法の場合)</h3>
+
+<p><code>--volumes-from</code> で指定した共有は使っているコンテナがなくなってしまっても内容が残っていますが、
+名前で指定して取り出す方法がなくなってしまうように見えます。</p>
+
+<p><code>my-data</code> コンテナを削除してしまった場合、
+<code>--volumes-from my-data</code> は使えなくなるので、
+<code>docker run --volumes-from samba-server --name my-data busybox true</code>
+のように残っているコンテナを <code>--volumes-from</code> で指定して再作成すれば、
+また <code>docker run -it --rm --volumes-from my-data ubuntu /bin/bash</code> のように
+<code>--volumes-from</code> に <code>my-data</code> を指定できるようになります。</p>
+
+<h3>samba 起動</h3>
+
+<p><code>docker run --rm -v /usr/local/bin/docker:/docker -v /var/run/docker.sock:/docker.sock svendowideit/samba my-data</code>
+で samba を起動します。</p>
+
+<p><code>docker.sock</code> も渡しているので、多重起動しないように既存の <code>samba-server</code> は止めてくれるようです。</p>
+
+<p>起動時に以下のようにホスト側からの接続方法の説明が出ます。</p>
+
+<pre><code>% docker run --rm -v /usr/local/bin/docker:/docker -v /var/run/docker.sock:/docker.sock svendowideit/samba my-data
+stopping and removing existing server
+starting samba server container sharing my-data:/data
+
+# run 'docker logs samba-server' to view the samba logs
+
+================================================
+
+Your data volume (/data) should now be accessible at \\&lt;docker ip&gt;\ as 'guest' user (no password)
+
+For example, on OSX, using a typical boot2docker vm:
+    goto Go|Connect to Server in Finder
+    enter 'cifs://192.168.59.103
+    hit the 'Connect' button
+    select the volumes you want to mount
+    choose the 'Guest' radiobox and connect
+
+Or on Linux:
+    mount -t cifs //192.168.59.103/data /mnt/data -o username=guest
+
+Or on Windows:
+    Enter '\\192.168.59.103\data' into Explorer
+    Log in as Guest - no password
+</code></pre>
+
+<h3>samba に接続</h3>
+
+<p><code>boot2docker ip</code> で IP アドレスを確認して、
+<code>192.168.59.103</code> なら、
+<code>Finder</code> の <code>サーバへ接続</code> (メニューの <code>移動</code> の <code>サーバーへ接続...</code>) を開いて、
+サーバアドレスとして <code>cifs://192.168.59.103/data</code> を入力して <code>接続</code> します。
+<code>ユーザの種類</code> は <code>ゲスト</code> を選んで <code>接続</code> します。
+すると <code>/Volumes/data</code> で見えるようになります。</p>
+
+<p>Linux なら <code>mount -t cifs //192.168.59.103/data /mnt/data -o username=guest</code> のようにマウントするそうです。</p>
+
+<p>Windows ならエクスプローラーで <code>\\192.168.59.103\data</code> にパスワードなしのゲスト接続すれば見えるそうです。</p>
+
+<h3>別コンテナで確認</h3>
+
+<p><code>docker run -it --rm --volumes-from my-data ubuntu /bin/bash</code> などで別コンテナを起動すると、
+<code>/data</code> にマウントされているので、
+<code>ls -l /data</code> で中身を確認したり、
+<code>/data</code> の中にファイルを作成して他で見えることを確認しました。</p>
+
+<h2>まとめ</h2>
+
+<p><a href="https://github.com/boot2docker/boot2docker#folder-sharing">README に書いてある Folder sharing</a>
+だと間違えて消してしまうことがあったので、ちょっと工夫した方法を紹介しました。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[boot2docker のシリアルコンソールにつなぐ]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-08-06-boot2docker-serial.html"/>
+    <updated>2014-08-06T23:13:18+09:00</updated>
+    <id>http://blog.n-z.jp/blog/boot2docker-serial</id>
+    <content type="html"><![CDATA[<p>boot2docker-vm の設定をみていると、
+<code>~/.boot2docker/boot2docker-vm.sock</code> にシリアルポートが設定されていたので使ってみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Mac OS X 10.9.4</li>
+<li>VirtualBox 4.3.14</li>
+<li>boot2docker 1.1.2</li>
+</ul>
+
+
+<h2>接続方法</h2>
+
+<p><code>nc -U ~/.boot2docker/boot2docker-vm.sock</code>
+で接続して一度 Enter を押してログインプロンプトを再表示させて
+<code>docker</code> でログインできます。</p>
+
+<p>Control+C の INT シグナルで <code>nc</code> が終了してしまうので、
+普通は素直に <code>boot2docker ssh</code> を使う方が良さそうです。</p>
+
+<p>ssh で入れなくなった時の予備の手段として知っておくと良いかもしれません。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% nc -U ~/.boot2docker/boot2docker-vm.sock
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>Core Linux
+</span><span class='line'>boot2docker login: docker
+</span><span class='line'>docker
+</span><span class='line'>                        ##        .
+</span><span class='line'>                  ## ## ##       ==
+</span><span class='line'>               ## ## ## ##      ===
+</span><span class='line'>           /""""""""""""""""\___/ ===
+</span><span class='line'>      ~~~ {~~ ~~~~ ~~~ ~~~~ ~~ ~ /  ===- ~~~
+</span><span class='line'>           \______ o          __/
+</span><span class='line'>             \    \        __/
+</span><span class='line'>              \____\______/
+</span><span class='line'> _                 _   ____     _            _
+</span><span class='line'>| |__   ___   ___ | |_|___ \ __| | ___   ___| | _____ _ __
+</span><span class='line'>| '_ \ / _ \ / _ \| __| __) / _` |/ _ \ / __| |/ / _ \ '__|
+</span><span class='line'>| |_) | (_) | (_) | |_ / __/ (_| | (_) | (__|   &lt;  __/ |
+</span><span class='line'>|_.__/ \___/ \___/ \__|_____\__,_|\___/ \___|_|\_\___|_|
+</span><span class='line'>boot2docker: 1.1.2
+</span><span class='line'>             master : 740106c - Thu Jul 24 03:24:10 UTC 2014
+</span><span class='line'>docker@boot2docker:~$</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>参考サイト</h2>
+
+<ul>
+<li><a href="http://d.hatena.ne.jp/hiboma/20140130/1391061776" title="Vagrant (VirtualBox) でシリアルコンソールに繋ぐ - hibomaのはてなダイアリー">Vagrant (VirtualBox) でシリアルコンソールに繋ぐ &ndash; hibomaのはてなダイアリー</a></li>
+</ul>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[boot2docker のバージョンアップ]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-08-06-boot2docker-upgrade.html"/>
+    <updated>2014-08-06T23:10:26+09:00</updated>
+    <id>http://blog.n-z.jp/blog/boot2docker-upgrade</id>
+    <content type="html"><![CDATA[<p>boot2docker の ISO の更新は専用コマンドで簡単にできるとわかったので、
+わざと古いバージョンに戻したりして動作確認してみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Mac OS X 10.9.4</li>
+<li>VirtualBox 4.3.14</li>
+<li>docker 1.1.2</li>
+<li>boot2docker 1.1.2</li>
+</ul>
+
+
+<h2>更新準備</h2>
+
+<p><code>boot2docker delete</code> して消してから ISO を更新して
+<code>boot2docker init</code> で作り直すという説明もありますが、
+再起動しても残る部分は ISO とは別の仮想ディスクの <code>/dev/sda1</code> に保存されていて、
+そのまま使い回せることがほとんどなので、
+作り直さなくても更新できます。</p>
+
+<p>大きくバージョンをあげるとか、クリーンな環境でやり直したいと言うときは消して作り直せば良いと思います。</p>
+
+<p>参考: <a href="http://qiita.com/tukiyo3/items/07f1eb77b5ffd9031e30" title="boot2dockerのデータ永続化まとめ - Qiita">boot2dockerのデータ永続化まとめ &ndash; Qiita</a></p>
+
+<h2>更新方法</h2>
+
+<h3>VM を停止して更新</h3>
+
+<p><code>boot2docker upgrade</code> で VM が起動していれば停止して更新して起動し直してくれます。</p>
+
+<h3>ISO だけ更新</h3>
+
+<p><code>boot2docker download</code> で ISO だけ無条件にダウンロードしてくれます。</p>
+
+<h3>boot2docker help</h3>
+
+<p>以上の説明は <code>boot2docker help</code> にちゃんと書いてある通りです。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% boot2docker help
+</span><span class='line'>Usage: boot2docker [&lt;options&gt;] &lt;command&gt; [&lt;args&gt;]
+</span><span class='line'>
+</span><span class='line'>boot2docker management utility.
+</span><span class='line'>
+</span><span class='line'>Commands:
+</span><span class='line'>    init                    Create a new boot2docker VM.
+</span><span class='line'>    up|start|boot           Start VM from any states.
+</span><span class='line'>    ssh [ssh-command]       Login to VM via SSH.
+</span><span class='line'>    save|suspend            Suspend VM and save state to disk.
+</span><span class='line'>    down|stop|halt          Gracefully shutdown the VM.
+</span><span class='line'>    restart                 Gracefully reboot the VM.
+</span><span class='line'>    poweroff                Forcefully power off the VM (might corrupt disk image).
+</span><span class='line'>    reset                   Forcefully power cycle the VM (might corrupt disk image).
+</span><span class='line'>    delete|destroy          Delete boot2docker VM and its disk image.
+</span><span class='line'>    config|cfg              Show selected profile file settings.
+</span><span class='line'>    info                    Display detailed information of VM.
+</span><span class='line'>    ip                      Display the IP address of the VM's Host-only network.
+</span><span class='line'>    status                  Display current state of VM.
+</span><span class='line'>    download                Download boot2docker ISO image.
+</span><span class='line'>    upgrade                 Upgrade the boot2docker ISO image (if vm is running it will be stopped and started).
+</span><span class='line'>    version                 Display version information.
+</span><span class='line'>
+</span><span class='line'>Options:
+</span><span class='line'>      --basevmdk="": Path to VMDK to use as base for persistent partition
+</span><span class='line'>      --dhcp=true: enable VirtualBox host-only network DHCP.
+</span><span class='line'>      --dhcpip=192.168.59.99: VirtualBox host-only network DHCP server address.
+</span><span class='line'>  -s, --disksize=20000: boot2docker disk image size (in MB).
+</span><span class='line'>      --dockerport=2375: host Docker port (forward to port 2375 in VM).
+</span><span class='line'>      --hostip=192.168.59.3: VirtualBox host-only network IP address.
+</span><span class='line'>      --iso="/Users/knishiyama/.boot2docker/boot2docker.iso": path to boot2docker ISO image.
+</span><span class='line'>      --lowerip=192.168.59.103: VirtualBox host-only network DHCP lower bound.
+</span><span class='line'>  -m, --memory=2048: virtual machine memory size (in MB).
+</span><span class='line'>      --netmask=ffffff00: VirtualBox host-only network mask.
+</span><span class='line'>      --serial=false: try serial console to get IP address (experimental)
+</span><span class='line'>      --serialfile="": path to the serial socket/pipe.
+</span><span class='line'>      --ssh="ssh": path to SSH client utility.
+</span><span class='line'>      --ssh-keygen="ssh-keygen": path to ssh-keygen utility.
+</span><span class='line'>      --sshkey="/Users/knishiyama/.ssh/id_boot2docker": path to SSH key to use.
+</span><span class='line'>      --sshport=2022: host SSH port (forward to port 22 in VM).
+</span><span class='line'>      --upperip=192.168.59.254: VirtualBox host-only network DHCP upper bound.
+</span><span class='line'>      --vbm="VBoxManage": path to VirtualBox management utility.
+</span><span class='line'>  -v, --verbose=false: display verbose command invocations.
+</span><span class='line'>      --vm="boot2docker-vm": virtual machine name.</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ruby-buildをrbenvと組み合わせずに使う]]></title>
@@ -2536,527 +2890,6 @@ pull などは git プロトコル (昔は Git Read-Only と書いてあった U
 <p>詳細は
 <a href="http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html" title="githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法">githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法</a>
 を参照してください。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Amagasakirb特別編 須藤さん関連プロダクツ勉強会に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-06-28-amagasakirb.html"/>
-    <updated>2014-06-28T13:16:24+09:00</updated>
-    <id>http://blog.n-z.jp/blog/amagasakirb</id>
-    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/event/index/186111/" title="6月28日 Amagasakirb特別編 須藤さん関連プロダクツ勉強会(兵庫県)">6月28日 Amagasakirb特別編 須藤さん関連プロダクツ勉強会(兵庫県)</a>
-に参加しました。</p>
-
-<!--more-->
-
-
-<h2>自己紹介</h2>
-
-<p>まず最初に、使っている須藤さん関連プロダクツの話を中心に自己紹介していました。
-イベントのページには書いていませんでしたが、
-<a href="http://docs.ruby-lang.org/ja/search/" title="るりまサーチ">るりまサーチ</a>
-も須藤さん関連プロダクツでした。</p>
-
-<h2>メモ</h2>
-
-<p>その後は須藤さん関連プロダクツの話をいろいろしていたので、
-その中からのメモです。
-話としては groonga 関連と ActiveLdap 関連が多かったです。</p>
-
-<h3>groonga 関連</h3>
-
-<ul>
-<li><a href="http://ongaeshi.hatenablog.com/entry/honyomi-init" title="数万の電子書籍から目的のページを一瞬で見つけ出す、Honyomi - ブログのおんがえし">数万の電子書籍から目的のページを一瞬で見つけ出す、Honyomi &ndash; ブログのおんがえし</a></li>
-<li><a href="http://milkode.ongaeshi.me/" title="Milkode - 行指向のソースコード検索エンジン">Milkode &ndash; 行指向のソースコード検索エンジン</a></li>
-<li><a href="http://patentfield.com/%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%9A%E3%83%BC%E3%82%B8" title="PatentField | 無料特許検索">PatentField | 無料特許検索</a></li>
-</ul>
-
-
-<h3>ActiveLdap 関連</h3>
-
-<ul>
-<li>値が1個しかなくても常に配列を返す使い方も出来る</li>
-<li>使い方が Net-LDAP より直感的</li>
-</ul>
-
-
-<h3>groonga と競合する?プロダクト</h3>
-
-<ul>
-<li>solr</li>
-<li>lucene</li>
-<li>xapian</li>
-</ul>
-
-
-<h3>mroonga 関連メモ</h3>
-
-<p>他の話はメモしきれなかったので、
-テーブルの情報取得に</p>
-
-<ul>
-<li><code>show create table test;</code></li>
-<li><code>desc test;</code></li>
-</ul>
-
-
-<p>の2種類の方法を使っていたことぐらいはメモしておきたいと思いました。</p>
-
-<h3>ChupaText</h3>
-
-<ul>
-<li>チュパカブラが名前の由来</li>
-<li>groonga と組み合わせれば Hyper Estraier のようなものが作れるかも</li>
-</ul>
-
-
-<h3>Jekyll のコンテンツの翻訳の話</h3>
-
-<ul>
-<li><a href="http://www.clear-code.com/blog/2014/4/23.html" title="Jekyllで複数言語のコンテンツを継続してメンテナンスする方法 - ククログ(2014-04-23)">Jekyllで複数言語のコンテンツを継続してメンテナンスする方法 &ndash; ククログ(2014-04-23)</a></li>
-<li><a href="https://www.ruby-lang.org/admin/translation-status/" title="www.ruby-lang.org - News Post Translation Status">www.ruby-lang.org &ndash; News Post Translation Status</a></li>
-</ul>
-
-
-<h3>須藤さん関連</h3>
-
-<ul>
-<li><a href="http://slide.rabbit-shocker.org/authors/kou/">http://slide.rabbit-shocker.org/authors/kou/</a></li>
-<li><a href="https://github.com/kou">https://github.com/kou</a></li>
-<li><a href="https://github.com/clear-code/sezemi-2014-readable-code">https://github.com/clear-code/sezemi-2014-readable-code</a></li>
-</ul>
-
-
-<h3>最後に須藤さんの過去のプレゼンから</h3>
-
-<ul>
-<li><a href="http://slide.rabbit-shocker.org/authors/kou/devmi-2013/">http://slide.rabbit-shocker.org/authors/kou/devmi-2013/</a></li>
-</ul>
-
-
-<h2>rabbiter 問題</h2>
-
-<p>自己紹介の時に rabbit を使ったので、せっかくなので、
-rabbiter を使おうとしたのですが、今回も事前に動かせる状態までは
-もっていけませんでした。</p>
-
-<p>しかし、
-Homebrew で rabbiter がインストールできなかったり、動かなかったりしたのが、
-須藤さんの助言で解決しました。</p>
-
-<p>まず <code>libffi</code> は <code>PKG_CONFIG_PATH</code> で <code>libffi.pc</code> の場所を指定すれば通りました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>export PKG_CONFIG_PATH=/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig
-</span><span class='line'>gem install rabbiter</span></code></pre></td></tr></table></div></figure>
-
-
-<p>この件は <code>/usr/local/lib/pkgconfig</code> に symlink がないのが問題なので、
-<a href="https://github.com/Homebrew/homebrew/pull/30516">Homebrew 側の問題の修正</a>
-を pull request してみました。</p>
-
-<p>次に <code>rabbiter --filter twitter</code> のように起動しても
-<code>(rabbiter:99703): GLib-GIO-ERROR **: No GSettings schemas are installed on the system</code>
-ですぐに落ちてしまうという問題が起きました。</p>
-
-<p>これは須藤さんに調べてもらって、環境変数 <code>GSETTINGS_SCHEMA_DIR</code> で <code>schemas</code> のディレクトリを指定すれば良いということで、</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>export GSETTINGS_SCHEMA_DIR=/usr/local/Cellar/gsettings-desktop-schemas/3.12.2/share/glib-2.0/schemas
-</span><span class='line'>rabbiter --filter 'twitter'</span></code></pre></td></tr></table></div></figure>
-
-
-<p>のように起動して解決しました。</p>
-
-<p>こちらは対処方法がわからなかったので、
-<a href="https://github.com/Homebrew/homebrew/issues/26455">gsettings-desktop-schemas crashes under current configure options</a>
-という同様の現象が報告されている issue に回避策をコメントしておきました。</p>
-
-<p>その後も以下のエラーで動いていませんでしたが、これは
-<code>~/.rabbit/twitter-oauth.yaml</code>
-が古いままで、アプリ連携の許可を取り消してしまっていたためで、
-ファイルを削除して許可し直せば直りました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% rabbiter --filter 'twitter'
-</span><span class='line'>[エラー]
-</span><span class='line'>[twitter] invalid status code: 401.</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>自分のスライド</h2>
-
-<p>最後に自分の自己紹介の時に使ったスライドを載せておきます。
-<code>ActiveLdap</code> と書いていますが、
-<code>ActiveSambaLdap</code> の間違いでした。</p>
-
-<iframe src="http://slide.rabbit-shocker.org/authors/znz/amagasakirb-201406/viewer.html"
-        width="640" height="524"
-        frameborder="0"
-        marginwidth="0"
-        marginheight="0"
-        scrolling="no"
-        style="border: 1px solid #ccc; border-width: 1px 1px 0; margin-bottom: 5px"
-        allowfullscreen> </iframe>
-
-
-<div style="margin-bottom: 5px">
-  <a href="http://slide.rabbit-shocker.org/authors/znz/amagasakirb-201406/" title="普段使っている須藤さん関連プロダクツ">普段使っている須藤さん関連プロダクツ</a>
-</div>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[環境変数にハッシュの配列を入れてみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-06-25-env-array-hash.html"/>
-    <updated>2014-06-25T21:37:22+09:00</updated>
-    <id>http://blog.n-z.jp/blog/env-array-hash</id>
-    <content type="html"><![CDATA[<p><a href="https://twitter.com/znz/status/481691675136245760">環境変数にハッシュを入れたいと思って、ちょっと考えてみたら LTSV を使えば良いということに気づいた</a>ので、
-実装してみました。
-実際には単独のハッシュではなくハッシュの配列がほしかったので、
-連続する数値を末尾に付けて複数受け取れるようにしています。</p>
-
-<!--more-->
-
-
-<h2>実装</h2>
-
-<p>キーワード引数を使っているので、
-以下の実装のままだと ruby 2.0.0 以降必須です。
-必要なら適当に変更して使ってください。</p>
-
-<div><script src='https://gist.github.com/849166c048a2117c341d.js?file=env_ltsv_each.rb'></script>
-<noscript><pre><code># -*- coding: utf-8 -*-
-# env_ltsv_each.rb
-# copyright (c) 2014 Kazuhiro NISHIYAMA
-# This software is released under the MIT License.
-# http://opensource.org/licenses/MIT
-require &#39;ostruct&#39;
-
-def env_ltsv_each(prefix, start: 0, encoding: Encoding::UTF_8, scrub: false)
-  block_given? or return enum_for(__method__)
-  i = start
-  loop do
-    ltsv = ENV[&quot;#{prefix}_#{i}&quot;]
-    i = i.succ
-    break unless ltsv
-    h = OpenStruct.new
-    ltsv.split(/\t/).each do |pair|
-      key, value = pair.split(&#39;:&#39;, 2)
-      value.force_encoding(encoding)
-      value.scrub! if scrub
-      h[key] = value
-    end
-    yield h
-  end
-  nil
-end
-
-if __FILE__ == $0
-  ENV[&#39;NAVI_0&#39;] = &#39;icon:top label:Top   uri:/&#39;
-  ENV[&#39;NAVI_1&#39;] = &#39;icon:posts   label:Listing Posts uri:/posts&#39;
-  ENV[&#39;NAVI_2&#39;] = &#39;icon:users   label:Listing Users uri:/users&#39;
-  env_ltsv_each(&#39;NAVI&#39;) do |h|
-    puts %Q(&lt;a href=&quot;#{h.uri}&quot;&gt;&lt;img src=&quot;#{h.icon}.png&quot; alt=&quot;#{h.label}&quot;&gt;&lt;/a&gt;)
-    #=&gt;
-    # &lt;a href=&quot;/&quot;&gt;&lt;img src=&quot;top.png&quot; alt=&quot;Top&quot;&gt;&lt;/a&gt;
-    # &lt;a href=&quot;/posts&quot;&gt;&lt;img src=&quot;posts.png&quot; alt=&quot;Listing Posts&quot;&gt;&lt;/a&gt;
-    # &lt;a href=&quot;/users&quot;&gt;&lt;img src=&quot;users.png&quot; alt=&quot;Listing Users&quot;&gt;&lt;/a&gt;
-  end
-end
-</code></pre></noscript></div>
-
-
-<h2>詳細</h2>
-
-<p><code>String#scrub!</code> は 2.1.0 以降か
-<a href="https://rubygems.org/gems/string-scrub">string-scrub gem</a>
-が必要なのでデフォルトでは呼ばないようにしています。</p>
-
-<p><code>Hash</code> だと取り出すのが面倒だったので、
-<code>OpenStruct</code> を使ってみました。
-メソッド名として問題がある場合は
-<code>h['send']</code> のように普通の <code>Hash</code> のように取り出せます。</p>
-
-<p>添字をまわすのに <code>succ</code> を使っているので <code>FOO_A</code>, <code>FOO_B</code>, &hellip; のような使い方も出来ると思います。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[caffでキーサインした]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-06-22-key-sign-caff.html"/>
-    <updated>2014-06-22T19:07:19+09:00</updated>
-    <id>http://blog.n-z.jp/blog/key-sign-caff</id>
-    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20140622" title="第 85 回 関西 Debian 勉強会">第 85 回 関西 Debian 勉強会</a>
-で
-<a href="https://launchpad.net/~mocchi">坂本さん</a>とキーサインをしたので、そのメモです。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Ubuntu 12.04.4 LTS</li>
-<li>gnupg 1.4.11-3ubuntu2.5</li>
-<li>signing-party 1.1.4-1</li>
-</ul>
-
-
-<h2>事前準備</h2>
-
-<p>事前にキーサインをするとわかっていれば <code>gpg-key2ps</code> コマンドで fingerprint の紙を用意しておくと良いと思います。
-今回は少人数だったので、
-fingerprint は画面上で見せて確認してもらいました。</p>
-
-<h2>本人確認</h2>
-
-<p>対面で運転免許証などの写真付きの身分証明書で名前を確認して、
-それと署名対象の鍵の uid に入っている名前が一致するのを確認しておきます。
-また、後で署名するために fingerprint の情報も入手しておきます。</p>
-
-<h2>caff の設定</h2>
-
-<p>基本的には
-<a href="http://tokyodebian.alioth.debian.org/pdf/debianmeetingresume200910-presentation.pdf">Why GPG Key sign? 東京エリア Debian 勉強会 in OSC 2009 Tokyo/Fall</a>
-の PDF の内容のままです。</p>
-
-<h3>.caffrc</h3>
-
-<p>自分の鍵 ID を <code>gpg --list-secret-keys</code> で確認すると、
-<code>4096R/B4222F7A</code> とわかるので、
-<code>gpg --fingerprint B4222F7A</code>
-で fingerprint 全体を確認しておきます。
-(fingerprint の末尾が鍵 ID です。)</p>
-
-<p>spam よけのために email のところはちょっと改変していますが、
-<code>~/.caffrc</code> は以下のように設定しています。
-<code>keyid</code> は fingerprint の末尾のうち、
-設定例と同じ長さだけ普通の鍵 ID よりちょっと長めに取り出して設定しています。
-<code>owner</code> と <code>email</code> はメール送信の時に使われます。</p>
-
-<figure class='code'><figcaption><span>~/.caffrc</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-</pre></td><td class='code'><pre><code class='perl'><span class='line'><span class="c1"># .caffrc -- vim:ft=perl:</span>
-</span><span class='line'><span class="c1"># This file is in perl(1) format - see caff(1) for details.</span>
-</span><span class='line'>
-</span><span class='line'><span class="nv">$CONFIG</span><span class="p">{</span><span class="s">&#39;owner&#39;</span><span class="p">}</span> <span class="o">=</span> <span class="s">&#39;Kazuhiro NISHIYAMA&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="nv">$CONFIG</span><span class="p">{</span><span class="s">&#39;email&#39;</span><span class="p">}</span> <span class="o">=</span> <span class="s">&#39;zn mbf.nifty.com&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="c1">#$CONFIG{&#39;reply-to&#39;} = &#39;foo@bla.org&#39;;</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1"># You can get your long keyid from</span>
-</span><span class='line'><span class="c1">#   gpg --with-colons --list-key &lt;yourkeyid|name|emailaddress..&gt;</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="c1"># If you have a v4 key, it will simply be the last 16 digits of</span>
-</span><span class='line'><span class="c1"># your fingerprint.</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="c1"># Example:</span>
-</span><span class='line'><span class="c1">#   $CONFIG{&#39;keyid&#39;} = [ qw{FEDCBA9876543210} ];</span>
-</span><span class='line'><span class="c1">#  or, if you have more than one key:</span>
-</span><span class='line'><span class="c1">#   $CONFIG{&#39;keyid&#39;} = [ qw{0123456789ABCDEF 89ABCDEF76543210} ];</span>
-</span><span class='line'><span class="nv">$CONFIG</span><span class="p">{</span><span class="s">&#39;keyid&#39;</span><span class="p">}</span> <span class="o">=</span> <span class="p">[</span> <span class="sx">qw{262ED8DBB4222F7A}</span> <span class="p">];</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1"># Select this/these keys to sign with</span>
-</span><span class='line'><span class="c1">#$CONFIG{&#39;local-user&#39;} = [ qw{EE739B28C657086C 9B585538ED7E1B73 262ED8DBB4222F7A C9429DABCB28285B} ];</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1"># Additionally encrypt messages for these keyids</span>
-</span><span class='line'><span class="c1">#$CONFIG{&#39;also-encrypt-to&#39;} = [ qw{EE739B28C657086C 9B585538ED7E1B73 262ED8DBB4222F7A C9429DABCB28285B} ];</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1"># Mail template to use for the encrypted part</span>
-</span><span class='line'><span class="c1">#$CONFIG{&#39;mail-template&#39;} = &lt;&lt; &#39;EOM&#39;;</span>
-</span><span class='line'><span class="c1">#Hi,</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="c1">#please find attached the user id{(scalar @uids &gt;= 2 ? &#39;s&#39; : &#39;&#39;)}</span>
-</span><span class='line'><span class="c1">#{foreach $uid (@uids) {</span>
-</span><span class='line'><span class="c1">#    $OUT .= &quot;\t&quot;.$uid.&quot;\n&quot;;</span>
-</span><span class='line'><span class="c1">#};}of your key {$key} signed by me.</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="c1">#If you have multiple user ids, I sent the signature for each user id</span>
-</span><span class='line'><span class="c1">#separately to that user id&#39;s associated email address. You can import</span>
-</span><span class='line'><span class="c1">#the signatures by running each through `gpg --import`.</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="c1">#Note that I did not upload your key to any keyservers. If you want this</span>
-</span><span class='line'><span class="c1">#new signature to be available to others, please upload it yourself.</span>
-</span><span class='line'><span class="c1">#With GnuPG this can be done using</span>
-</span><span class='line'><span class="c1">#       gpg --keyserver pool.sks-keyservers.net --send-key {$key}</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="c1">#If you have any questions, don&#39;t hesitate to ask.</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="c1">#Regards,</span>
-</span><span class='line'><span class="c1">#{$owner}</span>
-</span><span class='line'><span class="c1">#EOM</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>~/.caff/gnupghome/gpg.conf の設定</h3>
-
-<p>以前参考にした設定のまま</p>
-
-<figure class='code'><figcaption><span>~/.caff/gnupghome/gpg.conf</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>keyserver pgp.mit.edu
-</span><span class='line'>cert-digest-algo SHA256
-</span><span class='line'>personal-digest-preferences SHA256
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>となっていました。
-PDF では SHA512 になっていたので、
-SHA256 から SHA512 に変更しました。
-今日の caff での署名した時点では SHA256 のままだったので、
-次回から変わる予定です。</p>
-
-<figure class='code'><figcaption><span>~/.caff/gnupghome/gpg.conf</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>keyserver pgp.mit.edu
-</span><span class='line'>cert-digest-algo SHA512
-</span><span class='line'>personal-digest-preferences SHA512
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>caff -u で署名</h2>
-
-<p>spam よけのためメールアドレスの所は改変した状態のログは以下の通りです。
-「本当に署名しますか? (y/N)」のところで身分証明書と一緒に確認した fingerprint と合っているか確認します。</p>
-
-<p>最後にメールを送信して終了です。
-相手の鍵で暗号化されたメールが localhost の SMTP サーバー送信されます。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> caff -u B4222F7A D66FD341
-</span><span class='line'><span class="go">[INFO] Importing key 262ED8DBB4222F7A from your normal GnuPGHome.</span>
-</span><span class='line'><span class="go">[INFO] fetching keys, this will take a while...</span>
-</span><span class='line'><span class="go">[INFO] Sign the following keys according to your policy, then exit gpg with &#39;save&#39; after signing each key</span>
-</span><span class='line'><span class="go">gpg --local-user B4222F7A --homedir=/home/kazu/.caff/gnupghome --secret-keyring /home/kazu/.gnupg/secring.gpg --no-auto-check-trustdb --trust-model=always --edit 25DA5B9699F132DB74BD2270B5A586C7D66FD341 sign</span>
-</span><span class='line'><span class="go">gpg (GnuPG) 1.4.11; Copyright (C) 2010 Free Software Foundation, Inc.</span>
-</span><span class='line'><span class="go">This is free software: you are free to change and redistribute it.</span>
-</span><span class='line'><span class="go">There is NO WARRANTY, to the extent permitted by law.</span>
-</span><span class='line'>
-</span><span class='line'>
-</span><span class='line'><span class="go">pub  4096R/D66FD341  作成: 2014-06-22  満了: 無期限       利用法: SC</span>
-</span><span class='line'><span class="go">sub  4096R/5D3BA622  作成: 2014-06-22  満了: 無期限       利用法: E</span>
-</span><span class='line'><span class="go">[ unknown] (1). Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt;</span>
-</span><span class='line'>
-</span><span class='line'>
-</span><span class='line'><span class="go">pub  4096R/D66FD341  作成: 2014-06-22  満了: 無期限       利用法: SC</span>
-</span><span class='line'><span class="go"> 主鍵の指紋: 25DA 5B96 99F1 32DB 74BD  2270 B5A5 86C7 D66F D341</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">     Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">本当にこの鍵にあなたの鍵“Kazuhiro NISHIYAMA &lt;zn mbf.nifty.com&gt;”で署名してよいですか</span>
-</span><span class='line'><span class="go">(B4222F7A)</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">本当に署名しますか? (y/N) y</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">次のユーザーの秘密鍵のロックを解除するには</span>
-</span><span class='line'><span class="go">パスフレーズがいります:“Kazuhiro NISHIYAMA &lt;zn mbf.nifty.com&gt;”</span>
-</span><span class='line'><span class="go">4096ビットRSA鍵, ID B4222F7A作成日付は2010-06-27</span>
-</span><span class='line'>
-</span><span class='line'>
-</span><span class='line'><span class="go">gpg&gt; save</span>
-</span><span class='line'><span class="go">[INFO] B5A586C7D66FD341 1 Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt; done.</span>
-</span><span class='line'><span class="go">[INFO] key 25DA5B9699F132DB74BD2270B5A586C7D66FD341 done.</span>
-</span><span class='line'><span class="go">Mail signature for Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt; to &#39;o-takashi sakamocchi.jp&#39;? [Y/n]</span>
-</span><span class='line'><span class="gp">%</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>caff からのメールを受け取った相手のすべきこと</h2>
-
-<p>暗号化されたメールが届くので、
-対応する秘密鍵を使って復号してメールを確認します。
-さらにその中にある署名を自分の鍵束にインポートしてキーサーバーに送信します。</p>
-
-<p>caff のやり方はここでメールアドレスの到達性もチェックしているようなので、
-署名した側はキーサーバーに送信する必要はなさそうです。
-むしろそういうことをしないようにするために
-<code>~/.caff/gnupghome</code> に独自の鍵束を用意しているように思いました。</p>
 ]]></content>
   </entry>
   

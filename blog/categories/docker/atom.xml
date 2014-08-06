@@ -4,7 +4,7 @@
   <title><![CDATA[Category: docker | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/docker/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-03T12:32:03+09:00</updated>
+  <updated>2014-08-07T00:26:11+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,245 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[boot2docker で VM のファイルをコンテナやホストと共有する]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-08-06-docker-volume.html"/>
+    <updated>2014-08-06T23:17:27+09:00</updated>
+    <id>http://blog.n-z.jp/blog/docker-volume</id>
+    <content type="html"><![CDATA[<p>Mac OS X 上の <code>boot2docker</code> でホストとコンテナでファイルを共有する方法を試してみました。
+さらに <code>boot2docker ssh</code> で入ったときにも見えるような設定でも試してみました。</p>
+
+<!--more-->
+
+
+<h2>参考</h2>
+
+<ul>
+<li><a href="http://qiita.com/numa08/items/e52bd18611ac159af1ac" title="boot2dockerでコンテナからホストのファイルを参照する - Qiita">boot2dockerでコンテナからホストのファイルを参照する &ndash; Qiita</a></li>
+<li><a href="https://github.com/boot2docker/boot2docker#folder-sharing" title="Folder sharing">Folder sharing</a></li>
+<li><a href="https://docs.docker.com/userguide/dockervolumes/" title="Managing data in containers - Docker Documentation">Managing data in containers &ndash; Docker Documentation</a></li>
+</ul>
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Mac OS X 10.9.4</li>
+<li>VirtualBox 4.3.14</li>
+<li>docker 1.1.2</li>
+<li>boot2docker 1.1.2</li>
+</ul>
+
+
+<h2>実行コマンド</h2>
+
+<ul>
+<li><code>docker run -v /mnt/sda1/data:/data --name my-data busybox true</code> で共有ボリューム用コンテナ作成</li>
+<li><code>docker run --rm -v /usr/local/bin/docker:/docker -v /var/run/docker.sock:/docker.sock svendowideit/samba my-data</code> で samba 起動</li>
+<li><code>docker run -it --rm --volumes-from my-data ubuntu /bin/bash</code> で確認</li>
+</ul>
+
+
+<h3>共有ボリューム用コンテナ作成</h3>
+
+<p><a href="http://blog.n-z.jp/blog/2013-12-24-docker-rm.html" title="Dockerで不要になったコンテナやイメージを削除する">Dockerで不要になったコンテナやイメージを削除する</a>
+のように <code>docker ps -a -q | xargs docker rm</code> などで停止しているコンテナを削除してしまうと
+<code>my-data</code> という名前を付けたデータ保存用のコンテナも消えてしまうので、
+<code>boot2docker</code> では永続化されているパーティションの <code>/mnt/sda1</code> に <code>data</code> をおくことにしました。</p>
+
+<p>run の時点で <code>/mnt/sda1/data</code> は自動作成されるので、
+あらかじめ作っておく必要はありません。</p>
+
+<p>間違えてコンテナを削除してしまった場合は
+<code>docker run -v /mnt/sda1/data:/data --name my-data busybox true</code>
+で作成し直せばデータは残ったまま <code>my-data</code> コンテナを再作成できます。</p>
+
+<p>このやり方は docker を動かすホストに依存してしまうので、
+一般には標準のボリュームコンテナを作成する方法の方がおすすめのようです。</p>
+
+<h3>共有ボリューム用コンテナ再作成 (標準の方法の場合)</h3>
+
+<p><code>--volumes-from</code> で指定した共有は使っているコンテナがなくなってしまっても内容が残っていますが、
+名前で指定して取り出す方法がなくなってしまうように見えます。</p>
+
+<p><code>my-data</code> コンテナを削除してしまった場合、
+<code>--volumes-from my-data</code> は使えなくなるので、
+<code>docker run --volumes-from samba-server --name my-data busybox true</code>
+のように残っているコンテナを <code>--volumes-from</code> で指定して再作成すれば、
+また <code>docker run -it --rm --volumes-from my-data ubuntu /bin/bash</code> のように
+<code>--volumes-from</code> に <code>my-data</code> を指定できるようになります。</p>
+
+<h3>samba 起動</h3>
+
+<p><code>docker run --rm -v /usr/local/bin/docker:/docker -v /var/run/docker.sock:/docker.sock svendowideit/samba my-data</code>
+で samba を起動します。</p>
+
+<p><code>docker.sock</code> も渡しているので、多重起動しないように既存の <code>samba-server</code> は止めてくれるようです。</p>
+
+<p>起動時に以下のようにホスト側からの接続方法の説明が出ます。</p>
+
+<pre><code>% docker run --rm -v /usr/local/bin/docker:/docker -v /var/run/docker.sock:/docker.sock svendowideit/samba my-data
+stopping and removing existing server
+starting samba server container sharing my-data:/data
+
+# run 'docker logs samba-server' to view the samba logs
+
+================================================
+
+Your data volume (/data) should now be accessible at \\&lt;docker ip&gt;\ as 'guest' user (no password)
+
+For example, on OSX, using a typical boot2docker vm:
+    goto Go|Connect to Server in Finder
+    enter 'cifs://192.168.59.103
+    hit the 'Connect' button
+    select the volumes you want to mount
+    choose the 'Guest' radiobox and connect
+
+Or on Linux:
+    mount -t cifs //192.168.59.103/data /mnt/data -o username=guest
+
+Or on Windows:
+    Enter '\\192.168.59.103\data' into Explorer
+    Log in as Guest - no password
+</code></pre>
+
+<h3>samba に接続</h3>
+
+<p><code>boot2docker ip</code> で IP アドレスを確認して、
+<code>192.168.59.103</code> なら、
+<code>Finder</code> の <code>サーバへ接続</code> (メニューの <code>移動</code> の <code>サーバーへ接続...</code>) を開いて、
+サーバアドレスとして <code>cifs://192.168.59.103/data</code> を入力して <code>接続</code> します。
+<code>ユーザの種類</code> は <code>ゲスト</code> を選んで <code>接続</code> します。
+すると <code>/Volumes/data</code> で見えるようになります。</p>
+
+<p>Linux なら <code>mount -t cifs //192.168.59.103/data /mnt/data -o username=guest</code> のようにマウントするそうです。</p>
+
+<p>Windows ならエクスプローラーで <code>\\192.168.59.103\data</code> にパスワードなしのゲスト接続すれば見えるそうです。</p>
+
+<h3>別コンテナで確認</h3>
+
+<p><code>docker run -it --rm --volumes-from my-data ubuntu /bin/bash</code> などで別コンテナを起動すると、
+<code>/data</code> にマウントされているので、
+<code>ls -l /data</code> で中身を確認したり、
+<code>/data</code> の中にファイルを作成して他で見えることを確認しました。</p>
+
+<h2>まとめ</h2>
+
+<p><a href="https://github.com/boot2docker/boot2docker#folder-sharing">README に書いてある Folder sharing</a>
+だと間違えて消してしまうことがあったので、ちょっと工夫した方法を紹介しました。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[boot2docker のバージョンアップ]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-08-06-boot2docker-upgrade.html"/>
+    <updated>2014-08-06T23:10:26+09:00</updated>
+    <id>http://blog.n-z.jp/blog/boot2docker-upgrade</id>
+    <content type="html"><![CDATA[<p>boot2docker の ISO の更新は専用コマンドで簡単にできるとわかったので、
+わざと古いバージョンに戻したりして動作確認してみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Mac OS X 10.9.4</li>
+<li>VirtualBox 4.3.14</li>
+<li>docker 1.1.2</li>
+<li>boot2docker 1.1.2</li>
+</ul>
+
+
+<h2>更新準備</h2>
+
+<p><code>boot2docker delete</code> して消してから ISO を更新して
+<code>boot2docker init</code> で作り直すという説明もありますが、
+再起動しても残る部分は ISO とは別の仮想ディスクの <code>/dev/sda1</code> に保存されていて、
+そのまま使い回せることがほとんどなので、
+作り直さなくても更新できます。</p>
+
+<p>大きくバージョンをあげるとか、クリーンな環境でやり直したいと言うときは消して作り直せば良いと思います。</p>
+
+<p>参考: <a href="http://qiita.com/tukiyo3/items/07f1eb77b5ffd9031e30" title="boot2dockerのデータ永続化まとめ - Qiita">boot2dockerのデータ永続化まとめ &ndash; Qiita</a></p>
+
+<h2>更新方法</h2>
+
+<h3>VM を停止して更新</h3>
+
+<p><code>boot2docker upgrade</code> で VM が起動していれば停止して更新して起動し直してくれます。</p>
+
+<h3>ISO だけ更新</h3>
+
+<p><code>boot2docker download</code> で ISO だけ無条件にダウンロードしてくれます。</p>
+
+<h3>boot2docker help</h3>
+
+<p>以上の説明は <code>boot2docker help</code> にちゃんと書いてある通りです。</p>
+
+<p>```
+% boot2docker help
+Usage: boot2docker [<options>] <command> [<args>]</p>
+
+<p>boot2docker management utility.</p>
+
+<p>Commands:</p>
+
+<pre><code>init                    Create a new boot2docker VM.
+up|start|boot           Start VM from any states.
+ssh [ssh-command]       Login to VM via SSH.
+save|suspend            Suspend VM and save state to disk.
+down|stop|halt          Gracefully shutdown the VM.
+restart                 Gracefully reboot the VM.
+poweroff                Forcefully power off the VM (might corrupt disk image).
+reset                   Forcefully power cycle the VM (might corrupt disk image).
+delete|destroy          Delete boot2docker VM and its disk image.
+config|cfg              Show selected profile file settings.
+info                    Display detailed information of VM.
+ip                      Display the IP address of the VM's Host-only network.
+status                  Display current state of VM.
+download                Download boot2docker ISO image.
+upgrade                 Upgrade the boot2docker ISO image (if vm is running it will be stopped and started).
+version                 Display version information.
+</code></pre>
+
+<p>Options:</p>
+
+<pre><code>  --basevmdk="": Path to VMDK to use as base for persistent partition
+  --dhcp=true: enable VirtualBox host-only network DHCP.
+  --dhcpip=192.168.59.99: VirtualBox host-only network DHCP server address.
+</code></pre>
+
+<p>  -s, &mdash;disksize=20000: boot2docker disk image size (in MB).</p>
+
+<pre><code>  --dockerport=2375: host Docker port (forward to port 2375 in VM).
+  --hostip=192.168.59.3: VirtualBox host-only network IP address.
+  --iso="/Users/knishiyama/.boot2docker/boot2docker.iso": path to boot2docker ISO image.
+  --lowerip=192.168.59.103: VirtualBox host-only network DHCP lower bound.
+</code></pre>
+
+<p>  -m, &mdash;memory=2048: virtual machine memory size (in MB).</p>
+
+<pre><code>  --netmask=ffffff00: VirtualBox host-only network mask.
+  --serial=false: try serial console to get IP address (experimental)
+  --serialfile="": path to the serial socket/pipe.
+  --ssh="ssh": path to SSH client utility.
+  --ssh-keygen="ssh-keygen": path to ssh-keygen utility.
+  --sshkey="/Users/knishiyama/.ssh/id_boot2docker": path to SSH key to use.
+  --sshport=2022: host SSH port (forward to port 22 in VM).
+  --upperip=192.168.59.254: VirtualBox host-only network DHCP upper bound.
+  --vbm="VBoxManage": path to VirtualBox management utility.
+</code></pre>
+
+<p>  -v, &mdash;verbose=false: display verbose command invocations.</p>
+
+<pre><code>  --vm="boot2docker-vm": virtual machine name.
+</code></pre>
+
+<p>```</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[RubyLiveを仮想環境で作成]]></title>
@@ -441,382 +680,6 @@ rebuild.fm で話があったブランチごとよりもさらに富豪的に、
 <h2>終わり</h2>
 
 <p>他の発表の時間に余裕を持たせていて、パネルディスカッションはありませんでした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[boot2dockerでdockerを試す]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-02-23-boot2docker.html"/>
-    <updated>2014-02-23T00:47:22+09:00</updated>
-    <id>http://blog.n-z.jp/blog/boot2docker</id>
-    <content type="html"><![CDATA[<p>boot2docker で最新の docker を試してみました。
-他ではあまり書いていないアンインストール方法も書いているので、
-不要になった時や何か変になった時の削除方法も参考になると思います。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Mac OS X 10.9.1 で試しましたが Linux でも同様に動くはずです</li>
-<li>VirtualBox 4.3.6</li>
-<li>boot2docker 0.6.0</li>
-<li>docker 0.8.1</li>
-</ul>
-
-
-<p>014-08-03 追記: 追記部分の確認バージョン</p>
-
-<ul>
-<li>boot2docker 1.1.2</li>
-<li>docker 1.1.2</li>
-</ul>
-
-
-<h2>VirtualBox</h2>
-
-<p>あらかじめ VirtualBox をインストールしておきます。</p>
-
-<h2>boot2docker</h2>
-
-<p><a href="http://docs.docker.io/en/latest/installation/mac/">http://docs.docker.io/en/latest/installation/mac/</a> の手順に従って
-<code>boot2docker</code> を入れてみます。</p>
-
-<h3>インストール</h3>
-
-<p>適当なディレクトリに <code>boot2docker</code> をダウンロードして実行可能にします。</p>
-
-<p><code>
- mkdir -p ~/boot2docker
- cd ~/boot2docker
- curl https://raw.github.com/boot2docker/boot2docker/master/boot2docker &gt; boot2docker
- chmod +x boot2docker
-</code></p>
-
-<p>この段階でのアンインストールは <code>boot2docker</code> を削除するだけです。</p>
-
-<p>(2014-08-03 追記:
-Mac OS X なら
-<code>brew install boot2docker</code>
-などでもインストールできます。)</p>
-
-<h3>VM イメージの作成</h3>
-
-<p>初回は <code>./boot2docker init</code> を実行して iso のダウンロードと VM の作成をします。</p>
-
-<p>(2014-08-03 追記:
-ISO のダウンロードだけなら <code>boot2docker download</code> で、
-既に ISO があっても最新にするなら <code>boot2docker upgrade</code> で
-ダウンロードできます。)</p>
-
-<p>```
-% ./boot2docker init
-[2014-02-22 23:43:36] Creating VM boot2docker-vm
-Virtual machine &lsquo;boot2docker-vm&rsquo; is created and registered.
-UUID: 61e0ec36-fc80-4b70-ac11-899f6526a57e
-Settings file: &lsquo;/Users/kazu/VirtualBox VMs/boot2docker-vm/boot2docker-vm.vbox&rsquo;
-[2014-02-22 23:43:36] Setting VM settings
-[2014-02-22 23:43:36] Setting VM networking
-[2014-02-22 23:43:36] boot2docker.iso not found.
-[2014-02-22 23:43:38] Latest version is v0.6.0, downloading&hellip;
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current</p>
-
-<pre><code>                             Dload  Upload   Total   Spent    Left  Speed
-</code></pre>
-
-<p>100   346  100   346    0     0    319      0  0:00:01  0:00:01 &mdash;:&mdash;:&mdash;   319
-100 24.0M  100 24.0M    0     0   295k      0  0:01:23  0:01:23 &mdash;:&mdash;:&mdash;  498k
-[2014-02-22 23:45:02] Done
-[2014-02-22 23:45:02] Setting VM disks
-[2014-02-22 23:45:02] Creating 40000 Meg hard drive&hellip;
-Converting from raw image file=&ldquo;stdin&rdquo; to file=&ldquo;/Users/kazu/.boot2docker/boot2docker-vm.vmdk&rdquo;&hellip;
-Creating dynamic image with size 41943040000 bytes (40000MB)&hellip;
-[2014-02-22 23:45:02] Done.
-[2014-02-22 23:45:02] You can now type boot2docker up and wait for the VM to start.
-```</p>
-
-<p>この段階のやり直しは VM が起動していれば <code>./boot2docker stop</code> で止めて、
-<code>./boot2docker delete</code> で VM を削除するだけではダメで、
-<code>~/.boot2docker</code> も削除する必要があります。</p>
-
-<p>パスは <code>boot2docker</code> の中の <code>BOOT2DOCKER_CFG_DIR</code> に書かれていて、
-以下の設定は <code>$HOME/.boot2docker/profile</code> で設定変更できます。</p>
-
-<ul>
-<li><code>VM_NAME</code> : VirtualBox での VM の名前 (デフォルト: <code>boot2docker-vm</code>)</li>
-<li><code>DOCKER_PORT</code> : ホスト側で docker 用に使うポート (デフォルト: <code>4243</code>)</li>
-<li><code>SSH_HOST_PORT</code> : ホスト側で ssh サーバー用に使うポート (デフォルト: <code>2022</code>)</li>
-<li><code>VM_DISK</code> : vmdk ファイルのパス (デフォルト: <code>${BOOT2DOCKER_CFG_DIR}/${VM_NAME}.vmdk</code>)</li>
-<li><code>VM_DISK_SIZE</code> : vmdk の容量 (デフォルト: <code>40000</code> メガバイト)</li>
-<li><code>VM_MEM</code> : メモリ (デフォルト: <code>1024</code>)</li>
-<li><code>BOOT2DOCKER_ISO</code> : ISO ファイルのパス (デフォルト: <code>${BOOT2DOCKER_CFG_DIR}/boot2docker.iso</code>)</li>
-</ul>
-
-
-<p>VM を作り直すだけなら <code>./boot2docker delete</code> して <code>./boot2docker init</code> すれば
-ISO はダウンロードし直さずに VM だけ作り直せます。</p>
-
-<p>間違えて先に <code>~/.boot2docker</code> を削除してしまうと VirtualBox の状態が不整合になるので、
-VirtualBox の GUI の方の仮想メディアマネージャーで存在しなくっているファイルを除去するなどの対処をして直します。</p>
-
-<h3>VM の起動</h3>
-
-<p>docker デーモンの VM を <code>./boot2docker up</code> で起動します。</p>
-
-<p>```
-% ./boot2docker up
-[2014-02-22 23:50:43] Starting boot2docker-vm&hellip;
-[2014-02-22 23:51:03] Started.</p>
-
-<p>To connect the docker client to the Docker daemon, please set:
-export DOCKER_HOST=tcp://localhost:4243</p>
-
-<p>```</p>
-
-<p>止めるのは <code>./boot2docker stop</code> です。</p>
-
-<h3>ssh で中に入る</h3>
-
-<p><code>vagrant</code> と似た感じで <code>./boot2docker ssh</code> で中に入れます。
-ユーザーは <code>docker</code> でパスワードは <code>tcuser</code> です。
-Tiny Core Linux ベースなので、こういうパスワードになっているのだと思います。</p>
-
-<p>(2014-08-03 追記:
-最近の boot2docker では、
-ssh でのログインや sudo はパスワードなしで出来るようになっているようです。
-<code>su - docker</code> で確認したところ、パスワードは <code>tcuser</code> のままでした。)</p>
-
-<p>```
-% ./boot2docker ssh
-docker@localhost&rsquo;s password:</p>
-
-<pre><code>                    ##        .
-              ## ## ##       ==
-           ## ## ## ##      ===
-       /""""""""""""""""\___/ ===
-  ~~~ {~~ ~~~~ ~~~ ~~~~ ~~ ~ /  ===- ~~~
-       \______ o          __/
-         \    \        __/
-          \____\______/
-</code></pre>
-
-<hr />
-
-<p>| |<strong>   </strong><em>   </em><strong> | |<em>|</em></strong> \ <strong>| | </strong><em>   </em><strong>| | </strong><em><strong> _ </strong>
-| &lsquo;</em> \ / _ \ / _ \| <strong>| </strong>) / <em>` |/ _ \ / <strong>| |/ / _ \ &rsquo;</strong>|
-| |</em>) | (<em>) | (</em>) | |<em> / __/ (</em>| | (<em>) | (<strong>|   &lt;  </strong>/ |
-|</em>.<strong>/ _</strong>/ _<strong>/ _<em>|</em></strong><strong>_<em>,</em>|_</strong>/ _<strong>|_|__</strong>|_|
-boot2docker: 0.6.0
-docker@boot2docker:~$
-```</p>
-
-<h2>docker を使ってみる</h2>
-
-<p>ホスト OS 側に docker コマンドをインストールして、そこから使っても良いのですが、
-Homebrew でインストールできたバージョンが 0.8.0 で少し古かったので、
-主に VM の中の docker コマンドを使いました。</p>
-
-<p>ドキュメントでは <code>sudo docker</code> で実行していますが、
-TCP 接続だったり、ローカルの unix socket の場合でもグループのアクセス権限で許可されている場合などは
-<code>sudo</code> なしの <code>docker</code> コマンドだけで大丈夫です。</p>
-
-<p><code>boot2docker</code> の VM の場合は <code>/var/run/docker.sock</code> が <code>docker</code> グループに読み書きが許可されていて、
-<code>docker</code> ユーザーが <code>docker</code> グループに属しているため、 <code>sudo</code> が不要になっています。</p>
-
-<h3>バージョンなどの情報確認</h3>
-
-<p><code>docker version</code> や <code>docker info</code> で情報を確認します。</p>
-
-<p><code>boot2docker</code> の場合は問題ないと思いますが、
-docker のサーバーとの接続がうまくいかない場合はここでエラーなどになるので、
-環境変数 <code>DOCKER_HOST</code> やポートフォワーディングや firewall などの設定を確認します。</p>
-
-<p>まず VM の外の Homebrew でインストールした docker コマンドから確認しました。
-ここでバージョンが古かったので、後は ssh で入った VM の中で docker コマンドを使うことにしました。</p>
-
-<p>(2014-08-03 追記:
-最近のバージョンでは <code>boot2docker up</code> の時に
-<code>export DOCKER_HOST=tcp://192.168.59.103:2375</code>
-のようなメッセージが出てくるように docker の接続に使う IP アドレスとポート番号が変わっています。)</p>
-
-<p>```
-% export DOCKER_HOST=tcp://127.0.0.1:4243
-% docker version
-Client version: 0.8.0
-Go version (client): go1.2
-Git commit (client): cc3a8c8d8ec57e15b7b7316797132d770408ab1a</p>
-
-<p>Server version: 0.8.1
-Git commit (server): a1598d1
-Go version (server): go1.2
-Last stable version: 0.8.1, please update docker
-```</p>
-
-<p>VM の中では Server と Client のバージョンが最新版で一致しています。
-ついでに <code>docker info</code> も確認しました。</p>
-
-<p><code>
-docker@boot2docker:~$ docker version
-Client version: 0.8.1
-Go version (client): go1.2
-Git commit (client): a1598d1
-Server version: 0.8.1
-Git commit (server): a1598d1
-Go version (server): go1.2
-Last stable version: 0.8.1
-docker@boot2docker:~$ docker info
-Containers: 0
-Images: 0
-Driver: aufs
- Root Dir: /mnt/sda1/var/lib/docker/aufs
- Dirs: 0
-Debug mode (server): true
-Debug mode (client): false
-Fds: 10
-Goroutines: 13
-Execution Driver: lxc-0.8.0
-EventsListeners: 0
-Kernel Version: 3.13.3-tinycore64
-Init Path: /usr/local/bin/docker
-docker@boot2docker:~$
-</code></p>
-
-<h3>docker を試してみる</h3>
-
-<p><code>docker pull ubuntu</code> であらかじめダウンロードしてから <code>docker run</code> を実行しても良いのですが、
-いきなり <code>docker run -i -t ubuntu /bin/bash</code> を実行しても、
-自動的にダウンロードしてから実行されます。</p>
-
-<p>ダウンロードはサーバー側が遅いのか、時間がかかることがあるようなので、
-ゆっくり待った方が良さそうです。</p>
-
-<p>引数に指定した <code>/bin/bash</code> がコンテナの中の唯一のプロセスとして起動するので、
-自由に試してみて、 <code>exit</code> などで <code>/bin/bash</code> が終了すればコンテナも終了します。</p>
-
-<p><code>
-docker@boot2docker:~$ docker run -i -t ubuntu /bin/bash
-Unable to find image 'ubuntu' locally
-Pulling repository ubuntu
-9cd978db300e: Download complete
-eb601b8965b8: Download complete
-5ac751e8d623: Download complete
-9cc9ea5ea540: Download complete
-9f676bd305a4: Download complete
-511136ea3c5a: Download complete
-f323cf34fd77: Download complete
-6170bb7b0ad1: Download complete
-1c7f181e78b9: Download complete
-7a4f87241845: Download complete
-321f7f4200f4: Download complete
-root@a64cca91db41:/# ps -ef
-UID        PID  PPID  C STIME TTY          TIME CMD
-root         1     0  0 15:32 ?        00:00:00 /bin/bash
-root         9     1  0 15:33 ?        00:00:00 ps -ef
-root@a64cca91db41:/# exit
-exit
-docker@boot2docker:~$
-</code></p>
-
-<p><a href="http://blog.n-z.jp/blog/2013-12-24-docker-rm.html">Dockerで不要になったコンテナやイメージを削除する</a>
-に書いたようにコンテナが溜まっていくので、削除しておきます。</p>
-
-<p><code>
-docker@boot2docker:~$ docker ps -a -q
-a64cca91db41
-docker@boot2docker:~$ docker rm `docker ps -a -q`
-a64cca91db41
-docker@boot2docker:~$
-</code></p>
-
-<p>ちょっと試すだけなら <code>-rm</code> オプションを付けて自動削除するのが良さそうです。</p>
-
-<p>(2014-08-03 追記:
-最近の <code>docker</code> では <code>-rm</code> ではなく <code>--rm</code> を使うように警告
-「<code>Warning: '-rm' is deprecated, it will be replaced by '--rm' soon. See usage.</code>」
-が出てくるので、
-将来のバージョンでは長いオプションには <code>-</code> 2個が必須になるようです。)</p>
-
-<p><code>
-docker@boot2docker:~$ docker run -i -t -rm ubuntu /bin/bash
-root@f810cbccf394:/# exit
-exit
-docker@boot2docker:~$ docker ps -a -q
-docker@boot2docker:~$
-</code></p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[installコマンドでコマンド数を減らす]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-02-14-install.html"/>
-    <updated>2014-02-14T23:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/install</id>
-    <content type="html"><![CDATA[<p>mkdir とか touch とか chown とか chmod とか個別に実行しなくても
-install コマンドだけでまとめて出来るという話です。</p>
-
-<!--more-->
-
-
-<h2>問題例</h2>
-
-<p>Dockerfile の RUN などが典型的な例ですが、他でも例えば
-<code>mkdir -p /home/foo/.ssh; chown foo /home/foo/.ssh; chmod 0700 /home/foo/.ssh</code>
-のようなことをすることがあると思います。</p>
-
-<p>特に Dockerfile の場合は RUN ごとにイメージがたまっていくこともあって、
-<code>;</code> や <code>&amp;&amp;</code> でつなげて単独の RUN にまとめて書くことも多いと思います。</p>
-
-<h2>install でディレクトリを作る</h2>
-
-<p>たとえば</p>
-
-<p><code>
- mkdir -p /home/foo/.ssh
- chown foo /home/foo/.ssh
- chgrp users /home/foo/.ssh
- chmod 0700 /home/foo/.ssh
-</code></p>
-
-<p>なら
-<code>install -o foo -g users -m 0700 -d /home/foo/.ssh</code>
-にまとめられます。</p>
-
-<p><code>install -o foo -g users -m 0700 -d /home/foo/.ssh /home/foo/tmp</code>
-のように複数ディレクトリを同時に作成することも出来ます。</p>
-
-<p>2014-02-16 追記:
-<a href="http://qiita.com/znz/items/fee7c42587e995566a69#comment-a08bc7770a5fcdf902a0">Qiita の方のコメント</a>
-で
-<code>sudo -u user mkdir -p -m 700 /home/user/.ssh</code>
-というやり方もあるという話がありました。</p>
-
-<h2>install でファイルをコピーする</h2>
-
-<p>たとえば</p>
-
-<p><code>
- cp /path/from/*.txt /path/to/
- chown foo /path/to/*.txt
- chgrp users /path/to/*.txt
- chmod 0644 /path/to/*.txt
-</code></p>
-
-<p>なら
-<code>install -o foo -g users -m 0644 /path/from/*.txt /path/to/</code>
-にまとめられます。</p>
-
-<p><code>install -o foo -g users -m 0644 -t /path/to /path/from/*.txt</code>
-のようにディレクトリを先に書くことも出来ます。</p>
-
-<p>1ファイルだけなら
-<code>install -o foo -g users -m 0644  /path/from/foo.txt /path/to/bar.txt</code>
-のようにコピー先のファイル名を指定することも出来ます。</p>
-
-<h2>まとめ</h2>
-
-<p>たくさん <code>chown</code> や <code>chmod</code> を実行していることがあれば、
-<code>install</code> コマンドでまとめられないか検討してみてください。</p>
 ]]></content>
   </entry>
   
