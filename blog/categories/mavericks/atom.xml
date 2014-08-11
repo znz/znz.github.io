@@ -4,7 +4,7 @@
   <title><![CDATA[Category: mavericks | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/mavericks/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -38,26 +38,18 @@ reinstall したら <code>brew edit emacs</code> で戻しました。</p>
 
 <p>適用されればどこでも良いのですが、最後に追加するようにしてみました。</p>
 
-<p>```diff
-diff &mdash;git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb
+<pre><code class="diff">diff --git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb
 index db7c46c..26ec334 100644
-&mdash;&ndash; a/Library/Formula/emacs.rb
+--- a/Library/Formula/emacs.rb
 +++ b/Library/Formula/emacs.rb
-@@ -49,6 +49,7 @@ class Emacs &lt; Formula</p>
-
-<pre><code> if build.include? "cocoa" and build.include? "japanese"
-   p[:p0].push("http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583")
- end
+@@ -49,6 +49,7 @@ class Emacs &lt; Formula
+     if build.include? "cocoa" and build.include? "japanese"
+       p[:p0].push("http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583")
+     end
++    p[:p1].push "https://gist.github.com/anonymous/8553178/raw/c0ddb67b6e92da35a815d3465c633e036df1a105/emacs.memory.leak.aka.distnoted.patch.diff"
+     p
+   end unless build.head?
 </code></pre>
-
-<ul>
-<li> p[:p1].push &ldquo;<a href="https://gist.github.com/anonymous/8553178/raw/c0ddb67b6e92da35a815d3465c633e036df1a105/emacs.memory.leak.aka.distnoted.patch.diff">https://gist.github.com/anonymous/8553178/raw/c0ddb67b6e92da35a815d3465c633e036df1a105/emacs.memory.leak.aka.distnoted.patch.diff</a>&rdquo;
- p
-end unless build.head?</li>
-</ul>
-
-
-<p>```</p>
 
 <h2>しばらく使ってみて</h2>
 
@@ -70,11 +62,10 @@ end unless build.head?</li>
 
 <p>文章を入力しにくくなるので、今は</p>
 
-<p><code>
-brew uninstall emacs
+<pre><code>brew uninstall emacs
 brew install emacs --cocoa --srgb --with-gnutls
 brew linkapps
-</code></p>
+</code></pre>
 
 <p>という感じで <code>--japanese</code> は外した状態でインストールしています。</p>
 
@@ -111,56 +102,39 @@ brew linkapps
 <code>brew reinstall emacs</code>
 で再インストールしました。</p>
 
-<p>```diff
-diff &mdash;git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb
+<pre><code class="diff">diff --git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb
 index 712c3d1..5ce4ce2 100644
-&mdash;&ndash; a/Library/Formula/emacs.rb
+--- a/Library/Formula/emacs.rb
 +++ b/Library/Formula/emacs.rb
-@@ -47,7 +47,7 @@ class Emacs &lt; Formula</p>
-
-<pre><code> # "--japanese" option:
- # to apply a patch from MacEmacsJP for Japanese input methods
- if build.include? "cocoa" and build.include? "japanese"
+@@ -47,7 +47,7 @@ class Emacs &lt; Formula
+     # "--japanese" option:
+     # to apply a patch from MacEmacsJP for Japanese input methods
+     if build.include? "cocoa" and build.include? "japanese"
+-      p[:p0].push("http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583")
++      p[:p0].push("https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch")
+     end
+     p
+   end unless build.head?
 </code></pre>
-
-<ul>
-<li>   p[:p0].push(&ldquo;<a href="http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583">http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583</a>&rdquo;)</li>
-<li>   p[:p0].push(&ldquo;<a href="https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch">https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch</a>&rdquo;)
- end
- p
-end unless build.head?
-```</li>
-</ul>
-
 
 <h2>元のパッチからの変更点</h2>
 
 <p>元の sourceforge.jp のパッチとの差分をとってみると、
 以下のメソッド呼び出しが変わっているだけでした。</p>
 
-<p>```diff
-diff &mdash;git a/emacs-inline.patch.sfjp b/emacs-inline.patch.gist
+<pre><code class="diff">diff --git a/emacs-inline.patch.sfjp b/emacs-inline.patch.gist
 index 52f2052..d67ad1d 100644
-&mdash;&ndash; a/emacs-inline.patch.sfjp
+--- a/emacs-inline.patch.sfjp
 +++ b/emacs-inline.patch.gist
-@@ -1015,7 +1015,7 @@ diff -r -N -p ../emacs-24.3.org/src/nsterm.m src/nsterm.m</p>
+@@ -1015,7 +1015,7 @@ diff -r -N -p ../emacs-24.3.org/src/nsterm.m src/nsterm.m
+                                                name: nil object: nil]; */
+ +   [[NSDistributedNotificationCenter defaultCenter] addObserver: NSApp
+ +                  selector: @selector (changeInputMethod:)
+-+                         name: @"AppleSelectedInputSourcesChangedNotification" object: nil];
+++                         name: @"AppleSelectedInputSourcesChangedNotification" object: nil suspensionBehavior:NSNotificationSuspensionBehaviorDeliverImmediately];
 
-<pre><code>                                            name: nil object: nil]; */
+     dpyinfo = xzalloc (sizeof *dpyinfo);
 </code></pre>
-
-<ul>
-<li> [[NSDistributedNotificationCenter defaultCenter] addObserver: NSApp</li>
-<li><pre><code>            selector: @selector (changeInputMethod:)
-</code></pre>
-
-<p>&ndash;+                         name: @&ldquo;AppleSelectedInputSourcesChangedNotification&rdquo; object: nil];
-++                         name: @&ldquo;AppleSelectedInputSourcesChangedNotification&rdquo; object: nil suspensionBehavior:NSNotificationSuspensionBehaviorDeliverImmediately];</p>
-
-<p>   dpyinfo = xzalloc (sizeof *dpyinfo);</p></li>
-</ul>
-
-
-<p>```</p>
 
 <h2>まとめ</h2>
 
@@ -225,26 +199,23 @@ OS 自体を再起動したりしていました。</p>
 
 <p><code>launchd</code> で定期的に実行するには</p>
 
-<p>```xml ~/Library/LaunchAgents/local.killall.distnoted.plist
-&lt;?xml version=&ldquo;1.0&rdquo; encoding=&ldquo;UTF-8&rdquo;?>
-&lt;!DOCTYPE plist PUBLIC &ldquo;&ndash;//Apple//DTD PLIST 1.0//EN&rdquo; &ldquo;<a href="http://www.apple.com/DTDs/PropertyList-1.0.dtd">http://www.apple.com/DTDs/PropertyList-1.0.dtd</a>&rdquo;>
-<plist version="1.0">
-<dict></p>
-
-<pre><code>&lt;key&gt;Label&lt;/key&gt;
-&lt;string&gt;local.killall.distnoted&lt;/string&gt;
-&lt;key&gt;ProgramArguments&lt;/key&gt;
-&lt;array&gt;
-    &lt;string&gt;/usr/bin/killall&lt;/string&gt;
-    &lt;string&gt;distnoted&lt;/string&gt;
-&lt;/array&gt;
-&lt;key&gt;StartInterval&lt;/key&gt;
-&lt;integer&gt;600&lt;/integer&gt;
-</code></pre>
-
-<p></dict>
-</plist>
-```</p>
+<p><code>xml ~/Library/LaunchAgents/local.killall.distnoted.plist
+&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+    &lt;key&gt;Label&lt;/key&gt;
+    &lt;string&gt;local.killall.distnoted&lt;/string&gt;
+    &lt;key&gt;ProgramArguments&lt;/key&gt;
+    &lt;array&gt;
+        &lt;string&gt;/usr/bin/killall&lt;/string&gt;
+        &lt;string&gt;distnoted&lt;/string&gt;
+    &lt;/array&gt;
+    &lt;key&gt;StartInterval&lt;/key&gt;
+    &lt;integer&gt;600&lt;/integer&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;
+</code></p>
 
 <p>という内容のファイルを
 <code>~/Library/LaunchAgents/local.killall.distnoted.plist</code>
@@ -254,10 +225,9 @@ OS 自体を再起動したりしていました。</p>
 
 <p>設定を変更したときは</p>
 
-<p><code>
-launchctl unload ~/Library/LaunchAgents/local.killall.distnoted.plist
+<pre><code>launchctl unload ~/Library/LaunchAgents/local.killall.distnoted.plist
 launchctl load ~/Library/LaunchAgents/local.killall.distnoted.plist
-</code></p>
+</code></pre>
 
 <p>で反映します。</p>
 
@@ -294,40 +264,30 @@ Emacs.app を起動した時に <code>default-directory</code>
 ホームディレクトリに移動するかどうかを判定しているのに、
 Mavericks だと引数なしで起動されるようになったからのようです。</p>
 
-<p>```c emacs-24.3/src/emacs.c
- #ifdef HAVE_NS
+<pre><code class="c emacs-24.3/src/emacs.c"> #ifdef HAVE_NS
    ns_pool = ns_alloc_autorelease_pool ();
-   if (!noninteractive)</p>
-
-<pre><code> {
-</code></pre>
-
-<p> #ifdef NS_IMPL_COCOA</p>
-
-<pre><code>   if (skip_args &lt; argc)
+   if (!noninteractive)
      {
-  /* FIXME: Do the right thing if getenv returns NULL, or if
-     chdir fails.  */
-       if (!strncmp (argv[skip_args], "-psn", 4))
+ #ifdef NS_IMPL_COCOA
+       if (skip_args &lt; argc)
          {
-           skip_args += 1;
-           chdir (getenv ("HOME"));
+      /* FIXME: Do the right thing if getenv returns NULL, or if
+         chdir fails.  */
+           if (!strncmp (argv[skip_args], "-psn", 4))
+             {
+               skip_args += 1;
+               chdir (getenv ("HOME"));
+             }
+           else if (skip_args+1 &lt; argc &amp;&amp; !strncmp (argv[skip_args+1], "-psn", 4))
+             {
+               skip_args += 2;
+               chdir (getenv ("HOME"));
+             }
          }
-       else if (skip_args+1 &lt; argc &amp;&amp; !strncmp (argv[skip_args+1], "-psn", 4))
-         {
-           skip_args += 2;
-           chdir (getenv ("HOME"));
-         }
+ #endif  /* COCOA */
      }
+ #endif /* HAVE_NS */
 </code></pre>
-
-<p> #endif  /<em> COCOA </em>/</p>
-
-<pre><code> }
-</code></pre>
-
-<p> #endif /<em> HAVE_NS </em>/
-```</p>
 
 <h2>状況</h2>
 
@@ -352,37 +312,25 @@ revision 114730 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114730 
 revision 114882 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114882 -->
 のパッチをあわせて以下のように対応すれば良さそうに見えました。</p>
 
-<p>```diff emacs.c.diff
-&mdash;&ndash; src/emacs.c.orig    2013-02-06 13:33:36.000000000 +0900
+<pre><code class="diff emacs.c.diff">--- src/emacs.c.orig    2013-02-06 13:33:36.000000000 +0900
 +++ src/emacs.c 2013-11-02 22:38:45.000000000 +0900
 @@ -1158,10 +1158,13 @@
-   if (!noninteractive)</p>
-
-<pre><code> {
-</code></pre>
-
-<p> #ifdef NS_IMPL_COCOA
-+      /<em> Started from GUI? </em>/
-+      /<em> FIXME: Do the right thing if getenv returns NULL, or if
-+         chdir fails.  </em>/
+   if (!noninteractive)
+     {
+ #ifdef NS_IMPL_COCOA
++      /* Started from GUI? */
++      /* FIXME: Do the right thing if getenv returns NULL, or if
++         chdir fails.  */
 +      if (! inhibit_window_system &amp;&amp; ! isatty (0))
-+        chdir (getenv (&ldquo;HOME&rdquo;));</p>
-
-<pre><code>   if (skip_args &lt; argc)
-     {
++        chdir (getenv ("HOME"));
+       if (skip_args &lt; argc)
+         {
+-     /* FIXME: Do the right thing if getenv returns NULL, or if
+-        chdir fails.  */
+           if (!strncmp (argv[skip_args], "-psn", 4))
+             {
+               skip_args += 1;
 </code></pre>
-
-<ul>
-<li>  /* FIXME: Do the right thing if getenv returns NULL, or if</li>
-<li><pre><code> chdir fails.  */
-   if (!strncmp (argv[skip_args], "-psn", 4))
-     {
-       skip_args += 1;
-</code></pre>
-
-<p>```</p></li>
-</ul>
-
 
 <p>というわけで homebrew の方に
 <a href="https://github.com/mxcl/homebrew/pull/23897">fix default-directory on Cocoa and Mavericks</a>

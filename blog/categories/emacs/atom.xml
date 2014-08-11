@@ -4,7 +4,7 @@
   <title><![CDATA[Category: emacs | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/emacs/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -38,26 +38,18 @@ reinstall したら <code>brew edit emacs</code> で戻しました。</p>
 
 <p>適用されればどこでも良いのですが、最後に追加するようにしてみました。</p>
 
-<p>```diff
-diff &mdash;git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb
+<pre><code class="diff">diff --git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb
 index db7c46c..26ec334 100644
-&mdash;&ndash; a/Library/Formula/emacs.rb
+--- a/Library/Formula/emacs.rb
 +++ b/Library/Formula/emacs.rb
-@@ -49,6 +49,7 @@ class Emacs &lt; Formula</p>
-
-<pre><code> if build.include? "cocoa" and build.include? "japanese"
-   p[:p0].push("http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583")
- end
+@@ -49,6 +49,7 @@ class Emacs &lt; Formula
+     if build.include? "cocoa" and build.include? "japanese"
+       p[:p0].push("http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583")
+     end
++    p[:p1].push "https://gist.github.com/anonymous/8553178/raw/c0ddb67b6e92da35a815d3465c633e036df1a105/emacs.memory.leak.aka.distnoted.patch.diff"
+     p
+   end unless build.head?
 </code></pre>
-
-<ul>
-<li> p[:p1].push &ldquo;<a href="https://gist.github.com/anonymous/8553178/raw/c0ddb67b6e92da35a815d3465c633e036df1a105/emacs.memory.leak.aka.distnoted.patch.diff">https://gist.github.com/anonymous/8553178/raw/c0ddb67b6e92da35a815d3465c633e036df1a105/emacs.memory.leak.aka.distnoted.patch.diff</a>&rdquo;
- p
-end unless build.head?</li>
-</ul>
-
-
-<p>```</p>
 
 <h2>しばらく使ってみて</h2>
 
@@ -70,11 +62,10 @@ end unless build.head?</li>
 
 <p>文章を入力しにくくなるので、今は</p>
 
-<p><code>
-brew uninstall emacs
+<pre><code>brew uninstall emacs
 brew install emacs --cocoa --srgb --with-gnutls
 brew linkapps
-</code></p>
+</code></pre>
 
 <p>という感じで <code>--japanese</code> は外した状態でインストールしています。</p>
 
@@ -111,56 +102,39 @@ brew linkapps
 <code>brew reinstall emacs</code>
 で再インストールしました。</p>
 
-<p>```diff
-diff &mdash;git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb
+<pre><code class="diff">diff --git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb
 index 712c3d1..5ce4ce2 100644
-&mdash;&ndash; a/Library/Formula/emacs.rb
+--- a/Library/Formula/emacs.rb
 +++ b/Library/Formula/emacs.rb
-@@ -47,7 +47,7 @@ class Emacs &lt; Formula</p>
-
-<pre><code> # "--japanese" option:
- # to apply a patch from MacEmacsJP for Japanese input methods
- if build.include? "cocoa" and build.include? "japanese"
+@@ -47,7 +47,7 @@ class Emacs &lt; Formula
+     # "--japanese" option:
+     # to apply a patch from MacEmacsJP for Japanese input methods
+     if build.include? "cocoa" and build.include? "japanese"
+-      p[:p0].push("http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583")
++      p[:p0].push("https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch")
+     end
+     p
+   end unless build.head?
 </code></pre>
-
-<ul>
-<li>   p[:p0].push(&ldquo;<a href="http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583">http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583</a>&rdquo;)</li>
-<li>   p[:p0].push(&ldquo;<a href="https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch">https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch</a>&rdquo;)
- end
- p
-end unless build.head?
-```</li>
-</ul>
-
 
 <h2>元のパッチからの変更点</h2>
 
 <p>元の sourceforge.jp のパッチとの差分をとってみると、
 以下のメソッド呼び出しが変わっているだけでした。</p>
 
-<p>```diff
-diff &mdash;git a/emacs-inline.patch.sfjp b/emacs-inline.patch.gist
+<pre><code class="diff">diff --git a/emacs-inline.patch.sfjp b/emacs-inline.patch.gist
 index 52f2052..d67ad1d 100644
-&mdash;&ndash; a/emacs-inline.patch.sfjp
+--- a/emacs-inline.patch.sfjp
 +++ b/emacs-inline.patch.gist
-@@ -1015,7 +1015,7 @@ diff -r -N -p ../emacs-24.3.org/src/nsterm.m src/nsterm.m</p>
+@@ -1015,7 +1015,7 @@ diff -r -N -p ../emacs-24.3.org/src/nsterm.m src/nsterm.m
+                                                name: nil object: nil]; */
+ +   [[NSDistributedNotificationCenter defaultCenter] addObserver: NSApp
+ +                  selector: @selector (changeInputMethod:)
+-+                         name: @"AppleSelectedInputSourcesChangedNotification" object: nil];
+++                         name: @"AppleSelectedInputSourcesChangedNotification" object: nil suspensionBehavior:NSNotificationSuspensionBehaviorDeliverImmediately];
 
-<pre><code>                                            name: nil object: nil]; */
+     dpyinfo = xzalloc (sizeof *dpyinfo);
 </code></pre>
-
-<ul>
-<li> [[NSDistributedNotificationCenter defaultCenter] addObserver: NSApp</li>
-<li><pre><code>            selector: @selector (changeInputMethod:)
-</code></pre>
-
-<p>&ndash;+                         name: @&ldquo;AppleSelectedInputSourcesChangedNotification&rdquo; object: nil];
-++                         name: @&ldquo;AppleSelectedInputSourcesChangedNotification&rdquo; object: nil suspensionBehavior:NSNotificationSuspensionBehaviorDeliverImmediately];</p>
-
-<p>   dpyinfo = xzalloc (sizeof *dpyinfo);</p></li>
-</ul>
-
-
-<p>```</p>
 
 <h2>まとめ</h2>
 
@@ -194,12 +168,11 @@ index 52f2052..d67ad1d 100644
 
 <p>単純に短くするには <code>minor-mode-alist</code> の文字列を直接変更してしまうだけです。</p>
 
-<p><code>common-lisp
-(when (consp (assq 'abbrev-mode minor-mode-alist))
+<pre><code class="common-lisp">(when (consp (assq 'abbrev-mode minor-mode-alist))
   (setcar (cdr (assq 'abbrev-mode minor-mode-alist)) " ab"))
 (when (consp (assq 'auto-fill-function minor-mode-alist))
   (setcar (cdr (assq 'auto-fill-function minor-mode-alist)) " Fil"))
-</code></p>
+</code></pre>
 
 <h2>色も付ける</h2>
 
@@ -209,20 +182,13 @@ index 52f2052..d67ad1d 100644
 最低限 <code>:foreground</code> と <code>:background</code> を知っておけば良いと思います。
 指定できる色は <code>list-colors-display</code> で一覧できます。</p>
 
-<p>```common-lisp
-(when (consp (assq &lsquo;abbrev-mode minor-mode-alist))
-  (setcar (cdr (assq 'abbrev-mode minor-mode-alist))</p>
-
-<pre><code>  (propertize "省" 'face '(:foreground "green"))))
+<pre><code class="common-lisp">(when (consp (assq 'abbrev-mode minor-mode-alist))
+  (setcar (cdr (assq 'abbrev-mode minor-mode-alist))
+      (propertize "省" 'face '(:foreground "green"))))
+(when (consp (assq 'auto-fill-function minor-mode-alist))
+  (setcar (cdr (assq 'auto-fill-function minor-mode-alist))
+      (propertize "詰" 'face '(:foreground "yellow"))))
 </code></pre>
-
-<p>(when (consp (assq &lsquo;auto-fill-function minor-mode-alist))
-  (setcar (cdr (assq 'auto-fill-function minor-mode-alist))</p>
-
-<pre><code>  (propertize "詰" 'face '(:foreground "yellow"))))
-</code></pre>
-
-<p>```</p>
 
 <h2>設定対象の探し方</h2>
 
@@ -236,20 +202,16 @@ index 52f2052..d67ad1d 100644
 
 <p>毎回長々と書くのは面倒なので、以下の関数を定義して使っています。</p>
 
-<p>```common-lisp
-(defun my-shorten-minor-mode-name (mode-sym short-name &amp;optional face)
-  &ldquo;minor-modeの名前を短くする。&rdquo;
-  (let ((cell (assq mode-sym minor-mode-alist)))</p>
-
-<pre><code>(when (consp cell)
-  (if face
-      (setq short-name (propertize short-name 'face face))
-    (setq short-name (concat " " short-name)))
-  (setcar (cdr cell) short-name))
-))
+<pre><code class="common-lisp">(defun my-shorten-minor-mode-name (mode-sym short-name &amp;optional face)
+  "minor-modeの名前を短くする。"
+  (let ((cell (assq mode-sym minor-mode-alist)))
+    (when (consp cell)
+      (if face
+          (setq short-name (propertize short-name 'face face))
+        (setq short-name (concat " " short-name)))
+      (setcar (cdr cell) short-name))
+    ))
 </code></pre>
-
-<p>```</p>
 
 <h2>起動時に読み込まれていない minor-mode の設定</h2>
 
@@ -258,14 +220,10 @@ index 52f2052..d67ad1d 100644
 <code>minor-mode-alist</code> に登録されていないのでうまくいきません。
 こういう場合は <code>eval-after-load</code> で設定しています。</p>
 
-<p>```common-lisp
-(eval-after-load &ldquo;view&rdquo;
-  &lsquo;(my-shorten-minor-mode-name</p>
-
-<pre><code>'view-mode "見" '(:foreground "white" :background "DeepPink1")))
+<pre><code class="common-lisp">(eval-after-load "view"
+  '(my-shorten-minor-mode-name
+    'view-mode "見" '(:foreground "white" :background "DeepPink1")))
 </code></pre>
-
-<p>```</p>
 
 <h2>変数で設定できる場合</h2>
 
@@ -281,14 +239,10 @@ index 52f2052..d67ad1d 100644
 
 <p>そこで <code>risky-local-variable</code> に <code>t</code> を設定すれば色がつくようになりました。</p>
 
-<p>```common-lisp
-(put &lsquo;eldoc-minor-mode-string 'risky-local-variable t)
-(setq eldoc-minor-mode-string</p>
-
-<pre><code>  (propertize "d" 'face '(:foreground "purple" :background "yellow")))
+<pre><code class="common-lisp">(put 'eldoc-minor-mode-string 'risky-local-variable t)
+(setq eldoc-minor-mode-string
+      (propertize "d" 'face '(:foreground "purple" :background "yellow")))
 </code></pre>
-
-<p>```</p>
 
 <h2>anzu.el での例</h2>
 
@@ -296,16 +250,12 @@ index 52f2052..d67ad1d 100644
 <a href="http://qiita.com/syohex/items/56cf3b7f7d9943f7a7ba">anzu.el</a>
 なら以下のように設定しています。</p>
 
-<p>```common-lisp
-  (when (require &lsquo;anzu nil t)</p>
-
-<pre><code>(put 'anzu-mode-lighter 'risky-local-variable t)
-(setq anzu-mode-lighter (propertize "杏" 'face 'anzu-mode-line))
-(global-anzu-mode +1)
-)
+<pre><code class="common-lisp">  (when (require 'anzu nil t)
+    (put 'anzu-mode-lighter 'risky-local-variable t)
+    (setq anzu-mode-lighter (propertize "杏" 'face 'anzu-mode-line))
+    (global-anzu-mode +1)
+    )
 </code></pre>
-
-<p>```</p>
 
 <h2>まとめ</h2>
 
@@ -360,16 +310,12 @@ Mac OS X は IME のオン・オフのような状態の切り替えではなく
 <p><a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html">TeraTerm Pro の対応制御シーケンス</a>
 には以下の3種類の IME 関連の制御シーケンスがあります。</p>
 
-<p>```
-  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
+<pre><code>  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
   CSI &lt; s    TTIMESVIME の開閉状態を保存する。
-  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。</p>
-
-<pre><code>           Ps = 0      IME を閉じる。
-              = 1      IME を開く。
+  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。
+               Ps = 0      IME を閉じる。
+                  = 1      IME を開く。
 </code></pre>
-
-<p>```</p>
 
 <p>この中の <code>TTIMESTIME</code> の <code>Ps</code> を拡張して、
 2 以上も受け付けるようにして、
@@ -400,39 +346,35 @@ IME 関連の設定をしてみました。</p>
 
 <p>以降は設定内容を個別に解説していきます。</p>
 
-<p>```scheme
-(global-set-key (kbd &ldquo;M-¥&rdquo;) (lambda () (interactive) (insert &ldquo;\&rdquo;)))</p>
+<pre><code class="scheme">(global-set-key (kbd "M-¥") (lambda () (interactive) (insert "\\")))
 
-<p>(static-when (eq window-system &lsquo;ns)
-  (static-when (assoc &ldquo;MacOSX&rdquo; input-method-alist)</p>
-
-<pre><code>;; ime inline patch
-(setq default-input-method "MacOSX")
-(static-when t
-  (mac-translate-from-yen-to-backslash)
-  (global-set-key (kbd "M-¥") (lambda () (interactive) (insert "¥")))
-  )
-
-(mapc
- (lambda (param)
-   (let ((name (car param)))
-     (cond
-      ((string-match "Japanese\\(\\.base\\)?\\'" name) ;; ひらがなの日本語入力
-       (mac-set-input-method-parameter name 'cursor-color "blue"))
-      ((string-match "Japanese" name) ;; カナなどの日本語入力
-       (mac-set-input-method-parameter name 'cursor-color "red"))
-      ((string-match "Roman" name) ;; 英字
-       (mac-set-input-method-parameter name 'cursor-color "black"))
-      (t ;; その他
-       (mac-set-input-method-parameter name 'cursor-color "yellow"))
+(static-when (eq window-system 'ns)
+  (static-when (assoc "MacOSX" input-method-alist)
+    ;; ime inline patch
+    (setq default-input-method "MacOSX")
+    (static-when t
+      (mac-translate-from-yen-to-backslash)
+      (global-set-key (kbd "M-¥") (lambda () (interactive) (insert "¥")))
       )
-     ))
- mac-input-method-parameters)
-(mac-set-input-method-parameter "com.apple.keylayout.US" 'cursor-color "black")
-)
-</code></pre>
 
-<p>```</p>
+    (mapc
+     (lambda (param)
+       (let ((name (car param)))
+         (cond
+          ((string-match "Japanese\\(\\.base\\)?\\'" name) ;; ひらがなの日本語入力
+           (mac-set-input-method-parameter name 'cursor-color "blue"))
+          ((string-match "Japanese" name) ;; カナなどの日本語入力
+           (mac-set-input-method-parameter name 'cursor-color "red"))
+          ((string-match "Roman" name) ;; 英字
+           (mac-set-input-method-parameter name 'cursor-color "black"))
+          (t ;; その他
+           (mac-set-input-method-parameter name 'cursor-color "yellow"))
+          )
+         ))
+     mac-input-method-parameters)
+    (mac-set-input-method-parameter "com.apple.keylayout.US" 'cursor-color "black")
+    )
+</code></pre>
 
 <h2>環境のチェック</h2>
 
@@ -520,119 +462,115 @@ TeraTerm Pro のように IME の状態によってカーソルの表示を変�
 後で設定しています。
 (先に設定すると、その他の黄色で上書きしてしまう。)</p>
 
-<p>```scheme ns-win.el.gz
-(defvar mac-input-method-parameters
-  &lsquo;(</p>
-
-<pre><code>("com.apple.inputmethod.Kotoeri.Roman"
- (title . "A")
- (cursor-color)
- (cursor-type))
-("com.apple.inputmethod.Kotoeri.Japanese"
- (title . "あ")
- (cursor-color)
- (cursor-type))
-("com.apple.inputmethod.Kotoeri.Japanese.Katakana"
- (title . "ア")
- (cursor-color)
- (cursor-type))
-("com.apple.inputmethod.Kotoeri.Japanese.FullWidthRoman"
- (title . "Ａ")
- (cursor-color)
- (cursor-type))
-("com.apple.inputmethod.Kotoeri.Japanese.HalfWidthKana"
- (title . "ｱ")
- (cursor-color)
- (cursor-type))
-("com.apple.inputmethod.kotoeri.Ainu"
- (title . "アイヌ")
- (cursor-color)
- (cursor-type))
-...
-("com.google.inputmethod.Japanese.Roman"
- (title . "G")
- (cursor-color)
- (cursor-type))
-("com.google.inputmethod.Japanese.base"
- (title . "ぐ")
- (cursor-color)
- (cursor-type))
-("com.google.inputmethod.Japanese.Katakana"
- (title . "グ")
- (cursor-color)
- (cursor-type))
-("com.google.inputmethod.Japanese.FullWidthRoman"
- (title . "Ｇ")
- (cursor-color)
- (cursor-type))
-("com.google.inputmethod.Japanese.HalfWidthKana"
- (title . "ｸﾞ")
- (cursor-color)
- (cursor-type))
-("jp.monokakido.inputmethod.Kawasemi.Roman"
- (title . "K")
- (cursor-color)
- (cursor-type))
-("jp.monokakido.inputmethod.Kawasemi.Japanese"
- (title . "か")
- (cursor-color)
- (cursor-type))
-("jp.monokakido.inputmethod.Kawasemi.Japanese.Katakana"
- (title . "カ")
- (cursor-color)
- (cursor-type))
-("jp.monokakido.inputmethod.Kawasemi.Japanese.FullWidthRoman"
- (title . "Ｋ")
- (cursor-color)
- (cursor-type))
-("jp.monokakido.inputmethod.Kawasemi.Japanese.HalfWidthKana"
- (title . "ｶ")
- (cursor-color)
- (cursor-type))
-("jp.monokakido.inputmethod.Kawasemi.Japanese.HalfWidthRoman"
- (title . "_K")
- (cursor-color)
- (cursor-type))
-("jp.monokakido.inputmethod.Kawasemi.Japanese.Code"
- (title . "C")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok21.Roman"
- (title . "A")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok21.Japanese"
- (title . "あ")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok21.Japanese.Katakana"
- (title . "ア")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok21.Japanese.FullWidthRoman"
- (title . "英")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok21.Japanese.HalfWidthEiji"
- (title . "半英")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok22.Roman"
- (title . "A")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok22.Japanese"
- (title . "あ")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok22.Japanese.Katakana"
- (title . "ア")
- (cursor-color)
- (cursor-type))
-...
+<pre><code class="scheme ns-win.el.gz">(defvar mac-input-method-parameters
+  '(
+    ("com.apple.inputmethod.Kotoeri.Roman"
+     (title . "A")
+     (cursor-color)
+     (cursor-type))
+    ("com.apple.inputmethod.Kotoeri.Japanese"
+     (title . "あ")
+     (cursor-color)
+     (cursor-type))
+    ("com.apple.inputmethod.Kotoeri.Japanese.Katakana"
+     (title . "ア")
+     (cursor-color)
+     (cursor-type))
+    ("com.apple.inputmethod.Kotoeri.Japanese.FullWidthRoman"
+     (title . "Ａ")
+     (cursor-color)
+     (cursor-type))
+    ("com.apple.inputmethod.Kotoeri.Japanese.HalfWidthKana"
+     (title . "ｱ")
+     (cursor-color)
+     (cursor-type))
+    ("com.apple.inputmethod.kotoeri.Ainu"
+     (title . "アイヌ")
+     (cursor-color)
+     (cursor-type))
+    ...
+    ("com.google.inputmethod.Japanese.Roman"
+     (title . "G")
+     (cursor-color)
+     (cursor-type))
+    ("com.google.inputmethod.Japanese.base"
+     (title . "ぐ")
+     (cursor-color)
+     (cursor-type))
+    ("com.google.inputmethod.Japanese.Katakana"
+     (title . "グ")
+     (cursor-color)
+     (cursor-type))
+    ("com.google.inputmethod.Japanese.FullWidthRoman"
+     (title . "Ｇ")
+     (cursor-color)
+     (cursor-type))
+    ("com.google.inputmethod.Japanese.HalfWidthKana"
+     (title . "ｸﾞ")
+     (cursor-color)
+     (cursor-type))
+    ("jp.monokakido.inputmethod.Kawasemi.Roman"
+     (title . "K")
+     (cursor-color)
+     (cursor-type))
+    ("jp.monokakido.inputmethod.Kawasemi.Japanese"
+     (title . "か")
+     (cursor-color)
+     (cursor-type))
+    ("jp.monokakido.inputmethod.Kawasemi.Japanese.Katakana"
+     (title . "カ")
+     (cursor-color)
+     (cursor-type))
+    ("jp.monokakido.inputmethod.Kawasemi.Japanese.FullWidthRoman"
+     (title . "Ｋ")
+     (cursor-color)
+     (cursor-type))
+    ("jp.monokakido.inputmethod.Kawasemi.Japanese.HalfWidthKana"
+     (title . "ｶ")
+     (cursor-color)
+     (cursor-type))
+    ("jp.monokakido.inputmethod.Kawasemi.Japanese.HalfWidthRoman"
+     (title . "_K")
+     (cursor-color)
+     (cursor-type))
+    ("jp.monokakido.inputmethod.Kawasemi.Japanese.Code"
+     (title . "C")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok21.Roman"
+     (title . "A")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok21.Japanese"
+     (title . "あ")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok21.Japanese.Katakana"
+     (title . "ア")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok21.Japanese.FullWidthRoman"
+     (title . "英")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok21.Japanese.HalfWidthEiji"
+     (title . "半英")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok22.Roman"
+     (title . "A")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok22.Japanese"
+     (title . "あ")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok22.Japanese.Katakana"
+     (title . "ア")
+     (cursor-color)
+     (cursor-type))
+    ...
 </code></pre>
-
-<p>```</p>
 ]]></content>
   </entry>
   

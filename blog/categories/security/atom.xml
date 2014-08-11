@@ -4,7 +4,7 @@
   <title><![CDATA[Category: security | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/security/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -51,15 +51,13 @@ RHEL などでは <code>gnutls-utils</code> というパッケージに入って
 <code>--bits</code> で鍵のビット数を指定しないと squeeze だと 2048 ビット、 precise や wheezy だと 2432 ビットになりました。
 ファイルのパーミッションも <code>-rw-------</code> (600) で作成されるので、そのまま使えます。</p>
 
-<p><code>console gnutls
-$ certtool --generate-privkey --outfile example-tls.key
+<pre><code class="console gnutls">$ certtool --generate-privkey --outfile example-tls.key
 Generating a 2432 bit RSA private key...
-</code></p>
+</code></pre>
 
-<p><code>console gnutls
-$ certtool --generate-privkey --bits 4096 --outfile example-tls.key
+<pre><code class="console gnutls">$ certtool --generate-privkey --bits 4096 --outfile example-tls.key
 Generating a 4096 bit RSA private key...
-</code></p>
+</code></pre>
 
 <h3>OpenSSL</h3>
 
@@ -70,25 +68,23 @@ OpenSSL 1.0.0 では <code>genpkey</code> サブコマンドになっている�
 <p>ビット数を指定しないと squeeze だと 1024 ビット、 precise や wheezy だと 512 ビットになりました。
 また、そのままだとパーミッションが <code>-rw-rw-r--</code> (664) で生成されるので、あらかじめパーミッションを設定したファイルを用意しておいて上書きさせるか、すぐに <code>chmod</code> で変更しておいた方が良さそうです。</p>
 
-<p><code>console openssl
-$ touch example-ssl.key
+<pre><code class="console openssl">$ touch example-ssl.key
 $ chmod 600 example-ssl.key
 $ openssl genrsa -out example-ssl.key
 Generating RSA private key, 512 bit long modulus
 ....++++++++++++
 .........................++++++++++++
 e is 65537 (0x10001)
-</code></p>
+</code></pre>
 
-<p><code>console openssl
-$ touch example-ssl.key
+<pre><code class="console openssl">$ touch example-ssl.key
 $ chmod 600 example-ssl.key
 $ openssl genrsa -out example-ssl.key 4096
 Generating RSA private key, 4096 bit long modulus
 ......................................................++
 ...........++
 e is 65537 (0x10001)
-</code></p>
+</code></pre>
 
 <p>ネット上見つかる情報では <code>-des3</code> などで生成したファイルを一度暗号化して、
 サーバーの起動時に不要になるようにすぐに外すような例もあるようですが、
@@ -111,122 +107,72 @@ e is 65537 (0x10001)
 秘密鍵本体の前にテキストの説明がついたものも元の秘密鍵と同様に扱えるようなので、
 デフォルトでは元の内容も出力するようになっているのだと思います。</p>
 
-<p>```console openssl
-$ openssl rsa -in example-ssl.key -text -noout
+<pre><code class="console openssl">$ openssl rsa -in example-ssl.key -text -noout
 Private-Key: (4096 bit)
-modulus:</p>
-
-<pre><code>00:cb:35:ec:f6:00:5a:75:d7:55:14:f8:55:91:1a:
-(略)
+modulus:
+    00:cb:35:ec:f6:00:5a:75:d7:55:14:f8:55:91:1a:
+    (略)
+publicExponent: 65537 (0x10001)
+privateExponent:
+    4d:86:de:47:a0:2c:e2:e6:6b:2c:5b:ed:f1:35:10:
+    (略)
+prime1:
+    00:ef:49:b3:f8:4c:1e:a9:13:a9:fb:86:7e:80:7a:
+    (略)
+prime2:
+    00:d9:67:2f:e1:4c:13:78:fa:dd:2b:7a:3e:f5:68:
+    (略)
+exponent1:
+    00:ba:18:ee:ff:a7:6b:9d:01:2f:0c:f0:0f:88:29:
+    (略)
+exponent2:
+    52:93:94:27:32:5b:4f:1f:92:74:9a:39:61:c3:ae:
+    (略)
+coefficient:
+    44:e9:a2:de:87:e7:2d:f0:57:58:d6:fc:85:20:df:
+    (略)
 </code></pre>
-
-<p>publicExponent: 65537 (0x10001)
-privateExponent:</p>
-
-<pre><code>4d:86:de:47:a0:2c:e2:e6:6b:2c:5b:ed:f1:35:10:
-(略)
-</code></pre>
-
-<p>prime1:</p>
-
-<pre><code>00:ef:49:b3:f8:4c:1e:a9:13:a9:fb:86:7e:80:7a:
-(略)
-</code></pre>
-
-<p>prime2:</p>
-
-<pre><code>00:d9:67:2f:e1:4c:13:78:fa:dd:2b:7a:3e:f5:68:
-(略)
-</code></pre>
-
-<p>exponent1:</p>
-
-<pre><code>00:ba:18:ee:ff:a7:6b:9d:01:2f:0c:f0:0f:88:29:
-(略)
-</code></pre>
-
-<p>exponent2:</p>
-
-<pre><code>52:93:94:27:32:5b:4f:1f:92:74:9a:39:61:c3:ae:
-(略)
-</code></pre>
-
-<p>coefficient:</p>
-
-<pre><code>44:e9:a2:de:87:e7:2d:f0:57:58:d6:fc:85:20:df:
-(略)
-</code></pre>
-
-<p>```</p>
 
 <h3>GnuTLS</h3>
 
 <p>GnuTLS の <code>certtool</code> で秘密鍵の内容を確認するには <code>-k</code> (<code>--key-info</code>) を使います。
 <code>openssl</code> の <code>-noout</code> 相当のオプションは見つけられませんでした。</p>
 
-<p>```console gnutls
-$ certtool -k &mdash;infile example-tls.key
-Public Key Info:</p>
+<pre><code class="console gnutls">$ certtool -k --infile example-tls.key
+Public Key Info:
+        Public Key Algorithm: RSA
+        Key Security Level: High
+modulus:
+        00:da:45:da:ca:13:ac:59:43:55:87:68:04:16:1a:
+        (略)
+public exponent:
+        01:00:01:
+private exponent:
+        3c:5b:18:96:cc:3d:da:28:fe:5b:84:ed:ac:56:e2:
+        (略)
+prime1:
+        00:dc:f3:92:13:d5:c7:cf:bc:9f:76:b3:f6:a2:60:
+        (略)
+prime2:
+        00:fc:e5:83:0e:2e:d4:a1:be:37:bf:05:6e:c3:d3:
+        (略)
+coefficient:
+        63:74:e3:95:9e:d6:6c:7d:d9:2d:ad:45:f8:0b:1a:
+        (略)
+exp1:
+        00:a1:1d:a7:9e:79:1c:2b:da:42:79:bf:7f:10:26:
+        (略)
+exp2:
+        00:b3:be:9c:ab:53:f5:a5:10:01:a7:2f:41:4e:c5:
+        (略)
+        c4:31:
 
-<pre><code>    Public Key Algorithm: RSA
-    Key Security Level: High
-</code></pre>
+Public Key ID: 45:44:BC:C4:BB:95:24:97:5D:C2:95:BF:27:95:02:2C:50:09:9E:35
 
-<p>modulus:</p>
-
-<pre><code>    00:da:45:da:ca:13:ac:59:43:55:87:68:04:16:1a:
-    (略)
-</code></pre>
-
-<p>public exponent:</p>
-
-<pre><code>    01:00:01:
-</code></pre>
-
-<p>private exponent:</p>
-
-<pre><code>    3c:5b:18:96:cc:3d:da:28:fe:5b:84:ed:ac:56:e2:
-    (略)
-</code></pre>
-
-<p>prime1:</p>
-
-<pre><code>    00:dc:f3:92:13:d5:c7:cf:bc:9f:76:b3:f6:a2:60:
-    (略)
-</code></pre>
-
-<p>prime2:</p>
-
-<pre><code>    00:fc:e5:83:0e:2e:d4:a1:be:37:bf:05:6e:c3:d3:
-    (略)
-</code></pre>
-
-<p>coefficient:</p>
-
-<pre><code>    63:74:e3:95:9e:d6:6c:7d:d9:2d:ad:45:f8:0b:1a:
-    (略)
-</code></pre>
-
-<p>exp1:</p>
-
-<pre><code>    00:a1:1d:a7:9e:79:1c:2b:da:42:79:bf:7f:10:26:
-    (略)
-</code></pre>
-
-<p>exp2:</p>
-
-<pre><code>    00:b3:be:9c:ab:53:f5:a5:10:01:a7:2f:41:4e:c5:
-    (略)
-    c4:31:
-</code></pre>
-
-<p>Public Key ID: 45:44:BC:C4:BB:95:24:97:5D:C2:95:BF:27:95:02:2C:50:09:9E:35</p>
-
-<p>&mdash;&mdash;-BEGIN RSA PRIVATE KEY&mdash;&mdash;&ndash;
+-----BEGIN RSA PRIVATE KEY-----
 (略)
-&mdash;&mdash;-END RSA PRIVATE KEY&mdash;&mdash;&ndash;</p>
-
-<p>```</p>
+-----END RSA PRIVATE KEY-----
+</code></pre>
 
 <h2>CSR 作成と内容確認</h2>
 
@@ -242,71 +188,61 @@ GnuTLS の <code>certtool</code> は <code>-q</code> (<code>--generate-request</
 対話的に作成しつつ空欄にしたい時は
 別途 <code>openssl.cnf</code> を用意する必要がありそうです。</p>
 
-<p>```console openssl
-$ openssl req -new -key example-ssl.key -out example-ssl.csr
+<pre><code class="console openssl">$ openssl req -new -key example-ssl.key -out example-ssl.csr
 You are about to be asked to enter information that will be incorporated
 into your certificate request.
 What you are about to enter is what is called a Distinguished Name or a DN.
 There are quite a few fields but you can leave some blank
-For some fields there will be a default value,</p>
-
-<h2>If you enter &lsquo;.&rsquo;, the field will be left blank.</h2>
-
-<p>Country Name (2 letter code) [AU]:JP
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:JP
 State or Province Name (full name) [Some-State]:Osaka
 Locality Name (eg, city) []:
 Organization Name (eg, company) [Internet Widgits Pty Ltd]:
 Organizational Unit Name (eg, section) []:
 Common Name (e.g. server FQDN or YOUR name) []:ssl.example.jp
-Email Address []:</p>
+Email Address []:
 
-<p>Please enter the following &lsquo;extra&rsquo; attributes
+Please enter the following 'extra' attributes
 to be sent with your certificate request
 A challenge password []:
 An optional company name []:
 $ openssl req -in example-ssl.csr -text -noout
-Certificate Request:</p>
-
-<pre><code>Data:
-    Version: 0 (0x0)
-    Subject: C=JP, ST=Osaka, O=Internet Widgits Pty Ltd, CN=ssl.example.jp
-    Subject Public Key Info:
-        Public Key Algorithm: rsaEncryption
-            Public-Key: (4096 bit)
-            Modulus:
-                00:cb:35:ec:f6:00:5a:75:d7:55:14:f8:55:91:1a:
-                (略)
-            Exponent: 65537 (0x10001)
-    Attributes:
-        a0:00
-Signature Algorithm: sha1WithRSAEncryption
-     4f:1a:a7:57:9f:88:f3:17:23:aa:51:12:11:ff:c0:24:31:4c:
-     (略)
-</code></pre>
-
-<p>$ certtool &mdash;crq-info &mdash;infile example-ssl.csr
-PKCS #10 Certificate Request Information:</p>
-
-<pre><code>    Version: 1
-    Subject: C=JP,ST=Osaka,O=Internet Widgits Pty Ltd,CN=ssl.example.jp
-    Subject Public Key Algorithm: RSA
-            Modulus (bits 4096):
-                    cb:35:ec:f6:00:5a:75:d7:55:14:f8:55:91:1a:9b:83
+Certificate Request:
+    Data:
+        Version: 0 (0x0)
+        Subject: C=JP, ST=Osaka, O=Internet Widgits Pty Ltd, CN=ssl.example.jp
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (4096 bit)
+                Modulus:
+                    00:cb:35:ec:f6:00:5a:75:d7:55:14:f8:55:91:1a:
                     (略)
-            Exponent:
-                    01:00:01
-</code></pre>
+                Exponent: 65537 (0x10001)
+        Attributes:
+            a0:00
+    Signature Algorithm: sha1WithRSAEncryption
+         4f:1a:a7:57:9f:88:f3:17:23:aa:51:12:11:ff:c0:24:31:4c:
+         (略)
+$ certtool --crq-info --infile example-ssl.csr
+PKCS #10 Certificate Request Information:
+        Version: 1
+        Subject: C=JP,ST=Osaka,O=Internet Widgits Pty Ltd,CN=ssl.example.jp
+        Subject Public Key Algorithm: RSA
+                Modulus (bits 4096):
+                        cb:35:ec:f6:00:5a:75:d7:55:14:f8:55:91:1a:9b:83
+                        (略)
+                Exponent:
+                        01:00:01
+Other Information:
+        Public Key Id:
+                c14459bdb79e6b71e6303e4ffd9c7ab43dc9b9df
 
-<p>Other Information:</p>
-
-<pre><code>    Public Key Id:
-            c14459bdb79e6b71e6303e4ffd9c7ab43dc9b9df
-</code></pre>
-
-<p>&mdash;&mdash;-BEGIN NEW CERTIFICATE REQUEST&mdash;&mdash;&ndash;
+-----BEGIN NEW CERTIFICATE REQUEST-----
 (略)
-&mdash;&mdash;-END NEW CERTIFICATE REQUEST&mdash;&mdash;&ndash;
-```</p>
+-----END NEW CERTIFICATE REQUEST-----
+</code></pre>
 
 <h3>GnuTLS</h3>
 
@@ -316,9 +252,8 @@ PKCS #10 Certificate Request Information:</p>
 <code>Requested Extensions</code> が設定されるようなので、
 不要な場合には困りそうです。</p>
 
-<p>```console gnutls
-$ certtool -q &mdash;load-privkey example-tls.key &mdash;outfile example-tls.csr
-Generating a PKCS #10 certificate request&hellip;
+<pre><code class="console gnutls">$ certtool -q --load-privkey example-tls.key --outfile example-tls.csr
+Generating a PKCS #10 certificate request...
 Country name (2 chars):
 Organization name:
 Organizational unit name:
@@ -336,58 +271,50 @@ Will the certificate be used for encryption (RSA ciphersuites)? (y/N):
 Is this a TLS web client certificate? (y/N):
 Is this also a TLS web server certificate? (y/N):
 $ openssl req -in example-tls.csr -text -noout
-Certificate Request:</p>
-
-<pre><code>Data:
-    Version: 0 (0x0)
-    Subject: CN=tls.example.jp
-    Subject Public Key Info:
-        Public Key Algorithm: rsaEncryption
-            Public-Key: (4096 bit)
-            Modulus:
-                00:da:45:da:ca:13:ac:59:43:55:87:68:04:16:1a:
-                (略)
-            Exponent: 65537 (0x10001)
-    Attributes:
-    Requested Extensions:
-        X509v3 Basic Constraints: critical
-            CA:FALSE
-        X509v3 Key Usage: critical
-            Digital Signature
-Signature Algorithm: sha1WithRSAEncryption
-     cb:71:d2:c9:a2:97:14:74:f0:63:69:6b:36:31:ff:ce:f2:a0:
-     (略)
-</code></pre>
-
-<p>$ certtool &mdash;crq-info &mdash;infile example-tls.csr
-PKCS #10 Certificate Request Information:</p>
-
-<pre><code>    Version: 1
-    Subject: CN=tls.example.jp
-    Subject Public Key Algorithm: RSA
-            Modulus (bits 4096):
-                    da:45:da:ca:13:ac:59:43:55:87:68:04:16:1a:09:41
+Certificate Request:
+    Data:
+        Version: 0 (0x0)
+        Subject: CN=tls.example.jp
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (4096 bit)
+                Modulus:
+                    00:da:45:da:ca:13:ac:59:43:55:87:68:04:16:1a:
                     (略)
-            Exponent:
-                    01:00:01
-    Attributes:
-            Extensions:
-                    Basic Constraints (critical):
-                            Certificate Authority (CA): FALSE
-                    Key Usage (critical):
-                            Digital signature.
-</code></pre>
+                Exponent: 65537 (0x10001)
+        Attributes:
+        Requested Extensions:
+            X509v3 Basic Constraints: critical
+                CA:FALSE
+            X509v3 Key Usage: critical
+                Digital Signature
+    Signature Algorithm: sha1WithRSAEncryption
+         cb:71:d2:c9:a2:97:14:74:f0:63:69:6b:36:31:ff:ce:f2:a0:
+         (略)
+$ certtool --crq-info --infile example-tls.csr
+PKCS #10 Certificate Request Information:
+        Version: 1
+        Subject: CN=tls.example.jp
+        Subject Public Key Algorithm: RSA
+                Modulus (bits 4096):
+                        da:45:da:ca:13:ac:59:43:55:87:68:04:16:1a:09:41
+                        (略)
+                Exponent:
+                        01:00:01
+        Attributes:
+                Extensions:
+                        Basic Constraints (critical):
+                                Certificate Authority (CA): FALSE
+                        Key Usage (critical):
+                                Digital signature.
+Other Information:
+        Public Key Id:
+                4544bcc4bb9524975dc295bf2795022c50099e35
 
-<p>Other Information:</p>
-
-<pre><code>    Public Key Id:
-            4544bcc4bb9524975dc295bf2795022c50099e35
-</code></pre>
-
-<p>&mdash;&mdash;-BEGIN NEW CERTIFICATE REQUEST&mdash;&mdash;&ndash;
+-----BEGIN NEW CERTIFICATE REQUEST-----
 (略)
-&mdash;&mdash;-END NEW CERTIFICATE REQUEST&mdash;&mdash;&ndash;
-```</p>
+-----END NEW CERTIFICATE REQUEST-----
+</code></pre>
 
 <h2>まとめて作成</h2>
 
@@ -400,35 +327,32 @@ CSR と一緒に秘密鍵を生成できるようです。</p>
 この場合もそのままだとパーミッションが <code>-rw-rw-r--</code> (664) になるようなので、注意が必要です。
 <code>-nodes</code> を付けないと暗号化するためのパスフレーズを要求されます。</p>
 
-<p>```console openssl
-$ openssl req -new -newkey rsa:4096 -nodes -keyout server.key -out server.csr
+<pre><code class="console openssl">$ openssl req -new -newkey rsa:4096 -nodes -keyout server.key -out server.csr
 Generating a 4096 bit RSA private key
-&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;&hellip;++
-&hellip;&hellip;++</p>
-
-<h2>writing new private key to &lsquo;server.key&rsquo;</h2>
-
-<p>You are about to be asked to enter information that will be incorporated
+.............................................................................................................................................................................................................................................................................................................................................++
+......++
+writing new private key to 'server.key'
+-----
+You are about to be asked to enter information that will be incorporated
 into your certificate request.
 What you are about to enter is what is called a Distinguished Name or a DN.
 There are quite a few fields but you can leave some blank
-For some fields there will be a default value,</p>
-
-<h2>If you enter &lsquo;.&rsquo;, the field will be left blank.</h2>
-
-<p>Country Name (2 letter code) [AU]:JP
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:JP
 State or Province Name (full name) [Some-State]:Osaka
 Locality Name (eg, city) []:
 Organization Name (eg, company) [Internet Widgits Pty Ltd]:
 Organizational Unit Name (eg, section) []:
 Common Name (e.g. server FQDN or YOUR name) []:ssl.example.jp
-Email Address []:</p>
+Email Address []:
 
-<p>Please enter the following &lsquo;extra&rsquo; attributes
+Please enter the following 'extra' attributes
 to be sent with your certificate request
 A challenge password []:
 An optional company name []:
-```</p>
+</code></pre>
 
 <h3>GnuTLS</h3>
 
@@ -436,10 +360,9 @@ An optional company name []:
 出力は <code>--outfile</code> で指定したファイルにまとめて入ってしまって、
 使い勝手は良くないので、個別に生成した方が良さそうです。</p>
 
-<p>```console gnutls
-$ certtool -q &mdash;outfile out.txt
-Generating a PKCS #10 certificate request&hellip;
-Generating a 2432 bit RSA private key&hellip;
+<pre><code class="console gnutls">$ certtool -q --outfile out.txt
+Generating a PKCS #10 certificate request...
+Generating a 2432 bit RSA private key...
 Country name (2 chars):
 Organization name:
 Organizational unit name:
@@ -457,37 +380,32 @@ Will the certificate be used for encryption (RSA ciphersuites)? (y/N):
 Is this a TLS web client certificate? (y/N):
 Is this also a TLS web server certificate? (y/N):
 $ cat out.txt
-&mdash;&mdash;-BEGIN RSA PRIVATE KEY&mdash;&mdash;&ndash;
+-----BEGIN RSA PRIVATE KEY-----
 (略)
-&mdash;&mdash;-END RSA PRIVATE KEY&mdash;&mdash;&ndash;
-PKCS #10 Certificate Request Information:</p>
+-----END RSA PRIVATE KEY-----
+PKCS #10 Certificate Request Information:
+        Version: 1
+        Subject: CN=tls.example.jp
+        Subject Public Key Algorithm: RSA
+                Modulus (bits 2432):
+                        f4:ff:66:e8:c6:19:ab:7b:39:e3:72:ff:ee:13:fa:cf
+                        (略)
+                Exponent:
+                        01:00:01
+        Attributes:
+                Extensions:
+                        Basic Constraints (critical):
+                                Certificate Authority (CA): FALSE
+                        Key Usage (critical):
+                                Digital signature.
+Other Information:
+        Public Key Id:
+                61c9cef12d691e3373f71ad3a82d1ac4c4b71793
 
-<pre><code>    Version: 1
-    Subject: CN=tls.example.jp
-    Subject Public Key Algorithm: RSA
-            Modulus (bits 2432):
-                    f4:ff:66:e8:c6:19:ab:7b:39:e3:72:ff:ee:13:fa:cf
-                    (略)
-            Exponent:
-                    01:00:01
-    Attributes:
-            Extensions:
-                    Basic Constraints (critical):
-                            Certificate Authority (CA): FALSE
-                    Key Usage (critical):
-                            Digital signature.
-</code></pre>
-
-<p>Other Information:</p>
-
-<pre><code>    Public Key Id:
-            61c9cef12d691e3373f71ad3a82d1ac4c4b71793
-</code></pre>
-
-<p>&mdash;&mdash;-BEGIN NEW CERTIFICATE REQUEST&mdash;&mdash;&ndash;
+-----BEGIN NEW CERTIFICATE REQUEST-----
 (略)
-&mdash;&mdash;-END NEW CERTIFICATE REQUEST&mdash;&mdash;&ndash;
-```</p>
+-----END NEW CERTIFICATE REQUEST-----
+</code></pre>
 ]]></content>
   </entry>
   
@@ -507,7 +425,7 @@ PKCS #10 Certificate Request Information:</p>
 
 <h2>考えられる攻撃シナリオ</h2>
 
-<p><a href="http://www.exploit-db.com/exploits/32745/">OpenSSL TLS Heartbeat Extension &ndash; Memory Disclosure</a>
+<p><a href="http://www.exploit-db.com/exploits/32745/">OpenSSL TLS Heartbeat Extension - Memory Disclosure</a>
 を自分のサーバーに試した時に
 <code>mod-spdy-beta</code>
 が原因で脆弱性が残ったままになっていて、
@@ -554,7 +472,7 @@ Cookie のようなクライアントに返す情報は影響を受けて漏洩�
 フロントエンドサーバーのプロセスが読み込んでいる情報にあたる SSL/TLS の秘密鍵は漏洩している可能性があります。</p>
 
 <p>きちんとした対処としては
-<a href="http://d.hatena.ne.jp/nekoruri/20140408/heartbleed">CVE-2014-0160 OpenSSL Heartbleed 脆弱性まとめ &ndash; めもおきば</a>
+<a href="http://d.hatena.ne.jp/nekoruri/20140408/heartbleed">CVE-2014-0160 OpenSSL Heartbleed 脆弱性まとめ - めもおきば</a>
 にも書いてあるように</p>
 
 <ol>
@@ -615,31 +533,24 @@ Ubuntu なら libssl の更新は OS 自体を再起動した方が良いと思�
 <p><code>mod-spdy-beta</code> に含まれる <code>mod_ssl_with_npn.so</code> は改変した <code>libssl</code> を静的リンクしているようなので、
 システム側の OpenSSL が 0.9.8 系などのディストリビューション (wheezy など) でも以下のようになっていて、脆弱性の影響を受けます。</p>
 
-<p>```
-$ ldd /usr/lib/apache2/modules/mod_ssl.so</p>
-
-<pre><code>    linux-vdso.so.1 =&gt;  (0x00007fff25b9a000)
-    libssl.so.1.0.0 =&gt; /usr/lib/x86_64-linux-gnu/libssl.so.1.0.0 (0x00007f6ae2d93000)
-    libcrypto.so.1.0.0 =&gt; /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0 (0x00007f6ae299c000)
-    libpthread.so.0 =&gt; /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f6ae277f000)
-    libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6 (0x00007f6ae23f4000)
-    libdl.so.2 =&gt; /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f6ae21f0000)
-    libz.so.1 =&gt; /lib/x86_64-linux-gnu/libz.so.1 (0x00007f6ae1fd8000)
-    /lib64/ld-linux-x86-64.so.2 (0x00007f6ae322d000)
+<pre><code>$ ldd /usr/lib/apache2/modules/mod_ssl.so
+        linux-vdso.so.1 =&gt;  (0x00007fff25b9a000)
+        libssl.so.1.0.0 =&gt; /usr/lib/x86_64-linux-gnu/libssl.so.1.0.0 (0x00007f6ae2d93000)
+        libcrypto.so.1.0.0 =&gt; /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0 (0x00007f6ae299c000)
+        libpthread.so.0 =&gt; /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f6ae277f000)
+        libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6 (0x00007f6ae23f4000)
+        libdl.so.2 =&gt; /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f6ae21f0000)
+        libz.so.1 =&gt; /lib/x86_64-linux-gnu/libz.so.1 (0x00007f6ae1fd8000)
+        /lib64/ld-linux-x86-64.so.2 (0x00007f6ae322d000)
+$ ldd /usr/lib/apache2/modules/mod_ssl_with_npn.so
+        linux-vdso.so.1 =&gt;  (0x00007fff825ff000)
+        librt.so.1 =&gt; /lib/x86_64-linux-gnu/librt.so.1 (0x00007f8704d4e000)
+        libcrypt.so.1 =&gt; /lib/x86_64-linux-gnu/libcrypt.so.1 (0x00007f8704b17000)
+        libpthread.so.0 =&gt; /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f87048fa000)
+        libdl.so.2 =&gt; /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f87046f6000)
+        libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6 (0x00007f870436b000)
+        /lib64/ld-linux-x86-64.so.2 (0x00007f8705367000)
 </code></pre>
-
-<p>$ ldd /usr/lib/apache2/modules/mod_ssl_with_npn.so</p>
-
-<pre><code>    linux-vdso.so.1 =&gt;  (0x00007fff825ff000)
-    librt.so.1 =&gt; /lib/x86_64-linux-gnu/librt.so.1 (0x00007f8704d4e000)
-    libcrypt.so.1 =&gt; /lib/x86_64-linux-gnu/libcrypt.so.1 (0x00007f8704b17000)
-    libpthread.so.0 =&gt; /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f87048fa000)
-    libdl.so.2 =&gt; /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f87046f6000)
-    libc.so.6 =&gt; /lib/x86_64-linux-gnu/libc.so.6 (0x00007f870436b000)
-    /lib64/ld-linux-x86-64.so.2 (0x00007f8705367000)
-</code></pre>
-
-<p>```</p>
 
 <h2>影響を受ける OpenSSL のバージョン</h2>
 
@@ -656,7 +567,7 @@ Heartbleed の <code>How about operating systems?</code>
 Debian と Ubuntu に付いてもう少し調べてみました。</p>
 
 <p>Heartbleed にも書いてありますが、
-<a href="https://www.debian.org/security/2014/dsa-2896">Debian &mdash; Security Information &mdash; DSA-2896-1 openssl</a>
+<a href="https://www.debian.org/security/2014/dsa-2896">Debian &ndash; Security Information &ndash; DSA-2896-1 openssl</a>
 によると Debian は oldstable (squeeze) は影響がなくて、
 stable (wheezy) だと影響があるようです。
 つまりまだ wheezy に上げていないサーバーは大丈夫でした。</p>
@@ -709,8 +620,7 @@ stable (wheezy) だと影響があるようです。
 
 <p>サーバー側では <code>/etc/ssh/ssh_host_*</code> を削除して <code>dpkg-reconfigure openssh-server</code> で再生成するのが良さそうです。</p>
 
-<p><code>
-% sudo rm /etc/ssh/ssh_host_*
+<pre><code>% sudo rm /etc/ssh/ssh_host_*
 % sudo dpkg-reconfigure openssh-server
 Creating SSH2 RSA key; this may take some time ...
 Creating SSH2 DSA key; this may take some time ...
@@ -720,7 +630,7 @@ ssh start/running, process 7230
 % sudo service ssh restart
 ssh stop/waiting
 ssh start/running, process 7339
-</code></p>
+</code></pre>
 
 <p>クライアント側では、
 <code>HashKnownHosts no</code>
@@ -754,7 +664,7 @@ CA まで再生成する必要があるのかどうかがわからないので
 様子見中です。</p>
 
 <p>以前の Debian での修正ミスで脆弱な鍵しか生成できなくなっていた問題の修正のときの
-<a href="https://www.debian.org/security/key-rollover/">Debian &mdash; 鍵のロールオーバー</a>
+<a href="https://www.debian.org/security/key-rollover/">Debian &ndash; 鍵のロールオーバー</a>
 が参考になるかもしれませんが、
 今回はサーバー外からでも鍵が抜き出せてしまうという問題のようなので、
 LAN 内のサーバーなど、そのサーバーにアクセスできる環境に攻撃者が入れる時点で問題がある環境なら、
@@ -766,7 +676,7 @@ LAN 内のサーバーなど、そのサーバーにアクセスできる環境�
 <p>2014-04-09 参考リンクを追加</p>
 
 <ul>
-<li><a href="http://d.hatena.ne.jp/nekoruri/20140408/heartbleed">CVE-2014-0160 OpenSSL Heartbleed 脆弱性まとめ &ndash; めもおきば</a>
+<li><a href="http://d.hatena.ne.jp/nekoruri/20140408/heartbleed">CVE-2014-0160 OpenSSL Heartbleed 脆弱性まとめ - めもおきば</a>
 
 <ul>
 <li>このリンク先が日本語としては一番情報がまとまっているようです。</li>
@@ -784,19 +694,19 @@ LAN 内のサーバーなど、そのサーバーにアクセスできる環境�
 <li>英語だけど Google Chrome の翻訳機能でもだいたい読めます。</li>
 </ul>
 </li>
-<li><a href="http://www.exploit-db.com/exploits/32745/">OpenSSL TLS Heartbeat Extension &ndash; Memory Disclosure</a>
+<li><a href="http://www.exploit-db.com/exploits/32745/">OpenSSL TLS Heartbeat Extension - Memory Disclosure</a>
 
 <ul>
 <li>実際に情報が抜き出せるチェックツールで、これをみて他のツールの誤検知ではなく <code>mod_spdy</code> が原因だと気付きました。</li>
 </ul>
 </li>
-<li><a href="https://groups.google.com/forum/#!topic/mod-spdy-discuss/0yAGH8BHfQo">CVE-2014-0160 / heartbleed openssl bug &amp; mod_spdy &ndash; Google グループ</a>
+<li><a href="https://groups.google.com/forum/#!topic/mod-spdy-discuss/0yAGH8BHfQo">CVE-2014-0160 / heartbleed openssl bug &amp; mod_spdy - Google グループ</a>
 
 <ul>
 <li><code>mod_spdy</code> の対応の話 (英語) です。日本時間の 2014-04-09 02:00 時点ではまだ対応中で修正版のリリースはされていないようです。</li>
 </ul>
 </li>
-<li><a href="https://groups.google.com/forum/#!msg/mod-spdy-discuss/EwCowyS1KTU/uGm4586P_CQJ">New mod_spdy binary bugfix release (v0.9.4.2) &ndash; SECURITY FIX</a>
+<li><a href="https://groups.google.com/forum/#!msg/mod-spdy-discuss/EwCowyS1KTU/uGm4586P_CQJ">New mod_spdy binary bugfix release (v0.9.4.2) - SECURITY FIX</a>
 
 <ul>
 <li>日本時間の 2014-04-09 09:00 時点ではリリースされていました。</li>

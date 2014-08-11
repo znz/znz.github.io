@@ -4,7 +4,7 @@
   <title><![CDATA[Category: dokku | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/dokku/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -30,11 +30,10 @@
 <p>まず dokku を clone して中の Vagrantfile をみて、
 環境変数で設定できる項目があるのを確認しておきます。</p>
 
-<p><code>console
-% git clone https://github.com/progrium/dokku
+<pre><code class="console">% git clone https://github.com/progrium/dokku
 % cd dokku
 % vi Vagrantfile
-</code></p>
+</code></pre>
 
 <h2>Vagantfile を変更する</h2>
 
@@ -44,30 +43,23 @@
 shell provision のところで書き換えておきます。
 (関係ないところにマッチして問題が起きる可能性はほぼないので、置換元の URL の <code>.</code> はエスケープしていません。)</p>
 
-<p>```diff
-diff &mdash;git a/Vagrantfile b/Vagrantfile
+<pre><code class="diff">diff --git a/Vagrantfile b/Vagrantfile
 index a310f6b..7c1a133 100644
-&mdash;&ndash; a/Vagrantfile
+--- a/Vagrantfile
 +++ b/Vagrantfile
-@@ -29,5 +29,10 @@ Vagrant::configure(&ldquo;2&rdquo;) do |config|</p>
+@@ -29,5 +29,10 @@ Vagrant::configure("2") do |config|
+     vb.customize ["modifyvm", :id, "--memory", BOX_MEMORY]
+   end
 
-<pre><code> vb.customize ["modifyvm", :id, "--memory", BOX_MEMORY]
+-  config.vm.provision :shell, :inline =&gt; "apt-get -y install git &amp;&amp; cd /root/dokku &amp;&amp; #{make_cmd}"
++  config.vm.provision :shell, :inline =&gt; &lt;&lt;-SHELL
++    sed -i~ -e 's;http://archive.ubuntu.com/ubuntu;http://ftp.jaist.ac.jp/pub/Linux/ubuntu;' /etc/apt/sources.list &amp;&amp;
++    apt-get update &amp;&amp;
++    apt-get -y install git &amp;&amp;
++    cd /root/dokku &amp;&amp; #{make_cmd}
++  SHELL
+ end
 </code></pre>
-
-<p>   end</p>
-
-<ul>
-<li>config.vm.provision :shell, :inline => &ldquo;apt-get -y install git &amp;&amp; cd /root/dokku &amp;&amp; #{make_cmd}&rdquo;</li>
-<li>config.vm.provision :shell, :inline => &lt;&lt;-SHELL</li>
-<li> sed -i~ -e &rsquo;s;<a href="http://archive.ubuntu.com/ubuntu;http://ftp.jaist.ac.jp/pub/Linux/ubuntu;">http://archive.ubuntu.com/ubuntu;http://ftp.jaist.ac.jp/pub/Linux/ubuntu;</a>&lsquo; /etc/apt/sources.list &amp;&amp;</li>
-<li> apt-get update &amp;&amp;</li>
-<li> apt-get -y install git &amp;&amp;</li>
-<li> cd /root/dokku &amp;&amp; #{make_cmd}</li>
-<li>SHELL
-end
-```</li>
-</ul>
-
 
 <h2>初回起動</h2>
 
@@ -78,9 +70,8 @@ end
 Rails アプリを動かそうとするとメモリ不足で <code>bundle install</code> の途中で失敗して
 deploy できなかったので増やしています。</p>
 
-<p><code>console
-% BOX_NAME=trusty-amd64-20140418 BOX_URI=https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box BOX_MEMORY=2048 vagrant up
-</code></p>
+<pre><code class="console">% BOX_NAME=trusty-amd64-20140418 BOX_URI=https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box BOX_MEMORY=2048 vagrant up
+</code></pre>
 
 <p>box のダウンロードとインストール、
 VM の作成などには時間がかかるので、
@@ -95,114 +86,92 @@ box の設定は参照されないので省略できます。
 
 <p><code>BOX_MEMORY</code> は毎回設定されるので、指定を忘れると 512 に戻ってしまいます。</p>
 
-<p><code>console
-% BOX_MEMORY=2048 vagrant up
-</code></p>
+<pre><code class="console">% BOX_MEMORY=2048 vagrant up
+</code></pre>
 
 <h2>dokku の初期設定</h2>
 
 <p>ssh の鍵を追加します。</p>
 
-<p>```console
-% vagrant ssh
-vagrant@dokku:~$ egrep &lsquo;^ssh&rsquo; ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
+<pre><code class="console">% vagrant ssh
+vagrant@dokku:~$ egrep '^ssh' ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
 dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6
-vagrant@dokku:~$ cat ~/.ssh/authorized_keys</p>
-
-<h1>CLOUD_IMG: This file was created/modified by the Cloud Image build process</h1>
-
-<p>ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+vagrant@dokku:~$ cat ~/.ssh/authorized_keys
+# CLOUD_IMG: This file was created/modified by the Cloud Image build process
+ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
 vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
-command=&ldquo;FINGERPRINT=dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6 NAME=vagrant <code>cat /home/dokku/.sshcommand</code> $SSH_ORIGINAL_COMMAND&rdquo;,no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
-```</p>
+command="FINGERPRINT=dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6 NAME=vagrant `cat /home/dokku/.sshcommand` $SSH_ORIGINAL_COMMAND",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+</code></pre>
 
 <h2>dokku の鍵追加失敗例</h2>
 
 <p><code>cat ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant</code>
 で追加してしまうと以下のように変になってしまいます。</p>
 
-<p><code>text
-vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
+<pre><code class="text">vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
 command="FINGERPRINT=is NAME=vagrant `cat /home/dokku/.sshcommand` $SSH_ORIGINAL_COMMAND",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding # CLOUD_IMG: This file was created/modified by the Cloud Image build process
 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
-</code></p>
-
-<p>```bash</p>
-
-<pre><code>KEY=$(cat)
-FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
-KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
-echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
-echo $FINGERPRINT
 </code></pre>
 
-<p>```</p>
+<pre><code class="bash">    KEY=$(cat)
+    FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
+    KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
+    echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
+    echo $FINGERPRINT
+</code></pre>
 
 <p>の部分を以下のように <code>while read</code> ループに変えた方が良いのかもしれません。</p>
 
-<p>```bash</p>
-
-<pre><code>while read KEY; do
-  FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
-  KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
-  echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
-  echo $FINGERPRINT
-done
+<pre><code class="bash">    while read KEY; do
+      FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
+      KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
+      echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
+      echo $FINGERPRINT
+    done
 </code></pre>
-
-<p>```</p>
 
 <h2>node-js-sample の deploy</h2>
 
 <p><code>node-js-sample</code> を <code>deploy</code> して動作確認します。
 以下の例では <code>ssh dokku</code> で VM に接続できるように <code>~/.ssh/config</code> に設定済みです。</p>
 
-<p>```console
-% git clone <a href="https://github.com/heroku/node-js-sample">https://github.com/heroku/node-js-sample</a>
-Cloning into &lsquo;node-js-sample&rsquo;&hellip;
+<pre><code class="console">% git clone https://github.com/heroku/node-js-sample
+Cloning into 'node-js-sample'...
 remote: Reusing existing pack: 319, done.
 remote: Total 319 (delta 0), reused 0 (delta 0)
 Receiving objects: 100% (319/319), 201.92 KiB | 210.00 KiB/s, done.
 Resolving deltas: 100% (17/17), done.
-Checking connectivity&hellip; done.
+Checking connectivity... done.
 % cd node-js-sample
 % git remote add dokku dokku:node-js-app
-%  git push &mdash;set-upstream dokku master
+%  git push --set-upstream dokku master
 Counting objects: 319, done.
 Delta compression using up to 4 threads.
 Compressing objects: 100% (274/274), done.
 Writing objects: 100% (319/319), 201.92 KiB | 0 bytes/s, done.
 Total 319 (delta 17), reused 319 (delta 17)
-&mdash;&mdash;&ndash;> Cleaning up &hellip;
-remote: Cloning into &lsquo;/tmp/tmp.ChNvZEb5S9&rsquo;&hellip;
-&mdash;&mdash;&ndash;> Building node-js-app &hellip;
+-----&gt; Cleaning up ...
+remote: Cloning into '/tmp/tmp.ChNvZEb5S9'...
+-----&gt; Building node-js-app ...
 remote: warning: You appear to have cloned an empty repository.
 remote: done.
-remote: HEAD is now at 2e52ce7&hellip; Update documentation links</p>
-
-<pre><code>   Node.js app detected
-</code></pre>
-
-<p>&mdash;&mdash;&ndash;> Requested node range:  0.10.x
-&mdash;&mdash;&ndash;> Resolved node version: 0.10.26
-&mdash;&mdash;&ndash;> Downloading and installing node
+remote: HEAD is now at 2e52ce7... Update documentation links
+       Node.js app detected
+-----&gt; Requested node range:  0.10.x
+-----&gt; Resolved node version: 0.10.26
+-----&gt; Downloading and installing node
 (省略)
-&mdash;&mdash;&ndash;> Discovering process types</p>
+-----&gt; Discovering process types
+       Procfile declares types -&gt; web
+-----&gt; Releasing node-js-app ...
+-----&gt; Deploying node-js-app ...
+=====&gt; Application deployed:
+       http://node-js-app.dokku.me
 
-<pre><code>   Procfile declares types -&gt; web
-</code></pre>
-
-<p>&mdash;&mdash;&ndash;> Releasing node-js-app &hellip;
-&mdash;&mdash;&ndash;> Deploying node-js-app &hellip;
-=====> Application deployed:</p>
-
-<pre><code>   http://node-js-app.dokku.me
-</code></pre>
-
-<p>To dokku:node-js-app
- * [new branch]      master &ndash;> master
+To dokku:node-js-app
+ * [new branch]      master -&gt; master
 Branch master set up to track remote branch master from dokku.
-```</p>
+</code></pre>
 
 <p>Vagrantfile で guest の 80 番ポートを host の 8080 番ポートで見えるように設定されているので
 <code>http://node-js-app.dokku.me:8080/</code>
@@ -314,8 +283,7 @@ ssh 用の鍵としては
 の設定としては、
 グローバルの設定も含めると以下のようにしました。</p>
 
-<p><code>
-ExitOnForwardFailure yes
+<pre><code>ExitOnForwardFailure yes
 Ciphers aes256-ctr,aes192-ctr,aes128-ctr
 HashKnownHosts no
 NoHostAuthenticationForLocalhost yes
@@ -330,7 +298,7 @@ Host raring64
   PasswordAuthentication no
   IdentityFile ~/.vagrant.d/insecure_private_key
   IdentitiesOnly yes
-</code></p>
+</code></pre>
 
 <p><code>Ciphers</code> はデフォルトはセキュアなものを使い、
 VM 用には速いものを使うようにしています。</p>
@@ -385,9 +353,8 @@ VM 用には速いものを使うようにしています。</p>
 <code>127.0.0.1</code>
 にしています。</p>
 
-<p><code>
-echo deploy.127.0.0.1.xip.io | sudo tee /home/dokku/VHOST
-</code></p>
+<pre><code>echo deploy.127.0.0.1.xip.io | sudo tee /home/dokku/VHOST
+</code></pre>
 
 <h3>ssh 公開鍵の追加</h3>
 
@@ -401,15 +368,13 @@ echo deploy.127.0.0.1.xip.io | sudo tee /home/dokku/VHOST
 <p>ここもゲストOS側での作業になります。
 README の手順では <code>ssh</code> 経由で <code>sudo</code> を実行しています。</p>
 
-<p><code>
-cat ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
-</code></p>
+<pre><code>cat ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
+</code></pre>
 
 <p>この手順で追加した公開鍵は</p>
 
-<p><code>
-sudo sshcommand acl-remove dokku vagrant
-</code></p>
+<pre><code>sudo sshcommand acl-remove dokku vagrant
+</code></pre>
 
 <p>で削除できます。</p>
 
@@ -420,15 +385,11 @@ sudo sshcommand acl-remove dokku vagrant
 
 <p>問題なく設定できていれば以下で deploy できます。</p>
 
-<p>```</p>
-
-<pre><code>git clone https://github.com/heroku/node-js-sample
-cd node-js-sample
-git remote add raring64 dokku@raring64:node-js-app
-git push raring64 master
+<pre><code>    git clone https://github.com/heroku/node-js-sample
+    cd node-js-sample
+    git remote add raring64 dokku@raring64:node-js-app
+    git push raring64 master
 </code></pre>
-
-<p>```</p>
 
 <p>エラーになったときはログをみたり、
 <code>dmesg</code>
@@ -444,9 +405,8 @@ git push raring64 master
 ホストOS側には <code>dokku</code> コマンドはないので、
 どうすればいいのか悩んだのですが、</p>
 
-<p><code>
- ssh dokku@raring64 run node-js-app ls -alh
-</code></p>
+<pre><code> ssh dokku@raring64 run node-js-app ls -alh
+</code></pre>
 
 <p>のように <code>git push</code> に使う <code>ssh</code> 経由で
 <code>dokku</code> コマンドが実行されているのを使えました。</p>
@@ -458,18 +418,16 @@ git push raring64 master
 
 <p>他にも</p>
 
-<p><code>
- ssh dokku@raring64 delete node-js-app
-</code></p>
+<pre><code> ssh dokku@raring64 delete node-js-app
+</code></pre>
 
 <p>でアプリケーションの削除もできました。
 heroku と違って確認なしにいきなり削除されてしまうので注意が必要です。</p>
 
 <p>どんなコマンドが実行できるのかは <code>dokku help</code> 相当の</p>
 
-<p><code>
- ssh dokku@raring64 help
-</code></p>
+<pre><code> ssh dokku@raring64 help
+</code></pre>
 
 <p>で一覧が出てきます。</p>
 

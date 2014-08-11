@@ -4,7 +4,7 @@
   <title><![CDATA[Category: github | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/github/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -118,7 +118,7 @@ github 連携でアカウントを登録しました。</p>
 <h2>参考サイト</h2>
 
 <ul>
-<li><a href="http://qiita.com/kiri/items/f329a35543022d6e45d0">AnsibleWorks Galaxyにroleを登録してみる &ndash; Qiita</a>
+<li><a href="http://qiita.com/kiri/items/f329a35543022d6e45d0">AnsibleWorks Galaxyにroleを登録してみる - Qiita</a>
 
 <ul>
 <li>スクリーンショットをみると AnsibleWorks Galaxy になっているところが今は Ansible Galaxy なので、いつの間にか名前が変わっているようです。</li>
@@ -215,7 +215,7 @@ git-svn で移行しました。</p>
 
 <h2>CloudCore VPS</h2>
 
-<p><a href="http://www.cloudcore.jp/vps/develop/">開発者支援制度 &ndash; CloudCore VPS</a>
+<p><a href="http://www.cloudcore.jp/vps/develop/">開発者支援制度 - CloudCore VPS</a>
 でサーバーを借りてみて、
 テスト用の IRC サーバーを動かしています。</p>
 
@@ -276,19 +276,13 @@ github 以外でも使えます。</p>
 は、その他の <code>git fetch</code> や <code>git pull</code> の時は
 <code>https:</code> の代わりに <code>git:</code> を使うという意味になります。</p>
 
-<p>```ini ~/.gitconfig
-[url &ldquo;git@github.com:&rdquo;]</p>
-
-<pre><code>pushInsteadOf = git://github.com/
-pushInsteadOf = https://github.com/
-</code></pre>
-
-<p>[url &ldquo;git://github.com/&rdquo;]</p>
-
-<pre><code>insteadOf = https://github.com/
-</code></pre>
-
-<p>```</p>
+<p><code>ini ~/.gitconfig
+[url "git@github.com:"]
+    pushInsteadOf = git://github.com/
+    pushInsteadOf = https://github.com/
+[url "git://github.com/"]
+    insteadOf = https://github.com/
+</code></p>
 
 <h2>pushInsteadOf なしの場合</h2>
 
@@ -300,14 +294,11 @@ proxy を通さないといけないとかの理由で
 すべて https に統一したいのなら
 以下のような設定になると思います。</p>
 
-<p>```ini ~/.gitconfig
-[url &ldquo;<a href="https://github.com/">https://github.com/</a>&rdquo;]</p>
-
-<pre><code>insteadOf = git@github.com:
-insteadOf = git://github.com/
-</code></pre>
-
-<p>```</p>
+<p><code>ini ~/.gitconfig
+[url "https://github.com/"]
+    insteadOf = git@github.com:
+    insteadOf = git://github.com/
+</code></p>
 
 <h2>コマンドでの設定方法</h2>
 
@@ -317,12 +308,11 @@ insteadOf = git://github.com/
 <p><code>~/.gitconfig</code> に <code>github.token</code> などの秘密にすべき情報が入っていて
 共有しにくい時にはコマンドで設定できた方が便利です。</p>
 
-<p><code>bash
-GITHUB_URL_PREFIX="url.git@github.com:"
+<pre><code class="bash">GITHUB_URL_PREFIX="url.git@github.com:"
 git config --global --remove-section "$GITHUB_URL_PREFIX" || :
 git config --global       "$GITHUB_URL_PREFIX".pushInsteadOf "git://github.com/"
 git config --global --add "$GITHUB_URL_PREFIX".pushInsteadOf "https://github.com/"
-</code></p>
+</code></pre>
 
 <h2>設定確認方法</h2>
 
@@ -333,34 +323,24 @@ git config --global --add "$GITHUB_URL_PREFIX".pushInsteadOf "https://github.com
 <p><code>.git/config</code> の <code>remote</code> の <code>url</code> と見比べると
 ちゃんと設定が反映されていることがわかると思います。</p>
 
-<p>```console
-$ git remote -v
+<pre><code class="console">$ git remote -v
 origin  git://github.com/znz/rbenv-plug.git (fetch)
 origin  git@github.com:znz/rbenv-plug.git (push)
 $ cat .git/config
-[core]</p>
-
-<pre><code>repositoryformatversion = 0
-filemode = true
-bare = false
-logallrefupdates = true
-ignorecase = true
-precomposeunicode = false
+[core]
+    repositoryformatversion = 0
+    filemode = true
+    bare = false
+    logallrefupdates = true
+    ignorecase = true
+    precomposeunicode = false
+[remote "origin"]
+    url = https://github.com/znz/rbenv-plug.git
+    fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+    remote = origin
+    merge = refs/heads/master
 </code></pre>
-
-<p>[remote &ldquo;origin&rdquo;]</p>
-
-<pre><code>url = https://github.com/znz/rbenv-plug.git
-fetch = +refs/heads/*:refs/remotes/origin/*
-</code></pre>
-
-<p>[branch &ldquo;master&rdquo;]</p>
-
-<pre><code>remote = origin
-merge = refs/heads/master
-</code></pre>
-
-<p>```</p>
 
 <h2>URL の選ばれ方</h2>
 
@@ -494,14 +474,10 @@ github のレポジトリを作成する時の LICENSE ファイルそのまま�
 
 <p><code>rbenv update</code> だと <code>git pull</code> ではなく、毎回</p>
 
-<p>```</p>
-
-<pre><code>git checkout master
-git fetch origin
-git pull origin master
+<pre><code>    git checkout master
+    git fetch origin
+    git pull origin master
 </code></pre>
-
-<p>```</p>
 
 <p>を実行していて遅いというのも <code>rbenv git</code> などを作った理由のひとつというのを
 書き忘れていたので、追記しておきます。</p>

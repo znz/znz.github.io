@@ -4,7 +4,7 @@
   <title><![CDATA[Category: live | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/live/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -32,31 +32,25 @@
 
 <p>Vagrantfile では</p>
 
-<p>```ruby Vagrantfile
-  config.vm.provision :shell do |shell|</p>
-
-<pre><code>shell.path = "provision.sh"
+<pre><code class="ruby Vagrantfile">  config.vm.provision :shell do |shell|
+    shell.path = "provision.sh"
+  end
 </code></pre>
-
-<p>  end
-```</p>
 
 <p>のようにシェルスクリプトでプロビジョニングしているだけだったので、
 その中で以下のようにインストールして設定するようにしました。</p>
 
-<p><code>bash provision.sh
-apt-get install -y apt-cacher-ng
+<pre><code class="bash provision.sh">apt-get install -y apt-cacher-ng
 echo 'Acquire::http::Proxy "http://localhost:3142/";' &gt;/etc/apt/apt.conf.d/02proxy
-</code></p>
+</code></pre>
 
 <p>Vagrantfile で以下のようにポートフォワーディングを設定していれば
 <a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0315" title="第315回　apt-cacher-ngを使ってAPT用キャッシュプロキシの構築：Ubuntu Weekly Recipe｜gihyo.jp … 技術評論社">第315回　apt-cacher-ngを使ってAPT用キャッシュプロキシの構築：Ubuntu Weekly Recipe｜gihyo.jp … 技術評論社</a>
 の2ページ目に説明があるようにヒット率などを確認できます。</p>
 
-<p><code>ruby Vagrantfile
-  # apt-cacher-ng
+<pre><code class="ruby Vagrantfile">  # apt-cacher-ng
   config.vm.network "forwarded_port", guest: 3142, host: 3142
-</code></p>
+</code></pre>
 
 <h2>rake コマンドで環境変数を渡す</h2>
 
@@ -65,18 +59,14 @@ rake コマンドは引数の <code>FOO=bar</code> を <code>ENV</code> に設�
 <code>rake APT_HTTP_PROXY=http://localhost:3142</code> で渡して、
 Rakefile の中では以下のように受け取って <code>lb config</code> に渡しました。</p>
 
-<p>```ruby Rakefile
-desc &ldquo;config RubyLive&rdquo;
-task :config => [:clean] do
-  sh &lsquo;lb config&rsquo;
-  if ENV[&lsquo;APT_HTTP_PROXY&rsquo;]</p>
-
-<pre><code>sh "lb config --apt-http-proxy #{ENV['APT_HTTP_PROXY']}"
-</code></pre>
-
-<p>  end
+<pre><code class="ruby Rakefile">desc "config RubyLive"
+task :config =&gt; [:clean] do
+  sh 'lb config'
+  if ENV['APT_HTTP_PROXY']
+    sh "lb config --apt-http-proxy #{ENV['APT_HTTP_PROXY']}"
+  end
 end
-```</p>
+</code></pre>
 
 <h2>live-build で apt-cacher-ng を使う</h2>
 
@@ -149,12 +139,9 @@ docker は後述の制限のために作成できませんでした。</p>
 </ul>
 
 
-<p>なぜか</p>
-
-<pre><code>chroot: failed to run command `/usr/bin/env': No such file or directory
-</code></pre>
-
-<p>で失敗することがありましたが、再度 <code>/vagrant/rubylive.sh</code> を実行すれば問題なく作成できました。</p>
+<p>なぜか
+    chroot: failed to run command <code>/usr/bin/env': No such file or directory
+で失敗することがありましたが、再度</code>/vagrant/rubylive.sh` を実行すれば問題なく作成できました。</p>
 
 <h3>片付け方</h3>
 
@@ -336,7 +323,7 @@ zip ファイルなので、先ほどの <code>.gnomerc</code> でデスクト�
 
 <h2>ruby-build で ruby 2.1.2 のインストール</h2>
 
-<p><a href="http://qiita.com/takahashim/items/406421d515ef1d4f1189" title="[ReVIEW Tips] DockerでRe:VIEW - Qiita">[ReVIEW Tips] DockerでRe:VIEW &ndash; Qiita</a>
+<p><a href="http://qiita.com/takahashim/items/406421d515ef1d4f1189" title="[ReVIEW Tips] DockerでRe:VIEW - Qiita">[ReVIEW Tips] DockerでRe:VIEW - Qiita</a>
 を参考にして rbenv は使わずに ruby-build だけ使って <code>/usr/local</code> に ruby 2.1.2 をインストールしました。</p>
 
 <h2>localepurge</h2>

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: postfix | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/postfix/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -75,10 +75,9 @@ ML を運用する設定の情報があまりなかったので、
 <code>alias_maps = hash:/etc/aliases</code>
 という設定だったのなら、</p>
 
-<p><code>
-alias_maps = hash:/etc/aliases
+<pre><code>alias_maps = hash:/etc/aliases
  hash:/var/lib/mailman/data/aliases
-</code></p>
+</code></pre>
 
 <p>のように追加するだけです。
 差分をとりやすいように別の行にするのが好みですが、
@@ -106,14 +105,13 @@ alias_maps = hash:/etc/aliases
 <p>以下のような感じで ML の設定のデフォルト値を設定しておくと
 後から Web で設定変更する手間を省けます。</p>
 
-<p><code>
-DEFAULT_SUBJECT_PREFIX = "[%(real_name)s:%%d] "
+<pre><code>DEFAULT_SUBJECT_PREFIX = "[%(real_name)s:%%d] "
 DEFAULT_MSG_FOOTER = ""
 DEFAULT_REPLY_GOES_TO_LIST = 1
 DEFAULT_MAX_MESSAGE_SIZE = 0
 DEFAULT_LIST_ADVERTISED = No
 DEFAULT_PRIVATE_ROSTER = 2
-</code></p>
+</code></pre>
 
 <p>どんな設定項目があるのかは
 <code>/usr/lib/mailman/Mailman/Defaults.py</code>
@@ -133,8 +131,7 @@ DEFAULT_PRIVATE_ROSTER = 2
 シンボリックリンクでリンク先のグループは問題ないようなので、
 無視することにしました。</p>
 
-<p><code>
-$ sudo /var/lib/mailman/bin/check_perms -f
+<pre><code>$ sudo /var/lib/mailman/bin/check_perms -f
 /var/lib/mailman/bin bad group (has: root, expected list) (fixing)
 /var/lib/mailman/logs bad group (has: root, expected list) (fixing)
 /var/lib/mailman/cron bad group (has: root, expected list) (fixing)
@@ -147,7 +144,7 @@ $ sudo /var/lib/mailman/bin/check_perms -f
 /var/lib/mailman/locks bad group (has: root, expected list) (fixing)
 Problems found: 10
 Re-run as list (or root) with -f flag to fix
-</code></p>
+</code></pre>
 
 <h2>ML 作成</h2>
 
@@ -179,14 +176,13 @@ Re-run as list (or root) with -f flag to fix
 <h2>milter-manager の話</h2>
 
 <p>まず <code>milter-manager</code> は
-<a href="http://milter-manager.sourceforge.net/reference/ja/install-to-debian.html">Debianへインストール &ndash; milter manager</a>
+<a href="http://milter-manager.sourceforge.net/reference/ja/install-to-debian.html">Debianへインストール - milter manager</a>
 の手順通りに設定してみたのですが、確認のところで、</p>
 
-<p><code>
- $ sudo -u postfix milter-test-server -s unix:/var/spool/postfix/milter-manager/milter-manager.sock
+<pre><code> $ sudo -u postfix milter-test-server -s unix:/var/spool/postfix/milter-manager/milter-manager.sock
  status: temporary-failure
  elapsed-time: 0.007781 seconds
-</code></p>
+</code></pre>
 
 <p>のように <code>temporary-failure</code> になりました。
 そこで依存しているデーモンを調べてみたところ、
@@ -226,19 +222,15 @@ Re-run as list (or root) with -f flag to fix
 <a href="http://www.postfix-jp.info/ML/arc-2.5/msg00237.html">以前ひっかかったとき</a>
 とは変わっているということに気付きました。</p>
 
-<p>```
-&lt;自分のアドレス@gmail.com> (expanded from &lt;自分@あるサーバー>): host</p>
-
-<pre><code>gmail-smtp-in.l.google.com[2607:f8b0:4002:c01::1a] said: 550-5.7.1
-[2401:xxxx:xxx:xxxx:xxx:xxx:xxx:xxx      16] Our system has detected
-550-5.7.1 that this message does not meet IPv6 sending guidelines regarding
-PTR 550-5.7.1 records and authentication. Please review 550-5.7.1
-https://support.google.com/mail/?p=ipv6_authentication_error for more 550
-5.7.1 information. e2si14078426yhm.125 - gsmtp (in reply to end of DATA
-command)
+<pre><code>&lt;自分のアドレス@gmail.com&gt; (expanded from &lt;自分@あるサーバー&gt;): host
+    gmail-smtp-in.l.google.com[2607:f8b0:4002:c01::1a] said: 550-5.7.1
+    [2401:xxxx:xxx:xxxx:xxx:xxx:xxx:xxx      16] Our system has detected
+    550-5.7.1 that this message does not meet IPv6 sending guidelines regarding
+    PTR 550-5.7.1 records and authentication. Please review 550-5.7.1
+    https://support.google.com/mail/?p=ipv6_authentication_error for more 550
+    5.7.1 information. e2si14078426yhm.125 - gsmtp (in reply to end of DATA
+    command)
 </code></pre>
-
-<p>```</p>
 
 <h2>余談</h2>
 

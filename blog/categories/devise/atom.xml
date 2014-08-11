@@ -4,7 +4,7 @@
   <title><![CDATA[Category: devise | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/devise/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -86,56 +86,50 @@ doorkeeper 側の <code>oauth/applications</code> に登録しておく必要が
 
 <p>info のハッシュはサーバーから受け取れていて、後の処理でもっと欲しい情報があれば自由に増やせます。</p>
 
-<p>```ruby lib/omniauth/strategies/doorkeeper.rb
-module OmniAuth
-  module Strategies</p>
+<pre><code class="ruby lib/omniauth/strategies/doorkeeper.rb">module OmniAuth
+  module Strategies
+    class Doorkeeper &lt; OmniAuth::Strategies::OAuth2
+      option :name, :doorkeeper
 
-<pre><code>class Doorkeeper &lt; OmniAuth::Strategies::OAuth2
-  option :name, :doorkeeper
+      option :client_options, {
+        site: 'http://localhost:4000',
+        authorize_path: '/users/oauth/authorize'
+      }
 
-  option :client_options, {
-    site: 'http://localhost:4000',
-    authorize_path: '/users/oauth/authorize'
-  }
+      uid do
+        raw_info['id']
+      end
 
-  uid do
-    raw_info['id']
-  end
+      info do
+        {
+          email: raw_info['email'],
+          name: raw_info['name'],
+        }
+      end
 
-  info do
-    {
-      email: raw_info['email'],
-      name: raw_info['name'],
-    }
-  end
-
-  def raw_info
-    @raw_info ||= access_token.get('/api/v1/me.json').parsed || {}
+      def raw_info
+        @raw_info ||= access_token.get('/api/v1/me.json').parsed || {}
+      end
+    end
   end
 end
 </code></pre>
-
-<p>  end
-end
-```</p>
 
 <h2><code>config/initializers/devise.rb</code> で設定</h2>
 
 <p><a href="https://github.com/doorkeeper-gem/doorkeeper-devise-client">サンプルアプリ</a>
 では</p>
 
-<p><code>ruby config/initializers/devise.rb
-  config.omniauth :doorkeeper,  DOORKEEPER_APP_ID, DOORKEEPER_APP_SECRET, :client_options =&gt;  {:site =&gt; DOORKEEPER_APP_URL}
-</code></p>
+<pre><code class="ruby config/initializers/devise.rb">  config.omniauth :doorkeeper,  DOORKEEPER_APP_ID, DOORKEEPER_APP_SECRET, :client_options =&gt;  {:site =&gt; DOORKEEPER_APP_URL}
+</code></pre>
 
 <p>となっていました。</p>
 
 <p><code>scope</code> も追加すると以下のようになります。
 <code>dotenv</code> を使って <code>ENV</code> から取るようにしました。</p>
 
-<p><code>ruby config/initializers/devise.rb
-  config.omniauth :doorkeeper, ENV['DOORKEEPER_APP_ID'], ENV['DOORKEEPER_APP_SECRET'], client_options: {site: ENV['DOORKEEPER_APP_URL'] }, scope: 'public write'
-</code></p>
+<pre><code class="ruby config/initializers/devise.rb">  config.omniauth :doorkeeper, ENV['DOORKEEPER_APP_ID'], ENV['DOORKEEPER_APP_SECRET'], client_options: {site: ENV['DOORKEEPER_APP_URL'] }, scope: 'public write'
+</code></pre>
 
 <p><code>scope</code> は <code>'public,write'</code> だと <code>The requested scope is invalid, unknown, or malformed.</code> というエラーになってしまったので、
 <code>,</code> 区切りではなくスペース区切りにしています。</p>
@@ -148,50 +142,43 @@ end
 
 <p>認証に失敗した時はログイン画面 (あれば) か <code>root_path</code> に戻すようにしています。</p>
 
-<p>```ruby app/controllers/users/omniauth_callbacks_controller.rb
-class Users::OmniauthCallbacksController &lt; Devise::OmniauthCallbacksController
-  # <a href="https://github.com/plataformatec/devise/issues/2432">https://github.com/plataformatec/devise/issues/2432</a>
+<pre><code class="ruby app/controllers/users/omniauth_callbacks_controller.rb">class Users::OmniauthCallbacksController &lt; Devise::OmniauthCallbacksController
+  # https://github.com/plataformatec/devise/issues/2432
   protect_from_forgery except: :doorkeeper
-  skip_filter :auto_authenticate_omniauth_user!, only: :doorkeeper</p>
+  skip_filter :auto_authenticate_omniauth_user!, only: :doorkeeper
 
-<p>  def doorkeeper</p>
+  def doorkeeper
+    # You need to implement the method below in your model (e.g. app/models/user.rb)
+    oauth_data = request.env['omniauth.auth']
+    @user = User.find_or_create_for_doorkeeper_oauth(oauth_data)
+    session[:doorkeeper_token] = oauth_data['credentials']['token']
 
-<pre><code># You need to implement the method below in your model (e.g. app/models/user.rb)
-oauth_data = request.env['omniauth.auth']
-@user = User.find_or_create_for_doorkeeper_oauth(oauth_data)
-session[:doorkeeper_token] = oauth_data['credentials']['token']
-
-if @user.persisted?
-  sign_in_and_redirect @user, :event =&gt; :authentication #this will throw if @user is not activated
-  if is_navigational_format?
-    set_flash_message(:notice, :success, kind: ENV['DOORKEEPER_APP_NAME'] || 'Doorkeeper')
-    # hide flash message after auto sign in
-    #flash.delete(:notice)
+    if @user.persisted?
+      sign_in_and_redirect @user, :event =&gt; :authentication #this will throw if @user is not activated
+      if is_navigational_format?
+        set_flash_message(:notice, :success, kind: ENV['DOORKEEPER_APP_NAME'] || 'Doorkeeper')
+        # hide flash message after auto sign in
+        #flash.delete(:notice)
+      end
+    else
+      session['devise.doorkeeper_data'] = request.env['omniauth.auth']
+      if respond_to?(:new_user_registration_url)
+        redirect_to new_user_registration_url
+      else
+        redirect_to root_url
+      end
+    end
   end
-else
-  session['devise.doorkeeper_data'] = request.env['omniauth.auth']
-  if respond_to?(:new_user_registration_url)
-    redirect_to new_user_registration_url
-  else
-    redirect_to root_url
+
+  def after_omniauth_failure_path_for(scope)
+    if respond_to?(:new_session_path)
+      new_session_path(scope)
+    else
+      root_path
+    end
   end
 end
 </code></pre>
-
-<p>  end</p>
-
-<p>  def after_omniauth_failure_path_for(scope)</p>
-
-<pre><code>if respond_to?(:new_session_path)
-  new_session_path(scope)
-else
-  root_path
-end
-</code></pre>
-
-<p>  end
-end
-```</p>
 
 <p>自動ログイン後のメッセージが不要なら <code>set_flash_message</code> の部分を <code>flash.delete(:notice)</code> に置き換えます。
 「Doorkeeper でログインしました」だとどのサイトか区別がつかないので、
@@ -208,16 +195,12 @@ end
 <p><code>sign_out</code> が <code>get</code> か <code>delete</code> か違うことがあるので、
 <code>sign_out_via</code> を使ってどちらでも対応できるようにしました。</p>
 
-<p>```ruby config/routes.rb
-  devise_for :users, controllers: { omniauth_callbacks: &lsquo;users/omniauth_callbacks&rsquo; }
-  devise_scope :user do</p>
-
-<pre><code>get 'sign_in',  to: 'devise/sessions#new',     as: :new_user_session
-__send__ Devise.sign_out_via, 'sign_out', to: 'devise/sessions#destroy', as: :destroy_user_session
+<pre><code class="ruby config/routes.rb">  devise_for :users, controllers: { omniauth_callbacks: 'users/omniauth_callbacks' }
+  devise_scope :user do
+    get 'sign_in',  to: 'devise/sessions#new',     as: :new_user_session
+    __send__ Devise.sign_out_via, 'sign_out', to: 'devise/sessions#destroy', as: :destroy_user_session
+  end
 </code></pre>
-
-<p>  end
-```</p>
 
 <h2>timeoutable 設定</h2>
 
@@ -234,11 +217,10 @@ doorkeeper
 <p>その副作用として入力に時間のかかるフォームがあると入力途中でタイムアウトしてしまって
 投稿に失敗するなどの問題も起きるので、その点を考慮しておく必要があります。</p>
 
-<p><code>ruby config/initializers/devise.rb
-  # Default is 30 minutes.
+<pre><code class="ruby config/initializers/devise.rb">  # Default is 30 minutes.
   config.timeout_in = 1.minutes if Rails.env.development?
   config.expire_auth_token_on_timeout = true
-</code></p>
+</code></pre>
 
 <h2>app/models/user.rb に実装</h2>
 
@@ -246,11 +228,10 @@ doorkeeper
 <code>omniauthable</code> に <code>omniauth_providers</code> も設定して余計な route が生成されないようにしています。
 <code>timeoutable</code> も入れています。</p>
 
-<p><code>ruby app/models/user.rb
-  devise :omniauthable, omniauth_providers: [:doorkeeper]
+<pre><code class="ruby app/models/user.rb">  devise :omniauthable, omniauth_providers: [:doorkeeper]
   devise :timeoutable
   include DoorkeeperOauthFinder
-</code></p>
+</code></pre>
 
 <p>ログインしたときに <code>name</code> や <code>email</code> が変わっていたら反映するようにしています。</p>
 
@@ -260,66 +241,56 @@ doorkeeper gem による OAuth provider 側とユーザーの ID を統一でき
 <p>SSO 的に使うのならパスワードは不要なので、
 ここではコメントアウトしています。</p>
 
-<p>```ruby app/models/concerns/doorkeeper_oauth_finder.rb
-module DoorkeeperOauthFinder
-  extend ActiveSupport::Concern</p>
+<pre><code class="ruby app/models/concerns/doorkeeper_oauth_finder.rb">module DoorkeeperOauthFinder
+  extend ActiveSupport::Concern
 
-<p>  module ClassMethods</p>
-
-<pre><code>def find_or_create_for_doorkeeper_oauth(oauth_data)
-  uid = oauth_data.uid.to_s
-  id = uid.to_i
-  user = self.where(provider: oauth_data.provider, uid: uid).first
-  if user
-    user.name = oauth_data.info.name
-    user.email = oauth_data.info.email
-    user.save! if user.changed?
-  else
-    user = self.create!({
-      id: id, # use same id
-      name: oauth_data.info.name,
-      provider: oauth_data.provider,
-      uid: uid,
-      email: oauth_data.info.email,
-      #password: Devise.friendly_token[0,20]
-    })
+  module ClassMethods
+    def find_or_create_for_doorkeeper_oauth(oauth_data)
+      uid = oauth_data.uid.to_s
+      id = uid.to_i
+      user = self.where(provider: oauth_data.provider, uid: uid).first
+      if user
+        user.name = oauth_data.info.name
+        user.email = oauth_data.info.email
+        user.save! if user.changed?
+      else
+        user = self.create!({
+          id: id, # use same id
+          name: oauth_data.info.name,
+          provider: oauth_data.provider,
+          uid: uid,
+          email: oauth_data.info.email,
+          #password: Devise.friendly_token[0,20]
+        })
+      end
+      user
+    end
   end
-  user
 end
 </code></pre>
-
-<p>  end
-end
-```</p>
 
 <p>データベースの migration の方でも削除して unique index の制約なども不要なものは外しておきます。</p>
 
-<p>```ruby db/migrate/*_devise_create_users.rb</p>
-
-<pre><code>  ## Database authenticatable
-  t.string :email,              null: false, default: ""
-  # t.string :encrypted_password, null: false, default: ""
-</code></pre>
-
-<p>```</p>
+<p><code>ruby db/migrate/*_devise_create_users.rb
+      ## Database authenticatable
+      t.string :email,              null: false, default: ""
+      # t.string :encrypted_password, null: false, default: ""
+</code></p>
 
 <p>代わりに <code>provider</code> と <code>uid</code> と <code>name</code> を追加しました。
 このアプリは Doorkeeper 専用なので、直接 <code>users</code> に追加していますが、
 複数プロバイダに対応するには <code>provider</code> と <code>uid</code> の組を別テーブルにします。</p>
 
-<p>```ruby db/migrate/*_add_omniauth_columns_to_users.rb
+<p><code>ruby db/migrate/*_add_omniauth_columns_to_users.rb
 class AddOmniauthColumnsToUsers &lt; ActiveRecord::Migration
-  def change</p>
-
-<pre><code>add_column :users, :provider, :string
-add_column :users, :uid, :string
-add_column :users, :name, :string
-add_index :users, [:provider, :uid], unique: true
-</code></pre>
-
-<p>  end
+  def change
+    add_column :users, :provider, :string
+    add_column :users, :uid, :string
+    add_column :users, :name, :string
+    add_index :users, [:provider, :uid], unique: true
+  end
 end
-```</p>
+</code></p>
 
 <h2><code>OAuth2::AccessToken</code> を生成</h2>
 
@@ -327,46 +298,33 @@ end
 ここでは <code>concerns</code> に分けて必要なコントローラーでだけ <code>include DoorkeeperApiV1</code> するようにしました。
 全体で使いたいのなら <code>ApplicationController</code> に <code>include</code> すれば良いと思います。</p>
 
-<p>```ruby app/controllers/concerns/doorkeeper_api_v1.rb
-module DoorkeeperApiV1
-  private</p>
+<pre><code class="ruby app/controllers/concerns/doorkeeper_api_v1.rb">module DoorkeeperApiV1
+  private
 
-<p>  def access_token</p>
+  def access_token
+    return @access_token if defined?(@access_token)
+    config = Devise.omniauth_configs[:doorkeeper]
+    strategy = config.strategy_class.new(*config.args)
+    token = session[:doorkeeper_token]
+    @access_token = OAuth2::AccessToken.new(strategy.client, token)
+  end
 
-<pre><code>return @access_token if defined?(@access_token)
-config = Devise.omniauth_configs[:doorkeeper]
-strategy = config.strategy_class.new(*config.args)
-token = session[:doorkeeper_token]
-@access_token = OAuth2::AccessToken.new(strategy.client, token)
-</code></pre>
+  def get_me
+    access_token.get("/api/v1/me.json").parsed
+  end
 
-<p>  end</p>
+  def get_microposts
+    access_token.get("/api/v1/microposts.json").parsed
+  end
 
-<p>  def get_me</p>
+  MICROPOST_CONTENT_MAX_LENGTH = 140
 
-<pre><code>access_token.get("/api/v1/me.json").parsed
-</code></pre>
-
-<p>  end</p>
-
-<p>  def get_microposts</p>
-
-<pre><code>access_token.get("/api/v1/microposts.json").parsed
-</code></pre>
-
-<p>  end</p>
-
-<p>  MICROPOST_CONTENT_MAX_LENGTH = 140</p>
-
-<p>  def post_micropost(micropost)</p>
-
-<pre><code>micropost[:content] = micropost[:content].truncate(MICROPOST_CONTENT_MAX_LENGTH)
-access_token.post("/api/v1/microposts", params: { micropost: micropost }).parsed
-</code></pre>
-
-<p>  end
+  def post_micropost(micropost)
+    micropost[:content] = micropost[:content].truncate(MICROPOST_CONTENT_MAX_LENGTH)
+    access_token.post("/api/v1/microposts", params: { micropost: micropost }).parsed
+  end
 end
-```</p>
+</code></pre>
 
 <p>使い方は <code>get_me</code> などを呼び出すだけなので省略します。</p>
 
@@ -377,25 +335,20 @@ User クラスを使っている場合の devise での戻り先の <code>sessio
 <code>user_omniauth_authorize_path(:doorkeeper)</code> に強制的にリダイレクトしています。
 <code>main_app.</code> をつけているのは route で mount している engine の中で問題が起きたことがあったためです。</p>
 
-<p><code>ruby app/controllers/application_controller.rb
-  include AuthDoorkeeper
+<pre><code class="ruby app/controllers/application_controller.rb">  include AuthDoorkeeper
   before_action :auto_authenticate_omniauth_user!
-</code></p>
-
-<p>```ruby app/controllers/concerns/auth_doorkeeper.rb
-module AuthDoorkeeper
-  private</p>
-
-<p>  def auto_authenticate_omniauth_user!</p>
-
-<pre><code>return if current_user
-session[:user_return_to] = request.original_url
-redirect_to main_app.user_omniauth_authorize_path(:doorkeeper)
 </code></pre>
 
-<p>  end
+<pre><code class="ruby app/controllers/concerns/auth_doorkeeper.rb">module AuthDoorkeeper
+  private
+
+  def auto_authenticate_omniauth_user!
+    return if current_user
+    session[:user_return_to] = request.original_url
+    redirect_to main_app.user_omniauth_authorize_path(:doorkeeper)
+  end
 end
-```</p>
+</code></pre>
 
 <h2>テストについて</h2>
 
@@ -482,16 +435,15 @@ secret も見えてしまうので、 read 権限までしっかり制限する�
 <p>Doorkeeper gem の Wiki の例にあるようにユーザー情報をとれるようにしています。
 制限していないと以下のような情報がとれました。</p>
 
-<p><code>json
-{ "id": 1,
+<pre><code class="json">{ "id": 1,
   "email": "admin@example.com",
   "created_at": "2014-07-11T06:32:22.077Z",
   "updated_at": "2014-07-11T09:33:42.143Z",
   "name": "admin" }
-</code></p>
+</code></pre>
 
 <p>制限したり関連するモデルの情報を増やしたりするなら
-<a href="http://sugamasao.hatenablog.com/entry/20100914/1284415669" title="Rails のモデル関係と to_json(to_xml) - すがブロ">Rails のモデル関係と to_json(to_xml) &ndash; すがブロ</a>
+<a href="http://sugamasao.hatenablog.com/entry/20100914/1284415669" title="Rails のモデル関係と to_json(to_xml) - すがブロ">Rails のモデル関係と to_json(to_xml) - すがブロ</a>
 に書いてあるように <code>respond_with</code> に <code>:only</code> をつけたり <code>:include</code> をつけたりすると出来るようです。</p>
 
 <p>入ったり入らなかったりする条件がよくわからなかったのですが、
@@ -586,16 +538,12 @@ User モデルにいろんな情報を入れているなら、
 
 <p>OmniAuth と使用するサービスを追加します。</p>
 
-<p>```ruby Gemfile</p>
-
-<pre><code>gem 'omniauth'
-gem 'omniauth-facebook'
-gem 'omniauth-github'
-gem 'omniauth-google-oauth2'
-gem 'omniauth-twitter'
+<pre><code class="ruby Gemfile">    gem 'omniauth'
+    gem 'omniauth-facebook'
+    gem 'omniauth-github'
+    gem 'omniauth-google-oauth2'
+    gem 'omniauth-twitter'
 </code></pre>
-
-<p>```</p>
 
 <h3>initializer 追加</h3>
 
@@ -606,55 +554,51 @@ gem 'omniauth-twitter'
 追加で名前や Font Awesome のアイコン名も入れたかったので、
 <code>AUTH_PROVIDERS</code> という配列にハッシュを入れるようにしています。</p>
 
-<p>```ruby config/initializers/omniauth.rb</p>
+<pre><code class="ruby config/initializers/omniauth.rb">    AUTH_PROVIDERS = []
 
-<pre><code>AUTH_PROVIDERS = []
+    Rails.application.config.middleware.use OmniAuth::Builder do
+      key, secret = ENV['FACEBOOK_KEY'], ENV['FACEBOOK_SECRET']
+      if key &amp;&amp; secret
+        provider :facebook, key, secret
+        AUTH_PROVIDERS &lt;&lt; {
+          provider: :facebook,
+          name: 'Facebook',
+        }
+      end
 
-Rails.application.config.middleware.use OmniAuth::Builder do
-  key, secret = ENV['FACEBOOK_KEY'], ENV['FACEBOOK_SECRET']
-  if key &amp;&amp; secret
-    provider :facebook, key, secret
-    AUTH_PROVIDERS &lt;&lt; {
-      provider: :facebook,
-      name: 'Facebook',
-    }
-  end
+      key, secret = ENV['GITHUB_CONSUMER_KEY'], ENV['GITHUB_CONSUMER_SECRET']
+      if key &amp;&amp; secret
+        provider :github, key, secret
+        AUTH_PROVIDERS &lt;&lt; {
+          provider: :github,
+          name: 'GitHub',
+        }
+      end
 
-  key, secret = ENV['GITHUB_CONSUMER_KEY'], ENV['GITHUB_CONSUMER_SECRET']
-  if key &amp;&amp; secret
-    provider :github, key, secret
-    AUTH_PROVIDERS &lt;&lt; {
-      provider: :github,
-      name: 'GitHub',
-    }
-  end
+      key, secret = ENV['GOOGLE_CLIENT_ID'], ENV['GOOGLE_CLIENT_SECRET']
+      if key &amp;&amp; secret
+        provider :google_oauth2, key, secret
+        AUTH_PROVIDERS &lt;&lt; {
+          provider: :google_oauth2,
+          name: 'Google',
+          icon: :google
+        }
+      end
 
-  key, secret = ENV['GOOGLE_CLIENT_ID'], ENV['GOOGLE_CLIENT_SECRET']
-  if key &amp;&amp; secret
-    provider :google_oauth2, key, secret
-    AUTH_PROVIDERS &lt;&lt; {
-      provider: :google_oauth2,
-      name: 'Google',
-      icon: :google
-    }
-  end
+      key, secret = ENV['TWITTER_CONSUMER_KEY'], ENV['TWITTER_CONSUMER_SECRET']
+      if key &amp;&amp; secret
+        provider :twitter, key, secret
+        AUTH_PROVIDERS &lt;&lt; {
+          provider: :twitter,
+          name: 'Twitter',
+        }
+      end
 
-  key, secret = ENV['TWITTER_CONSUMER_KEY'], ENV['TWITTER_CONSUMER_SECRET']
-  if key &amp;&amp; secret
-    provider :twitter, key, secret
-    AUTH_PROVIDERS &lt;&lt; {
-      provider: :twitter,
-      name: 'Twitter',
-    }
-  end
-
-  AUTH_PROVIDERS.each do |provider|
-    provider[:icon] ||= provider[:provider]
-  end
-end
+      AUTH_PROVIDERS.each do |provider|
+        provider[:icon] ||= provider[:provider]
+      end
+    end
 </code></pre>
-
-<p>```</p>
 
 <h3>UserAuth モデル作成</h3>
 
@@ -663,27 +607,22 @@ end
 <p>モデルクラスは生成されたまま使いましたが、
 validation を追加した方が良さそうです。</p>
 
-<p>```ruby app/models/user_auth.rb</p>
-
-<pre><code>class UserAuth &lt; ActiveRecord::Base
-  belongs_to :user
-end
+<pre><code class="ruby app/models/user_auth.rb">    class UserAuth &lt; ActiveRecord::Base
+      belongs_to :user
+    end
 </code></pre>
-
-<p>```</p>
 
 <p>データベースの方は <code>null: false</code> や index を追加しました。</p>
 
-<p>```ruby db/migrate/*_create_user_auths.rb</p>
+<p>&#8220;`ruby db/migrate/*_create_user_auths.rb
+    class CreateUserAuths &lt; ActiveRecord::Migration
+      def change
+        create_table :user_auths do |t|
+          t.references :user, index: true, null: false
+          t.string :uid, null: false
+          t.string :provider, null: false</p>
 
-<pre><code>class CreateUserAuths &lt; ActiveRecord::Migration
-  def change
-    create_table :user_auths do |t|
-      t.references :user, index: true, null: false
-      t.string :uid, null: false
-      t.string :provider, null: false
-
-      t.timestamps
+<pre><code>      t.timestamps
     end
 
     add_index :user_auths, [:uid, :provider], unique: true
@@ -691,48 +630,42 @@ end
 end
 </code></pre>
 
-<p>```</p>
+<pre><code>
+### `rake db:migrate`
 
-<h3><code>rake db:migrate</code></h3>
+`rake db:migrate` で反映しておきます。
 
-<p><code>rake db:migrate</code> で反映しておきます。</p>
+### User クラス側
 
-<h3>User クラス側</h3>
-
-<p><code>has_many</code> を追加しておきます。</p>
-
-<p>```ruby app/models/user.rb</p>
+`has_many` を追加しておきます。
+</code></pre>
 
 <pre><code>  has_many :user_auths, dependent: :destroy
 </code></pre>
 
-<p>```</p>
+<pre><code>
+### ルーティング追加
 
-<h3>ルーティング追加</h3>
+まず、どう使われるのか把握するためにルーティングを追加します。
 
-<p>まず、どう使われるのか把握するためにルーティングを追加します。</p>
-
-<p><code>auth_help</code> は後でプライバシーポリシーなどを書いています。</p>
-
-<p>```ruby config/routes.rb</p>
+`auth_help` は後でプライバシーポリシーなどを書いています。
+</code></pre>
 
 <pre><code>  get '/auth/help' =&gt; 'auth#help', as: :auth_help
   get '/auth/:provider/callback' =&gt; 'auth#create'
   delete '/auth/destroy/:provider' =&gt; 'auth#destroy', as: :destroy_connection
 </code></pre>
 
-<p>```</p>
+<pre><code>
+ここには出てきていませんが、
+OmniAuth で `/auth/:provider` がルーティングされるようです。
 
-<p>ここには出てきていませんが、
-OmniAuth で <code>/auth/:provider</code> がルーティングされるようです。</p>
+### AuthController 実装
 
-<h3>AuthController 実装</h3>
+参考サイトの実装例を参考にして AuthController を実装しました。
 
-<p>参考サイトの実装例を参考にして AuthController を実装しました。</p>
-
-<p>help は静的な情報を表示するだけなので、実装は空です。</p>
-
-<p>```ruby</p>
+help は静的な情報を表示するだけなので、実装は空です。
+</code></pre>
 
 <pre><code># -*- coding: utf-8 -*-
 class AuthController &lt; ApplicationController
@@ -766,31 +699,26 @@ class AuthController &lt; ApplicationController
 end
 </code></pre>
 
-<p>```</p>
+<pre><code>
+まだ連携を登録していない状態で
 
-<p>まだ連携を登録していない状態で</p>
+- ログアウト状態
+- 連携サービスで認証・連携許可
+- 戻ってきて通常ログイン
+- `auth/failure` に飛ばされる
 
-<ul>
-<li>ログアウト状態</li>
-<li>連携サービスで認証・連携許可</li>
-<li>戻ってきて通常ログイン</li>
-<li><code>auth/failure</code> に飛ばされる</li>
-</ul>
+ということがおきているのですが、
+`auth/failure`
+を実装していないので、デフォルトの 404 エラー画面になってしまいます。
 
+### view helpers 実装
 
-<p>ということがおきているのですが、
-<code>auth/failure</code>
-を実装していないので、デフォルトの 404 エラー画面になってしまいます。</p>
+以前から使っていた `link_to_sign_in_or_out` の実装も同じファイルに持ってきて、
+`link_to_provider` という汎用的なメソッドを実装しました。
+使い方は後述します。
 
-<h3>view helpers 実装</h3>
-
-<p>以前から使っていた <code>link_to_sign_in_or_out</code> の実装も同じファイルに持ってきて、
-<code>link_to_provider</code> という汎用的なメソッドを実装しました。
-使い方は後述します。</p>
-
-<p><code>AUTH_PROVIDERS</code> のハッシュはここで使っています。</p>
-
-<p>```ruby app/helpers/link_to_auth_helper.rb</p>
+`AUTH_PROVIDERS` のハッシュはここで使っています。
+</code></pre>
 
 <pre><code># -*- coding: utf-8 -*-
 module LinkToAuthHelper
@@ -820,16 +748,15 @@ module LinkToAuthHelper
 end
 </code></pre>
 
-<p>```</p>
+<pre><code>
 
-<h3>view に追加</h3>
+### view に追加
 
-<p>ナビゲーションに以下のように追加しました。
-認証連携がないときは従来のログイン・ログアウトだけ表示しています。</p>
+ナビゲーションに以下のように追加しました。
+認証連携がないときは従来のログイン・ログアウトだけ表示しています。
 
-<p><code>AUTH_PROVIDERS</code> に登録されているときだけ連携のリンクを表示するようにしています。</p>
-
-<p>```text app/views/layouts/_navigation.html.slim</p>
+`AUTH_PROVIDERS` に登録されているときだけ連携のリンクを表示するようにしています。
+</code></pre>
 
 <pre><code>    li.dropdown
       a.dropdown-toggle data-toggle="dropdown"
@@ -843,174 +770,136 @@ end
           li= link_to_provider(provider)
 </code></pre>
 
-<p>```</p>
+<pre><code>
+### twitter 連携
 
-<h3>twitter 連携</h3>
-
-<p>Twitter は複数アカウントを使うことも通常の使用範囲として想定されていて、
+Twitter は複数アカウントを使うことも通常の使用範囲として想定されていて、
 アプリ専用のアカウントもとりやすいので、
-Twitter 連携から試してみました。</p>
+Twitter 連携から試してみました。
 
-<p><a href="https://apps.twitter.com/">https://apps.twitter.com/</a> から <code>Create New App</code> で作成します。</p>
+https://apps.twitter.com/ から `Create New App` で作成します。
 
-<ul>
-<li>Name: Twitter 全体で一意になるアプリケーションの ID 的にも使われるもの。ツイートの時にツイートしたアプリ名としても埋め込まれるが、今回は認証のみなので、他とぶつからないような名前という以上はこだわらなかった。</li>
-<li>Description: 認証のときに出てくる説明。</li>
-<li>Website: たとえば <code>http://app.127.0.0.1.xip.io:3000/</code> など</li>
-<li>Callback URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/auth/twitter/callback</code> のように <code>/auth/twitter/callback</code> にする。実サイトなら <code>https</code> にすべき。</li>
-</ul>
+- Name: Twitter 全体で一意になるアプリケーションの ID 的にも使われるもの。ツイートの時にツイートしたアプリ名としても埋め込まれるが、今回は認証のみなので、他とぶつからないような名前という以上はこだわらなかった。
+- Description: 認証のときに出てくる説明。
+- Website: たとえば `http://app.127.0.0.1.xip.io:3000/` など
+- Callback URL: たとえば `http://app.127.0.0.1.xip.io:3000/auth/twitter/callback` のように `/auth/twitter/callback` にする。実サイトなら `https` にすべき。
 
+作成後には `Allow this application to be used to Sign in with Twitter` のチェックを入れておきます。
+チェックがないと Twitter 連携でのログインがうまくいかないようです。
 
-<p>作成後には <code>Allow this application to be used to Sign in with Twitter</code> のチェックを入れておきます。
-チェックがないと Twitter 連携でのログインがうまくいかないようです。</p>
+アイコンや Organization なども必要に応じて変更します。
 
-<p>アイコンや Organization なども必要に応じて変更します。</p>
+API keys タブで key と secret を取得します。
 
-<p>API keys タブで key と secret を取得します。</p>
+- API key : 環境変数 `TWITTER_CONSUMER_KEY` に設定
+- API secret : 環境変数 `TWITTER_CONSUMER_SECRET` に設定
 
-<ul>
-<li>API key : 環境変数 <code>TWITTER_CONSUMER_KEY</code> に設定</li>
-<li>API secret : 環境変数 <code>TWITTER_CONSUMER_SECRET</code> に設定</li>
-</ul>
-
-
-<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
-ランダムな文字列のように見えます。</p>
-
-<p>```text</p>
+dotenv を使っているので `.env` に以下のような感じで設定しました。
+ランダムな文字列のように見えます。
+</code></pre>
 
 <pre><code>TWITTER_CONSUMER_KEY="xxxxXXxxXxXxXXXxXxXXXXxxx"
 TWITTER_CONSUMER_SECRET="xxXXxXXxxxxxxXXXXXxXxXXxxXXXxXXxxxxXXxxXxxXXxxXxxx"
 </code></pre>
 
-<p>```</p>
+<pre><code>
+### 動作確認
 
-<h3>動作確認</h3>
+- 通常のログインをした状態で「Twitter と連携」で Twitter の許可画面に飛びます。
+- 許可すると「Twitter 側に許可情報」と「UserAuth に連携情報」が保存されます。
+- 「Twitter との連携を解除」で「UserAuth が削除」されます。
+- 「ログアウト」して「Twitter でログイン」すると「ログイン画面」に戻ります。
+- ログインすると `auth/failure` が 404 エラーになります。ここは後で実装する予定です。
+- 再度ログイン後の画面を直接開きます。
+- 再度「Twitter と連携」で「UserAuth に連携情報」が保存されます。「Twitter 側の許可情報」は古いままです。
+- 「ログアウト」して「Twitter でログイン」でログインできます。
+- https://twitter.com/settings/applications で許可を取り消します。
+- 「ログアウト」して「Twitter でログイン」で Twitter の許可画面に飛びます。
+- 許可すると「Twitter 側に許可情報」が保存されて、「UserAuth」は残っているので、そのままログインできます。
 
-<ul>
-<li>通常のログインをした状態で「Twitter と連携」で Twitter の許可画面に飛びます。</li>
-<li>許可すると「Twitter 側に許可情報」と「UserAuth に連携情報」が保存されます。</li>
-<li>「Twitter との連携を解除」で「UserAuth が削除」されます。</li>
-<li>「ログアウト」して「Twitter でログイン」すると「ログイン画面」に戻ります。</li>
-<li>ログインすると <code>auth/failure</code> が 404 エラーになります。ここは後で実装する予定です。</li>
-<li>再度ログイン後の画面を直接開きます。</li>
-<li>再度「Twitter と連携」で「UserAuth に連携情報」が保存されます。「Twitter 側の許可情報」は古いままです。</li>
-<li>「ログアウト」して「Twitter でログイン」でログインできます。</li>
-<li><a href="https://twitter.com/settings/applications">https://twitter.com/settings/applications</a> で許可を取り消します。</li>
-<li>「ログアウト」して「Twitter でログイン」で Twitter の許可画面に飛びます。</li>
-<li>許可すると「Twitter 側に許可情報」が保存されて、「UserAuth」は残っているので、そのままログインできます。</li>
-</ul>
+### GitHub 連携
 
+GitHub 連携は作成後にすぐに使えるので、アプリケーション作成に使っても良いアカウントがあれば一番簡単です。
 
-<h3>GitHub 連携</h3>
+https://github.com/settings/applications から `Register new application` で作成します。
 
-<p>GitHub 連携は作成後にすぐに使えるので、アプリケーション作成に使っても良いアカウントがあれば一番簡単です。</p>
+- Application name: 適切な名前を設定
+- Homepage URL: たとえば `http://app.127.0.0.1.xip.io:3000/` など
+- Application description: ユーザーが許可するときにわかりやすい説明
+- Authorization callback URL: たとえば `http://app.127.0.0.1.xip.io:3000/auth/github/callback` のように `/auth/github/callback` にする。実サイトなら `https` にすべき。
 
-<p><a href="https://github.com/settings/applications">https://github.com/settings/applications</a> から <code>Register new application</code> で作成します。</p>
+右上に見えている Client ID と Client Secret を使います。
 
-<ul>
-<li>Application name: 適切な名前を設定</li>
-<li>Homepage URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/</code> など</li>
-<li>Application description: ユーザーが許可するときにわかりやすい説明</li>
-<li>Authorization callback URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/auth/github/callback</code> のように <code>/auth/github/callback</code> にする。実サイトなら <code>https</code> にすべき。</li>
-</ul>
+- Client ID : 環境変数 `GITHUB_CONSUMER_KEY` に設定
+- Client Secret : 環境変数 `GITHUB_CONSUMER_SECRET` に設定
 
-
-<p>右上に見えている Client ID と Client Secret を使います。</p>
-
-<ul>
-<li>Client ID : 環境変数 <code>GITHUB_CONSUMER_KEY</code> に設定</li>
-<li>Client Secret : 環境変数 <code>GITHUB_CONSUMER_SECRET</code> に設定</li>
-</ul>
-
-
-<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
-十六進数の数字のように見えます。</p>
-
-<p>```text</p>
+dotenv を使っているので `.env` に以下のような感じで設定しました。
+十六進数の数字のように見えます。
+</code></pre>
 
 <pre><code>GITHUB_CONSUMER_KEY="xxxxxxxxxxxxxxxxxxxx"
 GITHUB_CONSUMER_SECRET="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 </code></pre>
 
-<p>```</p>
+<pre><code>
+## Facebook 連携
 
-<h2>Facebook 連携</h2>
+https://developers.facebook.com/ から上の `Apps` の中にある `Craete a New App` で作成します。
+最初は作成前に開発者関連の規約などに同意する必要があるようです。
 
-<p><a href="https://developers.facebook.com/">https://developers.facebook.com/</a> から上の <code>Apps</code> の中にある <code>Craete a New App</code> で作成します。
-最初は作成前に開発者関連の規約などに同意する必要があるようです。</p>
+- Display Name: 適切な名前を設定します。
+- Namespace: optional なので空欄のままで良いようです。
+- カテゴリ: 適当に選択します。
 
-<ul>
-<li>Display Name: 適切な名前を設定します。</li>
-<li>Namespace: optional なので空欄のままで良いようです。</li>
-<li>カテゴリ: 適当に選択します。</li>
-</ul>
+セキュリティチェックがあるので、入力すると作成できます。
 
+右上に見えている App ID と App Secret (Show を押すとパスワード認証の後に内容表示) を使います。
 
-<p>セキュリティチェックがあるので、入力すると作成できます。</p>
+- App ID : 環境変数 `FACEBOOK_KEY` に設定
+- App Secret : 環境変数 `FACEBOOK_SECRET` に設定
 
-<p>右上に見えている App ID と App Secret (Show を押すとパスワード認証の後に内容表示) を使います。</p>
-
-<ul>
-<li>App ID : 環境変数 <code>FACEBOOK_KEY</code> に設定</li>
-<li>App Secret : 環境変数 <code>FACEBOOK_SECRET</code> に設定</li>
-</ul>
-
-
-<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
-十進数と十六進数の数字のように見えます。</p>
-
-<p>```text</p>
+dotenv を使っているので `.env` に以下のような感じで設定しました。
+十進数と十六進数の数字のように見えます。
+</code></pre>
 
 <pre><code>FACEBOOK_KEY="xxxxxxxxxxxxxxx"
 FACEBOOK_SECRET="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 </code></pre>
 
-<p>```</p>
+<pre><code>
+`Settings` の `Add Platform` で `Website` を選んで追加します。
 
-<p><code>Settings</code> の <code>Add Platform</code> で <code>Website</code> を選んで追加します。</p>
+- Site URL: たとえば `http://app.127.0.0.1.xip.io:3000/` など
+- Mobile Site URL: 空欄のまま
 
-<ul>
-<li>Site URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/</code> など</li>
-<li>Mobile Site URL: 空欄のまま</li>
-</ul>
+callback URL は設定が不要だったので、
+Site URL の下ならどこでも良さそうです。
 
+### `google_oauth2` 連携
 
-<p>callback URL は設定が不要だったので、
-Site URL の下ならどこでも良さそうです。</p>
+https://github.com/zquestz/omniauth-google-oauth2 に書いてあるように
+https://code.google.com/apis/console/ を開きます。
 
-<h3><code>google_oauth2</code> 連携</h3>
+飛ばされる先で `API &amp; AUTH` の中の `Credentials` で `Create new Client ID` で作成します。
 
-<p><a href="https://github.com/zquestz/omniauth-google-oauth2">https://github.com/zquestz/omniauth-google-oauth2</a> に書いてあるように
-<a href="https://code.google.com/apis/console/">https://code.google.com/apis/console/</a> を開きます。</p>
+- Application type : Web application
+- Authorized JavaScript origins : たとえば `http://app.127.0.0.1.xip.io:3000` など
+- Authorized redirect URI : たとえば `http://app.127.0.0.1.xip.io:3000/auth/google_oauth2/callback` のように `/auth/google_oauth2/callback` にする。実サイトなら `https` にすべき。
 
-<p>飛ばされる先で <code>API &amp; AUTH</code> の中の <code>Credentials</code> で <code>Create new Client ID</code> で作成します。</p>
+右に見えている Client ID と Client secret を使います。
 
-<ul>
-<li>Application type : Web application</li>
-<li>Authorized JavaScript origins : たとえば <code>http://app.127.0.0.1.xip.io:3000</code> など</li>
-<li>Authorized redirect URI : たとえば <code>http://app.127.0.0.1.xip.io:3000/auth/google_oauth2/callback</code> のように <code>/auth/google_oauth2/callback</code> にする。実サイトなら <code>https</code> にすべき。</li>
-</ul>
+- Client ID : 環境変数 `GOOGLE_CLIENT_ID` に設定
+- Client secret : 環境変数 `GOOGLE_CLIENT_SECRET` に設定
 
-
-<p>右に見えている Client ID と Client secret を使います。</p>
-
-<ul>
-<li>Client ID : 環境変数 <code>GOOGLE_CLIENT_ID</code> に設定</li>
-<li>Client secret : 環境変数 <code>GOOGLE_CLIENT_SECRET</code> に設定</li>
-</ul>
-
-
-<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
-ドメインっぽい文字列とランダムな文字列のように見えます。</p>
-
-<p>```text</p>
+dotenv を使っているので `.env` に以下のような感じで設定しました。
+ドメインっぽい文字列とランダムな文字列のように見えます。
+</code></pre>
 
 <pre><code>GOOGLE_CLIENT_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET="XXxxxXxXxxxXXxXXxXxXXxxX"
 </code></pre>
 
-<p>```</p>
+<p>&#8220;`</p>
 
 <p>さらに <code>Consent screen</code> での設定が必要です。
 しかも全アプリ共通のようなので、名前を分けたい場合はグーグルアカウントごと違うものにしないといけないように見えました。</p>
@@ -1030,7 +919,7 @@ APIs で <code>Google+ API</code> も有効にする必要がありました。<
 <h2>参考サイト</h2>
 
 <ul>
-<li><a href="http://xoyip.hatenablog.com/entry/2013/12/20/212109" title="Railsでログインとは別に複数のサービスとの連携を行う方法 - PILOG">Railsでログインとは別に複数のサービスとの連携を行う方法 &ndash; PILOG</a>
+<li><a href="http://xoyip.hatenablog.com/entry/2013/12/20/212109" title="Railsでログインとは別に複数のサービスとの連携を行う方法 - PILOG">Railsでログインとは別に複数のサービスとの連携を行う方法 - PILOG</a>
 と<a href="https://github.com/xoyip/multi-oauth">その実装</a>は非常に参考になりました。</li>
 <li><a href="http://qiita.com/aikyo02/items/459d03af304e1188f110" title="Google OAuth 2.0 loginが2014年9月に使えなくなる(Googleアカウントからのユーザ登録機能がある場合は注意)">Google OAuth 2.0 loginが2014年9月に使えなくなる(Googleアカウントからのユーザ登録機能がある場合は注意)</a></li>
 </ul>
@@ -1166,14 +1055,10 @@ doorkeeper の wiki は
 その情報を使って生成するようにしました。
 要点だけまとめると以下のコードになります。</p>
 
-<p>```ruby</p>
-
-<pre><code>config = Devise.omniauth_configs[:doorkeeper]
-strategy = config.strategy_class.new(*config.args)
-client = strategy.client
+<pre><code class="ruby">    config = Devise.omniauth_configs[:doorkeeper]
+    strategy = config.strategy_class.new(*config.args)
+    client = strategy.client
 </code></pre>
-
-<p>```</p>
 
 <h2>OAuth2::AccessToken の生成</h2>
 
@@ -1183,18 +1068,14 @@ client = strategy.client
 
 <p>まとめると以下のコードになります。</p>
 
-<p>```ruby
-  def access_token</p>
-
-<pre><code>return @access_token if defined?(@access_token)
-config = Devise.omniauth_configs[:doorkeeper]
-strategy = config.strategy_class.new(*config.args)
-token = session[:doorkeeper_token]
-@access_token = OAuth2::AccessToken.new(strategy.client, token)
+<pre><code class="ruby">  def access_token
+    return @access_token if defined?(@access_token)
+    config = Devise.omniauth_configs[:doorkeeper]
+    strategy = config.strategy_class.new(*config.args)
+    token = session[:doorkeeper_token]
+    @access_token = OAuth2::AccessToken.new(strategy.client, token)
+  end
 </code></pre>
-
-<p>  end
-```</p>
 
 <h2>API 呼び出し</h2>
 
@@ -1209,10 +1090,9 @@ JSON
 <code>parsed</code>
 を呼び出すだけです。</p>
 
-<p><code>ruby
-  access_token.get("/api/v1/me.json").parsed
+<pre><code class="ruby">  access_token.get("/api/v1/me.json").parsed
   access_token.get("/api/v1/posts.json").parsed
-</code></p>
+</code></pre>
 
 <p>今回は連携して書き込みたいというのが目的だったため、
 <code>post</code>
@@ -1222,33 +1102,28 @@ JSON
 <code>rails g scaffold post title body:text</code>
 で API の提供側では以下の実装とします。</p>
 
-<p>```ruby app/controllers/api/v1/posts_controller.rb
-module Api::V1
-  class PostsController &lt; ApiController</p>
+<pre><code class="ruby app/controllers/api/v1/posts_controller.rb">module Api::V1
+  class PostsController &lt; ApiController
+    doorkeeper_for :index
+    doorkeeper_for :create
+    respond_to     :json
 
-<pre><code>doorkeeper_for :index
-doorkeeper_for :create
-respond_to     :json
+    def index
+      respond_with Post.all
+    end
 
-def index
-  respond_with Post.all
-end
-
-def create
-  post = Post.new(params[:post])
-  post.user = current_resource_owner
-  post.save!
-  respond_with post
-end
+    def create
+      post = Post.new(params[:post])
+      post.user = current_resource_owner
+      post.save!
+      respond_with post
+    end
 </code></pre>
-
-<p>```</p>
 
 <p>呼び出し側は以下のようになります。</p>
 
-<p><code>ruby
-access_token.post("/api/v1/posts", params: { post: { title: title, body: body } })
-</code></p>
+<pre><code class="ruby">access_token.post("/api/v1/posts", params: { post: { title: title, body: body } })
+</code></pre>
 
 <p><code>params</code>
 による指定は
@@ -1274,10 +1149,9 @@ access_token.post("/api/v1/posts", params: { post: { title: title, body: body } 
 
 <p>をしておきます。</p>
 
-<p><code>ruby config/initializers/doorkeeper.rb
-  default_scopes  :public
+<pre><code class="ruby config/initializers/doorkeeper.rb">  default_scopes  :public
   optional_scopes :admin, :write
-</code></p>
+</code></pre>
 
 <p>2013-12-20 追記:
 doorkeeper gem を 0.7.3 から 0.7.4 に上げたところ、
@@ -1285,105 +1159,89 @@ doorkeeper gem を 0.7.3 から 0.7.4 に上げたところ、
 文字列に変更しました。</p>
 
 <p>(doorkeeer gem 0.7.3 以前)
-```ruby app/controllers/api/v1/posts_controller.rb</p>
-
-<pre><code>doorkeeper_for :index,  :show,   scopes: [:public]
-doorkeeper_for :create, :update, scopes: [:admin, :write]
-</code></pre>
-
-<p>```</p>
+<code>ruby app/controllers/api/v1/posts_controller.rb
+    doorkeeper_for :index,  :show,   scopes: [:public]
+    doorkeeper_for :create, :update, scopes: [:admin, :write]
+</code></p>
 
 <p>(doorkeeer gem 0.7.4 以降)
-```ruby app/controllers/api/v1/posts_controller.rb</p>
-
-<pre><code>doorkeeper_for :index,  :show,   scopes: %w"public"
-doorkeeper_for :create, :update, scopes: %w"admin write"
-</code></pre>
-
-<p>```</p>
+<code>ruby app/controllers/api/v1/posts_controller.rb
+    doorkeeper_for :index,  :show,   scopes: %w"public"
+    doorkeeper_for :create, :update, scopes: %w"admin write"
+</code></p>
 
 <p>参考のため、この API の rspec も載せておきます。
 複数の <code>scopes</code> を設定する時に <code>,</code> 区切りだとうまくいかないところがあったので、
 スペース区切りにしています。</p>
 
-<p>```ruby spec/controllers/api/v1/posts_controller_spec.rb
-require &lsquo;spec_helper&rsquo;</p>
+<pre><code class="ruby spec/controllers/api/v1/posts_controller_spec.rb">require 'spec_helper'
 
-<p>describe Api::V1::PostsController do
-  describe &ldquo;GET &lsquo;index&rsquo;&rdquo; do</p>
+describe Api::V1::PostsController do
+  describe "GET 'index'" do
+    let!(:application) { Doorkeeper::Application.create!(name: "MyApp", redirect_uri: "http://app.com") }
+    let!(:user) { FactoryGirl.create(:normal_user) }
+    let!(:token) { Doorkeeper::AccessToken.create! application_id: application.id, resource_owner_id: user.id, scopes: "public" }
+    subject { response }
 
-<pre><code>let!(:application) { Doorkeeper::Application.create!(name: "MyApp", redirect_uri: "http://app.com") }
-let!(:user) { FactoryGirl.create(:normal_user) }
-let!(:token) { Doorkeeper::AccessToken.create! application_id: application.id, resource_owner_id: user.id, scopes: "public" }
-subject { response }
+    context "valid token" do
+      before do
+        get 'index', format: :json, access_token: token.token
+      end
+      it { should be_success }
+      its(:status) { should eq(200) }
+      its(:body) { should == Post.all.to_a.to_json }
+    end
 
-context "valid token" do
-  before do
-    get 'index', format: :json, access_token: token.token
+    context "invalid token" do
+      before do
+        get 'index', format: :json, access_token: token.token.succ
+      end
+      it { should_not be_success }
+      its(:status) { should eq(401) }
+    end
   end
-  it { should be_success }
-  its(:status) { should eq(200) }
-  its(:body) { should == Post.all.to_a.to_json }
-end
 
-context "invalid token" do
-  before do
-    get 'index', format: :json, access_token: token.token.succ
+  describe "GET 'index' without scopes" do
+    let!(:application) { Doorkeeper::Application.create!(name: "MyApp", redirect_uri: "http://app.com") }
+    let!(:user) { FactoryGirl.create(:normal_user) }
+    let!(:token) { Doorkeeper::AccessToken.create! application_id: application.id, resource_owner_id: user.id, scopes: "write" }
+    subject { response }
+
+    context "valid token" do
+      before do
+        get 'index', format: :json, access_token: token.token
+      end
+      it { should_not be_success }
+      its(:status) { should eq(401) }
+      its(:body) { should == " " }
+    end
   end
-  it { should_not be_success }
-  its(:status) { should eq(401) }
+
+  describe "POST 'create'" do
+    let!(:application) { Doorkeeper::Application.create!(name: "MyApp", redirect_uri: "http://app.com") }
+    let!(:user) { FactoryGirl.create(:normal_user) }
+    let!(:token) { Doorkeeper::AccessToken.create! application_id: application.id, resource_owner_id: user.id, scopes: "public write" }
+    subject { response }
+
+    context "valid token" do
+      before do
+        post 'create', format: :json, access_token: token.token, post: { title: "title", body: "some content" }
+      end
+      it { should be_success }
+      its(:status) { should eq(201) } # 201 Created
+      its(:body) { should == Post.last.to_json }
+    end
+
+    context "invalid token" do
+      before do
+        post 'create', format: :json, access_token: token.token.succ
+      end
+      it { should_not be_success }
+      its(:status) { should eq(401) }
+    end
+  end
 end
 </code></pre>
-
-<p>  end</p>
-
-<p>  describe &ldquo;GET &lsquo;index&rsquo; without scopes&rdquo; do</p>
-
-<pre><code>let!(:application) { Doorkeeper::Application.create!(name: "MyApp", redirect_uri: "http://app.com") }
-let!(:user) { FactoryGirl.create(:normal_user) }
-let!(:token) { Doorkeeper::AccessToken.create! application_id: application.id, resource_owner_id: user.id, scopes: "write" }
-subject { response }
-
-context "valid token" do
-  before do
-    get 'index', format: :json, access_token: token.token
-  end
-  it { should_not be_success }
-  its(:status) { should eq(401) }
-  its(:body) { should == " " }
-end
-</code></pre>
-
-<p>  end</p>
-
-<p>  describe &ldquo;POST &lsquo;create&rsquo;&rdquo; do</p>
-
-<pre><code>let!(:application) { Doorkeeper::Application.create!(name: "MyApp", redirect_uri: "http://app.com") }
-let!(:user) { FactoryGirl.create(:normal_user) }
-let!(:token) { Doorkeeper::AccessToken.create! application_id: application.id, resource_owner_id: user.id, scopes: "public write" }
-subject { response }
-
-context "valid token" do
-  before do
-    post 'create', format: :json, access_token: token.token, post: { title: "title", body: "some content" }
-  end
-  it { should be_success }
-  its(:status) { should eq(201) } # 201 Created
-  its(:body) { should == Post.last.to_json }
-end
-
-context "invalid token" do
-  before do
-    post 'create', format: :json, access_token: token.token.succ
-  end
-  it { should_not be_success }
-  its(:status) { should eq(401) }
-end
-</code></pre>
-
-<p>  end
-end
-```</p>
 
 <h2>scope 付き呼び出し</h2>
 
@@ -1394,9 +1252,8 @@ end
 <code>scope</code>
 を追加するだけです。</p>
 
-<p><code>ruby config/initializers/devise.rb
-  config.omniauth :doorkeeper, ENV['DOORKEEPER_APP_ID'], ENV['DOORKEEPER_APP_SECRET'], { scope: 'public write' }
-</code></p>
+<pre><code class="ruby config/initializers/devise.rb">  config.omniauth :doorkeeper, ENV['DOORKEEPER_APP_ID'], ENV['DOORKEEPER_APP_SECRET'], { scope: 'public write' }
+</code></pre>
 
 <p>rspec のところでもちょっと書きましたが、
 区切りが <code>,</code> だとうまくいかないことがあったので、

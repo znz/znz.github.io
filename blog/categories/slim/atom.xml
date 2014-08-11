@@ -4,7 +4,7 @@
   <title><![CDATA[Category: slim | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/slim/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -33,11 +33,10 @@ slim は不要なスペースは入れずにコンパクトな HTML が生成さ
 <a href="https://github.com/slim-template/slim#default-options">https://github.com/slim-template/slim#default-options</a>
 で設定できるようだったので、以下のように設定しました。</p>
 
-<p><code>ruby config/initializers/slim.rb
-if Rails.env.development?
+<pre><code class="ruby config/initializers/slim.rb">if Rails.env.development?
   Slim::Engine.set_default_options pretty: true
 end
-</code></p>
+</code></pre>
 
 <h2>1.9 hash style</h2>
 
@@ -53,43 +52,27 @@ haml で属性を <code>{foo: bar}</code> のように書く形式には対応�
 
 <h2>HTML コメントの中でタグにならない</h2>
 
-<p>```haml</p>
-
-<pre><code>/[if lt IE 9]
-  %script{src: url_for(html5shiv)}
+<pre><code class="haml">    /[if lt IE 9]
+      %script{src: url_for(html5shiv)}
 </code></pre>
-
-<p>```</p>
 
 <p>のように書いていたのが</p>
 
-<p>```text</p>
-
-<pre><code>/![if lt IE 9]
-  script src: url_for(html5shiv)
+<pre><code class="text">    /![if lt IE 9]
+      script src: url_for(html5shiv)
 </code></pre>
-
-<p>```</p>
 
 <p>のように変換されてさっぱりダメだったので、</p>
 
-<p>```text</p>
-
-<pre><code>/[if lt IE 9]
-  script(src="#{url_for(html5shiv)}")
+<pre><code class="text">    /[if lt IE 9]
+      script(src="#{url_for(html5shiv)}")
 </code></pre>
-
-<p>```</p>
 
 <p>または</p>
 
-<p>```text</p>
-
-<pre><code>/[if lt IE 9]
-  script(src=url_for(html5shiv))
+<pre><code class="text">    /[if lt IE 9]
+      script(src=url_for(html5shiv))
 </code></pre>
-
-<p>```</p>
 
 <p>のように書き換えました。
 HTML コメント <code>/!</code> の中だとタグが使えない (そのまま文字列としてコメントの中に入る) ようなので、
@@ -116,9 +99,8 @@ slim だと <code>div(data-pjax-container)</code> が <code>&lt;div data-pjax-co
 によると
 <code>:format</code> を <code>:html</code> にすれば良いということで</p>
 
-<p><code>ruby config/initializers/slim.rb
-Slim::Engine.set_default_options format: :html
-</code></p>
+<pre><code class="ruby config/initializers/slim.rb">Slim::Engine.set_default_options format: :html
+</code></pre>
 
 <p>と設定してみても slim 2.0.2 だと変化がありませんでした。</p>
 
@@ -132,7 +114,7 @@ rails 3.2.17 との組み合わせは tilt の要求バージョンの解決が
 slim と temple の両方をまだリリースされていないバージョンにすると
 使えることが確認できました。</p>
 
-<p>```console
+<p>&#8220;`console
 % mkdir /tmp/slim-test
 % cd /tmp/slim-test
 % bundle init
@@ -149,63 +131,53 @@ slim と temple の両方をまだリリースされていないバージョン�
 <div ng-app></div>
 
 
-<p>```</p>
+<pre><code>
+今のところ、 `rack-pjax` の使用は止めていて、
+ `=""` がつく挙動で直接困ることはなさそうなので、
+この問題は保留することにしました。
 
-<p>今のところ、 <code>rack-pjax</code> の使用は止めていて、
- <code>=""</code> がつく挙動で直接困ることはなさそうなので、
-この問題は保留することにしました。</p>
-
-<h2>javascript や css の埋め込み</h2>
-
-<p>```haml</p>
+## javascript や css の埋め込み
+</code></pre>
 
 <pre><code>:javascript
   window.current_user_id = #{current_user.id.to_i}
 </code></pre>
 
-<p>```</p>
-
-<p>のように書いていたら、</p>
-
-<p>```text</p>
+<pre><code>
+のように書いていたら、
+</code></pre>
 
 <pre><code>javascript:
   | window.current_user_id = #{current_user.id.to_i}
 </code></pre>
 
-<p>```</p>
-
-<p>と変換されて <code>|</code> がそのまま <code>script</code> の中身に付いてしまったので、
-削除しました。</p>
-
-<p>```text</p>
+<pre><code>
+と変換されて `| ` がそのまま `script` の中身に付いてしまったので、
+削除しました。
+</code></pre>
 
 <pre><code>javascript:
   window.current_user_id = #{current_user.id.to_i}
 </code></pre>
 
-<p>```</p>
+<pre><code>
+`:css` から `css:` の変換でも同様でした。
+CSS の場合は行頭が記号だと `| ` がついていないこともありました。
 
-<p><code>:css</code> から <code>css:</code> の変換でも同様でした。
-CSS の場合は行頭が記号だと <code>|</code> がついていないこともありました。</p>
-
-<h2>空白の有無の問題</h2>
-
-<p>```haml</p>
+## 空白の有無の問題
+</code></pre>
 
 <pre><code>        = link_to home_path, class: 'brand' do
           = image_tag("brand.png", alt: "", size: "35x35")
           = base_title
 </code></pre>
 
-<p>```</p>
-
-<p>がそのまま slim になっていて、基本的には問題なかったのですが、
+<pre><code>
+がそのまま slim になっていて、基本的には問題なかったのですが、
 haml と違って slim だとタグとタイトルの間に空白が入らなくなってしまって、
 見た目が変わってしまっていたので、
-<code>'</code> だけの行を追加して空白が入るようにしました。</p>
-
-<p>```text</p>
+`'` だけの行を追加して空白が入るようにしました。
+</code></pre>
 
 <pre><code>        = link_to home_path, class: 'brand' do
           = image_tag("brand.png", alt: "", size: "35x35")
@@ -213,48 +185,47 @@ haml と違って slim だとタグとタイトルの間に空白が入らなく
           = base_title
 </code></pre>
 
-<p>```</p>
+<pre><code>
+## end が抜けるバグで SyntaxError
 
-<h2>end が抜けるバグで SyntaxError</h2>
-
-<p><code>syntax error, unexpected keyword_ensure, expecting keyword_end</code>
+`syntax error, unexpected keyword_ensure, expecting keyword_end`
 になるので原因を調べてみたところ、
 インデントの中の最初がコメントだと、
-そのブロックの <code>end</code> が抜けてしまうようです。</p>
+そのブロックの `end` が抜けてしまうようです。
+</code></pre>
 
-<p>```console
-% echo $&lsquo;&ndash; if true\n  / comment&rsquo; | bundle exec slimrb -e
+<p>% echo $&lsquo;- if true\n  / comment&rsquo; | bundle exec slimrb -e
 &lt;% if true</p>
 
 <p> %>
-% echo $&lsquo;&ndash; if true\n  |&rsquo; | bundle exec slimrb -e
+% echo $&lsquo;- if true\n  |&rsquo; | bundle exec slimrb -e
 &lt;% if true</p>
 
 <p>end %>
-% echo $&lsquo;&ndash; articles.each do |a|\n  / comment&rsquo; | bundle exec slimrb -e
+% echo $&lsquo;- articles.each do |a|\n  / comment&rsquo; | bundle exec slimrb -e
 &lt;% articles.each do |a|</p>
 
 <p> %>
-% echo $&lsquo;&ndash; articles.each do |a|\n  | text&rsquo; | bundle exec slimrb -e
+% echo $&lsquo;- articles.each do |a|\n  | text&rsquo; | bundle exec slimrb -e
 &lt;% articles.each do |a|
  %>text&lt;%
 %>&lt;% end %>
-% echo $&lsquo;&ndash; articles.each do |a|\n  / comment\n/ more comment&rsquo; | bundle exec slimrb -e
+% echo $&lsquo;- articles.each do |a|\n  / comment\n/ more comment&rsquo; | bundle exec slimrb -e
 &lt;% articles.each do |a|</p>
 
 <p> %>
-% echo $&lsquo;&ndash; articles.each do |a|\n  / comment\n| text\n/ more comment&rsquo; | bundle exec slimrb -e
+% echo $&lsquo;- articles.each do |a|\n  / comment\n| text\n/ more comment&rsquo; | bundle exec slimrb -e
 &lt;% articles.each do |a|</p>
 
 <p> %>text&lt;%
 %>&lt;%
 %>
-% echo $&lsquo;&ndash; articles.each do |a|\n  / comment\n| text\n&rsquo; | bundle exec slimrb -e
+% echo $&lsquo;- articles.each do |a|\n  / comment\n| text\n&rsquo; | bundle exec slimrb -e
 &lt;% articles.each do |a|</p>
 
 <p> %>text&lt;%
 %>
-```</p>
+&#8220;`</p>
 
 <p>この件は <a href="https://github.com/slim-template/slim/issues/485">https://github.com/slim-template/slim/issues/485</a> で報告してみました。</p>
 

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: lxc | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/lxc/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -117,8 +117,7 @@ ssh 用の鍵としては
 の設定としては、
 グローバルの設定も含めると以下のようにしました。</p>
 
-<p><code>
-ExitOnForwardFailure yes
+<pre><code>ExitOnForwardFailure yes
 Ciphers aes256-ctr,aes192-ctr,aes128-ctr
 HashKnownHosts no
 NoHostAuthenticationForLocalhost yes
@@ -133,7 +132,7 @@ Host raring64
   PasswordAuthentication no
   IdentityFile ~/.vagrant.d/insecure_private_key
   IdentitiesOnly yes
-</code></p>
+</code></pre>
 
 <p><code>Ciphers</code> はデフォルトはセキュアなものを使い、
 VM 用には速いものを使うようにしています。</p>
@@ -188,9 +187,8 @@ VM 用には速いものを使うようにしています。</p>
 <code>127.0.0.1</code>
 にしています。</p>
 
-<p><code>
-echo deploy.127.0.0.1.xip.io | sudo tee /home/dokku/VHOST
-</code></p>
+<pre><code>echo deploy.127.0.0.1.xip.io | sudo tee /home/dokku/VHOST
+</code></pre>
 
 <h3>ssh 公開鍵の追加</h3>
 
@@ -204,15 +202,13 @@ echo deploy.127.0.0.1.xip.io | sudo tee /home/dokku/VHOST
 <p>ここもゲストOS側での作業になります。
 README の手順では <code>ssh</code> 経由で <code>sudo</code> を実行しています。</p>
 
-<p><code>
-cat ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
-</code></p>
+<pre><code>cat ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
+</code></pre>
 
 <p>この手順で追加した公開鍵は</p>
 
-<p><code>
-sudo sshcommand acl-remove dokku vagrant
-</code></p>
+<pre><code>sudo sshcommand acl-remove dokku vagrant
+</code></pre>
 
 <p>で削除できます。</p>
 
@@ -223,15 +219,11 @@ sudo sshcommand acl-remove dokku vagrant
 
 <p>問題なく設定できていれば以下で deploy できます。</p>
 
-<p>```</p>
-
-<pre><code>git clone https://github.com/heroku/node-js-sample
-cd node-js-sample
-git remote add raring64 dokku@raring64:node-js-app
-git push raring64 master
+<pre><code>    git clone https://github.com/heroku/node-js-sample
+    cd node-js-sample
+    git remote add raring64 dokku@raring64:node-js-app
+    git push raring64 master
 </code></pre>
-
-<p>```</p>
 
 <p>エラーになったときはログをみたり、
 <code>dmesg</code>
@@ -247,9 +239,8 @@ git push raring64 master
 ホストOS側には <code>dokku</code> コマンドはないので、
 どうすればいいのか悩んだのですが、</p>
 
-<p><code>
- ssh dokku@raring64 run node-js-app ls -alh
-</code></p>
+<pre><code> ssh dokku@raring64 run node-js-app ls -alh
+</code></pre>
 
 <p>のように <code>git push</code> に使う <code>ssh</code> 経由で
 <code>dokku</code> コマンドが実行されているのを使えました。</p>
@@ -261,18 +252,16 @@ git push raring64 master
 
 <p>他にも</p>
 
-<p><code>
- ssh dokku@raring64 delete node-js-app
-</code></p>
+<pre><code> ssh dokku@raring64 delete node-js-app
+</code></pre>
 
 <p>でアプリケーションの削除もできました。
 heroku と違って確認なしにいきなり削除されてしまうので注意が必要です。</p>
 
 <p>どんなコマンドが実行できるのかは <code>dokku help</code> 相当の</p>
 
-<p><code>
- ssh dokku@raring64 help
-</code></p>
+<pre><code> ssh dokku@raring64 help
+</code></pre>
 
 <p>で一覧が出てきます。</p>
 

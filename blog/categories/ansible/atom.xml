@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ansible | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ansible/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -80,13 +80,9 @@ libyaml binding なので
 YAML は空白に敏感なので、
 <code>-foo</code> のように書くとエラーになります。</p>
 
-<p>```yaml</p>
-
-<pre><code>- foo
-- bar
+<pre><code class="yaml">    - foo
+    - bar
 </code></pre>
-
-<p>```</p>
 
 <h3>マッピング</h3>
 
@@ -95,38 +91,26 @@ YAML は空白に敏感なので、
 
 <p>読みやすくするために <code>:</code> の前後の空白を増やしても良いようです。</p>
 
-<p>```yaml</p>
-
-<pre><code>foo:  bar
-hoge: fuga
-bar : baz
+<pre><code class="yaml">    foo:  bar
+    hoge: fuga
+    bar : baz
 </code></pre>
-
-<p>```</p>
 
 <h3>マッピングと配列</h3>
 
 <p>マッピングの値に配列を入れるとき</p>
 
-<p>```yaml</p>
-
-<pre><code>roles:
-  - foo
-  - bar
+<pre><code class="yaml">    roles:
+      - foo
+      - bar
 </code></pre>
-
-<p>```</p>
 
 <p>のようにインデントするのが普通のようですが、</p>
 
-<p>```yaml</p>
-
-<pre><code>roles:
-- foo
-- bar
+<pre><code class="yaml">    roles:
+    - foo
+    - bar
 </code></pre>
-
-<p>```</p>
 
 <p>のようにインデントせずに配列を書いても大丈夫です。</p>
 
@@ -156,36 +140,28 @@ YAML ドキュメントの開始部分を示すのに使うようです。</p>
 
 <p>迷うなら付けておけば YAML ファイルということがちょっとわかりやすくなると思います。</p>
 
-<p>```console</p>
-
-<pre><code>% cat example.yml
----
-foo: bar
----
-hoge: fuga
-% ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' example.yml
-{"foo"=&gt;"bar"}
-% ruby -r yaml -r pp -e 'pp YAML.load_stream(ARGF)' example.yml
-[{"foo"=&gt;"bar"}, {"hoge"=&gt;"fuga"}]
+<pre><code class="console">    % cat example.yml
+    ---
+    foo: bar
+    ---
+    hoge: fuga
+    % ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' example.yml
+    {"foo"=&gt;"bar"}
+    % ruby -r yaml -r pp -e 'pp YAML.load_stream(ARGF)' example.yml
+    [{"foo"=&gt;"bar"}, {"hoge"=&gt;"fuga"}]
 </code></pre>
-
-<p>```</p>
 
 <h3>コメント</h3>
 
 <p><code>#</code> から行末までがコメントです。
 行頭以外からでもコメントになります。</p>
 
-<p>```yaml</p>
-
-<pre><code>foo: # ここはコメント
-  - bar
-hoge:
-  # ここもコメント
-  - fuga
+<pre><code class="yaml">    foo: # ここはコメント
+      - bar
+    hoge:
+      # ここもコメント
+      - fuga
 </code></pre>
-
-<p>```</p>
 
 <h2>スカラー値</h2>
 
@@ -200,19 +176,15 @@ ansible の設定では shell と組み合わせに便利です。</p>
 では以下のように <code>creates=</code> によるガード条件を最初の行に書いて、
 次の行からシェルスクリプトの内容を書いています。</p>
 
-<p>```yaml</p>
-
-<pre><code>- name: rbenv install 
-  shell: |
-   creates=/versions/
-   set -e
-   . /etc/profile.d/rbenv.sh
-   export CONFIGURE_OPTS="--disable-install-doc"
-   rbenv install 
-   rbenv global 
+<pre><code class="yaml">    - name: rbenv install 
+      shell: |
+       creates=/versions/
+       set -e
+       . /etc/profile.d/rbenv.sh
+       export CONFIGURE_OPTS="--disable-install-doc"
+       rbenv install 
+       rbenv global 
 </code></pre>
-
-<p>```</p>
 
 <p><code>&gt;</code> を使うと folded style になります。
 literal style と違って改行も普通の空白に置き換えられるので、
@@ -231,26 +203,22 @@ ansible の設定ファイルでは使ったことがありません。</p>
 
 <p>以下の例では大文字小文字の差が多いので、フロースタイルでまとめています。</p>
 
-<p>```console</p>
-
-<pre><code>% cat example.yml
----
-- [true, True, TRUE]
-- [false, False, FALSE]
-- [yes, Yes, YES]
-- [no, No, NO]
-- [on, On, ON]
-- [off, Off, OFF]
-% ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' example.yml
-[[[true, true, true],
-  [false, false, false],
-  [true, true, true],
-  [false, false, false],
-  [true, true, true],
-  [false, false, false]]]
+<pre><code class="console">    % cat example.yml
+    ---
+    - [true, True, TRUE]
+    - [false, False, FALSE]
+    - [yes, Yes, YES]
+    - [no, No, NO]
+    - [on, On, ON]
+    - [off, Off, OFF]
+    % ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' example.yml
+    [[[true, true, true],
+      [false, false, false],
+      [true, true, true],
+      [false, false, false],
+      [true, true, true],
+      [false, false, false]]]
 </code></pre>
-
-<p>```</p>
 
 <h2>文字列として解釈させる</h2>
 
@@ -258,18 +226,14 @@ ansible の設定ファイルでは使ったことがありません。</p>
 そういうときは <code>""</code> などでくくっておくか、
 <code>!!str</code> で明示的に文字列型ということを指定します。</p>
 
-<p>```console</p>
-
-<pre><code>% cat /tmp/example.yml
----
-- "true"
-- 'false'
-- !!str yes
-% ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' /tmp/example.yml
-["true", "false", "yes"]
+<pre><code class="console">    % cat /tmp/example.yml
+    ---
+    - "true"
+    - 'false'
+    - !!str yes
+    % ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' /tmp/example.yml
+    ["true", "false", "yes"]
 </code></pre>
-
-<p>```</p>
 
 <h2>まとめ</h2>
 
@@ -350,7 +314,7 @@ github 連携でアカウントを登録しました。</p>
 <h2>参考サイト</h2>
 
 <ul>
-<li><a href="http://qiita.com/kiri/items/f329a35543022d6e45d0">AnsibleWorks Galaxyにroleを登録してみる &ndash; Qiita</a>
+<li><a href="http://qiita.com/kiri/items/f329a35543022d6e45d0">AnsibleWorks Galaxyにroleを登録してみる - Qiita</a>
 
 <ul>
 <li>スクリーンショットをみると AnsibleWorks Galaxy になっているところが今は Ansible Galaxy なので、いつの間にか名前が変わっているようです。</li>
@@ -374,7 +338,7 @@ github 連携でアカウントを登録しました。</p>
 
 <h2>コードブロックのエスケープ</h2>
 
-<p><a href="http://stackoverflow.com/questions/15786144/how-to-escape-in-markdown-on-octopress">How to escape  in markdown on Octopress? &ndash; Stack Overflow</a>
+<p><a href="http://stackoverflow.com/questions/15786144/how-to-escape-in-markdown-on-octopress">How to escape  in markdown on Octopress? - Stack Overflow</a>
 にあるように</p>
 
 <pre><code>```種類 ファイル名
@@ -390,12 +354,9 @@ github 連携でアカウントを登録しました。</p>
 
 <p>先ほどのリンクのアンカーやこの節の見出しのような文の途中は</p>
 
-<p></p>
-
-<pre><code>{{ "{{" }}
-</code></pre>
-
-<p></p>
+<p>
+    {{ &ldquo;{{&rdquo; }}
+</p>
 
 <p>のように書けばエスケープできました。</p>
 
@@ -405,41 +366,29 @@ github 連携でアカウントを登録しました。</p>
 
 <p><code>{% raw %}</code> と <code>{% endraw %}</code> 自体をエスケープするのに</p>
 
-<p></p>
-
-<pre><code>{{ "{%" }}
-</code></pre>
-
-<p></p>
+<p>
+    {{ &ldquo;{%&rdquo; }}
+</p>
 
 <p>を使って</p>
 
-<p></p>
-
-<pre><code>`{{ "{%" }} raw %}` と `{{ "{%" }} endraw %}`
-</code></pre>
-
-<p></p>
+<p>
+    <code>{{ "{%" }} raw %}</code> と <code>{{ "{%" }} endraw %}</code>
+</p>
 
 <p>のように書きました。</p>
 
 <p><code>%}</code> まで <code>""</code> の中に入れようとして</p>
 
-<p></p>
-
-<pre><code>`{{ "{% raw %}" }}`
-</code></pre>
-
-<p></p>
+<p>
+    <code>{{ "{% raw %}" }}</code>
+</p>
 
 <p>と書くと</p>
 
-<p></p>
-
-<pre><code>Liquid Exception: Variable '{{ "{% raw %}' was not properly terminated with regexp: /\}\}/
-</code></pre>
-
-<p></p>
+<p>
+    Liquid Exception: Variable &lsquo;{{ &ldquo;{% raw %}&rsquo; was not properly terminated with regexp: /}}/
+</p>
 
 <p>というエラーになってうまくいきませんでした。</p>
 ]]></content>
@@ -474,19 +423,16 @@ github 連携でアカウントを登録しました。</p>
 
 <p></p>
 
-<h2>```yaml tasks/apt.yaml</h2>
+<pre><code class="yaml tasks/apt.yaml">---
+- template: src=sources.list.{{ ansible_distribution }}.j2 dest=/etc/apt/sources.list owner=root group=root mode=0644
+  register: apt_sources_list
+- apt: update_cache=yes
+  when: apt_sources_list|changed
+- apt: update_cache=yes cache_valid_time=3600
+  when: apt_sources_list|skipped
+</code></pre>
 
-<ul>
-<li>template: src=sources.list.{{ ansible_distribution }}.j2 dest=/etc/apt/sources.list owner=root group=root mode=0644
-register: apt_sources_list</li>
-<li>apt: update_cache=yes
-when: apt_sources_list|changed</li>
-<li>apt: update_cache=yes cache_valid_time=3600
-when: apt_sources_list|skipped
-```
-</li>
-</ul>
-
+<p></p>
 
 <h2>テンプレートの内容</h2>
 
@@ -499,7 +445,7 @@ components が別の行になっているものもあったのですが、
 1 行にまとめました。</p>
 
 <p>
-```text templates/sources.list.Ubuntu.j2
+&#8220;`text templates/sources.list.Ubuntu.j2
 deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }} {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
 deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }} {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
 deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-updates {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
@@ -511,7 +457,7 @@ deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-updates {{ apt_u
 
 <p>deb <a href="http://security.ubuntu.com/ubuntu">http://security.ubuntu.com/ubuntu</a> {{ ansible_distribution_release }}-security {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
 deb-src <a href="http://security.ubuntu.com/ubuntu">http://security.ubuntu.com/ubuntu</a> {{ ansible_distribution_release }}-security {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
-```
+&#8220;`
 </p>
 
 <p><code>backports</code> は使っていなかったのでコメントアウトしていますが、
@@ -521,15 +467,14 @@ deb-src <a href="http://security.ubuntu.com/ubuntu">http://security.ubuntu.com/u
 
 <p>例として jaist ミラーを使うようにしました。</p>
 
-<h2>```yaml vars/main.yml</h2>
-
-<p>apt_ubuntu_uri: &ldquo;<a href="http://ftp.jaist.ac.jp/pub/Linux/ubuntu/">http://ftp.jaist.ac.jp/pub/Linux/ubuntu/</a>&rdquo;
+<pre><code class="yaml vars/main.yml">---
+apt_ubuntu_uri: "http://ftp.jaist.ac.jp/pub/Linux/ubuntu/"
 apt_ubuntu_components:
-&ndash; main
-&ndash; restricted
-&ndash; universe
-&ndash; multiverse
-```</p>
+- main
+- restricted
+- universe
+- multiverse
+</code></pre>
 ]]></content>
   </entry>
   

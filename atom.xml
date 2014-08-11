@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,127 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Rails 4.1 で jQuery Raty を使ってみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-08-11-jquery-raty.html"/>
+    <updated>2014-08-11T19:37:53+09:00</updated>
+    <id>http://blog.n-z.jp/blog/jquery-raty</id>
+    <content type="html"><![CDATA[<p>Rails で星を使った評価付けを使いたかったので、
+jQuery プラグインを探してみたところ、
+<a href="http://wbotelhos.com/raty" title="jQuery Raty">jQuery Raty</a>
+というのが良さそうだったので使ってみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>jQuery Raty v2.7.0</li>
+<li>Ruby on Rails 4.1.4</li>
+<li>Ruby 2.1.2</li>
+</ul>
+
+
+<h2>うまくいかなかった方法</h2>
+
+<p><a href="http://rubygems.org/" title="RubyGems.org">RubyGems.org</a>
+の方には古いバージョンしかなさそうだったので、
+<a href="https://rails-assets.org/" title="Rails Assets">Rails Assets</a>
+で最新バージョンを使おうと思い、
+<code>Gemfile</code> に以下の設定をしたのですが、
+<code>raty</code> のディレクトリ配置が特殊なのか、
+うまくいきませんでした。</p>
+
+<pre><code class="ruby Gemfile">source 'https://rails-assets.org'
+gem 'rails-assets-raty'
+</code></pre>
+
+<h3>development 環境では動いた方法</h3>
+
+<p>以下のように書くことで development 環境では動いたのですが、
+capistrano で deploy した先では画像が表示されていませんでした。</p>
+
+<pre><code class="css app/assets/stylesheets/raty.css.scss">//= require raty/lib/jquery.raty
+</code></pre>
+
+<pre><code class="text app/assets/javascripts/raty.js.coffee.erb">#= require raty/lib/jquery.raty
+ $ -&gt;
+   $('.raty').raty
+     cancel   : true
+    cancelOff: '&lt;%= image_path('raty/lib/images/cancel-off.png') %&gt;'
+    cancelOn : '&lt;%= image_path('raty/lib/images/cancel-on.png') %&gt;'
+    starHalf : '&lt;%= image_path('raty/lib/images/star-half.png') %&gt;'
+    starOff  : '&lt;%= image_path('raty/lib/images/star-off.png') %&gt;'
+    starOn   : '&lt;%= image_path('raty/lib/images/star-on.png') %&gt;'
+    click: (score, event) -&gt;
+      raty = $(event.target).parent()
+      $(raty.data('field')).val(score)
+    score: -&gt;
+      $($(this).data('field')).val()
+</code></pre>
+
+<h2>うまくいった方法</h2>
+
+<p><code>vendor/assets/stylesheets/jquery.raty.css</code> と
+<code>vendor/assets/javascripts/jquery.raty.js</code> に
+ダウンロードしたファイルをおいて、
+<code>assets</code> も以下のように書き換えました。
+画像も <code>vendor/assets/images/raty</code> においてもうまくいかなかったので、
+<code>vendor/assets/images/raty</code> におきました。</p>
+
+<p>Web フォントは今回は使っていないので、
+考慮していません。
+<code>starType</code> を <code>i</code> に変更しない限り使われないはずなので、
+Web フォントを配置しなくても問題ないと思います。</p>
+
+<pre><code class="css app/assets/stylesheets/raty.css.scss">//= require jquery.raty
+</code></pre>
+
+<pre><code class="text app/assets/javascripts/raty.js.coffee.erb">#= require jquery.raty
+ $ -&gt;
+   $('.raty').raty
+     cancel   : true
+    cancelOff: '&lt;%= image_path('raty/cancel-off.png') %&gt;'
+    cancelOn : '&lt;%= image_path('raty/cancel-on.png') %&gt;'
+    starHalf : '&lt;%= image_path('raty/star-half.png') %&gt;'
+    starOff  : '&lt;%= image_path('raty/star-off.png') %&gt;'
+    starOn   : '&lt;%= image_path('raty/star-on.png') %&gt;'
+    click: (score, event) -&gt;
+      raty = $(event.target).parent()
+      $(raty.data('field')).val(score)
+    score: -&gt;
+      $($(this).data('field')).val()
+</code></pre>
+
+<h2>フォームでの使用例</h2>
+
+<p>bootstrap 3.2.0 の <code>form-horizontal</code> を使っているので、
+slim で以下のように使っています。</p>
+
+<pre><code class="text _form.html.slim">    .form-group
+      = f.label :readability, class: "control-label col-md-2"
+      .col-md-10
+        .raty.form-control data-field='#book_report_readability'
+        = f.hidden_field :readability, class: "form-control"
+</code></pre>
+
+<h2>show での使用例</h2>
+
+<p>以下のように <code>raty</code> の星を使って表示しています。</p>
+
+<pre><code class="ruby app/helpers/raty_helper.rb">module RatyHelper
+  def raty_stars(n, max=5)
+    (
+      image_tag('raty/star-on.png', alt: '') * n +
+      image_tag('raty/star-off.png', alt: '') * (max-n)
+      ).html_safe
+  end
+end
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[boot2docker で VM のファイルをコンテナやホストと共有する]]></title>
@@ -27,9 +148,9 @@
 <h2>参考</h2>
 
 <ul>
-<li><a href="http://qiita.com/numa08/items/e52bd18611ac159af1ac" title="boot2dockerでコンテナからホストのファイルを参照する - Qiita">boot2dockerでコンテナからホストのファイルを参照する &ndash; Qiita</a></li>
+<li><a href="http://qiita.com/numa08/items/e52bd18611ac159af1ac" title="boot2dockerでコンテナからホストのファイルを参照する - Qiita">boot2dockerでコンテナからホストのファイルを参照する - Qiita</a></li>
 <li><a href="https://github.com/boot2docker/boot2docker#folder-sharing" title="Folder sharing">Folder sharing</a></li>
-<li><a href="https://docs.docker.com/userguide/dockervolumes/" title="Managing data in containers - Docker Documentation">Managing data in containers &ndash; Docker Documentation</a></li>
+<li><a href="https://docs.docker.com/userguide/dockervolumes/" title="Managing data in containers - Docker Documentation">Managing data in containers - Docker Documentation</a></li>
 </ul>
 
 
@@ -173,56 +294,34 @@ Or on Windows:
 
 <p>ssh で入れなくなった時の予備の手段として知っておくと良いかもしれません。</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% nc -U ~/.boot2docker/boot2docker-vm.sock
-</span><span class='line'>
-</span><span class='line'>
-</span><span class='line'>Core Linux
-</span><span class='line'>boot2docker login: docker
-</span><span class='line'>docker
-</span><span class='line'>                        ##        .
-</span><span class='line'>                  ## ## ##       ==
-</span><span class='line'>               ## ## ## ##      ===
-</span><span class='line'>           /""""""""""""""""\___/ ===
-</span><span class='line'>      ~~~ {~~ ~~~~ ~~~ ~~~~ ~~ ~ /  ===- ~~~
-</span><span class='line'>           \______ o          __/
-</span><span class='line'>             \    \        __/
-</span><span class='line'>              \____\______/
-</span><span class='line'> _                 _   ____     _            _
-</span><span class='line'>| |__   ___   ___ | |_|___ \ __| | ___   ___| | _____ _ __
-</span><span class='line'>| '_ \ / _ \ / _ \| __| __) / _` |/ _ \ / __| |/ / _ \ '__|
-</span><span class='line'>| |_) | (_) | (_) | |_ / __/ (_| | (_) | (__|   &lt;  __/ |
-</span><span class='line'>|_.__/ \___/ \___/ \__|_____\__,_|\___/ \___|_|\_\___|_|
-</span><span class='line'>boot2docker: 1.1.2
-</span><span class='line'>             master : 740106c - Thu Jul 24 03:24:10 UTC 2014
-</span><span class='line'>docker@boot2docker:~$</span></code></pre></td></tr></table></div></figure>
+<pre><code>% nc -U ~/.boot2docker/boot2docker-vm.sock
 
+
+Core Linux
+boot2docker login: docker
+docker
+                        ##        .
+                  ## ## ##       ==
+               ## ## ## ##      ===
+           /""""""""""""""""\___/ ===
+      ~~~ {~~ ~~~~ ~~~ ~~~~ ~~ ~ /  ===- ~~~
+           \______ o          __/
+             \    \        __/
+              \____\______/
+ _                 _   ____     _            _
+| |__   ___   ___ | |_|___ \ __| | ___   ___| | _____ _ __
+| '_ \ / _ \ / _ \| __| __) / _` |/ _ \ / __| |/ / _ \ '__|
+| |_) | (_) | (_) | |_ / __/ (_| | (_) | (__|   &lt;  __/ |
+|_.__/ \___/ \___/ \__|_____\__,_|\___/ \___|_|\_\___|_|
+boot2docker: 1.1.2
+             master : 740106c - Thu Jul 24 03:24:10 UTC 2014
+docker@boot2docker:~$
+</code></pre>
 
 <h2>参考サイト</h2>
 
 <ul>
-<li><a href="http://d.hatena.ne.jp/hiboma/20140130/1391061776" title="Vagrant (VirtualBox) でシリアルコンソールに繋ぐ - hibomaのはてなダイアリー">Vagrant (VirtualBox) でシリアルコンソールに繋ぐ &ndash; hibomaのはてなダイアリー</a></li>
+<li><a href="http://d.hatena.ne.jp/hiboma/20140130/1391061776" title="Vagrant (VirtualBox) でシリアルコンソールに繋ぐ - hibomaのはてなダイアリー">Vagrant (VirtualBox) でシリアルコンソールに繋ぐ - hibomaのはてなダイアリー</a></li>
 </ul>
 
 ]]></content>
@@ -259,7 +358,7 @@ Or on Windows:
 
 <p>大きくバージョンをあげるとか、クリーンな環境でやり直したいと言うときは消して作り直せば良いと思います。</p>
 
-<p>参考: <a href="http://qiita.com/tukiyo3/items/07f1eb77b5ffd9031e30" title="boot2dockerのデータ永続化まとめ - Qiita">boot2dockerのデータ永続化まとめ &ndash; Qiita</a></p>
+<p>参考: <a href="http://qiita.com/tukiyo3/items/07f1eb77b5ffd9031e30" title="boot2dockerのデータ永続化まとめ - Qiita">boot2dockerのデータ永続化まとめ - Qiita</a></p>
 
 <h2>更新方法</h2>
 
@@ -275,95 +374,51 @@ Or on Windows:
 
 <p>以上の説明は <code>boot2docker help</code> にちゃんと書いてある通りです。</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% boot2docker help
-</span><span class='line'>Usage: boot2docker [&lt;options&gt;] &lt;command&gt; [&lt;args&gt;]
-</span><span class='line'>
-</span><span class='line'>boot2docker management utility.
-</span><span class='line'>
-</span><span class='line'>Commands:
-</span><span class='line'>    init                    Create a new boot2docker VM.
-</span><span class='line'>    up|start|boot           Start VM from any states.
-</span><span class='line'>    ssh [ssh-command]       Login to VM via SSH.
-</span><span class='line'>    save|suspend            Suspend VM and save state to disk.
-</span><span class='line'>    down|stop|halt          Gracefully shutdown the VM.
-</span><span class='line'>    restart                 Gracefully reboot the VM.
-</span><span class='line'>    poweroff                Forcefully power off the VM (might corrupt disk image).
-</span><span class='line'>    reset                   Forcefully power cycle the VM (might corrupt disk image).
-</span><span class='line'>    delete|destroy          Delete boot2docker VM and its disk image.
-</span><span class='line'>    config|cfg              Show selected profile file settings.
-</span><span class='line'>    info                    Display detailed information of VM.
-</span><span class='line'>    ip                      Display the IP address of the VM's Host-only network.
-</span><span class='line'>    status                  Display current state of VM.
-</span><span class='line'>    download                Download boot2docker ISO image.
-</span><span class='line'>    upgrade                 Upgrade the boot2docker ISO image (if vm is running it will be stopped and started).
-</span><span class='line'>    version                 Display version information.
-</span><span class='line'>
-</span><span class='line'>Options:
-</span><span class='line'>      --basevmdk="": Path to VMDK to use as base for persistent partition
-</span><span class='line'>      --dhcp=true: enable VirtualBox host-only network DHCP.
-</span><span class='line'>      --dhcpip=192.168.59.99: VirtualBox host-only network DHCP server address.
-</span><span class='line'>  -s, --disksize=20000: boot2docker disk image size (in MB).
-</span><span class='line'>      --dockerport=2375: host Docker port (forward to port 2375 in VM).
-</span><span class='line'>      --hostip=192.168.59.3: VirtualBox host-only network IP address.
-</span><span class='line'>      --iso="/Users/knishiyama/.boot2docker/boot2docker.iso": path to boot2docker ISO image.
-</span><span class='line'>      --lowerip=192.168.59.103: VirtualBox host-only network DHCP lower bound.
-</span><span class='line'>  -m, --memory=2048: virtual machine memory size (in MB).
-</span><span class='line'>      --netmask=ffffff00: VirtualBox host-only network mask.
-</span><span class='line'>      --serial=false: try serial console to get IP address (experimental)
-</span><span class='line'>      --serialfile="": path to the serial socket/pipe.
-</span><span class='line'>      --ssh="ssh": path to SSH client utility.
-</span><span class='line'>      --ssh-keygen="ssh-keygen": path to ssh-keygen utility.
-</span><span class='line'>      --sshkey="/Users/knishiyama/.ssh/id_boot2docker": path to SSH key to use.
-</span><span class='line'>      --sshport=2022: host SSH port (forward to port 22 in VM).
-</span><span class='line'>      --upperip=192.168.59.254: VirtualBox host-only network DHCP upper bound.
-</span><span class='line'>      --vbm="VBoxManage": path to VirtualBox management utility.
-</span><span class='line'>  -v, --verbose=false: display verbose command invocations.
-</span><span class='line'>      --vm="boot2docker-vm": virtual machine name.</span></code></pre></td></tr></table></div></figure>
+<pre><code>% boot2docker help
+Usage: boot2docker [&lt;options&gt;] &lt;command&gt; [&lt;args&gt;]
 
+boot2docker management utility.
+
+Commands:
+    init                    Create a new boot2docker VM.
+    up|start|boot           Start VM from any states.
+    ssh [ssh-command]       Login to VM via SSH.
+    save|suspend            Suspend VM and save state to disk.
+    down|stop|halt          Gracefully shutdown the VM.
+    restart                 Gracefully reboot the VM.
+    poweroff                Forcefully power off the VM (might corrupt disk image).
+    reset                   Forcefully power cycle the VM (might corrupt disk image).
+    delete|destroy          Delete boot2docker VM and its disk image.
+    config|cfg              Show selected profile file settings.
+    info                    Display detailed information of VM.
+    ip                      Display the IP address of the VM's Host-only network.
+    status                  Display current state of VM.
+    download                Download boot2docker ISO image.
+    upgrade                 Upgrade the boot2docker ISO image (if vm is running it will be stopped and started).
+    version                 Display version information.
+
+Options:
+      --basevmdk="": Path to VMDK to use as base for persistent partition
+      --dhcp=true: enable VirtualBox host-only network DHCP.
+      --dhcpip=192.168.59.99: VirtualBox host-only network DHCP server address.
+  -s, --disksize=20000: boot2docker disk image size (in MB).
+      --dockerport=2375: host Docker port (forward to port 2375 in VM).
+      --hostip=192.168.59.3: VirtualBox host-only network IP address.
+      --iso="/Users/knishiyama/.boot2docker/boot2docker.iso": path to boot2docker ISO image.
+      --lowerip=192.168.59.103: VirtualBox host-only network DHCP lower bound.
+  -m, --memory=2048: virtual machine memory size (in MB).
+      --netmask=ffffff00: VirtualBox host-only network mask.
+      --serial=false: try serial console to get IP address (experimental)
+      --serialfile="": path to the serial socket/pipe.
+      --ssh="ssh": path to SSH client utility.
+      --ssh-keygen="ssh-keygen": path to ssh-keygen utility.
+      --sshkey="/Users/knishiyama/.ssh/id_boot2docker": path to SSH key to use.
+      --sshport=2022: host SSH port (forward to port 22 in VM).
+      --upperip=192.168.59.254: VirtualBox host-only network DHCP upper bound.
+      --vbm="VBoxManage": path to VirtualBox management utility.
+  -v, --verbose=false: display verbose command invocations.
+      --vm="boot2docker-vm": virtual machine name.
+</code></pre>
 ]]></content>
   </entry>
   
@@ -386,16 +441,11 @@ Or on Windows:
 <p><code>ruby-build</code> 自体もインストールしてしまう場合は
 <code>install.sh</code> を使ってインストールします。</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>git clone --depth 1 https://github.com/sstephenson/ruby-build
-</span><span class='line'>ruby-build/install.sh
-</span><span class='line'>rm -rf ruby-build
-</span><span class='line'>ruby-build 2.1.2 /usr/local
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="sh">git clone --depth 1 https://github.com/sstephenson/ruby-build
+ruby-build/install.sh
+rm -rf ruby-build
+ruby-build 2.1.2 /usr/local
+</code></pre>
 
 <p>もっと詳しい使い方は
 <a href="http://qiita.com/takahashim/items/406421d515ef1d4f1189" title="[ReVIEW Tips] DockerでRe:VIEW">[ReVIEW Tips] DockerでRe:VIEW</a>
@@ -406,29 +456,20 @@ Or on Windows:
 <p><code>bin/ruby-build</code> を直接実行すれば <code>ruby-build</code> をインストールせずに
 <code>ruby</code> だけインストールすることもできます。</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>git clone --depth 1 https://github.com/sstephenson/ruby-build
-</span><span class='line'>ruby-build/bin/ruby-build 2.1.2 /usr/local
-</span><span class='line'>rm -rf ruby-build
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="sh">git clone --depth 1 https://github.com/sstephenson/ruby-build
+ruby-build/bin/ruby-build 2.1.2 /usr/local
+rm -rf ruby-build
+</code></pre>
 
 <p>ドキュメントの生成を止めたり、
 インストール中のメッセージを出したりするために
 以下のように実行するのも良いと思います。</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>git clone --depth 1 https://github.com/sstephenson/ruby-build
-</span><span class='line'><span class="nb">export </span><span class="nv">CONFIGURE_OPTS</span><span class="o">=</span><span class="s2">&quot;--disable-install-doc&quot;</span>
-</span><span class='line'>ruby-build/bin/ruby-build --verbose 2.1.2 /usr/local
-</span><span class='line'>rm -rf ruby-build
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="sh">git clone --depth 1 https://github.com/sstephenson/ruby-build
+export CONFIGURE_OPTS="--disable-install-doc"
+ruby-build/bin/ruby-build --verbose 2.1.2 /usr/local
+rm -rf ruby-build
+</code></pre>
 ]]></content>
   </entry>
   
@@ -519,12 +560,12 @@ Or on Windows:
 <h2>@IT Rails4 入門記事をツッコもう</h2>
 
 <ul>
-<li><a href="http://www.atmarkit.co.jp/ait/articles/1402/28/news047_2.html" title="開発現場でちゃんと使えるRails 4入門（1）：簡単インストールから始める初心者のためのRuby on Railsチュートリアル (2/3) - ＠IT">開発現場でちゃんと使えるRails 4入門（1）：簡単インストールから始める初心者のためのRuby on Railsチュートリアル (2/3) &ndash; ＠IT</a></li>
+<li><a href="http://www.atmarkit.co.jp/ait/articles/1402/28/news047_2.html" title="開発現場でちゃんと使えるRails 4入門（1）：簡単インストールから始める初心者のためのRuby on Railsチュートリアル (2/3) - ＠IT">開発現場でちゃんと使えるRails 4入門（1）：簡単インストールから始める初心者のためのRuby on Railsチュートリアル (2/3) - ＠IT</a></li>
 <li>rbenv 対 RVM</li>
 <li>エディタは Sublime Text, Vim, Emacs が多くて、その他 Atom, Eclipse</li>
 <li><code>rails new</code> の時の <code>--skip-bundle</code> と <code>bundle install --path vendor/bundle</code> の話</li>
 <li><code>bundle exec</code> の話</li>
-<li><a href="http://www.atmarkit.co.jp/ait/articles/1405/16/news024.html" title="開発現場でちゃんと使えるRails 4入門（4）：現場で使えるか見極めたいRails 4.1の新機能8選 - ＠IT">開発現場でちゃんと使えるRails 4入門（4）：現場で使えるか見極めたいRails 4.1の新機能8選 &ndash; ＠IT</a></li>
+<li><a href="http://www.atmarkit.co.jp/ait/articles/1405/16/news024.html" title="開発現場でちゃんと使えるRails 4入門（4）：現場で使えるか見極めたいRails 4.1の新機能8選 - ＠IT">開発現場でちゃんと使えるRails 4入門（4）：現場で使えるか見極めたいRails 4.1の新機能8選 - ＠IT</a></li>
 </ul>
 
 ]]></content>
@@ -535,7 +576,7 @@ Or on Windows:
     <link href="http://blog.n-z.jp/blog/2014-07-25-compact-chpwd-recent-dirs.html"/>
     <updated>2014-07-25T21:54:57+09:00</updated>
     <id>http://blog.n-z.jp/blog/compact-chpwd-recent-dirs</id>
-    <content type="html"><![CDATA[<p><a href="http://d.hatena.ne.jp/syohex/20140425/1398394421" title="既に存在しないディレクトリを cdrのリストから削除する - Life is very short">既に存在しないディレクトリを cdrのリストから削除する &ndash; Life is very short</a>
+    <content type="html"><![CDATA[<p><a href="http://d.hatena.ne.jp/syohex/20140425/1398394421" title="既に存在しないディレクトリを cdrのリストから削除する - Life is very short">既に存在しないディレクトリを cdrのリストから削除する - Life is very short</a>
 をみて perl を使っていて、
 ファイル名の変更にも対応していなくてポータブルではないと思ったので、
 zsh の機能のみで実装してみました。</p>
@@ -565,30 +606,18 @@ zsh の機能のみで実装してみました。</p>
 以下の実装になりました。
 <code>emulate -L zsh</code> などは参考にした部分にあったので、そのまま使っています。</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>my-compact-chpwd-recent-dirs <span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>    emulate -L zsh
-</span><span class='line'>    setopt extendedglob
-</span><span class='line'>    <span class="nb">local</span> -aU reply
-</span><span class='line'>    integer history_size
-</span><span class='line'>    autoload -Uz chpwd_recent_filehandler
-</span><span class='line'>    chpwd_recent_filehandler
-</span><span class='line'>    <span class="nv">history_size</span><span class="o">=</span><span class="nv">$#reply</span>
-</span><span class='line'>    <span class="nv">reply</span><span class="o">=(</span><span class="k">${</span><span class="p">^reply</span><span class="k">}</span><span class="o">(</span>N<span class="o">))</span>
-</span><span class='line'>    <span class="o">((</span> <span class="nv">$history_size</span> <span class="o">==</span> <span class="nv">$#reply</span> <span class="o">))</span> <span class="o">||</span> chpwd_recent_filehandler <span class="nv">$reply</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="sh">my-compact-chpwd-recent-dirs () {
+    emulate -L zsh
+    setopt extendedglob
+    local -aU reply
+    integer history_size
+    autoload -Uz chpwd_recent_filehandler
+    chpwd_recent_filehandler
+    history_size=$#reply
+    reply=(${^reply}(N))
+    (( $history_size == $#reply )) || chpwd_recent_filehandler $reply
+}
+</code></pre>
 
 <p>使い方としては</p>
 
@@ -725,7 +754,7 @@ user2.role2,v0.5
     <updated>2014-07-18T21:30:25+09:00</updated>
     <id>http://blog.n-z.jp/blog/wheezy-from-vagrant-cloud</id>
     <content type="html"><![CDATA[<p>Debian 7.6 がリリースされたので、新しい box がないか探してみたところ、
-<a href="http://www.vagrantbox.es/" title="A list of base boxes for Vagrant - Vagrantbox.es">A list of base boxes for Vagrant &ndash; Vagrantbox.es</a>
+<a href="http://www.vagrantbox.es/" title="A list of base boxes for Vagrant - Vagrantbox.es">A list of base boxes for Vagrant - Vagrantbox.es</a>
 から探すのではなく
 <a href="https://vagrantcloud.com/">Vagrant Cloud</a>
 を使えば良いということがわかりました。</p>
@@ -746,11 +775,9 @@ user2.role2,v0.5
 
 <p>古い box は</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>  config.vm.box = ENV["VM_BOX"] || "opscode_debian-7.4_chef-provisionerless"
-</span><span class='line'>  config.vm.box_url = ENV["VM_BOX_URL"] || "http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_debian-7.4_chef-provisionerless.box"</span></code></pre></td></tr></table></div></figure>
-
+<pre><code>  config.vm.box = ENV["VM_BOX"] || "opscode_debian-7.4_chef-provisionerless"
+  config.vm.box_url = ENV["VM_BOX_URL"] || "http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_debian-7.4_chef-provisionerless.box"
+</code></pre>
 
 <p>と指定していたのを
 <a href="https://github.com/ffuenf/vagrant-boxes" title="ffuenf/vagrant-boxes">ffuenf/vagrant-boxes</a>
@@ -759,9 +786,8 @@ user2.role2,v0.5
 の説明通り <code>vagrant init ffuenf/debian-7.6.0-amd64</code> で作成された
 <code>Vagrantfile</code> を参考にして、</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>  config.vm.box = "ffuenf/debian-7.6.0-amd64"</span></code></pre></td></tr></table></div></figure>
-
+<pre><code>  config.vm.box = "ffuenf/debian-7.6.0-amd64"
+</code></pre>
 
 <p>に書き換えました。</p>
 
@@ -809,30 +835,18 @@ VPS で動かしている Ubuntu の rsyslog で受け取って好きなだけ
 
 <p>ファイル名は日付を前にするか、送信元ホスト名を前にするかは好みで決めると良いと思います。</p>
 
-<figure class='code'><figcaption><span>/etc/rsyslog.d/10-local.conf</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'># provides UDP syslog reception
-</span><span class='line'>$ModLoad imudp
-</span><span class='line'>$UDPServerRun 51514
-</span><span class='line'>
-</span><span class='line'># provides TCP syslog reception
-</span><span class='line'>$ModLoad imtcp
-</span><span class='line'>$InputTCPServerRun 51514
-</span><span class='line'>
-</span><span class='line'>$template RemoteLog,&quot;/var/log/remote/%$year%%$month%%$day%_%hostname%.log&quot;
-</span><span class='line'>:fromhost-ip,!isequal,&quot;127.0.0.1&quot; ?RemoteLog
-</span><span class='line'>&amp; ~
-</span></code></pre></td></tr></table></div></figure>
+<pre><code class="text /etc/rsyslog.d/10-local.conf"># provides UDP syslog reception
+$ModLoad imudp
+$UDPServerRun 51514
 
+# provides TCP syslog reception
+$ModLoad imtcp
+$InputTCPServerRun 51514
+
+$template RemoteLog,"/var/log/remote/%$year%%$month%%$day%_%hostname%.log"
+:fromhost-ip,!isequal,"127.0.0.1" ?RemoteLog
+&amp; ~
+</code></pre>
 
 <h2><code>/var/log/remote</code> 作成</h2>
 
@@ -856,26 +870,16 @@ VPS で動かしている Ubuntu の rsyslog で受け取って好きなだけ
 <a href="https://devcenter.heroku.com/articles/logging#syslog-drains" title="Syslog drains">Syslog drains</a>
 にありますが、情報が少ないので、同様のログを蓄積するアドオンの設定を参考にするのが良いようです。</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> heroku drains
-</span><span class='line'><span class="go">No drains for this app</span>
-</span><span class='line'><span class="gp">%</span> heroku drains:add
-</span><span class='line'><span class="go"> !    Usage: heroku drains:add URL</span>
-</span><span class='line'><span class="go">zsh: exit 1     heroku drains:add</span>
-</span><span class='line'><span class="gp">%</span> heroku drains:add syslog://syslog.example.jp:51514
-</span><span class='line'><span class="go">Successfully added drain syslog://syslog.example.jp:51514</span>
-</span><span class='line'><span class="gp">%</span> heroku drains
-</span><span class='line'><span class="go">syslog://syslog.example.jp:51514 (d.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="console">% heroku drains
+No drains for this app
+% heroku drains:add
+ !    Usage: heroku drains:add URL
+zsh: exit 1     heroku drains:add
+% heroku drains:add syslog://syslog.example.jp:51514
+Successfully added drain syslog://syslog.example.jp:51514
+% heroku drains
+syslog://syslog.example.jp:51514 (d.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+</code></pre>
 ]]></content>
   </entry>
   
@@ -926,7 +930,7 @@ brew untap peco/peco
 
 <h2>peco の設定</h2>
 
-<p><a href="http://shibayu36.hatenablog.com/entry/2014/06/27/223538" title="pecoを使い始めた - $shibayu36-&gt;blog;">pecoを使い始めた &ndash; $shibayu36-&gt;blog;</a>
+<p><a href="http://shibayu36.hatenablog.com/entry/2014/06/27/223538" title="pecoを使い始めた - $shibayu36-&gt;blog;">pecoを使い始めた - $shibayu36-&gt;blog;</a>
 はいろいろキーバインドを設定していますが、
 デフォルトのまま使っています。</p>
 
@@ -937,60 +941,33 @@ brew untap peco/peco
 
 <p>以下に該当部分を抜き出しておきます。</p>
 
-<figure class='code'><figcaption><span>50peco.zsh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="k">if</span> <span class="o">((</span> <span class="k">${</span><span class="p">+commands[peco]</span><span class="k">}</span> <span class="o">))</span>; <span class="k">then</span>
-</span><span class='line'><span class="k">  </span>peco-go-to-dir <span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>    <span class="nb">local </span>line
-</span><span class='line'>    <span class="nb">local </span><span class="nv">selected</span><span class="o">=</span><span class="s2">&quot;$(</span>
-</span><span class='line'><span class="s2">      {</span>
-</span><span class='line'><span class="s2">        (</span>
-</span><span class='line'><span class="s2">          autoload -Uz chpwd_recent_filehandler</span>
-</span><span class='line'><span class="s2">          chpwd_recent_filehandler &amp;&amp; for line in $reply; do</span>
-</span><span class='line'><span class="s2">            if [[ -d &quot;</span><span class="nv">$line</span><span class="s2">&quot; ]]; then</span>
-</span><span class='line'><span class="s2">              echo &quot;</span><span class="nv">$line</span><span class="s2">&quot;</span>
-</span><span class='line'><span class="s2">            fi</span>
-</span><span class='line'><span class="s2">          done</span>
-</span><span class='line'><span class="s2">        )</span>
-</span><span class='line'><span class="s2">        ghq list --full-path</span>
-</span><span class='line'><span class="s2">        for line in *(-/) ${^cdpath}/*(N-/); do echo &quot;</span><span class="nv">$line</span><span class="s2">&quot;; done | sort -u</span>
-</span><span class='line'><span class="s2">      } | peco --query &quot;</span><span class="nv">$LBUFFER</span><span class="s2">&quot;</span>
-</span><span class='line'><span class="s2">    )&quot;</span>
-</span><span class='line'>    <span class="k">if</span> <span class="o">[</span> -n <span class="s2">&quot;$selected&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-</span><span class='line'><span class="k">      </span><span class="nv">BUFFER</span><span class="o">=</span><span class="s2">&quot;cd ${(q)selected}&quot;</span>
-</span><span class='line'>      zle accept-line
-</span><span class='line'>    <span class="k">fi</span>
-</span><span class='line'><span class="k">    </span>zle clear-screen
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>  zle -N peco-go-to-dir
-</span><span class='line'>  bindkey <span class="s1">&#39;^[g&#39;</span> peco-go-to-dir
-</span><span class='line'><span class="k">fi</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="sh 50peco.zsh">if (( ${+commands[peco]} )); then
+  peco-go-to-dir () {
+    local line
+    local selected="$(
+      {
+        (
+          autoload -Uz chpwd_recent_filehandler
+          chpwd_recent_filehandler &amp;&amp; for line in $reply; do
+            if [[ -d "$line" ]]; then
+              echo "$line"
+            fi
+          done
+        )
+        ghq list --full-path
+        for line in *(-/) ${^cdpath}/*(N-/); do echo "$line"; done | sort -u
+      } | peco --query "$LBUFFER"
+    )"
+    if [ -n "$selected" ]; then
+      BUFFER="cd ${(q)selected}"
+      zle accept-line
+    fi
+    zle clear-screen
+  }
+  zle -N peco-go-to-dir
+  bindkey '^[g' peco-go-to-dir
+fi
+</code></pre>
 
 <p>まず <code>(( ${+commands[peco]} ))</code> で <code>peco</code> コマンドの存在チェックをしています。
 zsh スクリプトの中では <code>type peco &gt;/dev/null 2&gt;&amp;1</code> のようなチェック方法の代わりに使えます。</p>
@@ -1047,8 +1024,8 @@ zsh スクリプトの中では <code>type peco &gt;/dev/null 2&gt;&amp;1</code>
 <li>RubyMotion + IB で参考にしたもの
 
 <ul>
-<li><a href="http://tama.hatenablog.jp/entry/2014/05/02/231633" title="RubyMotion(MacOS)でIBの作成方法 - たまたんのぶろぐ">RubyMotion(MacOS)でIBの作成方法 &ndash; たまたんのぶろぐ</a></li>
-<li><a href="http://d.hatena.ne.jp/laiso+iphone/20130510/1368201914" title="RubyMotionアプリでStoryboardとIBのアウトレット+アクションを使う話 - laiso+iphone">RubyMotionアプリでStoryboardとIBのアウトレット+アクションを使う話 &ndash; laiso+iphone</a></li>
+<li><a href="http://tama.hatenablog.jp/entry/2014/05/02/231633" title="RubyMotion(MacOS)でIBの作成方法 - たまたんのぶろぐ">RubyMotion(MacOS)でIBの作成方法 - たまたんのぶろぐ</a></li>
+<li><a href="http://d.hatena.ne.jp/laiso+iphone/20130510/1368201914" title="RubyMotionアプリでStoryboardとIBのアウトレット+アクションを使う話 - laiso+iphone">RubyMotionアプリでStoryboardとIBのアウトレット+アクションを使う話 - laiso+iphone</a></li>
 </ul>
 </li>
 <li><a href="https://github.com/omoon/rm-test-test">https://github.com/omoon/rm-test-test</a>
@@ -1154,82 +1131,50 @@ doorkeeper 側の <code>oauth/applications</code> に登録しておく必要が
 
 <p>info のハッシュはサーバーから受け取れていて、後の処理でもっと欲しい情報があれば自由に増やせます。</p>
 
-<figure class='code'><figcaption><span>lib/omniauth/strategies/doorkeeper.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">module</span> <span class="nn">OmniAuth</span>
-</span><span class='line'>  <span class="k">module</span> <span class="nn">Strategies</span>
-</span><span class='line'>    <span class="k">class</span> <span class="nc">Doorkeeper</span> <span class="o">&lt;</span> <span class="ss">OmniAuth</span><span class="p">:</span><span class="ss">:Strategies</span><span class="o">::</span><span class="no">OAuth2</span>
-</span><span class='line'>      <span class="n">option</span> <span class="ss">:name</span><span class="p">,</span> <span class="ss">:doorkeeper</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="n">option</span> <span class="ss">:client_options</span><span class="p">,</span> <span class="p">{</span>
-</span><span class='line'>        <span class="ss">site</span><span class="p">:</span> <span class="s1">&#39;http://localhost:4000&#39;</span><span class="p">,</span>
-</span><span class='line'>        <span class="n">authorize_path</span><span class="p">:</span> <span class="s1">&#39;/users/oauth/authorize&#39;</span>
-</span><span class='line'>      <span class="p">}</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="n">uid</span> <span class="k">do</span>
-</span><span class='line'>        <span class="n">raw_info</span><span class="o">[</span><span class="s1">&#39;id&#39;</span><span class="o">]</span>
-</span><span class='line'>      <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="n">info</span> <span class="k">do</span>
-</span><span class='line'>        <span class="p">{</span>
-</span><span class='line'>          <span class="ss">email</span><span class="p">:</span> <span class="n">raw_info</span><span class="o">[</span><span class="s1">&#39;email&#39;</span><span class="o">]</span><span class="p">,</span>
-</span><span class='line'>          <span class="nb">name</span><span class="p">:</span> <span class="n">raw_info</span><span class="o">[</span><span class="s1">&#39;name&#39;</span><span class="o">]</span><span class="p">,</span>
-</span><span class='line'>        <span class="p">}</span>
-</span><span class='line'>      <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="k">def</span> <span class="nf">raw_info</span>
-</span><span class='line'>        <span class="vi">@raw_info</span> <span class="o">||=</span> <span class="n">access_token</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/api/v1/me.json&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">parsed</span> <span class="o">||</span> <span class="p">{}</span>
-</span><span class='line'>      <span class="k">end</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
+<pre><code class="ruby lib/omniauth/strategies/doorkeeper.rb">module OmniAuth
+  module Strategies
+    class Doorkeeper &lt; OmniAuth::Strategies::OAuth2
+      option :name, :doorkeeper
 
+      option :client_options, {
+        site: 'http://localhost:4000',
+        authorize_path: '/users/oauth/authorize'
+      }
+
+      uid do
+        raw_info['id']
+      end
+
+      info do
+        {
+          email: raw_info['email'],
+          name: raw_info['name'],
+        }
+      end
+
+      def raw_info
+        @raw_info ||= access_token.get('/api/v1/me.json').parsed || {}
+      end
+    end
+  end
+end
+</code></pre>
 
 <h2><code>config/initializers/devise.rb</code> で設定</h2>
 
 <p><a href="https://github.com/doorkeeper-gem/doorkeeper-devise-client">サンプルアプリ</a>
 では</p>
 
-<figure class='code'><figcaption><span>config/initializers/devise.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">omniauth</span> <span class="ss">:doorkeeper</span><span class="p">,</span>  <span class="no">DOORKEEPER_APP_ID</span><span class="p">,</span> <span class="no">DOORKEEPER_APP_SECRET</span><span class="p">,</span> <span class="ss">:client_options</span> <span class="o">=&gt;</span>  <span class="p">{</span><span class="ss">:site</span> <span class="o">=&gt;</span> <span class="no">DOORKEEPER_APP_URL</span><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="ruby config/initializers/devise.rb">  config.omniauth :doorkeeper,  DOORKEEPER_APP_ID, DOORKEEPER_APP_SECRET, :client_options =&gt;  {:site =&gt; DOORKEEPER_APP_URL}
+</code></pre>
 
 <p>となっていました。</p>
 
 <p><code>scope</code> も追加すると以下のようになります。
 <code>dotenv</code> を使って <code>ENV</code> から取るようにしました。</p>
 
-<figure class='code'><figcaption><span>config/initializers/devise.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">omniauth</span> <span class="ss">:doorkeeper</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_ID&#39;</span><span class="o">]</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_SECRET&#39;</span><span class="o">]</span><span class="p">,</span> <span class="n">client_options</span><span class="p">:</span> <span class="p">{</span><span class="ss">site</span><span class="p">:</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_URL&#39;</span><span class="o">]</span> <span class="p">},</span> <span class="ss">scope</span><span class="p">:</span> <span class="s1">&#39;public write&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="ruby config/initializers/devise.rb">  config.omniauth :doorkeeper, ENV['DOORKEEPER_APP_ID'], ENV['DOORKEEPER_APP_SECRET'], client_options: {site: ENV['DOORKEEPER_APP_URL'] }, scope: 'public write'
+</code></pre>
 
 <p><code>scope</code> は <code>'public,write'</code> だと <code>The requested scope is invalid, unknown, or malformed.</code> というエラーになってしまったので、
 <code>,</code> 区切りではなくスペース区切りにしています。</p>
@@ -1242,80 +1187,43 @@ doorkeeper 側の <code>oauth/applications</code> に登録しておく必要が
 
 <p>認証に失敗した時はログイン画面 (あれば) か <code>root_path</code> に戻すようにしています。</p>
 
-<figure class='code'><figcaption><span>app/controllers/users/omniauth_callbacks_controller.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">Users</span><span class="o">::</span><span class="no">OmniauthCallbacksController</span> <span class="o">&lt;</span> <span class="ss">Devise</span><span class="p">:</span><span class="ss">:OmniauthCallbacksController</span>
-</span><span class='line'>  <span class="c1"># https://github.com/plataformatec/devise/issues/2432</span>
-</span><span class='line'>  <span class="n">protect_from_forgery</span> <span class="ss">except</span><span class="p">:</span> <span class="ss">:doorkeeper</span>
-</span><span class='line'>  <span class="n">skip_filter</span> <span class="ss">:auto_authenticate_omniauth_user!</span><span class="p">,</span> <span class="ss">only</span><span class="p">:</span> <span class="ss">:doorkeeper</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">doorkeeper</span>
-</span><span class='line'>    <span class="c1"># You need to implement the method below in your model (e.g. app/models/user.rb)</span>
-</span><span class='line'>    <span class="n">oauth_data</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">env</span><span class="o">[</span><span class="s1">&#39;omniauth.auth&#39;</span><span class="o">]</span>
-</span><span class='line'>    <span class="vi">@user</span> <span class="o">=</span> <span class="no">User</span><span class="o">.</span><span class="n">find_or_create_for_doorkeeper_oauth</span><span class="p">(</span><span class="n">oauth_data</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">session</span><span class="o">[</span><span class="ss">:doorkeeper_token</span><span class="o">]</span> <span class="o">=</span> <span class="n">oauth_data</span><span class="o">[</span><span class="s1">&#39;credentials&#39;</span><span class="o">][</span><span class="s1">&#39;token&#39;</span><span class="o">]</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="k">if</span> <span class="vi">@user</span><span class="o">.</span><span class="n">persisted?</span>
-</span><span class='line'>      <span class="n">sign_in_and_redirect</span> <span class="vi">@user</span><span class="p">,</span> <span class="ss">:event</span> <span class="o">=&gt;</span> <span class="ss">:authentication</span> <span class="c1">#this will throw if @user is not activated</span>
-</span><span class='line'>      <span class="k">if</span> <span class="n">is_navigational_format?</span>
-</span><span class='line'>        <span class="n">set_flash_message</span><span class="p">(</span><span class="ss">:notice</span><span class="p">,</span> <span class="ss">:success</span><span class="p">,</span> <span class="ss">kind</span><span class="p">:</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;DOORKEEPER_APP_NAME&#39;</span><span class="o">]</span> <span class="o">||</span> <span class="s1">&#39;Doorkeeper&#39;</span><span class="p">)</span>
-</span><span class='line'>        <span class="c1"># hide flash message after auto sign in</span>
-</span><span class='line'>        <span class="c1">#flash.delete(:notice)</span>
-</span><span class='line'>      <span class="k">end</span>
-</span><span class='line'>    <span class="k">else</span>
-</span><span class='line'>      <span class="n">session</span><span class="o">[</span><span class="s1">&#39;devise.doorkeeper_data&#39;</span><span class="o">]</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">env</span><span class="o">[</span><span class="s1">&#39;omniauth.auth&#39;</span><span class="o">]</span>
-</span><span class='line'>      <span class="k">if</span> <span class="nb">respond_to?</span><span class="p">(</span><span class="ss">:new_user_registration_url</span><span class="p">)</span>
-</span><span class='line'>        <span class="n">redirect_to</span> <span class="n">new_user_registration_url</span>
-</span><span class='line'>      <span class="k">else</span>
-</span><span class='line'>        <span class="n">redirect_to</span> <span class="n">root_url</span>
-</span><span class='line'>      <span class="k">end</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">after_omniauth_failure_path_for</span><span class="p">(</span><span class="n">scope</span><span class="p">)</span>
-</span><span class='line'>    <span class="k">if</span> <span class="nb">respond_to?</span><span class="p">(</span><span class="ss">:new_session_path</span><span class="p">)</span>
-</span><span class='line'>      <span class="n">new_session_path</span><span class="p">(</span><span class="n">scope</span><span class="p">)</span>
-</span><span class='line'>    <span class="k">else</span>
-</span><span class='line'>      <span class="n">root_path</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
+<pre><code class="ruby app/controllers/users/omniauth_callbacks_controller.rb">class Users::OmniauthCallbacksController &lt; Devise::OmniauthCallbacksController
+  # https://github.com/plataformatec/devise/issues/2432
+  protect_from_forgery except: :doorkeeper
+  skip_filter :auto_authenticate_omniauth_user!, only: :doorkeeper
 
+  def doorkeeper
+    # You need to implement the method below in your model (e.g. app/models/user.rb)
+    oauth_data = request.env['omniauth.auth']
+    @user = User.find_or_create_for_doorkeeper_oauth(oauth_data)
+    session[:doorkeeper_token] = oauth_data['credentials']['token']
+
+    if @user.persisted?
+      sign_in_and_redirect @user, :event =&gt; :authentication #this will throw if @user is not activated
+      if is_navigational_format?
+        set_flash_message(:notice, :success, kind: ENV['DOORKEEPER_APP_NAME'] || 'Doorkeeper')
+        # hide flash message after auto sign in
+        #flash.delete(:notice)
+      end
+    else
+      session['devise.doorkeeper_data'] = request.env['omniauth.auth']
+      if respond_to?(:new_user_registration_url)
+        redirect_to new_user_registration_url
+      else
+        redirect_to root_url
+      end
+    end
+  end
+
+  def after_omniauth_failure_path_for(scope)
+    if respond_to?(:new_session_path)
+      new_session_path(scope)
+    else
+      root_path
+    end
+  end
+end
+</code></pre>
 
 <p>自動ログイン後のメッセージが不要なら <code>set_flash_message</code> の部分を <code>flash.delete(:notice)</code> に置き換えます。
 「Doorkeeper でログインしました」だとどのサイトか区別がつかないので、
@@ -1332,18 +1240,12 @@ doorkeeper 側の <code>oauth/applications</code> に登録しておく必要が
 <p><code>sign_out</code> が <code>get</code> か <code>delete</code> か違うことがあるので、
 <code>sign_out_via</code> を使ってどちらでも対応できるようにしました。</p>
 
-<figure class='code'><figcaption><span>config/routes.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">devise_for</span> <span class="ss">:users</span><span class="p">,</span> <span class="ss">controllers</span><span class="p">:</span> <span class="p">{</span> <span class="n">omniauth_callbacks</span><span class="p">:</span> <span class="s1">&#39;users/omniauth_callbacks&#39;</span> <span class="p">}</span>
-</span><span class='line'>  <span class="n">devise_scope</span> <span class="ss">:user</span> <span class="k">do</span>
-</span><span class='line'>    <span class="n">get</span> <span class="s1">&#39;sign_in&#39;</span><span class="p">,</span>  <span class="ss">to</span><span class="p">:</span> <span class="s1">&#39;devise/sessions#new&#39;</span><span class="p">,</span>     <span class="ss">as</span><span class="p">:</span> <span class="ss">:new_user_session</span>
-</span><span class='line'>    <span class="nb">__send__</span> <span class="no">Devise</span><span class="o">.</span><span class="n">sign_out_via</span><span class="p">,</span> <span class="s1">&#39;sign_out&#39;</span><span class="p">,</span> <span class="ss">to</span><span class="p">:</span> <span class="s1">&#39;devise/sessions#destroy&#39;</span><span class="p">,</span> <span class="ss">as</span><span class="p">:</span> <span class="ss">:destroy_user_session</span>
-</span><span class='line'>  <span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="ruby config/routes.rb">  devise_for :users, controllers: { omniauth_callbacks: 'users/omniauth_callbacks' }
+  devise_scope :user do
+    get 'sign_in',  to: 'devise/sessions#new',     as: :new_user_session
+    __send__ Devise.sign_out_via, 'sign_out', to: 'devise/sessions#destroy', as: :destroy_user_session
+  end
+</code></pre>
 
 <h2>timeoutable 設定</h2>
 
@@ -1360,14 +1262,10 @@ doorkeeper
 <p>その副作用として入力に時間のかかるフォームがあると入力途中でタイムアウトしてしまって
 投稿に失敗するなどの問題も起きるので、その点を考慮しておく必要があります。</p>
 
-<figure class='code'><figcaption><span>config/initializers/devise.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="c1"># Default is 30 minutes.</span>
-</span><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">timeout_in</span> <span class="o">=</span> <span class="mi">1</span><span class="o">.</span><span class="n">minutes</span> <span class="k">if</span> <span class="no">Rails</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">development?</span>
-</span><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">expire_auth_token_on_timeout</span> <span class="o">=</span> <span class="kp">true</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="ruby config/initializers/devise.rb">  # Default is 30 minutes.
+  config.timeout_in = 1.minutes if Rails.env.development?
+  config.expire_auth_token_on_timeout = true
+</code></pre>
 
 <h2>app/models/user.rb に実装</h2>
 
@@ -1375,14 +1273,10 @@ doorkeeper
 <code>omniauthable</code> に <code>omniauth_providers</code> も設定して余計な route が生成されないようにしています。
 <code>timeoutable</code> も入れています。</p>
 
-<figure class='code'><figcaption><span>app/models/user.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">devise</span> <span class="ss">:omniauthable</span><span class="p">,</span> <span class="n">omniauth_providers</span><span class="p">:</span> <span class="o">[</span><span class="ss">:doorkeeper</span><span class="o">]</span>
-</span><span class='line'>  <span class="n">devise</span> <span class="ss">:timeoutable</span>
-</span><span class='line'>  <span class="kp">include</span> <span class="no">DoorkeeperOauthFinder</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="ruby app/models/user.rb">  devise :omniauthable, omniauth_providers: [:doorkeeper]
+  devise :timeoutable
+  include DoorkeeperOauthFinder
+</code></pre>
 
 <p>ログインしたときに <code>name</code> や <code>email</code> が変わっていたら反映するようにしています。</p>
 
@@ -1392,94 +1286,56 @@ doorkeeper gem による OAuth provider 側とユーザーの ID を統一でき
 <p>SSO 的に使うのならパスワードは不要なので、
 ここではコメントアウトしています。</p>
 
-<figure class='code'><figcaption><span>app/models/concerns/doorkeeper_oauth_finder.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">module</span> <span class="nn">DoorkeeperOauthFinder</span>
-</span><span class='line'>  <span class="kp">extend</span> <span class="ss">ActiveSupport</span><span class="p">:</span><span class="ss">:Concern</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">module</span> <span class="nn">ClassMethods</span>
-</span><span class='line'>    <span class="k">def</span> <span class="nf">find_or_create_for_doorkeeper_oauth</span><span class="p">(</span><span class="n">oauth_data</span><span class="p">)</span>
-</span><span class='line'>      <span class="n">uid</span> <span class="o">=</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">to_s</span>
-</span><span class='line'>      <span class="nb">id</span> <span class="o">=</span> <span class="n">uid</span><span class="o">.</span><span class="n">to_i</span>
-</span><span class='line'>      <span class="n">user</span> <span class="o">=</span> <span class="nb">self</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="ss">provider</span><span class="p">:</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">provider</span><span class="p">,</span> <span class="ss">uid</span><span class="p">:</span> <span class="n">uid</span><span class="p">)</span><span class="o">.</span><span class="n">first</span>
-</span><span class='line'>      <span class="k">if</span> <span class="n">user</span>
-</span><span class='line'>        <span class="n">user</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">name</span>
-</span><span class='line'>        <span class="n">user</span><span class="o">.</span><span class="n">email</span> <span class="o">=</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">email</span>
-</span><span class='line'>        <span class="n">user</span><span class="o">.</span><span class="n">save!</span> <span class="k">if</span> <span class="n">user</span><span class="o">.</span><span class="n">changed?</span>
-</span><span class='line'>      <span class="k">else</span>
-</span><span class='line'>        <span class="n">user</span> <span class="o">=</span> <span class="nb">self</span><span class="o">.</span><span class="n">create!</span><span class="p">({</span>
-</span><span class='line'>          <span class="nb">id</span><span class="p">:</span> <span class="nb">id</span><span class="p">,</span> <span class="c1"># use same id</span>
-</span><span class='line'>          <span class="nb">name</span><span class="p">:</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-</span><span class='line'>          <span class="ss">provider</span><span class="p">:</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">provider</span><span class="p">,</span>
-</span><span class='line'>          <span class="ss">uid</span><span class="p">:</span> <span class="n">uid</span><span class="p">,</span>
-</span><span class='line'>          <span class="ss">email</span><span class="p">:</span> <span class="n">oauth_data</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">email</span><span class="p">,</span>
-</span><span class='line'>          <span class="c1">#password: Devise.friendly_token[0,20]</span>
-</span><span class='line'>        <span class="p">})</span>
-</span><span class='line'>      <span class="k">end</span>
-</span><span class='line'>      <span class="n">user</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
+<pre><code class="ruby app/models/concerns/doorkeeper_oauth_finder.rb">module DoorkeeperOauthFinder
+  extend ActiveSupport::Concern
 
+  module ClassMethods
+    def find_or_create_for_doorkeeper_oauth(oauth_data)
+      uid = oauth_data.uid.to_s
+      id = uid.to_i
+      user = self.where(provider: oauth_data.provider, uid: uid).first
+      if user
+        user.name = oauth_data.info.name
+        user.email = oauth_data.info.email
+        user.save! if user.changed?
+      else
+        user = self.create!({
+          id: id, # use same id
+          name: oauth_data.info.name,
+          provider: oauth_data.provider,
+          uid: uid,
+          email: oauth_data.info.email,
+          #password: Devise.friendly_token[0,20]
+        })
+      end
+      user
+    end
+  end
+end
+</code></pre>
 
 <p>データベースの migration の方でも削除して unique index の制約なども不要なものは外しておきます。</p>
 
-<figure class='code'><figcaption><span>db/migrate/*_devise_create_users.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="c1">## Database authenticatable</span>
-</span><span class='line'>  <span class="n">t</span><span class="o">.</span><span class="n">string</span> <span class="ss">:email</span><span class="p">,</span>              <span class="ss">null</span><span class="p">:</span> <span class="kp">false</span><span class="p">,</span> <span class="ss">default</span><span class="p">:</span> <span class="s2">&quot;&quot;</span>
-</span><span class='line'>  <span class="c1"># t.string :encrypted_password, null: false, default: &quot;&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<p><code>ruby db/migrate/*_devise_create_users.rb
+      ## Database authenticatable
+      t.string :email,              null: false, default: ""
+      # t.string :encrypted_password, null: false, default: ""
+</code></p>
 
 <p>代わりに <code>provider</code> と <code>uid</code> と <code>name</code> を追加しました。
 このアプリは Doorkeeper 専用なので、直接 <code>users</code> に追加していますが、
 複数プロバイダに対応するには <code>provider</code> と <code>uid</code> の組を別テーブルにします。</p>
 
-<figure class='code'><figcaption><span>db/migrate/*_add_omniauth_columns_to_users.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">AddOmniauthColumnsToUsers</span> <span class="o">&lt;</span> <span class="ss">ActiveRecord</span><span class="p">:</span><span class="ss">:Migration</span>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">change</span>
-</span><span class='line'>    <span class="n">add_column</span> <span class="ss">:users</span><span class="p">,</span> <span class="ss">:provider</span><span class="p">,</span> <span class="ss">:string</span>
-</span><span class='line'>    <span class="n">add_column</span> <span class="ss">:users</span><span class="p">,</span> <span class="ss">:uid</span><span class="p">,</span> <span class="ss">:string</span>
-</span><span class='line'>    <span class="n">add_column</span> <span class="ss">:users</span><span class="p">,</span> <span class="ss">:name</span><span class="p">,</span> <span class="ss">:string</span>
-</span><span class='line'>    <span class="n">add_index</span> <span class="ss">:users</span><span class="p">,</span> <span class="o">[</span><span class="ss">:provider</span><span class="p">,</span> <span class="ss">:uid</span><span class="o">]</span><span class="p">,</span> <span class="ss">unique</span><span class="p">:</span> <span class="kp">true</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<p><code>ruby db/migrate/*_add_omniauth_columns_to_users.rb
+class AddOmniauthColumnsToUsers &lt; ActiveRecord::Migration
+  def change
+    add_column :users, :provider, :string
+    add_column :users, :uid, :string
+    add_column :users, :name, :string
+    add_index :users, [:provider, :uid], unique: true
+  end
+end
+</code></p>
 
 <h2><code>OAuth2::AccessToken</code> を生成</h2>
 
@@ -1487,60 +1343,33 @@ doorkeeper gem による OAuth provider 側とユーザーの ID を統一でき
 ここでは <code>concerns</code> に分けて必要なコントローラーでだけ <code>include DoorkeeperApiV1</code> するようにしました。
 全体で使いたいのなら <code>ApplicationController</code> に <code>include</code> すれば良いと思います。</p>
 
-<figure class='code'><figcaption><span>app/controllers/concerns/doorkeeper_api_v1.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">module</span> <span class="nn">DoorkeeperApiV1</span>
-</span><span class='line'>  <span class="kp">private</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">access_token</span>
-</span><span class='line'>    <span class="k">return</span> <span class="vi">@access_token</span> <span class="k">if</span> <span class="n">defined?</span><span class="p">(</span><span class="vi">@access_token</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">config</span> <span class="o">=</span> <span class="no">Devise</span><span class="o">.</span><span class="n">omniauth_configs</span><span class="o">[</span><span class="ss">:doorkeeper</span><span class="o">]</span>
-</span><span class='line'>    <span class="n">strategy</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">strategy_class</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="o">*</span><span class="n">config</span><span class="o">.</span><span class="n">args</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">token</span> <span class="o">=</span> <span class="n">session</span><span class="o">[</span><span class="ss">:doorkeeper_token</span><span class="o">]</span>
-</span><span class='line'>    <span class="vi">@access_token</span> <span class="o">=</span> <span class="ss">OAuth2</span><span class="p">:</span><span class="ss">:AccessToken</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">strategy</span><span class="o">.</span><span class="n">client</span><span class="p">,</span> <span class="n">token</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">get_me</span>
-</span><span class='line'>    <span class="n">access_token</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/v1/me.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parsed</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">get_microposts</span>
-</span><span class='line'>    <span class="n">access_token</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/v1/microposts.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parsed</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="no">MICROPOST_CONTENT_MAX_LENGTH</span> <span class="o">=</span> <span class="mi">140</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">post_micropost</span><span class="p">(</span><span class="n">micropost</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">micropost</span><span class="o">[</span><span class="ss">:content</span><span class="o">]</span> <span class="o">=</span> <span class="n">micropost</span><span class="o">[</span><span class="ss">:content</span><span class="o">].</span><span class="n">truncate</span><span class="p">(</span><span class="no">MICROPOST_CONTENT_MAX_LENGTH</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">access_token</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/api/v1/microposts&quot;</span><span class="p">,</span> <span class="ss">params</span><span class="p">:</span> <span class="p">{</span> <span class="ss">micropost</span><span class="p">:</span> <span class="n">micropost</span> <span class="p">})</span><span class="o">.</span><span class="n">parsed</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
+<pre><code class="ruby app/controllers/concerns/doorkeeper_api_v1.rb">module DoorkeeperApiV1
+  private
 
+  def access_token
+    return @access_token if defined?(@access_token)
+    config = Devise.omniauth_configs[:doorkeeper]
+    strategy = config.strategy_class.new(*config.args)
+    token = session[:doorkeeper_token]
+    @access_token = OAuth2::AccessToken.new(strategy.client, token)
+  end
+
+  def get_me
+    access_token.get("/api/v1/me.json").parsed
+  end
+
+  def get_microposts
+    access_token.get("/api/v1/microposts.json").parsed
+  end
+
+  MICROPOST_CONTENT_MAX_LENGTH = 140
+
+  def post_micropost(micropost)
+    micropost[:content] = micropost[:content].truncate(MICROPOST_CONTENT_MAX_LENGTH)
+    access_token.post("/api/v1/microposts", params: { micropost: micropost }).parsed
+  end
+end
+</code></pre>
 
 <p>使い方は <code>get_me</code> などを呼び出すだけなので省略します。</p>
 
@@ -1551,35 +1380,20 @@ User クラスを使っている場合の devise での戻り先の <code>sessio
 <code>user_omniauth_authorize_path(:doorkeeper)</code> に強制的にリダイレクトしています。
 <code>main_app.</code> をつけているのは route で mount している engine の中で問題が起きたことがあったためです。</p>
 
-<figure class='code'><figcaption><span>app/controllers/application_controller.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="kp">include</span> <span class="no">AuthDoorkeeper</span>
-</span><span class='line'>  <span class="n">before_action</span> <span class="ss">:auto_authenticate_omniauth_user!</span>
-</span></code></pre></td></tr></table></div></figure>
+<pre><code class="ruby app/controllers/application_controller.rb">  include AuthDoorkeeper
+  before_action :auto_authenticate_omniauth_user!
+</code></pre>
 
+<pre><code class="ruby app/controllers/concerns/auth_doorkeeper.rb">module AuthDoorkeeper
+  private
 
-
-
-<figure class='code'><figcaption><span>app/controllers/concerns/auth_doorkeeper.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">module</span> <span class="nn">AuthDoorkeeper</span>
-</span><span class='line'>  <span class="kp">private</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">auto_authenticate_omniauth_user!</span>
-</span><span class='line'>    <span class="k">return</span> <span class="k">if</span> <span class="n">current_user</span>
-</span><span class='line'>    <span class="n">session</span><span class="o">[</span><span class="ss">:user_return_to</span><span class="o">]</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">original_url</span>
-</span><span class='line'>    <span class="n">redirect_to</span> <span class="n">main_app</span><span class="o">.</span><span class="n">user_omniauth_authorize_path</span><span class="p">(</span><span class="ss">:doorkeeper</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
+  def auto_authenticate_omniauth_user!
+    return if current_user
+    session[:user_return_to] = request.original_url
+    redirect_to main_app.user_omniauth_authorize_path(:doorkeeper)
+  end
+end
+</code></pre>
 
 <h2>テストについて</h2>
 
@@ -1606,35 +1420,25 @@ User クラスを使っている場合の devise での戻り先の <code>sessio
 
 <p>Vagrantfile では</p>
 
-<figure class='code'><figcaption><span>Vagrantfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">provision</span> <span class="ss">:shell</span> <span class="k">do</span> <span class="o">|</span><span class="n">shell</span><span class="o">|</span>
-</span><span class='line'>    <span class="n">shell</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="s2">&quot;provision.sh&quot;</span>
-</span><span class='line'>  <span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="ruby Vagrantfile">  config.vm.provision :shell do |shell|
+    shell.path = "provision.sh"
+  end
+</code></pre>
 
 <p>のようにシェルスクリプトでプロビジョニングしているだけだったので、
 その中で以下のようにインストールして設定するようにしました。</p>
 
-<figure class='code'><figcaption><span>provision.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>apt-get install -y apt-cacher-ng
-</span><span class='line'><span class="nb">echo</span> <span class="s1">&#39;Acquire::http::Proxy &quot;http://localhost:3142/&quot;;&#39;</span> &gt;/etc/apt/apt.conf.d/02proxy
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="bash provision.sh">apt-get install -y apt-cacher-ng
+echo 'Acquire::http::Proxy "http://localhost:3142/";' &gt;/etc/apt/apt.conf.d/02proxy
+</code></pre>
 
 <p>Vagrantfile で以下のようにポートフォワーディングを設定していれば
 <a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0315" title="第315回　apt-cacher-ngを使ってAPT用キャッシュプロキシの構築：Ubuntu Weekly Recipe｜gihyo.jp … 技術評論社">第315回　apt-cacher-ngを使ってAPT用キャッシュプロキシの構築：Ubuntu Weekly Recipe｜gihyo.jp … 技術評論社</a>
 の2ページ目に説明があるようにヒット率などを確認できます。</p>
 
-<figure class='code'><figcaption><span>Vagrantfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="c1"># apt-cacher-ng</span>
-</span><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">vm</span><span class="o">.</span><span class="n">network</span> <span class="s2">&quot;forwarded_port&quot;</span><span class="p">,</span> <span class="ss">guest</span><span class="p">:</span> <span class="mi">3142</span><span class="p">,</span> <span class="ss">host</span><span class="p">:</span> <span class="mi">3142</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="ruby Vagrantfile">  # apt-cacher-ng
+  config.vm.network "forwarded_port", guest: 3142, host: 3142
+</code></pre>
 
 <h2>rake コマンドで環境変数を渡す</h2>
 
@@ -1643,22 +1447,14 @@ rake コマンドは引数の <code>FOO=bar</code> を <code>ENV</code> に設�
 <code>rake APT_HTTP_PROXY=http://localhost:3142</code> で渡して、
 Rakefile の中では以下のように受け取って <code>lb config</code> に渡しました。</p>
 
-<figure class='code'><figcaption><span>Rakefile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">desc</span> <span class="s2">&quot;config RubyLive&quot;</span>
-</span><span class='line'><span class="n">task</span> <span class="ss">:config</span> <span class="o">=&gt;</span> <span class="o">[</span><span class="ss">:clean</span><span class="o">]</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">sh</span> <span class="s1">&#39;lb config&#39;</span>
-</span><span class='line'>  <span class="k">if</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;APT_HTTP_PROXY&#39;</span><span class="o">]</span>
-</span><span class='line'>    <span class="n">sh</span> <span class="s2">&quot;lb config --apt-http-proxy </span><span class="si">#{</span><span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;APT_HTTP_PROXY&#39;</span><span class="o">]</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="ruby Rakefile">desc "config RubyLive"
+task :config =&gt; [:clean] do
+  sh 'lb config'
+  if ENV['APT_HTTP_PROXY']
+    sh "lb config --apt-http-proxy #{ENV['APT_HTTP_PROXY']}"
+  end
+end
+</code></pre>
 
 <h2>live-build で apt-cacher-ng を使う</h2>
 
@@ -1731,12 +1527,9 @@ docker は後述の制限のために作成できませんでした。</p>
 </ul>
 
 
-<p>なぜか</p>
-
-<pre><code>chroot: failed to run command `/usr/bin/env': No such file or directory
-</code></pre>
-
-<p>で失敗することがありましたが、再度 <code>/vagrant/rubylive.sh</code> を実行すれば問題なく作成できました。</p>
+<p>なぜか
+    chroot: failed to run command <code>/usr/bin/env': No such file or directory
+で失敗することがありましたが、再度</code>/vagrant/rubylive.sh` を実行すれば問題なく作成できました。</p>
 
 <h3>片付け方</h3>
 
@@ -1918,7 +1711,7 @@ zip ファイルなので、先ほどの <code>.gnomerc</code> でデスクト�
 
 <h2>ruby-build で ruby 2.1.2 のインストール</h2>
 
-<p><a href="http://qiita.com/takahashim/items/406421d515ef1d4f1189" title="[ReVIEW Tips] DockerでRe:VIEW - Qiita">[ReVIEW Tips] DockerでRe:VIEW &ndash; Qiita</a>
+<p><a href="http://qiita.com/takahashim/items/406421d515ef1d4f1189" title="[ReVIEW Tips] DockerでRe:VIEW - Qiita">[ReVIEW Tips] DockerでRe:VIEW - Qiita</a>
 を参考にして rbenv は使わずに ruby-build だけ使って <code>/usr/local</code> に ruby 2.1.2 をインストールしました。</p>
 
 <h2>localepurge</h2>
@@ -2014,21 +1807,15 @@ secret も見えてしまうので、 read 権限までしっかり制限する�
 <p>Doorkeeper gem の Wiki の例にあるようにユーザー情報をとれるようにしています。
 制限していないと以下のような情報がとれました。</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="p">{</span> <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-</span><span class='line'>  <span class="nt">&quot;email&quot;</span><span class="p">:</span> <span class="s2">&quot;admin@example.com&quot;</span><span class="p">,</span>
-</span><span class='line'>  <span class="nt">&quot;created_at&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-07-11T06:32:22.077Z&quot;</span><span class="p">,</span>
-</span><span class='line'>  <span class="nt">&quot;updated_at&quot;</span><span class="p">:</span> <span class="s2">&quot;2014-07-11T09:33:42.143Z&quot;</span><span class="p">,</span>
-</span><span class='line'>  <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;admin&quot;</span> <span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="json">{ "id": 1,
+  "email": "admin@example.com",
+  "created_at": "2014-07-11T06:32:22.077Z",
+  "updated_at": "2014-07-11T09:33:42.143Z",
+  "name": "admin" }
+</code></pre>
 
 <p>制限したり関連するモデルの情報を増やしたりするなら
-<a href="http://sugamasao.hatenablog.com/entry/20100914/1284415669" title="Rails のモデル関係と to_json(to_xml) - すがブロ">Rails のモデル関係と to_json(to_xml) &ndash; すがブロ</a>
+<a href="http://sugamasao.hatenablog.com/entry/20100914/1284415669" title="Rails のモデル関係と to_json(to_xml) - すがブロ">Rails のモデル関係と to_json(to_xml) - すがブロ</a>
 に書いてあるように <code>respond_with</code> に <code>:only</code> をつけたり <code>:include</code> をつけたりすると出来るようです。</p>
 
 <p>入ったり入らなかったりする条件がよくわからなかったのですが、
@@ -2123,18 +1910,12 @@ User モデルにいろんな情報を入れているなら、
 
 <p>OmniAuth と使用するサービスを追加します。</p>
 
-<figure class='code'><figcaption><span>Gemfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">gem</span> <span class="s1">&#39;omniauth&#39;</span>
-</span><span class='line'><span class="n">gem</span> <span class="s1">&#39;omniauth-facebook&#39;</span>
-</span><span class='line'><span class="n">gem</span> <span class="s1">&#39;omniauth-github&#39;</span>
-</span><span class='line'><span class="n">gem</span> <span class="s1">&#39;omniauth-google-oauth2&#39;</span>
-</span><span class='line'><span class="n">gem</span> <span class="s1">&#39;omniauth-twitter&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="ruby Gemfile">    gem 'omniauth'
+    gem 'omniauth-facebook'
+    gem 'omniauth-github'
+    gem 'omniauth-google-oauth2'
+    gem 'omniauth-twitter'
+</code></pre>
 
 <h3>initializer 追加</h3>
 
@@ -2145,96 +1926,51 @@ User モデルにいろんな情報を入れているなら、
 追加で名前や Font Awesome のアイコン名も入れたかったので、
 <code>AUTH_PROVIDERS</code> という配列にハッシュを入れるようにしています。</p>
 
-<figure class='code'><figcaption><span>config/initializers/omniauth.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">AUTH_PROVIDERS</span> <span class="o">=</span> <span class="o">[]</span>
-</span><span class='line'>
-</span><span class='line'><span class="no">Rails</span><span class="o">.</span><span class="n">application</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">middleware</span><span class="o">.</span><span class="n">use</span> <span class="ss">OmniAuth</span><span class="p">:</span><span class="ss">:Builder</span> <span class="k">do</span>
-</span><span class='line'>  <span class="n">key</span><span class="p">,</span> <span class="n">secret</span> <span class="o">=</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;FACEBOOK_KEY&#39;</span><span class="o">]</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;FACEBOOK_SECRET&#39;</span><span class="o">]</span>
-</span><span class='line'>  <span class="k">if</span> <span class="n">key</span> <span class="o">&amp;&amp;</span> <span class="n">secret</span>
-</span><span class='line'>    <span class="n">provider</span> <span class="ss">:facebook</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">secret</span>
-</span><span class='line'>    <span class="no">AUTH_PROVIDERS</span> <span class="o">&lt;&lt;</span> <span class="p">{</span>
-</span><span class='line'>      <span class="ss">provider</span><span class="p">:</span> <span class="ss">:facebook</span><span class="p">,</span>
-</span><span class='line'>      <span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;Facebook&#39;</span><span class="p">,</span>
-</span><span class='line'>    <span class="p">}</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="n">key</span><span class="p">,</span> <span class="n">secret</span> <span class="o">=</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;GITHUB_CONSUMER_KEY&#39;</span><span class="o">]</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;GITHUB_CONSUMER_SECRET&#39;</span><span class="o">]</span>
-</span><span class='line'>  <span class="k">if</span> <span class="n">key</span> <span class="o">&amp;&amp;</span> <span class="n">secret</span>
-</span><span class='line'>    <span class="n">provider</span> <span class="ss">:github</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">secret</span>
-</span><span class='line'>    <span class="no">AUTH_PROVIDERS</span> <span class="o">&lt;&lt;</span> <span class="p">{</span>
-</span><span class='line'>      <span class="ss">provider</span><span class="p">:</span> <span class="ss">:github</span><span class="p">,</span>
-</span><span class='line'>      <span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;GitHub&#39;</span><span class="p">,</span>
-</span><span class='line'>    <span class="p">}</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="n">key</span><span class="p">,</span> <span class="n">secret</span> <span class="o">=</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;GOOGLE_CLIENT_ID&#39;</span><span class="o">]</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;GOOGLE_CLIENT_SECRET&#39;</span><span class="o">]</span>
-</span><span class='line'>  <span class="k">if</span> <span class="n">key</span> <span class="o">&amp;&amp;</span> <span class="n">secret</span>
-</span><span class='line'>    <span class="n">provider</span> <span class="ss">:google_oauth2</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">secret</span>
-</span><span class='line'>    <span class="no">AUTH_PROVIDERS</span> <span class="o">&lt;&lt;</span> <span class="p">{</span>
-</span><span class='line'>      <span class="ss">provider</span><span class="p">:</span> <span class="ss">:google_oauth2</span><span class="p">,</span>
-</span><span class='line'>      <span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;Google&#39;</span><span class="p">,</span>
-</span><span class='line'>      <span class="ss">icon</span><span class="p">:</span> <span class="ss">:google</span>
-</span><span class='line'>    <span class="p">}</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="n">key</span><span class="p">,</span> <span class="n">secret</span> <span class="o">=</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;TWITTER_CONSUMER_KEY&#39;</span><span class="o">]</span><span class="p">,</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">&#39;TWITTER_CONSUMER_SECRET&#39;</span><span class="o">]</span>
-</span><span class='line'>  <span class="k">if</span> <span class="n">key</span> <span class="o">&amp;&amp;</span> <span class="n">secret</span>
-</span><span class='line'>    <span class="n">provider</span> <span class="ss">:twitter</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">secret</span>
-</span><span class='line'>    <span class="no">AUTH_PROVIDERS</span> <span class="o">&lt;&lt;</span> <span class="p">{</span>
-</span><span class='line'>      <span class="ss">provider</span><span class="p">:</span> <span class="ss">:twitter</span><span class="p">,</span>
-</span><span class='line'>      <span class="nb">name</span><span class="p">:</span> <span class="s1">&#39;Twitter&#39;</span><span class="p">,</span>
-</span><span class='line'>    <span class="p">}</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="no">AUTH_PROVIDERS</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">provider</span><span class="o">|</span>
-</span><span class='line'>    <span class="n">provider</span><span class="o">[</span><span class="ss">:icon</span><span class="o">]</span> <span class="o">||=</span> <span class="n">provider</span><span class="o">[</span><span class="ss">:provider</span><span class="o">]</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
+<pre><code class="ruby config/initializers/omniauth.rb">    AUTH_PROVIDERS = []
 
+    Rails.application.config.middleware.use OmniAuth::Builder do
+      key, secret = ENV['FACEBOOK_KEY'], ENV['FACEBOOK_SECRET']
+      if key &amp;&amp; secret
+        provider :facebook, key, secret
+        AUTH_PROVIDERS &lt;&lt; {
+          provider: :facebook,
+          name: 'Facebook',
+        }
+      end
+
+      key, secret = ENV['GITHUB_CONSUMER_KEY'], ENV['GITHUB_CONSUMER_SECRET']
+      if key &amp;&amp; secret
+        provider :github, key, secret
+        AUTH_PROVIDERS &lt;&lt; {
+          provider: :github,
+          name: 'GitHub',
+        }
+      end
+
+      key, secret = ENV['GOOGLE_CLIENT_ID'], ENV['GOOGLE_CLIENT_SECRET']
+      if key &amp;&amp; secret
+        provider :google_oauth2, key, secret
+        AUTH_PROVIDERS &lt;&lt; {
+          provider: :google_oauth2,
+          name: 'Google',
+          icon: :google
+        }
+      end
+
+      key, secret = ENV['TWITTER_CONSUMER_KEY'], ENV['TWITTER_CONSUMER_SECRET']
+      if key &amp;&amp; secret
+        provider :twitter, key, secret
+        AUTH_PROVIDERS &lt;&lt; {
+          provider: :twitter,
+          name: 'Twitter',
+        }
+      end
+
+      AUTH_PROVIDERS.each do |provider|
+        provider[:icon] ||= provider[:provider]
+      end
+    end
+</code></pre>
 
 <h3>UserAuth モデル作成</h3>
 
@@ -2243,415 +1979,299 @@ User モデルにいろんな情報を入れているなら、
 <p>モデルクラスは生成されたまま使いましたが、
 validation を追加した方が良さそうです。</p>
 
-<figure class='code'><figcaption><span>app/models/user_auth.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">UserAuth</span> <span class="o">&lt;</span> <span class="ss">ActiveRecord</span><span class="p">:</span><span class="ss">:Base</span>
-</span><span class='line'>  <span class="n">belongs_to</span> <span class="ss">:user</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="ruby app/models/user_auth.rb">    class UserAuth &lt; ActiveRecord::Base
+      belongs_to :user
+    end
+</code></pre>
 
 <p>データベースの方は <code>null: false</code> や index を追加しました。</p>
 
-<figure class='code'><figcaption><span>db/migrate/*_create_user_auths.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">CreateUserAuths</span> <span class="o">&lt;</span> <span class="ss">ActiveRecord</span><span class="p">:</span><span class="ss">:Migration</span>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">change</span>
-</span><span class='line'>    <span class="n">create_table</span> <span class="ss">:user_auths</span> <span class="k">do</span> <span class="o">|</span><span class="n">t</span><span class="o">|</span>
-</span><span class='line'>      <span class="n">t</span><span class="o">.</span><span class="n">references</span> <span class="ss">:user</span><span class="p">,</span> <span class="ss">index</span><span class="p">:</span> <span class="kp">true</span><span class="p">,</span> <span class="ss">null</span><span class="p">:</span> <span class="kp">false</span>
-</span><span class='line'>      <span class="n">t</span><span class="o">.</span><span class="n">string</span> <span class="ss">:uid</span><span class="p">,</span> <span class="ss">null</span><span class="p">:</span> <span class="kp">false</span>
-</span><span class='line'>      <span class="n">t</span><span class="o">.</span><span class="n">string</span> <span class="ss">:provider</span><span class="p">,</span> <span class="ss">null</span><span class="p">:</span> <span class="kp">false</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="n">t</span><span class="o">.</span><span class="n">timestamps</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="n">add_index</span> <span class="ss">:user_auths</span><span class="p">,</span> <span class="o">[</span><span class="ss">:uid</span><span class="p">,</span> <span class="ss">:provider</span><span class="o">]</span><span class="p">,</span> <span class="ss">unique</span><span class="p">:</span> <span class="kp">true</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
+<p>&#8220;`ruby db/migrate/*_create_user_auths.rb
+    class CreateUserAuths &lt; ActiveRecord::Migration
+      def change
+        create_table :user_auths do |t|
+          t.references :user, index: true, null: false
+          t.string :uid, null: false
+          t.string :provider, null: false</p>
 
+<pre><code>      t.timestamps
+    end
 
-<h3><code>rake db:migrate</code></h3>
+    add_index :user_auths, [:uid, :provider], unique: true
+  end
+end
+</code></pre>
 
-<p><code>rake db:migrate</code> で反映しておきます。</p>
+<pre><code>
+### `rake db:migrate`
 
-<h3>User クラス側</h3>
+`rake db:migrate` で反映しておきます。
 
-<p><code>has_many</code> を追加しておきます。</p>
+### User クラス側
 
-<figure class='code'><figcaption><span>app/models/user.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">has_many</span> <span class="ss">:user_auths</span><span class="p">,</span> <span class="ss">dependent</span><span class="p">:</span> <span class="ss">:destroy</span>
-</span></code></pre></td></tr></table></div></figure>
+`has_many` を追加しておきます。
+</code></pre>
 
+<pre><code>  has_many :user_auths, dependent: :destroy
+</code></pre>
 
-<h3>ルーティング追加</h3>
+<pre><code>
+### ルーティング追加
 
-<p>まず、どう使われるのか把握するためにルーティングを追加します。</p>
+まず、どう使われるのか把握するためにルーティングを追加します。
 
-<p><code>auth_help</code> は後でプライバシーポリシーなどを書いています。</p>
+`auth_help` は後でプライバシーポリシーなどを書いています。
+</code></pre>
 
-<figure class='code'><figcaption><span>config/routes.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">get</span> <span class="s1">&#39;/auth/help&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;auth#help&#39;</span><span class="p">,</span> <span class="ss">as</span><span class="p">:</span> <span class="ss">:auth_help</span>
-</span><span class='line'>  <span class="n">get</span> <span class="s1">&#39;/auth/:provider/callback&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;auth#create&#39;</span>
-</span><span class='line'>  <span class="n">delete</span> <span class="s1">&#39;/auth/destroy/:provider&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;auth#destroy&#39;</span><span class="p">,</span> <span class="ss">as</span><span class="p">:</span> <span class="ss">:destroy_connection</span>
-</span></code></pre></td></tr></table></div></figure>
+<pre><code>  get '/auth/help' =&gt; 'auth#help', as: :auth_help
+  get '/auth/:provider/callback' =&gt; 'auth#create'
+  delete '/auth/destroy/:provider' =&gt; 'auth#destroy', as: :destroy_connection
+</code></pre>
 
+<pre><code>
+ここには出てきていませんが、
+OmniAuth で `/auth/:provider` がルーティングされるようです。
 
-<p>ここには出てきていませんが、
-OmniAuth で <code>/auth/:provider</code> がルーティングされるようです。</p>
+### AuthController 実装
 
-<h3>AuthController 実装</h3>
+参考サイトの実装例を参考にして AuthController を実装しました。
 
-<p>参考サイトの実装例を参考にして AuthController を実装しました。</p>
+help は静的な情報を表示するだけなので、実装は空です。
+</code></pre>
 
-<p>help は静的な情報を表示するだけなので、実装は空です。</p>
+<pre><code># -*- coding: utf-8 -*-
+class AuthController &lt; ApplicationController
+  skip_before_filter :authenticate_user!
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># -*- coding: utf-8 -*-</span>
-</span><span class='line'><span class="k">class</span> <span class="nc">AuthController</span> <span class="o">&lt;</span> <span class="no">ApplicationController</span>
-</span><span class='line'>  <span class="n">skip_before_filter</span> <span class="ss">:authenticate_user!</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">create</span>
-</span><span class='line'>    <span class="n">auth</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">env</span><span class="o">[</span><span class="s1">&#39;omniauth.auth&#39;</span><span class="o">]</span>
-</span><span class='line'>    <span class="n">uid</span> <span class="o">=</span> <span class="n">auth</span><span class="o">[</span><span class="s1">&#39;uid&#39;</span><span class="o">]</span>
-</span><span class='line'>    <span class="n">provider</span> <span class="o">=</span> <span class="n">auth</span><span class="o">[</span><span class="s1">&#39;provider&#39;</span><span class="o">]</span>
-</span><span class='line'>    <span class="n">auth</span> <span class="o">=</span> <span class="no">UserAuth</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="ss">uid</span><span class="p">:</span> <span class="n">uid</span><span class="p">,</span> <span class="ss">provider</span><span class="p">:</span> <span class="n">provider</span><span class="p">)</span><span class="o">.</span><span class="n">first</span>
-</span><span class='line'>    <span class="k">if</span> <span class="n">auth</span>
-</span><span class='line'>      <span class="n">flash</span><span class="o">[</span><span class="ss">:notice</span><span class="o">]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">provider</span><span class="si">}</span><span class="s2">でログインしました。&quot;</span>
-</span><span class='line'>      <span class="n">sign_in_and_redirect</span> <span class="n">auth</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="ss">event</span><span class="p">:</span> <span class="ss">:authentication</span>
-</span><span class='line'>    <span class="k">else</span>
-</span><span class='line'>      <span class="n">authenticate_user!</span>
-</span><span class='line'>      <span class="no">UserAuth</span><span class="o">.</span><span class="n">create!</span><span class="p">(</span><span class="ss">uid</span><span class="p">:</span> <span class="n">uid</span><span class="p">,</span> <span class="ss">provider</span><span class="p">:</span> <span class="n">provider</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="n">current_user</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
-</span><span class='line'>      <span class="n">redirect_to</span> <span class="n">root_url</span><span class="p">,</span> <span class="ss">notice</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">provider</span><span class="si">}</span><span class="s2">と連携しました。&quot;</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">destroy</span>
-</span><span class='line'>    <span class="n">provider</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">require</span><span class="p">(</span><span class="ss">:provider</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">authenticate_user!</span>
-</span><span class='line'>    <span class="n">auth</span> <span class="o">=</span> <span class="no">UserAuth</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="ss">provider</span><span class="p">:</span> <span class="n">provider</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="n">current_user</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span>
-</span><span class='line'>    <span class="n">auth</span><span class="o">.</span><span class="n">destroy</span> <span class="k">if</span> <span class="n">auth</span>
-</span><span class='line'>    <span class="n">redirect_to</span> <span class="n">root_url</span><span class="p">,</span> <span class="ss">notice</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">provider</span><span class="si">}</span><span class="s2">と連携解除しました。&quot;</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">help</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
+  def create
+    auth = request.env['omniauth.auth']
+    uid = auth['uid']
+    provider = auth['provider']
+    auth = UserAuth.where(uid: uid, provider: provider).first
+    if auth
+      flash[:notice] = "#{provider}でログインしました。"
+      sign_in_and_redirect auth.user, event: :authentication
+    else
+      authenticate_user!
+      UserAuth.create!(uid: uid, provider: provider, user_id: current_user.id)
+      redirect_to root_url, notice: "#{provider}と連携しました。"
+    end
+  end
 
+  def destroy
+    provider = params.require(:provider)
+    authenticate_user!
+    auth = UserAuth.where(provider: provider, user_id: current_user.id).first
+    auth.destroy if auth
+    redirect_to root_url, notice: "#{provider}と連携解除しました。"
+  end
 
-<p>まだ連携を登録していない状態で</p>
+  def help
+  end
+end
+</code></pre>
 
-<ul>
-<li>ログアウト状態</li>
-<li>連携サービスで認証・連携許可</li>
-<li>戻ってきて通常ログイン</li>
-<li><code>auth/failure</code> に飛ばされる</li>
-</ul>
+<pre><code>
+まだ連携を登録していない状態で
 
+- ログアウト状態
+- 連携サービスで認証・連携許可
+- 戻ってきて通常ログイン
+- `auth/failure` に飛ばされる
 
-<p>ということがおきているのですが、
-<code>auth/failure</code>
-を実装していないので、デフォルトの 404 エラー画面になってしまいます。</p>
+ということがおきているのですが、
+`auth/failure`
+を実装していないので、デフォルトの 404 エラー画面になってしまいます。
 
-<h3>view helpers 実装</h3>
+### view helpers 実装
 
-<p>以前から使っていた <code>link_to_sign_in_or_out</code> の実装も同じファイルに持ってきて、
-<code>link_to_provider</code> という汎用的なメソッドを実装しました。
-使い方は後述します。</p>
+以前から使っていた `link_to_sign_in_or_out` の実装も同じファイルに持ってきて、
+`link_to_provider` という汎用的なメソッドを実装しました。
+使い方は後述します。
 
-<p><code>AUTH_PROVIDERS</code> のハッシュはここで使っています。</p>
+`AUTH_PROVIDERS` のハッシュはここで使っています。
+</code></pre>
 
-<figure class='code'><figcaption><span>app/helpers/link_to_auth_helper.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># -*- coding: utf-8 -*-</span>
-</span><span class='line'><span class="k">module</span> <span class="nn">LinkToAuthHelper</span>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">link_to_sign_in_or_out</span><span class="p">(</span><span class="n">html_options</span><span class="o">=</span><span class="p">{})</span>
-</span><span class='line'>    <span class="k">if</span> <span class="n">user_signed_in?</span>
-</span><span class='line'>      <span class="n">body</span> <span class="o">=</span> <span class="n">icon</span><span class="p">(</span><span class="ss">:&#39;sign-out&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">t</span><span class="p">(</span><span class="ss">:&quot;devise.shared.links.sign_out&quot;</span><span class="p">,</span> <span class="ss">default</span><span class="p">:</span> <span class="s2">&quot;Sign out&quot;</span><span class="p">)</span>
-</span><span class='line'>      <span class="n">html_options</span> <span class="o">=</span> <span class="p">{</span> <span class="nb">method</span><span class="p">:</span> <span class="ss">:delete</span> <span class="p">}</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">html_options</span><span class="p">)</span>
-</span><span class='line'>      <span class="n">link_to</span> <span class="n">body</span><span class="p">,</span> <span class="ss">:destroy_user_session</span><span class="p">,</span> <span class="n">html_options</span>
-</span><span class='line'>    <span class="k">else</span>
-</span><span class='line'>      <span class="n">body</span> <span class="o">=</span> <span class="n">icon</span><span class="p">(</span><span class="ss">:&#39;sign-in&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">t</span><span class="p">(</span><span class="ss">:&quot;devise.shared.links.sign_in&quot;</span><span class="p">,</span> <span class="ss">default</span><span class="p">:</span> <span class="s2">&quot;Sign in&quot;</span><span class="p">)</span>
-</span><span class='line'>      <span class="n">link_to</span> <span class="n">body</span><span class="p">,</span> <span class="ss">:new_user_session</span><span class="p">,</span> <span class="n">html_options</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">link_to_provider</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="n">html_options</span><span class="o">=</span><span class="p">{})</span>
-</span><span class='line'>    <span class="k">if</span> <span class="n">current_user</span>
-</span><span class='line'>      <span class="k">if</span> <span class="no">UserAuth</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="n">current_user</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="ss">provider</span><span class="p">:</span> <span class="n">provider</span><span class="o">[</span><span class="ss">:provider</span><span class="o">]</span><span class="p">)</span><span class="o">.</span><span class="n">exists?</span>
-</span><span class='line'>        <span class="n">html_options</span> <span class="o">=</span> <span class="p">{</span> <span class="nb">method</span><span class="p">:</span> <span class="ss">:delete</span> <span class="p">}</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">html_options</span><span class="p">)</span>
-</span><span class='line'>        <span class="n">link_to</span> <span class="n">icon</span><span class="p">(</span><span class="n">provider</span><span class="o">[</span><span class="ss">:icon</span><span class="o">]</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="si">#{</span><span class="n">provider</span><span class="o">[</span><span class="ss">:name</span><span class="o">]</span><span class="si">}</span><span class="s2">との連携を解除&quot;</span><span class="p">,</span> <span class="n">destroy_connection_path</span><span class="p">(</span><span class="ss">provider</span><span class="p">:</span> <span class="n">provider</span><span class="o">[</span><span class="ss">:provider</span><span class="o">]</span><span class="p">),</span> <span class="n">html_options</span>
-</span><span class='line'>      <span class="k">else</span>
-</span><span class='line'>        <span class="n">link_to</span> <span class="n">icon</span><span class="p">(</span><span class="n">provider</span><span class="o">[</span><span class="ss">:icon</span><span class="o">]</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="si">#{</span><span class="n">provider</span><span class="o">[</span><span class="ss">:name</span><span class="o">]</span><span class="si">}</span><span class="s2">と連携&quot;</span><span class="p">,</span> <span class="s2">&quot;/auth/</span><span class="si">#{</span><span class="n">provider</span><span class="o">[</span><span class="ss">:provider</span><span class="o">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">html_options</span>
-</span><span class='line'>      <span class="k">end</span>
-</span><span class='line'>    <span class="k">else</span>
-</span><span class='line'>      <span class="n">link_to</span> <span class="n">icon</span><span class="p">(</span><span class="n">provider</span><span class="o">[</span><span class="ss">:icon</span><span class="o">]</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="si">#{</span><span class="n">provider</span><span class="o">[</span><span class="ss">:name</span><span class="o">]</span><span class="si">}</span><span class="s2">でログイン&quot;</span><span class="p">,</span> <span class="s2">&quot;/auth/</span><span class="si">#{</span><span class="n">provider</span><span class="o">[</span><span class="ss">:provider</span><span class="o">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">html_options</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
+<pre><code># -*- coding: utf-8 -*-
+module LinkToAuthHelper
+  def link_to_sign_in_or_out(html_options={})
+    if user_signed_in?
+      body = icon(:'sign-out') + t(:"devise.shared.links.sign_out", default: "Sign out")
+      html_options = { method: :delete }.merge(html_options)
+      link_to body, :destroy_user_session, html_options
+    else
+      body = icon(:'sign-in') + t(:"devise.shared.links.sign_in", default: "Sign in")
+      link_to body, :new_user_session, html_options
+    end
+  end
 
+  def link_to_provider(provider, html_options={})
+    if current_user
+      if UserAuth.where(user_id: current_user.id, provider: provider[:provider]).exists?
+        html_options = { method: :delete }.merge(html_options)
+        link_to icon(provider[:icon])+"#{provider[:name]}との連携を解除", destroy_connection_path(provider: provider[:provider]), html_options
+      else
+        link_to icon(provider[:icon])+"#{provider[:name]}と連携", "/auth/#{provider[:provider]}", html_options
+      end
+    else
+      link_to icon(provider[:icon])+"#{provider[:name]}でログイン", "/auth/#{provider[:provider]}", html_options
+    end
+  end
+end
+</code></pre>
 
-<h3>view に追加</h3>
+<pre><code>
 
-<p>ナビゲーションに以下のように追加しました。
-認証連携がないときは従来のログイン・ログアウトだけ表示しています。</p>
+### view に追加
 
-<p><code>AUTH_PROVIDERS</code> に登録されているときだけ連携のリンクを表示するようにしています。</p>
+ナビゲーションに以下のように追加しました。
+認証連携がないときは従来のログイン・ログアウトだけ表示しています。
 
-<figure class='code'><figcaption><span>app/views/layouts/_navigation.html.slim</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>    li.dropdown
-</span><span class='line'>      a.dropdown-toggle data-toggle=&quot;dropdown&quot;
-</span><span class='line'>        = icon(:user) + &#39;ログイン管理&#39;
-</span><span class='line'>        b.caret
-</span><span class='line'>      ul.dropdown-menu
-</span><span class='line'>        li= link_to_sign_in_or_out
-</span><span class='line'>        - unless AUTH_PROVIDERS.empty?
-</span><span class='line'>          li= link_to icon(:info)+&quot;認証連携のヘルプ&quot;, auth_help_path
-</span><span class='line'>        - AUTH_PROVIDERS.each do |provider|
-</span><span class='line'>          li= link_to_provider(provider)
-</span></code></pre></td></tr></table></div></figure>
+`AUTH_PROVIDERS` に登録されているときだけ連携のリンクを表示するようにしています。
+</code></pre>
 
+<pre><code>    li.dropdown
+      a.dropdown-toggle data-toggle="dropdown"
+        = icon(:user) + 'ログイン管理'
+        b.caret
+      ul.dropdown-menu
+        li= link_to_sign_in_or_out
+        - unless AUTH_PROVIDERS.empty?
+          li= link_to icon(:info)+"認証連携のヘルプ", auth_help_path
+        - AUTH_PROVIDERS.each do |provider|
+          li= link_to_provider(provider)
+</code></pre>
 
-<h3>twitter 連携</h3>
+<pre><code>
+### twitter 連携
 
-<p>Twitter は複数アカウントを使うことも通常の使用範囲として想定されていて、
+Twitter は複数アカウントを使うことも通常の使用範囲として想定されていて、
 アプリ専用のアカウントもとりやすいので、
-Twitter 連携から試してみました。</p>
+Twitter 連携から試してみました。
 
-<p><a href="https://apps.twitter.com/">https://apps.twitter.com/</a> から <code>Create New App</code> で作成します。</p>
+https://apps.twitter.com/ から `Create New App` で作成します。
 
-<ul>
-<li>Name: Twitter 全体で一意になるアプリケーションの ID 的にも使われるもの。ツイートの時にツイートしたアプリ名としても埋め込まれるが、今回は認証のみなので、他とぶつからないような名前という以上はこだわらなかった。</li>
-<li>Description: 認証のときに出てくる説明。</li>
-<li>Website: たとえば <code>http://app.127.0.0.1.xip.io:3000/</code> など</li>
-<li>Callback URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/auth/twitter/callback</code> のように <code>/auth/twitter/callback</code> にする。実サイトなら <code>https</code> にすべき。</li>
-</ul>
+- Name: Twitter 全体で一意になるアプリケーションの ID 的にも使われるもの。ツイートの時にツイートしたアプリ名としても埋め込まれるが、今回は認証のみなので、他とぶつからないような名前という以上はこだわらなかった。
+- Description: 認証のときに出てくる説明。
+- Website: たとえば `http://app.127.0.0.1.xip.io:3000/` など
+- Callback URL: たとえば `http://app.127.0.0.1.xip.io:3000/auth/twitter/callback` のように `/auth/twitter/callback` にする。実サイトなら `https` にすべき。
 
+作成後には `Allow this application to be used to Sign in with Twitter` のチェックを入れておきます。
+チェックがないと Twitter 連携でのログインがうまくいかないようです。
 
-<p>作成後には <code>Allow this application to be used to Sign in with Twitter</code> のチェックを入れておきます。
-チェックがないと Twitter 連携でのログインがうまくいかないようです。</p>
+アイコンや Organization なども必要に応じて変更します。
 
-<p>アイコンや Organization なども必要に応じて変更します。</p>
+API keys タブで key と secret を取得します。
 
-<p>API keys タブで key と secret を取得します。</p>
+- API key : 環境変数 `TWITTER_CONSUMER_KEY` に設定
+- API secret : 環境変数 `TWITTER_CONSUMER_SECRET` に設定
 
-<ul>
-<li>API key : 環境変数 <code>TWITTER_CONSUMER_KEY</code> に設定</li>
-<li>API secret : 環境変数 <code>TWITTER_CONSUMER_SECRET</code> に設定</li>
-</ul>
+dotenv を使っているので `.env` に以下のような感じで設定しました。
+ランダムな文字列のように見えます。
+</code></pre>
 
+<pre><code>TWITTER_CONSUMER_KEY="xxxxXXxxXxXxXXXxXxXXXXxxx"
+TWITTER_CONSUMER_SECRET="xxXXxXXxxxxxxXXXXXxXxXXxxXXXxXXxxxxXXxxXxxXXxxXxxx"
+</code></pre>
 
-<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
-ランダムな文字列のように見えます。</p>
+<pre><code>
+### 動作確認
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>TWITTER_CONSUMER_KEY=&quot;xxxxXXxxXxXxXXXxXxXXXXxxx&quot;
-</span><span class='line'>TWITTER_CONSUMER_SECRET=&quot;xxXXxXXxxxxxxXXXXXxXxXXxxXXXxXXxxxxXXxxXxxXXxxXxxx&quot;
-</span></code></pre></td></tr></table></div></figure>
+- 通常のログインをした状態で「Twitter と連携」で Twitter の許可画面に飛びます。
+- 許可すると「Twitter 側に許可情報」と「UserAuth に連携情報」が保存されます。
+- 「Twitter との連携を解除」で「UserAuth が削除」されます。
+- 「ログアウト」して「Twitter でログイン」すると「ログイン画面」に戻ります。
+- ログインすると `auth/failure` が 404 エラーになります。ここは後で実装する予定です。
+- 再度ログイン後の画面を直接開きます。
+- 再度「Twitter と連携」で「UserAuth に連携情報」が保存されます。「Twitter 側の許可情報」は古いままです。
+- 「ログアウト」して「Twitter でログイン」でログインできます。
+- https://twitter.com/settings/applications で許可を取り消します。
+- 「ログアウト」して「Twitter でログイン」で Twitter の許可画面に飛びます。
+- 許可すると「Twitter 側に許可情報」が保存されて、「UserAuth」は残っているので、そのままログインできます。
 
+### GitHub 連携
 
-<h3>動作確認</h3>
+GitHub 連携は作成後にすぐに使えるので、アプリケーション作成に使っても良いアカウントがあれば一番簡単です。
 
-<ul>
-<li>通常のログインをした状態で「Twitter と連携」で Twitter の許可画面に飛びます。</li>
-<li>許可すると「Twitter 側に許可情報」と「UserAuth に連携情報」が保存されます。</li>
-<li>「Twitter との連携を解除」で「UserAuth が削除」されます。</li>
-<li>「ログアウト」して「Twitter でログイン」すると「ログイン画面」に戻ります。</li>
-<li>ログインすると <code>auth/failure</code> が 404 エラーになります。ここは後で実装する予定です。</li>
-<li>再度ログイン後の画面を直接開きます。</li>
-<li>再度「Twitter と連携」で「UserAuth に連携情報」が保存されます。「Twitter 側の許可情報」は古いままです。</li>
-<li>「ログアウト」して「Twitter でログイン」でログインできます。</li>
-<li><a href="https://twitter.com/settings/applications">https://twitter.com/settings/applications</a> で許可を取り消します。</li>
-<li>「ログアウト」して「Twitter でログイン」で Twitter の許可画面に飛びます。</li>
-<li>許可すると「Twitter 側に許可情報」が保存されて、「UserAuth」は残っているので、そのままログインできます。</li>
-</ul>
+https://github.com/settings/applications から `Register new application` で作成します。
 
+- Application name: 適切な名前を設定
+- Homepage URL: たとえば `http://app.127.0.0.1.xip.io:3000/` など
+- Application description: ユーザーが許可するときにわかりやすい説明
+- Authorization callback URL: たとえば `http://app.127.0.0.1.xip.io:3000/auth/github/callback` のように `/auth/github/callback` にする。実サイトなら `https` にすべき。
 
-<h3>GitHub 連携</h3>
+右上に見えている Client ID と Client Secret を使います。
 
-<p>GitHub 連携は作成後にすぐに使えるので、アプリケーション作成に使っても良いアカウントがあれば一番簡単です。</p>
+- Client ID : 環境変数 `GITHUB_CONSUMER_KEY` に設定
+- Client Secret : 環境変数 `GITHUB_CONSUMER_SECRET` に設定
 
-<p><a href="https://github.com/settings/applications">https://github.com/settings/applications</a> から <code>Register new application</code> で作成します。</p>
+dotenv を使っているので `.env` に以下のような感じで設定しました。
+十六進数の数字のように見えます。
+</code></pre>
 
-<ul>
-<li>Application name: 適切な名前を設定</li>
-<li>Homepage URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/</code> など</li>
-<li>Application description: ユーザーが許可するときにわかりやすい説明</li>
-<li>Authorization callback URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/auth/github/callback</code> のように <code>/auth/github/callback</code> にする。実サイトなら <code>https</code> にすべき。</li>
-</ul>
+<pre><code>GITHUB_CONSUMER_KEY="xxxxxxxxxxxxxxxxxxxx"
+GITHUB_CONSUMER_SECRET="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+</code></pre>
 
+<pre><code>
+## Facebook 連携
 
-<p>右上に見えている Client ID と Client Secret を使います。</p>
+https://developers.facebook.com/ から上の `Apps` の中にある `Craete a New App` で作成します。
+最初は作成前に開発者関連の規約などに同意する必要があるようです。
 
-<ul>
-<li>Client ID : 環境変数 <code>GITHUB_CONSUMER_KEY</code> に設定</li>
-<li>Client Secret : 環境変数 <code>GITHUB_CONSUMER_SECRET</code> に設定</li>
-</ul>
+- Display Name: 適切な名前を設定します。
+- Namespace: optional なので空欄のままで良いようです。
+- カテゴリ: 適当に選択します。
 
+セキュリティチェックがあるので、入力すると作成できます。
 
-<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
-十六進数の数字のように見えます。</p>
+右上に見えている App ID と App Secret (Show を押すとパスワード認証の後に内容表示) を使います。
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>GITHUB_CONSUMER_KEY=&quot;xxxxxxxxxxxxxxxxxxxx&quot;
-</span><span class='line'>GITHUB_CONSUMER_SECRET=&quot;xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx&quot;
-</span></code></pre></td></tr></table></div></figure>
+- App ID : 環境変数 `FACEBOOK_KEY` に設定
+- App Secret : 環境変数 `FACEBOOK_SECRET` に設定
 
+dotenv を使っているので `.env` に以下のような感じで設定しました。
+十進数と十六進数の数字のように見えます。
+</code></pre>
 
-<h2>Facebook 連携</h2>
+<pre><code>FACEBOOK_KEY="xxxxxxxxxxxxxxx"
+FACEBOOK_SECRET="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+</code></pre>
 
-<p><a href="https://developers.facebook.com/">https://developers.facebook.com/</a> から上の <code>Apps</code> の中にある <code>Craete a New App</code> で作成します。
-最初は作成前に開発者関連の規約などに同意する必要があるようです。</p>
+<pre><code>
+`Settings` の `Add Platform` で `Website` を選んで追加します。
 
-<ul>
-<li>Display Name: 適切な名前を設定します。</li>
-<li>Namespace: optional なので空欄のままで良いようです。</li>
-<li>カテゴリ: 適当に選択します。</li>
-</ul>
+- Site URL: たとえば `http://app.127.0.0.1.xip.io:3000/` など
+- Mobile Site URL: 空欄のまま
 
+callback URL は設定が不要だったので、
+Site URL の下ならどこでも良さそうです。
 
-<p>セキュリティチェックがあるので、入力すると作成できます。</p>
+### `google_oauth2` 連携
 
-<p>右上に見えている App ID と App Secret (Show を押すとパスワード認証の後に内容表示) を使います。</p>
+https://github.com/zquestz/omniauth-google-oauth2 に書いてあるように
+https://code.google.com/apis/console/ を開きます。
 
-<ul>
-<li>App ID : 環境変数 <code>FACEBOOK_KEY</code> に設定</li>
-<li>App Secret : 環境変数 <code>FACEBOOK_SECRET</code> に設定</li>
-</ul>
+飛ばされる先で `API &amp; AUTH` の中の `Credentials` で `Create new Client ID` で作成します。
 
+- Application type : Web application
+- Authorized JavaScript origins : たとえば `http://app.127.0.0.1.xip.io:3000` など
+- Authorized redirect URI : たとえば `http://app.127.0.0.1.xip.io:3000/auth/google_oauth2/callback` のように `/auth/google_oauth2/callback` にする。実サイトなら `https` にすべき。
 
-<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
-十進数と十六進数の数字のように見えます。</p>
+右に見えている Client ID と Client secret を使います。
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>FACEBOOK_KEY=&quot;xxxxxxxxxxxxxxx&quot;
-</span><span class='line'>FACEBOOK_SECRET=&quot;xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx&quot;
-</span></code></pre></td></tr></table></div></figure>
+- Client ID : 環境変数 `GOOGLE_CLIENT_ID` に設定
+- Client secret : 環境変数 `GOOGLE_CLIENT_SECRET` に設定
 
+dotenv を使っているので `.env` に以下のような感じで設定しました。
+ドメインっぽい文字列とランダムな文字列のように見えます。
+</code></pre>
 
-<p><code>Settings</code> の <code>Add Platform</code> で <code>Website</code> を選んで追加します。</p>
+<pre><code>GOOGLE_CLIENT_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="XXxxxXxXxxxXXxXXxXxXXxxX"
+</code></pre>
 
-<ul>
-<li>Site URL: たとえば <code>http://app.127.0.0.1.xip.io:3000/</code> など</li>
-<li>Mobile Site URL: 空欄のまま</li>
-</ul>
-
-
-<p>callback URL は設定が不要だったので、
-Site URL の下ならどこでも良さそうです。</p>
-
-<h3><code>google_oauth2</code> 連携</h3>
-
-<p><a href="https://github.com/zquestz/omniauth-google-oauth2">https://github.com/zquestz/omniauth-google-oauth2</a> に書いてあるように
-<a href="https://code.google.com/apis/console/">https://code.google.com/apis/console/</a> を開きます。</p>
-
-<p>飛ばされる先で <code>API &amp; AUTH</code> の中の <code>Credentials</code> で <code>Create new Client ID</code> で作成します。</p>
-
-<ul>
-<li>Application type : Web application</li>
-<li>Authorized JavaScript origins : たとえば <code>http://app.127.0.0.1.xip.io:3000</code> など</li>
-<li>Authorized redirect URI : たとえば <code>http://app.127.0.0.1.xip.io:3000/auth/google_oauth2/callback</code> のように <code>/auth/google_oauth2/callback</code> にする。実サイトなら <code>https</code> にすべき。</li>
-</ul>
-
-
-<p>右に見えている Client ID と Client secret を使います。</p>
-
-<ul>
-<li>Client ID : 環境変数 <code>GOOGLE_CLIENT_ID</code> に設定</li>
-<li>Client secret : 環境変数 <code>GOOGLE_CLIENT_SECRET</code> に設定</li>
-</ul>
-
-
-<p>dotenv を使っているので <code>.env</code> に以下のような感じで設定しました。
-ドメインっぽい文字列とランダムな文字列のように見えます。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>GOOGLE_CLIENT_ID=&quot;xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com&quot;
-</span><span class='line'>GOOGLE_CLIENT_SECRET=&quot;XXxxxXxXxxxXXxXXxXxXXxxX&quot;
-</span></code></pre></td></tr></table></div></figure>
-
+<p>&#8220;`</p>
 
 <p>さらに <code>Consent screen</code> での設定が必要です。
 しかも全アプリ共通のようなので、名前を分けたい場合はグーグルアカウントごと違うものにしないといけないように見えました。</p>
@@ -2671,7 +2291,7 @@ APIs で <code>Google+ API</code> も有効にする必要がありました。<
 <h2>参考サイト</h2>
 
 <ul>
-<li><a href="http://xoyip.hatenablog.com/entry/2013/12/20/212109" title="Railsでログインとは別に複数のサービスとの連携を行う方法 - PILOG">Railsでログインとは別に複数のサービスとの連携を行う方法 &ndash; PILOG</a>
+<li><a href="http://xoyip.hatenablog.com/entry/2013/12/20/212109" title="Railsでログインとは別に複数のサービスとの連携を行う方法 - PILOG">Railsでログインとは別に複数のサービスとの連携を行う方法 - PILOG</a>
 と<a href="https://github.com/xoyip/multi-oauth">その実装</a>は非常に参考になりました。</li>
 <li><a href="http://qiita.com/aikyo02/items/459d03af304e1188f110" title="Google OAuth 2.0 loginが2014年9月に使えなくなる(Googleアカウントからのユーザ登録機能がある場合は注意)">Google OAuth 2.0 loginが2014年9月に使えなくなる(Googleアカウントからのユーザ登録機能がある場合は注意)</a></li>
 </ul>
@@ -2730,166 +2350,6 @@ CDP道場（初中級）に参加していました。</p>
 
 <p>懇親会が無料というのを知らなかったこともあり、
 そのまま帰りました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[GOPATHとghqの設定を変更した話とgitconfigのコマンドでの設定の話]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-07-05-ghq-gitconfig.html"/>
-    <updated>2014-07-05T09:55:07+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ghq-gitconfig</id>
-    <content type="html"><![CDATA[<p><a href="http://blog.kentarok.org/entry/2014/06/03/135300" title="ghqを使ったローカルリポジトリの統一的・効率的な管理について - delirious thoughts">ghqを使ったローカルリポジトリの統一的・効率的な管理について &ndash; delirious thoughts</a>
-を参考にして、
-go と ghq で同じディレクトリを使っていたのですが、
-go で自動で追加ダウンロードされたものと
-自分でダウンロードしたものが混ざるとわかりにくいと思ったので、
-分けることにしました。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>go version go1.3 darwin/amd64</li>
-<li>git verseion 2.0.0</li>
-<li>Mercurial Distributed SCM (version 3.0.1)</li>
-<li>ghq version HEAD (2014-06-27 が最新コミットの状態)</li>
-</ul>
-
-
-<h2>go などのインストール</h2>
-
-<p><a href="http://brew.sh/">Homebrew</a> を使って
-<code>brew install go --cross-compile-common</code>
-でインストールしました。</p>
-
-<p>git と mercurial もインストールしておきました。</p>
-
-<h2>シェルの設定 (GOPATH など)</h2>
-
-<p>bash と zsh の共通の設定として
-<a href="https://github.com/znz/dot-shell/blob/bb84c5aefc83eab5ce1841508abd726ee9db6577/profile.d/50gopath.sh" title="50gopath.sh">50gopath.sh</a>
-で以下のように設定しています。</p>
-
-<p>統合している時は go とか git とかの意味をかねて g だけにしていましたが、
-今は go 専用にしています。</p>
-
-<figure class='code'><figcaption><span>50gopath.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;${GOPATH:-}&quot;</span> <span class="o">]</span>; <span class="k">then</span>
-</span><span class='line'><span class="k">    </span><span class="nb">export </span><span class="nv">GOPATH</span><span class="o">=</span><span class="nv">$HOME</span>/g
-</span><span class='line'>    <span class="nv">PATH</span><span class="o">=</span><span class="nv">$PATH</span>:<span class="nv">$GOPATH</span>/bin
-</span><span class='line'><span class="k">fi</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>その後に zsh 専用の追加設定で
-<a href="https://github.com/znz/dot-shell/blob/bb84c5aefc83eab5ce1841508abd726ee9db6577/profile.d/50gopath.zsh" title="50gopath.zsh">50gopath.zsh</a>
-で以下のように設定しています。</p>
-
-<p>GOPATH が PATH のように <code>:</code> 区切りで複数になる可能性を考慮してしまったのですが、
-<a href="http://golang.org/doc/code.html#GOPATH" title="The GOPATH environment variable">The GOPATH environment variable</a>
-をみるとそういうことはなさそうなので、
-<code>${^${(s/:/)GOPATH}}</code> は単純に <code>${GOPATH}</code> でも良さそうです。</p>
-
-<p>そして fpath に <code>_ghq</code> のパスを追加して <code>ghq</code> の引数を補完できるようにしています。</p>
-
-<figure class='code'><figcaption><span>50gopath.zsh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">path</span><span class="o">=(</span> <span class="nv">$path</span> <span class="k">${</span><span class="p">^</span><span class="k">${</span><span class="p">(s/:/)GOPATH</span><span class="k">}}</span>/bin<span class="o">(</span>N<span class="o">)</span> <span class="o">)</span>
-</span><span class='line'><span class="nv">fpath</span><span class="o">=(</span> <span class="nv">$fpath</span> <span class="k">${</span><span class="p">^</span><span class="k">${</span><span class="p">(s/:/)GOPATH</span><span class="k">}}</span>/src/*/*/ghq/zsh<span class="o">(</span>N<span class="o">)</span> <span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>ghq のインストール</h2>
-
-<p><code>go get -v github.com/motemen/ghq</code>
-でインストールしました。</p>
-
-<h3><code>https://</code> の要不要</h3>
-
-<p><code>ghq get</code> では <code>github.com</code> から書く時は <code>https://</code> が必須なのですが、
-こちらは <code>https://</code> は不要というか、
-むしろ付けるとエラーになりました。</p>
-
-<h2>.gitconfig の設定</h2>
-
-<p><a href="https://github.com/znz/dot-shell/blob/bb84c5aefc83eab5ce1841508abd726ee9db6577/git-config.sh" title="git-config.sh">git-config.sh</a>
-で <code>user.name</code> や <code>user.email</code> 以外の共通のものはまとめて設定しています。</p>
-
-<h3>コマンドでの設定の追加削除</h3>
-
-<p>詳細はドキュメントをみてもらうとして、まとめておくと以下のようになります。</p>
-
-<ul>
-<li>単独の設定 : <code>git config --global section.key value</code></li>
-<li>複数設定 : <code>git config --global section.key value</code> の後で <code>git config --global --add section.key value</code></li>
-<li>複数設定削除 : <code>git config --global --unset-all section.key</code> (ただしセクションが空になっても残る)</li>
-<li>セクションごと削除 : <code>git config --global --remove-section セクション</code></li>
-</ul>
-
-
-<h3>ghq の設定</h3>
-
-<p><code>ghq.root</code> を <code>--unset-all</code> だけすると git-config.sh を実行する度に
-ghq セクション、つまり <code>[ghq]</code> の行が増えていってしまったので、
-<code>--remove-section</code> を使いました。
-他に <code>ghq</code> セクションに設定を入れていたら、
-それも消えてしまうので注意してください。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="c"># ghq section</span>
-</span><span class='line'>git config --global --remove-section <span class="s2">&quot;ghq&quot;</span> <span class="o">||</span> :
-</span><span class='line'><span class="nv">GHQ_ROOT</span><span class="o">=</span><span class="s2">&quot;ghq.root&quot;</span>
-</span><span class='line'><span class="c">#git config --global --unset-all &quot;$GHQ_ROOT&quot; || :</span>
-</span><span class='line'>git config --global <span class="s2">&quot;$GHQ_ROOT&quot;</span> <span class="s2">&quot;$HOME/s&quot;</span>
-</span><span class='line'>git config --global --add <span class="s2">&quot;$GHQ_ROOT&quot;</span> <span class="s2">&quot;$HOME/g/src&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>これで <code>ghq get</code> は <code>$HOME/s</code> に入って
-<code>ghq look</code> では両方見えるようになりました。</p>
-
-<h3>github の URL 統一の話</h3>
-
-<p>github の URL は https に統一して、
-gitconfig の設定で
-push は ssh プロトコル、
-pull などは git プロトコル (昔は Git Read-Only と書いてあった URL)
-を使うようにしています。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="c"># github upload</span>
-</span><span class='line'><span class="nv">GITHUB_URL_PREFIX</span><span class="o">=</span><span class="s2">&quot;url.git@github.com:&quot;</span>
-</span><span class='line'>git config --global --remove-section <span class="s2">&quot;$GITHUB_URL_PREFIX&quot;</span> <span class="o">||</span> :
-</span><span class='line'>git config --global <span class="s2">&quot;$GITHUB_URL_PREFIX&quot;</span>.pushInsteadOf <span class="s2">&quot;git://github.com/&quot;</span>
-</span><span class='line'>git config --global --add <span class="s2">&quot;$GITHUB_URL_PREFIX&quot;</span>.pushInsteadOf <span class="s2">&quot;https://github.com/&quot;</span>
-</span><span class='line'><span class="c"># gist upload</span>
-</span><span class='line'>git config --global <span class="s2">&quot;url.git@gist.github.com:&quot;</span>.pushInsteadOf <span class="s2">&quot;https://gist.github.com/$(git config github.user)/&quot;</span>
-</span><span class='line'><span class="c"># github download</span>
-</span><span class='line'>git config --global url.<span class="s2">&quot;git://github.com/&quot;</span>.insteadOf <span class="s2">&quot;https://github.com/&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>詳細は
-<a href="http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html" title="githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法">githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法</a>
-を参照してください。</p>
 ]]></content>
   </entry>
   

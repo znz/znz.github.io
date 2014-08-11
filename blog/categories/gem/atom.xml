@@ -4,7 +4,7 @@
   <title><![CDATA[Category: gem | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/gem/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -42,23 +42,21 @@ bootstrap-sass-rails を確認してみたところ、
 
 <p>Less では変数の接頭辞は <code>@</code> ですが、 sass では <code>$</code> になることさえわかっていれば、最低限のカスタマイズは出来ると思います。</p>
 
-<p>```
-$navbar-default-bg: #312312;
+<pre><code>$navbar-default-bg: #312312;
 $light-orange: #ff8c00;
-$navbar-default-color: $light-orange;</p>
+$navbar-default-color: $light-orange;
 
-<p>@import &ldquo;bootstrap&rdquo;;
-```</p>
+@import "bootstrap";
+</code></pre>
 
 <p>bootstrap-sass-rails からの移行だったので、
 bootstrap-custom.css.scss の内容は以下のようにしました。</p>
 
-<p>```
-$body-bg:               #fff;
-$text-color:            lighten(#000, 20%);</p>
+<pre><code>$body-bg:               #fff;
+$text-color:            lighten(#000, 20%);
 
-<p>@import &ldquo;bootstrap&rdquo;;
-```</p>
+@import "bootstrap";
+</code></pre>
 
 <p>もっと高度なカスタマイズをするなら、
 <code>cp $(bundle show bootstrap-sass)/vendor/assets/stylesheets/bootstrap.scss app/assets/stylesheets/bootstrap-custom.scss</code>
@@ -84,53 +82,45 @@ $text-color:            lighten(#000, 20%);</p>
 
 <p>例外が発生した行は以下の内容で、今まで問題なく動いていたし、特に問題はなさそうだったので、他の gem の影響だということがわかりました。</p>
 
-<p>```ruby lib/devise/hooks/csrf_cleaner.rb
-Warden::Manager.after_authentication do |record, warden, options|
-  if Devise.clean_up_csrf_token_on_authentication</p>
-
-<pre><code>warden.request.session.try(:delete, :_csrf_token)
-</code></pre>
-
-<p>  end
+<pre><code class="ruby lib/devise/hooks/csrf_cleaner.rb">Warden::Manager.after_authentication do |record, warden, options|
+  if Devise.clean_up_csrf_token_on_authentication
+    warden.request.session.try(:delete, :_csrf_token)
+  end
 end
-```</p>
+</code></pre>
 
 <p>ソースコードを追いかけるのは難しそうだったので、 better_errors の live shell を使って調査しました。</p>
 
-<p>```console</p>
-
-<blockquote><blockquote><p>env.keys
-=> 略
-env[&ldquo;warden&rdquo;]
-=> Warden::Proxy:70192217236640 @config={:default_scope=>:user, :scope_defaults=>{}, :default_strategies=>{:user=>[:rememberable, :database_authenticatable]}, :intercept_401=>false, :failure_app=>#&lt;Devise::Delegator:0x007fadcc44d438>}
-env[&ldquo;warden&rdquo;].request
-=> #&lt;ActionDispatch::Request:0x007fadd10c4dc0 略>
-env[&ldquo;warden&rdquo;].request.session
-=> {&ldquo;session_id&rdquo;=>&ldquo;略&rdquo;, &ldquo;user_return_to&rdquo;=>&ldquo;/&rdquo;, &ldquo;<em>csrf_token&rdquo;=>&ldquo;略&rdquo;, &ldquo;warden.user.user.key&rdquo;=>[[8], &ldquo;$2a$10$略&rdquo;]}
-env[&ldquo;warden&rdquo;].request.session.try(:delete, :</em>csrf_token)
-!! #&lt;ArgumentError: wrong number of arguments (2 for 1)>
-```</p></blockquote></blockquote>
+<pre><code class="console">&gt;&gt; env.keys
+=&gt; 略
+&gt;&gt; env["warden"]
+=&gt; Warden::Proxy:70192217236640 @config={:default_scope=&gt;:user, :scope_defaults=&gt;{}, :default_strategies=&gt;{:user=&gt;[:rememberable, :database_authenticatable]}, :intercept_401=&gt;false, :failure_app=&gt;#&lt;Devise::Delegator:0x007fadcc44d438&gt;}
+&gt;&gt; env["warden"].request
+=&gt; #&lt;ActionDispatch::Request:0x007fadd10c4dc0 略&gt;
+&gt;&gt; env["warden"].request.session
+=&gt; {"session_id"=&gt;"略", "user_return_to"=&gt;"/", "_csrf_token"=&gt;"略", "warden.user.user.key"=&gt;[[8], "$2a$10$略"]}
+&gt;&gt; env["warden"].request.session.try(:delete, :_csrf_token)
+!! #&lt;ArgumentError: wrong number of arguments (2 for 1)&gt;
+</code></pre>
 
 <p><code>env["warden"]</code> 経由で再現しました。</p>
 
 <p>次に原因を探るために <code>arity</code> を調べました。</p>
 
-<p>```console</p>
-
-<blockquote><blockquote><p>env[&ldquo;warden&rdquo;].request.session.methods.grep /delete/
-=> [:delete, :delete_if]
-env[&ldquo;warden&rdquo;].request.session.method(&ldquo;delete&rdquo;)
-=> #&lt;Method: Rack::Session::Abstract::SessionHash#delete>
-env[&ldquo;warden&rdquo;].request.session.method(&ldquo;delete&rdquo;).arity
-=> 1
-env[&ldquo;warden&rdquo;].request.session.method(&ldquo;try&rdquo;)
-=> #&lt;Method: Rack::Session::Abstract::SessionHash(Object)#try>
-env[&ldquo;warden&rdquo;].request.session.method(&ldquo;try&rdquo;).arity
-=> 1
-env[&ldquo;warden&rdquo;].request.session.method(&ldquo;try&rdquo;).source_location
-=> [&ldquo;略/rails_best_practices-1.15.0/lib/rails_best_practices/core_ext/object.rb&rdquo;, 7]</p>
-
-<p>```</p></blockquote></blockquote>
+<pre><code class="console">&gt;&gt; env["warden"].request.session.methods.grep /delete/
+=&gt; [:delete, :delete_if]
+&gt;&gt; env["warden"].request.session.method("delete")
+=&gt; #&lt;Method: Rack::Session::Abstract::SessionHash#delete&gt;
+&gt;&gt; env["warden"].request.session.method("delete").arity
+=&gt; 1
+&gt;&gt; env["warden"].request.session.method("try")
+=&gt; #&lt;Method: Rack::Session::Abstract::SessionHash(Object)#try&gt;
+&gt;&gt; env["warden"].request.session.method("try").arity
+=&gt; 1
+&gt;&gt; env["warden"].request.session.method("try").source_location
+=&gt; ["略/rails_best_practices-1.15.0/lib/rails_best_practices/core_ext/object.rb", 7]
+&gt;&gt;
+</code></pre>
 
 <p>rails_best_practices 1.15.0 が原因とわかったので issues を確認すると既に同様の現象の報告があったので、<a href="https://github.com/railsbp/rails_best_practices/issues/202#issuecomment-34129010">コメントしておきました</a>。</p>
 ]]></content>
@@ -150,17 +140,12 @@ env[&ldquo;warden&rdquo;].request.session.method(&ldquo;try&rdquo;).source_locat
 
 <p>jQuery 1.11.0 にあがったのと jquery-ujs が更新されていました。</p>
 
-<p>```text CHANGELOG.md</p>
+<pre><code class="text CHANGELOG.md">## 3.1.0 (29 January 2014)
 
-<h2>3.1.0 (29 January 2014)</h2>
-
-<ul>
-<li>Updated to jQuery 1.11.0</li>
-<li>Updated to latest jquery-ujs</li>
-<li>Added development rake task for updating jQuery
-```</li>
-</ul>
-
+  - Updated to jQuery 1.11.0
+  - Updated to latest jquery-ujs
+  - Added development rake task for updating jQuery
+</code></pre>
 
 <h2>omniauth-oauth2 1.1.2 (was 1.1.1)</h2>
 
@@ -182,19 +167,18 @@ omniauth-oauth2 の依存関係が更新されたのが原因でした。</p>
 <code>config/initializers/rails_admin.rb</code>
 を以下のように変更する必要がありました。</p>
 
-<p>```diff config/initializers/rails_admin.rb.diff
-&mdash;&ndash; a/config/initializers/rails_admin.rb
+<pre><code class="diff config/initializers/rails_admin.rb.diff">--- a/config/initializers/rails_admin.rb
 +++ b/config/initializers/rails_admin.rb
 @@ -18,7 +18,7 @@ RailsAdmin.config do |config|
-   # config.audit_with :history, &lsquo;User&rsquo;</p>
+   # config.audit_with :history, 'User'
 
-<p>   # Or with a PaperTrail: (you need to install it first)
-&ndash;  config.audit_with :paper_trail, &lsquo;User&rsquo;
-+  config.audit_with :paper_trail, &lsquo;User&rsquo;, &lsquo;PaperTrail::Version&rsquo;</p>
+   # Or with a PaperTrail: (you need to install it first)
+-  config.audit_with :paper_trail, 'User'
++  config.audit_with :paper_trail, 'User', 'PaperTrail::Version'
 
-<p>   # Display empty fields in show views:
+   # Display empty fields in show views:
    # config.compact_show_view = false
-```</p>
+</code></pre>
 
 <p>あまりカスタマイズしていないのなら、
 <code>rails g rails_admin:install</code>
@@ -204,51 +188,44 @@ omniauth-oauth2 の依存関係が更新されたのが原因でした。</p>
 devise と pundit と paper_trail の設定をしただけで、
 actions などはそのままにしています。</p>
 
-<p>```ruby config/initializers/rails_admin.rb
-RailsAdmin.config do |config|</p>
+<pre><code class="ruby config/initializers/rails_admin.rb">RailsAdmin.config do |config|
 
-<p>  ### Popular gems integration</p>
+  ### Popular gems integration
 
-<p>  ## == Devise ==
-  config.authenticate_with do</p>
+  ## == Devise ==
+  config.authenticate_with do
+    warden.authenticate! scope: :user
+  end
+  config.current_user_method(&amp;:current_user)
 
-<pre><code>warden.authenticate! scope: :user
-</code></pre>
+  ## == Cancan ==
+  # config.authorize_with :cancan
 
-<p>  end
-  config.current_user_method(&amp;:current_user)</p>
+  require 'rails_admin/extensions/pundit'
+  config.authorize_with :pundit
 
-<p>  ## == Cancan ==
-  # config.authorize_with :cancan</p>
+  ## == PaperTrail ==
+  config.audit_with :paper_trail, 'User', 'PaperTrail::Version' # PaperTrail &gt;= 3.0.0
 
-<p>  require &lsquo;rails_admin/extensions/pundit&rsquo;
-  config.authorize_with :pundit</p>
+  ### More at https://github.com/sferik/rails_admin/wiki/Base-configuration
 
-<p>  ## == PaperTrail ==
-  config.audit_with :paper_trail, &lsquo;User&rsquo;, &lsquo;PaperTrail::Version&rsquo; # PaperTrail >= 3.0.0</p>
+  config.actions do
+    dashboard                     # mandatory
+    index                         # mandatory
+    new
+    export
+    bulk_delete
+    show
+    edit
+    delete
+    show_in_app
 
-<p>  ### More at <a href="https://github.com/sferik/rails_admin/wiki/Base-configuration">https://github.com/sferik/rails_admin/wiki/Base-configuration</a></p>
-
-<p>  config.actions do</p>
-
-<pre><code>dashboard                     # mandatory
-index                         # mandatory
-new
-export
-bulk_delete
-show
-edit
-delete
-show_in_app
-
-## With an audit adapter, you can add:
-# history_index
-# history_show
-</code></pre>
-
-<p>  end
+    ## With an audit adapter, you can add:
+    # history_index
+    # history_show
+  end
 end
-```</p>
+</code></pre>
 ]]></content>
   </entry>
   

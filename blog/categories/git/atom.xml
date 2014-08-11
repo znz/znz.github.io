@@ -4,7 +4,7 @@
   <title><![CDATA[Category: git | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/git/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -18,7 +18,7 @@
     <link href="http://blog.n-z.jp/blog/2014-07-05-ghq-gitconfig.html"/>
     <updated>2014-07-05T09:55:07+09:00</updated>
     <id>http://blog.n-z.jp/blog/ghq-gitconfig</id>
-    <content type="html"><![CDATA[<p><a href="http://blog.kentarok.org/entry/2014/06/03/135300" title="ghqを使ったローカルリポジトリの統一的・効率的な管理について - delirious thoughts">ghqを使ったローカルリポジトリの統一的・効率的な管理について &ndash; delirious thoughts</a>
+    <content type="html"><![CDATA[<p><a href="http://blog.kentarok.org/entry/2014/06/03/135300" title="ghqを使ったローカルリポジトリの統一的・効率的な管理について - delirious thoughts">ghqを使ったローカルリポジトリの統一的・効率的な管理について - delirious thoughts</a>
 を参考にして、
 go と ghq で同じディレクトリを使っていたのですが、
 go で自動で追加ダウンロードされたものと
@@ -55,15 +55,11 @@ go で自動で追加ダウンロードされたものと
 <p>統合している時は go とか git とかの意味をかねて g だけにしていましたが、
 今は go 専用にしています。</p>
 
-<p>```sh 50gopath.sh</p>
-
-<pre><code>if [ -z "${GOPATH:-}" ]; then
-    export GOPATH=$HOME/g
-    PATH=$PATH:$GOPATH/bin
-fi
+<pre><code class="sh 50gopath.sh">    if [ -z "${GOPATH:-}" ]; then
+        export GOPATH=$HOME/g
+        PATH=$PATH:$GOPATH/bin
+    fi
 </code></pre>
-
-<p>```</p>
 
 <p>その後に zsh 専用の追加設定で
 <a href="https://github.com/znz/dot-shell/blob/bb84c5aefc83eab5ce1841508abd726ee9db6577/profile.d/50gopath.zsh" title="50gopath.zsh">50gopath.zsh</a>
@@ -76,13 +72,9 @@ fi
 
 <p>そして fpath に <code>_ghq</code> のパスを追加して <code>ghq</code> の引数を補完できるようにしています。</p>
 
-<p>```sh 50gopath.zsh</p>
-
-<pre><code>path=( $path ${^${(s/:/)GOPATH}}/bin(N) )
-fpath=( $fpath ${^${(s/:/)GOPATH}}/src/*/*/ghq/zsh(N) )
+<pre><code class="sh 50gopath.zsh">    path=( $path ${^${(s/:/)GOPATH}}/bin(N) )
+    fpath=( $fpath ${^${(s/:/)GOPATH}}/src/*/*/ghq/zsh(N) )
 </code></pre>
-
-<p>```</p>
 
 <h2>ghq のインストール</h2>
 
@@ -120,17 +112,13 @@ ghq セクション、つまり <code>[ghq]</code> の行が増えていって�
 他に <code>ghq</code> セクションに設定を入れていたら、
 それも消えてしまうので注意してください。</p>
 
-<p>```sh</p>
-
-<pre><code># ghq section
-git config --global --remove-section "ghq" || :
-GHQ_ROOT="ghq.root"
-#git config --global --unset-all "$GHQ_ROOT" || :
-git config --global "$GHQ_ROOT" "$HOME/s"
-git config --global --add "$GHQ_ROOT" "$HOME/g/src"
+<pre><code class="sh">    # ghq section
+    git config --global --remove-section "ghq" || :
+    GHQ_ROOT="ghq.root"
+    #git config --global --unset-all "$GHQ_ROOT" || :
+    git config --global "$GHQ_ROOT" "$HOME/s"
+    git config --global --add "$GHQ_ROOT" "$HOME/g/src"
 </code></pre>
-
-<p>```</p>
 
 <p>これで <code>ghq get</code> は <code>$HOME/s</code> に入って
 <code>ghq look</code> では両方見えるようになりました。</p>
@@ -143,20 +131,16 @@ push は ssh プロトコル、
 pull などは git プロトコル (昔は Git Read-Only と書いてあった URL)
 を使うようにしています。</p>
 
-<p>```sh</p>
-
-<pre><code># github upload
-GITHUB_URL_PREFIX="url.git@github.com:"
-git config --global --remove-section "$GITHUB_URL_PREFIX" || :
-git config --global "$GITHUB_URL_PREFIX".pushInsteadOf "git://github.com/"
-git config --global --add "$GITHUB_URL_PREFIX".pushInsteadOf "https://github.com/"
-# gist upload
-git config --global "url.git@gist.github.com:".pushInsteadOf "https://gist.github.com/$(git config github.user)/"
-# github download
-git config --global url."git://github.com/".insteadOf "https://github.com/"
+<pre><code class="sh">    # github upload
+    GITHUB_URL_PREFIX="url.git@github.com:"
+    git config --global --remove-section "$GITHUB_URL_PREFIX" || :
+    git config --global "$GITHUB_URL_PREFIX".pushInsteadOf "git://github.com/"
+    git config --global --add "$GITHUB_URL_PREFIX".pushInsteadOf "https://github.com/"
+    # gist upload
+    git config --global "url.git@gist.github.com:".pushInsteadOf "https://gist.github.com/$(git config github.user)/"
+    # github download
+    git config --global url."git://github.com/".insteadOf "https://github.com/"
 </code></pre>
-
-<p>```</p>
 
 <p>詳細は
 <a href="http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html" title="githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法">githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法</a>
@@ -236,7 +220,7 @@ github 連携でアカウントを登録しました。</p>
 <h2>参考サイト</h2>
 
 <ul>
-<li><a href="http://qiita.com/kiri/items/f329a35543022d6e45d0">AnsibleWorks Galaxyにroleを登録してみる &ndash; Qiita</a>
+<li><a href="http://qiita.com/kiri/items/f329a35543022d6e45d0">AnsibleWorks Galaxyにroleを登録してみる - Qiita</a>
 
 <ul>
 <li>スクリーンショットをみると AnsibleWorks Galaxy になっているところが今は Ansible Galaxy なので、いつの間にか名前が変わっているようです。</li>
@@ -288,15 +272,11 @@ pre-commit の第一引数で git-dir が渡されるのかと思ったのです
 <code>'master'</code>
 と比較しているだけだったので、</p>
 
-<p><code>``sh is_master_branch
-if test "</code>git symbolic-ref HEAD | sed -e &rsquo;s:^refs/heads/::&lsquo;`&ldquo; = master; then</p>
-
-<pre><code>echo "cannot commit on master branch."
-exit 1
+<pre><code class="sh is_master_branch">if test "`git symbolic-ref HEAD | sed -e 's:^refs/heads/::'`" = master; then
+    echo "cannot commit on master branch."
+    exit 1
+fi
 </code></pre>
-
-<p>fi
-```</p>
 
 <p>とすることにしました。</p>
 
@@ -309,92 +289,62 @@ exit 1
 <p>元の pre-commit.sample からコピーした部分も含めて、
 pre-commit hook 全体は以下のようになりました。</p>
 
-<p>```sh .git/hooks/pre-commit</p>
+<pre><code class="sh .git/hooks/pre-commit">#!/bin/sh
+#
+# An example hook script to verify what is about to be committed.
+# Called by "git commit" with no arguments.  The hook should
+# exit with non-zero status after issuing an appropriate message if
+# it wants to stop the commit.
+#
+# To enable this hook, rename this file to "pre-commit".
 
-<h1>!/bin/sh</h1>
+if git rev-parse --verify HEAD &gt;/dev/null 2&gt;&amp;1
+then
+    against=HEAD
+else
+    # Initial commit: diff against an empty tree object
+    against=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+fi
 
-<p>#</p>
+# If you want to allow non-ascii filenames set this variable to true.
+allownonascii=$(git config hooks.allownonascii)
 
-<h1>An example hook script to verify what is about to be committed.</h1>
+# Redirect output to stderr.
+exec 1&gt;&amp;2
 
-<h1>Called by &ldquo;git commit&rdquo; with no arguments.  The hook should</h1>
+if test "`git symbolic-ref HEAD | sed -e 's:^refs/heads/::'`" = master; then
+    echo "cannot commit on master branch."
+    exit 1
+fi
 
-<h1>exit with non-zero status after issuing an appropriate message if</h1>
+# Cross platform projects tend to avoid non-ascii filenames; prevent
+# them from being added to the repository. We exploit the fact that the
+# printable range starts at the space character and ends with tilde.
+if [ "$allownonascii" != "true" ] &amp;&amp;
+    # Note that the use of brackets around a tr range is ok here, (it's
+    # even required, for portability to Solaris 10's /usr/bin/tr), since
+    # the square bracket bytes happen to fall in the designated range.
+    test $(git diff --cached --name-only --diff-filter=A -z $against |
+      LC_ALL=C tr -d '[ -~]\0' | wc -c) != 0
+then
+    echo "Error: Attempt to add a non-ascii file name."
+    echo
+    echo "This can cause problems if you want to work"
+    echo "with people on other platforms."
+    echo
+    echo "To be portable it is advisable to rename the file ..."
+    echo
+    echo "If you know what you are doing you can disable this"
+    echo "check using:"
+    echo
+    echo "  git config hooks.allownonascii true"
+    echo
+    exit 1
+fi
 
-<h1>it wants to stop the commit.</h1>
-
-<p>#</p>
-
-<h1>To enable this hook, rename this file to &ldquo;pre-commit&rdquo;.</h1>
-
-<p>if git rev-parse &mdash;verify HEAD >/dev/null 2>&amp;1
-then</p>
-
-<pre><code>against=HEAD
+# If there are whitespace errors, print the offending file names and fail.
+exec git diff-index --check --cached $against --
 </code></pre>
-
-<p>else</p>
-
-<pre><code># Initial commit: diff against an empty tree object
-against=4b825dc642cb6eb9a060e54bf8d69288fbee4904
-</code></pre>
-
-<p>fi</p>
-
-<h1>If you want to allow non-ascii filenames set this variable to true.</h1>
-
-<p>allownonascii=$(git config hooks.allownonascii)</p>
-
-<h1>Redirect output to stderr.</h1>
-
-<p>exec 1>&amp;2</p>
-
-<p>if test &ldquo;<code>git symbolic-ref HEAD | sed -e 's:^refs/heads/::'</code>&rdquo; = master; then</p>
-
-<pre><code>echo "cannot commit on master branch."
-exit 1
-</code></pre>
-
-<p>fi</p>
-
-<h1>Cross platform projects tend to avoid non-ascii filenames; prevent</h1>
-
-<h1>them from being added to the repository. We exploit the fact that the</h1>
-
-<h1>printable range starts at the space character and ends with tilde.</h1>
-
-<p>if [ &ldquo;$allownonascii&rdquo; != &ldquo;true&rdquo; ] &amp;&amp;</p>
-
-<pre><code># Note that the use of brackets around a tr range is ok here, (it's
-# even required, for portability to Solaris 10's /usr/bin/tr), since
-# the square bracket bytes happen to fall in the designated range.
-test $(git diff --cached --name-only --diff-filter=A -z $against |
-  LC_ALL=C tr -d '[ -~]\0' | wc -c) != 0
-</code></pre>
-
-<p>then</p>
-
-<pre><code>echo "Error: Attempt to add a non-ascii file name."
-echo
-echo "This can cause problems if you want to work"
-echo "with people on other platforms."
-echo
-echo "To be portable it is advisable to rename the file ..."
-echo
-echo "If you know what you are doing you can disable this"
-echo "check using:"
-echo
-echo "  git config hooks.allownonascii true"
-echo
-exit 1
-</code></pre>
-
-<p>fi</p>
-
-<h1>If there are whitespace errors, print the offending file names and fail.</h1>
-
-<p>exec git diff-index &mdash;check &mdash;cached $against &mdash;
-```</p>
 ]]></content>
   </entry>
   
@@ -419,8 +369,7 @@ zsh の <code>(mm-1)</code> を使っているので、
 最近は <code>--prune</code> を付けてリモートで削除されたブランチは手元でも削除されるようにしていることが多いので、
 今回も付けています。</p>
 
-<p><code>console
-% git remote -v
+<pre><code class="console">% git remote -v
 octopress   git://github.com/imathis/octopress.git (fetch)
 octopress   git@github.com:imathis/octopress.git (push)
 origin  git@github.com:znz/znz.github.io (fetch)
@@ -435,12 +384,11 @@ From git://github.com/imathis/octopress
  * [new branch]      jekyll-1-3 -&gt; octopress/jekyll-1-3
    64ba603..78defff  master     -&gt; octopress/master
 %
-</code></p>
+</code></pre>
 
 <p>差分を確認してからマージしました。</p>
 
-<p><code>console
-% git diff source...octopress/master
+<pre><code class="console">% git diff source...octopress/master
 % git merge octopress/master
 Auto-merging Rakefile
 Merge made by the 'recursive' strategy.
@@ -459,14 +407,13 @@ Merge made by the 'recursive' strategy.
  plugins/include_code.rb                                   |  2 +-
  plugins/jsfiddle.rb                                       |  2 +-
  14 files changed, 41 insertions(+), 55 deletions(-)
-</code></p>
+</code></pre>
 
 <p>themes も更新されているので、
 <a href="http://octopress.org/docs/updating/">Updating Octopress</a>
 の手順に従ってアップデートしました。</p>
 
-<p><code>console
- % bundle install
+<pre><code class="console"> % bundle install
  Using rake (0.9.2.2)
  Using RedCloth (4.2.9)
  Using chunky_png (1.2.5)
@@ -512,7 +459,7 @@ Merge made by the 'recursive' strategy.
  cp -r sass/custom/. sass.old/custom
  ## Updated Sass ##
  %
-</code></p>
+</code></pre>
 
 <p><code>git diff</code> で確認するとローカルでの変更が消えてしまっていたので、
 <code>git checkout ファイルパス</code> で戻したり、
@@ -532,11 +479,10 @@ zsh の機能だけでうまく表現できなかったので、
 <a href="http://qiita.com/mollifier/items/1c4a4930a89aa75e5ced">zsh で find を使わずに簡単にファイルを絞り込む</a>
 を参考にして1分以内に変更されたファイルだけという絞り込みで妥協することにしました。</p>
 
-<p><code>console
- bundle exec rake "isolate[$(echo source/_posts/*.markdown(mm-1))]"
+<pre><code class="console"> bundle exec rake "isolate[$(echo source/_posts/*.markdown(mm-1))]"
  bundle exec rake preview
  bundle exec rake integrate
-</code></p>
+</code></pre>
 
 <h3>rake integrate 忘れを防ぐ</h3>
 
@@ -546,11 +492,10 @@ zsh の機能だけでうまく表現できなかったので、
 
 <p>Rakefile をみてみると</p>
 
-<p><code>ruby Rakefile
-desc "Generate website and deploy"
+<pre><code class="ruby Rakefile">desc "Generate website and deploy"
 task :gen_deploy =&gt; [:integrate, :generate, :deploy] do
 end
-</code></p>
+</code></pre>
 
 <p>となっているので、
 <code>bundle exec rake deploy</code> ではなく
@@ -560,9 +505,8 @@ end
 
 <p>octopress の fork で作成したこの変更は</p>
 
-<p><code>console
-git pull git@github.com:znz/octopress.git check-stash-before-deploy
-</code></p>
+<pre><code class="console">git pull git@github.com:znz/octopress.git check-stash-before-deploy
+</code></pre>
 
 <p>で手元の source ブランチに取り込みました。</p>
 ]]></content>
@@ -596,19 +540,13 @@ github 以外でも使えます。</p>
 は、その他の <code>git fetch</code> や <code>git pull</code> の時は
 <code>https:</code> の代わりに <code>git:</code> を使うという意味になります。</p>
 
-<p>```ini ~/.gitconfig
-[url &ldquo;git@github.com:&rdquo;]</p>
-
-<pre><code>pushInsteadOf = git://github.com/
-pushInsteadOf = https://github.com/
-</code></pre>
-
-<p>[url &ldquo;git://github.com/&rdquo;]</p>
-
-<pre><code>insteadOf = https://github.com/
-</code></pre>
-
-<p>```</p>
+<p><code>ini ~/.gitconfig
+[url "git@github.com:"]
+    pushInsteadOf = git://github.com/
+    pushInsteadOf = https://github.com/
+[url "git://github.com/"]
+    insteadOf = https://github.com/
+</code></p>
 
 <h2>pushInsteadOf なしの場合</h2>
 
@@ -620,14 +558,11 @@ proxy を通さないといけないとかの理由で
 すべて https に統一したいのなら
 以下のような設定になると思います。</p>
 
-<p>```ini ~/.gitconfig
-[url &ldquo;<a href="https://github.com/">https://github.com/</a>&rdquo;]</p>
-
-<pre><code>insteadOf = git@github.com:
-insteadOf = git://github.com/
-</code></pre>
-
-<p>```</p>
+<p><code>ini ~/.gitconfig
+[url "https://github.com/"]
+    insteadOf = git@github.com:
+    insteadOf = git://github.com/
+</code></p>
 
 <h2>コマンドでの設定方法</h2>
 
@@ -637,12 +572,11 @@ insteadOf = git://github.com/
 <p><code>~/.gitconfig</code> に <code>github.token</code> などの秘密にすべき情報が入っていて
 共有しにくい時にはコマンドで設定できた方が便利です。</p>
 
-<p><code>bash
-GITHUB_URL_PREFIX="url.git@github.com:"
+<pre><code class="bash">GITHUB_URL_PREFIX="url.git@github.com:"
 git config --global --remove-section "$GITHUB_URL_PREFIX" || :
 git config --global       "$GITHUB_URL_PREFIX".pushInsteadOf "git://github.com/"
 git config --global --add "$GITHUB_URL_PREFIX".pushInsteadOf "https://github.com/"
-</code></p>
+</code></pre>
 
 <h2>設定確認方法</h2>
 
@@ -653,34 +587,24 @@ git config --global --add "$GITHUB_URL_PREFIX".pushInsteadOf "https://github.com
 <p><code>.git/config</code> の <code>remote</code> の <code>url</code> と見比べると
 ちゃんと設定が反映されていることがわかると思います。</p>
 
-<p>```console
-$ git remote -v
+<pre><code class="console">$ git remote -v
 origin  git://github.com/znz/rbenv-plug.git (fetch)
 origin  git@github.com:znz/rbenv-plug.git (push)
 $ cat .git/config
-[core]</p>
-
-<pre><code>repositoryformatversion = 0
-filemode = true
-bare = false
-logallrefupdates = true
-ignorecase = true
-precomposeunicode = false
+[core]
+    repositoryformatversion = 0
+    filemode = true
+    bare = false
+    logallrefupdates = true
+    ignorecase = true
+    precomposeunicode = false
+[remote "origin"]
+    url = https://github.com/znz/rbenv-plug.git
+    fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+    remote = origin
+    merge = refs/heads/master
 </code></pre>
-
-<p>[remote &ldquo;origin&rdquo;]</p>
-
-<pre><code>url = https://github.com/znz/rbenv-plug.git
-fetch = +refs/heads/*:refs/remotes/origin/*
-</code></pre>
-
-<p>[branch &ldquo;master&rdquo;]</p>
-
-<pre><code>remote = origin
-merge = refs/heads/master
-</code></pre>
-
-<p>```</p>
 
 <h2>URL の選ばれ方</h2>
 

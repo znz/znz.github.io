@@ -4,7 +4,7 @@
   <title><![CDATA[Category: bootstrap | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/bootstrap/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -40,17 +40,15 @@ bootstrap 側から公式にリリースされている bootstrap-sass gem に�
 一時的に rails_admin を外して、
 新しい bootstrap-sass を rails 3.2.17 と一緒に使いました。</p>
 
-<p><code>ruby Gemfile
-gem 'less-rails'
+<pre><code class="ruby Gemfile">gem 'less-rails'
 gem 'twitter-bootstrap-rails'
-</code></p>
+</code></pre>
 
 <p>を <a href="https://github.com/twbs/bootstrap-sass">https://github.com/twbs/bootstrap-sass</a> に書いてあるバージョン指定付きで</p>
 
-<p><code>ruby Gemfile
-gem 'sass-rails', '&gt;= 3.2'
+<pre><code class="ruby Gemfile">gem 'sass-rails', '&gt;= 3.2'
 gem 'bootstrap-sass', '~&gt; 3.1.1'
-</code></p>
+</code></pre>
 
 <p>に書き換えて、 <code>bundle update</code> で反映しました。</p>
 
@@ -67,11 +65,10 @@ gem 'bootstrap-sass', '~&gt; 3.1.1'
 <p>app/assets/stylesheets/bootstrap_and_overrides.css.less を削除して、
 app/assets/stylesheets/app.css.scss のようなファイルに移行しました。</p>
 
-<p>```css app.css.scss
-@import &ldquo;bootstrap&rdquo;;</p>
+<pre><code class="css app.css.scss">@import "bootstrap";
 
-<p>// その他の bootstrap_and_overrides.css.less から移行した内容
-```</p>
+// その他の bootstrap_and_overrides.css.less から移行した内容
+</code></pre>
 
 <h2>キャッシュ削除</h2>
 
@@ -111,18 +108,14 @@ development 環境でもキャッシュを有効にしている場合は削除�
 <p>中に画像を入れているとずれてしまうので、
 scss に以下のように書いて調整しました。</p>
 
-<p>```css
-.navbar-brand {
+<pre><code class="css">.navbar-brand {
   padding-top: 8px;
-  img {</p>
-
-<pre><code>height: 34px;
-width: 34px;
-</code></pre>
-
-<p>  }
+  img {
+    height: 34px;
+    width: 34px;
+  }
 }
-```</p>
+</code></pre>
 
 <p>8 + 34 + 8 ということで高さ 50px の <code>.navbar</code> の真ん中になることを期待しています。</p>
 
@@ -178,10 +171,9 @@ width: 34px;
 <a href="https://github.com/twbs/bootstrap-sass#usage">bootstrap-sass の Usage</a>
 では <code>//= require</code> より <code>@import</code> が推奨されていたので、</p>
 
-<p><code>css
-@import "bootstrap";
+<pre><code class="css">@import "bootstrap";
 @import "font-awesome";
-</code></p>
+</code></pre>
 
 <p>のように <code>@import</code> にしてみました。</p>
 
@@ -199,14 +191,10 @@ width: 34px;
 
 <p><code>glyph(:lock, :white)</code> のような複数指定には対応していないようなので、</p>
 
-<p>```haml</p>
-
-<pre><code>= icon('spinner fa-spin'.freeze)
--# or
-= icon(:spinner, nil, class: 'fa-spin')
+<pre><code class="haml">    = icon('spinner fa-spin'.freeze)
+    -# or
+    = icon(:spinner, nil, class: 'fa-spin')
 </code></pre>
-
-<p>```</p>
 
 <p>のように 2 個目以降は無理矢理埋め込むしかなさそうです。</p>
 
@@ -221,28 +209,25 @@ width: 34px;
 <p><code>icon</code> は第2引数に文字列を指定すると間にスペースを入れてくれるので、
 今までは</p>
 
-<p><code>css
-i[class^="icon-"]:after {
+<pre><code class="css">i[class^="icon-"]:after {
   content: " "
 }
-</code></p>
+</code></pre>
 
 <p>のようにスタイルシートで空白を足していたのですが、</p>
 
-<p><code>ruby
-icon(:pencil, t('.edit', default: :'helpers.links.edit'))
-</code></p>
+<pre><code class="ruby">icon(:pencil, t('.edit', default: :'helpers.links.edit'))
+</code></pre>
 
 <p>のように使うのも良さそうです。</p>
 
 <p>今回は書き換えの手間を減らすため、以下のように今までと同じようにスタイルシートで空白を入れるようにしました。
 何のスタイルが影響しているのか調べていないのですが、半角スペースだとうまくいかなかったので、 NBSP を直接埋め込みました。</p>
 
-<p><code>css
-i.fa:after {
+<pre><code class="css">i.fa:after {
   content: " "; // nbsp
 }
-</code></p>
+</code></pre>
 
 <p>いくつかのアイコンの名前は変更が必要でした。
 使っていて影響があったのは以下のアイコンでした。</p>

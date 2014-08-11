@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rsyslog | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rsyslog/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -45,22 +45,18 @@ VPS で動かしている Ubuntu の rsyslog で受け取って好きなだけ
 
 <p>ファイル名は日付を前にするか、送信元ホスト名を前にするかは好みで決めると良いと思います。</p>
 
-<p>```text /etc/rsyslog.d/10-local.conf</p>
+<pre><code class="text /etc/rsyslog.d/10-local.conf"># provides UDP syslog reception
+$ModLoad imudp
+$UDPServerRun 51514
 
-<h1>provides UDP syslog reception</h1>
+# provides TCP syslog reception
+$ModLoad imtcp
+$InputTCPServerRun 51514
 
-<p>$ModLoad imudp
-$UDPServerRun 51514</p>
-
-<h1>provides TCP syslog reception</h1>
-
-<p>$ModLoad imtcp
-$InputTCPServerRun 51514</p>
-
-<p>$template RemoteLog,&ldquo;/var/log/remote/%$year%%$month%%$day%_%hostname%.log&rdquo;
-:fromhost-ip,!isequal,&ldquo;127.0.0.1&rdquo; ?RemoteLog
+$template RemoteLog,"/var/log/remote/%$year%%$month%%$day%_%hostname%.log"
+:fromhost-ip,!isequal,"127.0.0.1" ?RemoteLog
 &amp; ~
-```</p>
+</code></pre>
 
 <h2><code>/var/log/remote</code> 作成</h2>
 
@@ -84,8 +80,7 @@ $InputTCPServerRun 51514</p>
 <a href="https://devcenter.heroku.com/articles/logging#syslog-drains" title="Syslog drains">Syslog drains</a>
 にありますが、情報が少ないので、同様のログを蓄積するアドオンの設定を参考にするのが良いようです。</p>
 
-<p><code>console
-% heroku drains
+<pre><code class="console">% heroku drains
 No drains for this app
 % heroku drains:add
  !    Usage: heroku drains:add URL
@@ -94,7 +89,7 @@ zsh: exit 1     heroku drains:add
 Successfully added drain syslog://syslog.example.jp:51514
 % heroku drains
 syslog://syslog.example.jp:51514 (d.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-</code></p>
+</code></pre>
 ]]></content>
   </entry>
   

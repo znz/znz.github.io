@@ -4,7 +4,7 @@
   <title><![CDATA[Category: mysql | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/mysql/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -80,10 +80,9 @@ Rails 4 に対応して、 README の <code>This gem is now Rails 3 only.</code>
 <code>sudo -u postgres psql</code>
 で作成しておきます。</p>
 
-<p><code>
-CREATE ROLE dbuser LOGIN ENCRYPTED PASSWORD 'dbpass' NOINHERIT VALID UNTIL 'infinity';
+<pre><code>CREATE ROLE dbuser LOGIN ENCRYPTED PASSWORD 'dbpass' NOINHERIT VALID UNTIL 'infinity';
 CREATE DATABASE dbname WITH ENCODING='UTF8' OWNER=dbuser;
-</code></p>
+</code></pre>
 
 <p>データベースの作成方法はいつも
 <a href="http://www.redmine.org/projects/redmine/wiki/RedmineInstall">RedmineInstall</a>
@@ -97,20 +96,16 @@ CREATE DATABASE dbname WITH ENCODING='UTF8' OWNER=dbuser;
 
 <p>まず apache2 + passenger の方でメンテナンス中画面を出すようにしました。</p>
 
-<p>```</p>
-
-<pre><code>&lt;Directory /path/to/app&gt;
-    Options FollowSymLinks
-    AllowOverride None
-    #Order allow,deny
-    #allow from all
-    Order deny,allow
-    deny from all
-&lt;/Directory&gt;
-ErrorDocument 403 "&amp;#x30e1;&amp;#x30f3;&amp;#x30c6;&amp;#x30ca;&amp;#x30f3;&amp;#x30b9;&amp;#x4e2d;&amp;#x3067;&amp;#x3059;&amp;#x3002;&amp;#x20;&amp;#x3057;&amp;#x3070;&amp;#x3089;&amp;#x304f;&amp;#x304a;&amp;#x5f85;&amp;#x3061;&amp;#x304f;&amp;#x3060;&amp;#x3055;&amp;#x3044;&amp;#x3002;"
+<pre><code>    &lt;Directory /path/to/app&gt;
+        Options FollowSymLinks
+        AllowOverride None
+        #Order allow,deny
+        #allow from all
+        Order deny,allow
+        deny from all
+    &lt;/Directory&gt;
+    ErrorDocument 403 "&amp;#x30e1;&amp;#x30f3;&amp;#x30c6;&amp;#x30ca;&amp;#x30f3;&amp;#x30b9;&amp;#x4e2d;&amp;#x3067;&amp;#x3059;&amp;#x3002;&amp;#x20;&amp;#x3057;&amp;#x3070;&amp;#x3089;&amp;#x304f;&amp;#x304a;&amp;#x5f85;&amp;#x3061;&amp;#x304f;&amp;#x3060;&amp;#x3055;&amp;#x3044;&amp;#x3002;"
 </code></pre>
-
-<p>```</p>
 
 <p><code>ErrorDocument</code> の埋め込み文字列は <code>Content-Type: text/html;charset=iso-8859-1</code> になってNいたので、
 <code>'メンテナンス中です。 しばらくお待ちください。'.unpack('U*').map{|c| '&amp;#x%x;' % c }.join('')</code>
@@ -123,17 +118,15 @@ ErrorDocument 403 "&amp;#x30e1;&amp;#x30f3;&amp;#x30c6;&amp;#x30ca;&amp;#x30f3;&
 
 <p>cron で動かしているデータベースのバックアップと yaml_db でのダンプをしました。</p>
 
-<p><code>
-/path/to/app$ sudo /etc/cron.daily/local-dump
+<pre><code>/path/to/app$ sudo /etc/cron.daily/local-dump
 /path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:dump
-</code></p>
+</code></pre>
 
 <h3>config/database.yml 書き換え</h3>
 
 <p>database.yml で postgresql の方を使うように書き換えます。</p>
 
-<p><code>
-  adapter: postgresql
+<pre><code>  adapter: postgresql
   encoding: unicode
   database: dbname
   pool: 5
@@ -142,17 +135,16 @@ ErrorDocument 403 "&amp;#x30e1;&amp;#x30f3;&amp;#x30c6;&amp;#x30ca;&amp;#x30f3;&
   host: localhost
   #port: 5432
   min_messages: warning
-</code></p>
+</code></pre>
 
 <h3>データの読み込み</h3>
 
 <p><code>rake db:migrate</code> でマイグレーションを実行した後、
 <code>rake db:data:load</code> でデータを読み込みます。</p>
 
-<p><code>
-/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:migrate
+<pre><code>/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:migrate
 /path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:load
-</code></p>
+</code></pre>
 
 <h3>メンテナンス解除と確認</h3>
 
@@ -195,26 +187,24 @@ yaml_db の方が fork が乱立して、新しい rails に対応したもの�
 <p>まず、 Ruby 1.9.1 以降に対応できていないようなので、 Ruby 1.8.7 を使いました。
 rack も新しいバージョンに対応できていないので、以下のような Gemfile でバージョンを指定して<code>bundle install --path vendor/bundle</code> して使いました。</p>
 
-<p><code>ruby Gemfile
-  source "https://rubygems.org"
+<pre><code class="ruby Gemfile">  source "https://rubygems.org"
   gem "taps"
   gem "sqlite3"
   gem "mysql"
   gem "pg"
   gem "rack", "1.0.1"
-</code></p>
+</code></pre>
 
 <p>元の <code>config/database.yml</code> の設定が</p>
 
-<p><code>yaml config/database.yml
-production:
+<pre><code class="yaml config/database.yml">production:
   adapter: mysql2
   database: redmine_db
   host: localhost
   username: redminemyuser
   password: my_password
   encoding: utf8
-</code></p>
+</code></pre>
 
 <p>という感じなら、 MySQL を動かしている方で
 <code>bundle exec taps server mysql://redminemyuser:my_password@localhost/redmine_db tapsuser tapspass</code>
@@ -222,10 +212,9 @@ production:
 
 <p>PostgreSQL の方では</p>
 
-<p><code>console sudo -u postgres psql
-CREATE ROLE redminepguser LOGIN ENCRYPTED PASSWORD 'pg_password' NOINHERIT VALID UNTIL 'infinity';
+<pre><code class="console sudo -u postgres psql">CREATE ROLE redminepguser LOGIN ENCRYPTED PASSWORD 'pg_password' NOINHERIT VALID UNTIL 'infinity';
 CREATE DATABASE redmine_db WITH ENCODING='UTF8' OWNER=redminepguser;
-</code></p>
+</code></pre>
 
 <p>という感じでデータベースを作っておいて、
 <code>bundle exec taps pull postgres://redminepguser:pg_password@localhost/redmine_db http://tapsuser:tapspass@localhost:5000</code>
@@ -258,8 +247,7 @@ redmine を再起動すると直りました。</p>
 
 <p>別途 PostgreSQL の環境を用意して redmine を新規インストールして <code>rake db:migrate</code> で生成した <code>db/schema.rb</code> と比較して全体としては以下の修正をしました。</p>
 
-<p><code>sql rails dbconsole
-ALTER TABLE attachments ALTER filename SET DEFAULT '';
+<pre><code class="sql rails dbconsole">ALTER TABLE attachments ALTER filename SET DEFAULT '';
 ALTER TABLE attachments ALTER disk_filename SET DEFAULT '';
 ALTER TABLE attachments ALTER content_type SET DEFAULT '';
 ALTER TABLE attachments ALTER digest SET DEFAULT '';
@@ -310,17 +298,15 @@ ALTER TABLE wiki_content_versions ALTER compression SET DEFAULT '';
 ALTER TABLE wiki_content_versions ALTER comments SET DEFAULT '';
 ALTER TABLE users ALTER mail_notification SET DEFAULT '';
 ALTER TABLE users ALTER lastname SET DEFAULT '';
-</code></p>
+</code></pre>
 
-<p><code>sql rails dbconsole
-ALTER TABLE users ALTER mail_notification SET DEFAULT '';
-</code></p>
+<pre><code class="sql rails dbconsole">ALTER TABLE users ALTER mail_notification SET DEFAULT '';
+</code></pre>
 
 <p>はすでに実行済みで、</p>
 
-<p><code>sql rails dbconsole
-ALTER TABLE users ALTER lastname SET DEFAULT '';
-</code></p>
+<pre><code class="sql rails dbconsole">ALTER TABLE users ALTER lastname SET DEFAULT '';
+</code></pre>
 
 <p>は既に default が <code>""</code> になっていたので不要でしたが、
 重複して実行しても問題が起きないようなので、上の SQL にも入れています。</p>

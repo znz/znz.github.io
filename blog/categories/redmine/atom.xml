@@ -4,7 +4,7 @@
   <title><![CDATA[Category: redmine | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/redmine/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -33,26 +33,24 @@
 <p>まず、 Ruby 1.9.1 以降に対応できていないようなので、 Ruby 1.8.7 を使いました。
 rack も新しいバージョンに対応できていないので、以下のような Gemfile でバージョンを指定して<code>bundle install --path vendor/bundle</code> して使いました。</p>
 
-<p><code>ruby Gemfile
-  source "https://rubygems.org"
+<pre><code class="ruby Gemfile">  source "https://rubygems.org"
   gem "taps"
   gem "sqlite3"
   gem "mysql"
   gem "pg"
   gem "rack", "1.0.1"
-</code></p>
+</code></pre>
 
 <p>元の <code>config/database.yml</code> の設定が</p>
 
-<p><code>yaml config/database.yml
-production:
+<pre><code class="yaml config/database.yml">production:
   adapter: mysql2
   database: redmine_db
   host: localhost
   username: redminemyuser
   password: my_password
   encoding: utf8
-</code></p>
+</code></pre>
 
 <p>という感じなら、 MySQL を動かしている方で
 <code>bundle exec taps server mysql://redminemyuser:my_password@localhost/redmine_db tapsuser tapspass</code>
@@ -60,10 +58,9 @@ production:
 
 <p>PostgreSQL の方では</p>
 
-<p><code>console sudo -u postgres psql
-CREATE ROLE redminepguser LOGIN ENCRYPTED PASSWORD 'pg_password' NOINHERIT VALID UNTIL 'infinity';
+<pre><code class="console sudo -u postgres psql">CREATE ROLE redminepguser LOGIN ENCRYPTED PASSWORD 'pg_password' NOINHERIT VALID UNTIL 'infinity';
 CREATE DATABASE redmine_db WITH ENCODING='UTF8' OWNER=redminepguser;
-</code></p>
+</code></pre>
 
 <p>という感じでデータベースを作っておいて、
 <code>bundle exec taps pull postgres://redminepguser:pg_password@localhost/redmine_db http://tapsuser:tapspass@localhost:5000</code>
@@ -96,8 +93,7 @@ redmine を再起動すると直りました。</p>
 
 <p>別途 PostgreSQL の環境を用意して redmine を新規インストールして <code>rake db:migrate</code> で生成した <code>db/schema.rb</code> と比較して全体としては以下の修正をしました。</p>
 
-<p><code>sql rails dbconsole
-ALTER TABLE attachments ALTER filename SET DEFAULT '';
+<pre><code class="sql rails dbconsole">ALTER TABLE attachments ALTER filename SET DEFAULT '';
 ALTER TABLE attachments ALTER disk_filename SET DEFAULT '';
 ALTER TABLE attachments ALTER content_type SET DEFAULT '';
 ALTER TABLE attachments ALTER digest SET DEFAULT '';
@@ -148,17 +144,15 @@ ALTER TABLE wiki_content_versions ALTER compression SET DEFAULT '';
 ALTER TABLE wiki_content_versions ALTER comments SET DEFAULT '';
 ALTER TABLE users ALTER mail_notification SET DEFAULT '';
 ALTER TABLE users ALTER lastname SET DEFAULT '';
-</code></p>
+</code></pre>
 
-<p><code>sql rails dbconsole
-ALTER TABLE users ALTER mail_notification SET DEFAULT '';
-</code></p>
+<pre><code class="sql rails dbconsole">ALTER TABLE users ALTER mail_notification SET DEFAULT '';
+</code></pre>
 
 <p>はすでに実行済みで、</p>
 
-<p><code>sql rails dbconsole
-ALTER TABLE users ALTER lastname SET DEFAULT '';
-</code></p>
+<pre><code class="sql rails dbconsole">ALTER TABLE users ALTER lastname SET DEFAULT '';
+</code></pre>
 
 <p>は既に default が <code>""</code> になっていたので不要でしたが、
 重複して実行しても問題が起きないようなので、上の SQL にも入れています。</p>

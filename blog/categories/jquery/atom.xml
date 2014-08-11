@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: jquery | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/jquery/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2014-08-11T19:53:16+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Rails 4.1 で jQuery Raty を使ってみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-08-11-jquery-raty.html"/>
+    <updated>2014-08-11T19:37:53+09:00</updated>
+    <id>http://blog.n-z.jp/blog/jquery-raty</id>
+    <content type="html"><![CDATA[<p>Rails で星を使った評価付けを使いたかったので、
+jQuery プラグインを探してみたところ、
+<a href="http://wbotelhos.com/raty" title="jQuery Raty">jQuery Raty</a>
+というのが良さそうだったので使ってみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>jQuery Raty v2.7.0</li>
+<li>Ruby on Rails 4.1.4</li>
+<li>Ruby 2.1.2</li>
+</ul>
+
+
+<h2>うまくいかなかった方法</h2>
+
+<p><a href="http://rubygems.org/" title="RubyGems.org">RubyGems.org</a>
+の方には古いバージョンしかなさそうだったので、
+<a href="https://rails-assets.org/" title="Rails Assets">Rails Assets</a>
+で最新バージョンを使おうと思い、
+<code>Gemfile</code> に以下の設定をしたのですが、
+<code>raty</code> のディレクトリ配置が特殊なのか、
+うまくいきませんでした。</p>
+
+<pre><code class="ruby Gemfile">source 'https://rails-assets.org'
+gem 'rails-assets-raty'
+</code></pre>
+
+<h3>development 環境では動いた方法</h3>
+
+<p>以下のように書くことで development 環境では動いたのですが、
+capistrano で deploy した先では画像が表示されていませんでした。</p>
+
+<pre><code class="css app/assets/stylesheets/raty.css.scss">//= require raty/lib/jquery.raty
+</code></pre>
+
+<pre><code class="text app/assets/javascripts/raty.js.coffee.erb">#= require raty/lib/jquery.raty
+ $ -&gt;
+   $('.raty').raty
+     cancel   : true
+    cancelOff: '&lt;%= image_path('raty/lib/images/cancel-off.png') %&gt;'
+    cancelOn : '&lt;%= image_path('raty/lib/images/cancel-on.png') %&gt;'
+    starHalf : '&lt;%= image_path('raty/lib/images/star-half.png') %&gt;'
+    starOff  : '&lt;%= image_path('raty/lib/images/star-off.png') %&gt;'
+    starOn   : '&lt;%= image_path('raty/lib/images/star-on.png') %&gt;'
+    click: (score, event) -&gt;
+      raty = $(event.target).parent()
+      $(raty.data('field')).val(score)
+    score: -&gt;
+      $($(this).data('field')).val()
+</code></pre>
+
+<h2>うまくいった方法</h2>
+
+<p><code>vendor/assets/stylesheets/jquery.raty.css</code> と
+<code>vendor/assets/javascripts/jquery.raty.js</code> に
+ダウンロードしたファイルをおいて、
+<code>assets</code> も以下のように書き換えました。
+画像も <code>vendor/assets/images/raty</code> においてもうまくいかなかったので、
+<code>vendor/assets/images/raty</code> におきました。</p>
+
+<p>Web フォントは今回は使っていないので、
+考慮していません。
+<code>starType</code> を <code>i</code> に変更しない限り使われないはずなので、
+Web フォントを配置しなくても問題ないと思います。</p>
+
+<pre><code class="css app/assets/stylesheets/raty.css.scss">//= require jquery.raty
+</code></pre>
+
+<pre><code class="text app/assets/javascripts/raty.js.coffee.erb">#= require jquery.raty
+ $ -&gt;
+   $('.raty').raty
+     cancel   : true
+    cancelOff: '&lt;%= image_path('raty/cancel-off.png') %&gt;'
+    cancelOn : '&lt;%= image_path('raty/cancel-on.png') %&gt;'
+    starHalf : '&lt;%= image_path('raty/star-half.png') %&gt;'
+    starOff  : '&lt;%= image_path('raty/star-off.png') %&gt;'
+    starOn   : '&lt;%= image_path('raty/star-on.png') %&gt;'
+    click: (score, event) -&gt;
+      raty = $(event.target).parent()
+      $(raty.data('field')).val(score)
+    score: -&gt;
+      $($(this).data('field')).val()
+</code></pre>
+
+<h2>フォームでの使用例</h2>
+
+<p>bootstrap 3.2.0 の <code>form-horizontal</code> を使っているので、
+slim で以下のように使っています。</p>
+
+<pre><code class="text _form.html.slim">    .form-group
+      = f.label :readability, class: "control-label col-md-2"
+      .col-md-10
+        .raty.form-control data-field='#book_report_readability'
+        = f.hidden_field :readability, class: "form-control"
+</code></pre>
+
+<h2>show での使用例</h2>
+
+<p>以下のように <code>raty</code> の星を使って表示しています。</p>
+
+<pre><code class="ruby app/helpers/raty_helper.rb">module RatyHelper
+  def raty_stars(n, max=5)
+    (
+      image_tag('raty/star-on.png', alt: '') * n +
+      image_tag('raty/star-off.png', alt: '') * (max-n)
+      ).html_safe
+  end
+end
+</code></pre>
+]]></content>
+  </entry>
+  
+</feed>

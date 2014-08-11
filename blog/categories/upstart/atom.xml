@@ -4,7 +4,7 @@
   <title><![CDATA[Category: upstart | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/upstart/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -73,31 +73,18 @@ Ubuntu 13.10 の
 <code>/etc/init.d/zabbix-server</code>
 では</p>
 
-<p>```</p>
-
-<h3>BEGIN INIT INFO</h3>
-
-<h1>Provides:          zabbix-server</h1>
-
-<h1>Required-Start:    $remote_fs $network</h1>
-
-<h1>Required-Stop:     $remote_fs</h1>
-
-<h1>Default-Start:     2 3 4 5</h1>
-
-<h1>Default-Stop:      0 1 6</h1>
-
-<h1>Should-Start:      postgresql</h1>
-
-<h1>Should-Stop:       postgresql</h1>
-
-<h1>Short-Description: Start zabbix-server daemon</h1>
-
-<h1>Description: Start zabbix-server daemon (PostgreSQL)</h1>
-
-<h3>END INIT INFO</h3>
-
-<p>```</p>
+<pre><code>### BEGIN INIT INFO
+# Provides:          zabbix-server
+# Required-Start:    $remote_fs $network
+# Required-Stop:     $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Should-Start:      postgresql
+# Should-Stop:       postgresql
+# Short-Description: Start zabbix-server daemon
+# Description: Start zabbix-server daemon (PostgreSQL)
+### END INIT INFO
+</code></pre>
 
 <p>となっていて、
 <code>postgresql</code> より後に起動するようになっているのに、</p>
@@ -105,10 +92,9 @@ Ubuntu 13.10 の
 <p><code>/etc/init/zabbix-server.conf</code>
 では</p>
 
-<p><code>
-start on (filesystem and net-device-up IFACE=lo)
+<pre><code>start on (filesystem and net-device-up IFACE=lo)
 stop on runlevel [!2345]
-</code></p>
+</code></pre>
 
 <p>となっていて、起動順序の関係が不足しています。</p>
 
@@ -123,12 +109,9 @@ stop on runlevel [!2345]
 <code>/etc/cron.d/local</code>
 に</p>
 
-<p>```</p>
-
-<h1>zabbix-server may fail to start before postgresql</h1>
-
-<p>@reboot root /usr/sbin/service zabbix-server start
-```</p>
+<pre><code># zabbix-server may fail to start before postgresql
+@reboot root /usr/sbin/service zabbix-server start
+</code></pre>
 
 <p>という設定を置いていて、
 <code>cron</code> の <code>@reboot</code> が実行されるタイミングで起動し直すようにしています。</p>
@@ -182,63 +165,50 @@ IRC でちょっと助言を受けつつ移植してみました。</p>
 動作確認していたので、
 その部分も残しています。</p>
 
-<p>```ruby /tmp/test-service.rb
- #!/usr/bin/ruby
- require &lsquo;socket&rsquo;
- open(&ldquo;/tmp/test.log&rdquo;, &ldquo;w&rdquo;) do |f|
-   ENV.each do |key, value|</p>
-
-<pre><code> f.puts "#{key}=#{value}"
-</code></pre>
-
-<p>   end
-   begin</p>
-
-<pre><code> serv_socket = Socket.for_fd(ENV["UPSTART_FDS"].to_i)
- client_socket, client_addrinfo = serv_socket.accept
- message = client_socket.recv(1024)
- f.puts message
- client_socket.send("I got your message: #{message}", 0)
- client_socket.close
-</code></pre>
-
-<p>   rescue Exception => e</p>
-
-<pre><code> f.puts e.inspect
- f.puts e.backtrace
-</code></pre>
-
-<p>   end
-   f.puts &ldquo;finished&rdquo;
+<pre><code class="ruby /tmp/test-service.rb"> #!/usr/bin/ruby
+ require 'socket'
+ open("/tmp/test.log", "w") do |f|
+   ENV.each do |key, value|
+     f.puts "#{key}=#{value}"
+   end
+   begin
+     serv_socket = Socket.for_fd(ENV["UPSTART_FDS"].to_i)
+     client_socket, client_addrinfo = serv_socket.accept
+     message = client_socket.recv(1024)
+     f.puts message
+     client_socket.send("I got your message: #{message}", 0)
+     client_socket.close
+   rescue Exception =&gt; e
+     f.puts e.inspect
+     f.puts e.backtrace
+   end
+   f.puts "finished"
  end
-```</p>
+</code></pre>
 
 <p>バグとしては
 <code>for_fd</code> の引数の <code>to_i</code> を忘れていたり、
 <code>send</code> の引数が足りなかったりしました。</p>
 
-<p><code>text /etc/init/socket-test.conf
- description "upstart-socket-bridge test"
+<pre><code class="text /etc/init/socket-test.conf"> description "upstart-socket-bridge test"
  start on socket PROTO=inet PORT=34567 ADDR=127.0.0.1  # 34567 番ポートで待ち受け
  setuid exampleuser                                    # root ではなく exampleuser で動作
  exec /usr/bin/ruby /tmp/test-service.rb               # サービス起動
-</code></p>
+</code></pre>
 
 <p><code>nc</code> コマンドで接続して動作確認します。</p>
 
-<p><code>console
- $ nc localhost 34567
+<pre><code class="console"> $ nc localhost 34567
  Hello Ruby
  I got your message: Hello Ruby
-</code></p>
+</code></pre>
 
 <p>最後にテストで作成したファイルを削除しておきます。</p>
 
-<p><code>console
- $ sudo rm /etc/init/socket-test.conf  # ブリッジとの接続解除
+<pre><code class="console"> $ sudo rm /etc/init/socket-test.conf  # ブリッジとの接続解除
  $ rm /tmp/test-service.rb             # テストサービス削除
  $ rm /tmp/test.log                    # ログファイル削除
-</code></p>
+</code></pre>
 
 <h2>まとめ</h2>
 

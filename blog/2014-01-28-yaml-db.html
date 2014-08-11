@@ -9,7 +9,7 @@
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="yaml_dbでMySQLからPostgreSQLに移行した 2014-01-28 (Tue) | <a href="#disqus_thread" data-disqus-identifier="http://blog.n-z.jp">Comments 先週 redmine を MySQL &hellip;">
+  <meta name="description" content="yaml_dbでMySQLからPostgreSQLに移行した | Comments 先週 redmine を MySQL から PostgreSQL に移行するときに、最近の ruby では動かなくなっている taps ではなく yaml_db を使ってみました。 その後、自作 Rails &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -102,7 +102,7 @@
   
 
 
-<time datetime="2014-01-28T21:25:00+09:00" pubdate data-updated="true">2014-01-28 (Tue)</time>
+<time datetime="2014-01-28T21:25:00+09:00" pubdate data-updated="true"></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -177,11 +177,9 @@ Rails 4 に対応して、 README の <code>This gem is now Rails 3 only.</code>
 <code>sudo -u postgres psql</code>
 で作成しておきます。</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>CREATE ROLE dbuser LOGIN ENCRYPTED PASSWORD 'dbpass' NOINHERIT VALID UNTIL 'infinity';
-</span><span class='line'>CREATE DATABASE dbname WITH ENCODING='UTF8' OWNER=dbuser;</span></code></pre></td></tr></table></div></figure>
-
+<pre><code>CREATE ROLE dbuser LOGIN ENCRYPTED PASSWORD 'dbpass' NOINHERIT VALID UNTIL 'infinity';
+CREATE DATABASE dbname WITH ENCODING='UTF8' OWNER=dbuser;
+</code></pre>
 
 <p>データベースの作成方法はいつも
 <a href="http://www.redmine.org/projects/redmine/wiki/RedmineInstall">RedmineInstall</a>
@@ -195,25 +193,16 @@ Rails 4 に対応して、 README の <code>This gem is now Rails 3 only.</code>
 
 <p>まず apache2 + passenger の方でメンテナンス中画面を出すようにしました。</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>&lt;Directory /path/to/app&gt;
-</span><span class='line'>    Options FollowSymLinks
-</span><span class='line'>    AllowOverride None
-</span><span class='line'>    #Order allow,deny
-</span><span class='line'>    #allow from all
-</span><span class='line'>    Order deny,allow
-</span><span class='line'>    deny from all
-</span><span class='line'>&lt;/Directory&gt;
-</span><span class='line'>ErrorDocument 403 "&#x30e1;&#x30f3;&#x30c6;&#x30ca;&#x30f3;&#x30b9;&#x4e2d;&#x3067;&#x3059;&#x3002;&#x20;&#x3057;&#x3070;&#x3089;&#x304f;&#x304a;&#x5f85;&#x3061;&#x304f;&#x3060;&#x3055;&#x3044;&#x3002;"</span></code></pre></td></tr></table></div></figure>
-
+<pre><code>    &lt;Directory /path/to/app&gt;
+        Options FollowSymLinks
+        AllowOverride None
+        #Order allow,deny
+        #allow from all
+        Order deny,allow
+        deny from all
+    &lt;/Directory&gt;
+    ErrorDocument 403 "&amp;#x30e1;&amp;#x30f3;&amp;#x30c6;&amp;#x30ca;&amp;#x30f3;&amp;#x30b9;&amp;#x4e2d;&amp;#x3067;&amp;#x3059;&amp;#x3002;&amp;#x20;&amp;#x3057;&amp;#x3070;&amp;#x3089;&amp;#x304f;&amp;#x304a;&amp;#x5f85;&amp;#x3061;&amp;#x304f;&amp;#x3060;&amp;#x3055;&amp;#x3044;&amp;#x3002;"
+</code></pre>
 
 <p><code>ErrorDocument</code> の埋め込み文字列は <code>Content-Type: text/html;charset=iso-8859-1</code> になってNいたので、
 <code>'メンテナンス中です。 しばらくお待ちください。'.unpack('U*').map{|c| '&amp;#x%x;' % c }.join('')</code>
@@ -226,46 +215,33 @@ Rails 4 に対応して、 README の <code>This gem is now Rails 3 only.</code>
 
 <p>cron で動かしているデータベースのバックアップと yaml_db でのダンプをしました。</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>/path/to/app$ sudo /etc/cron.daily/local-dump
-</span><span class='line'>/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:dump</span></code></pre></td></tr></table></div></figure>
-
+<pre><code>/path/to/app$ sudo /etc/cron.daily/local-dump
+/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:dump
+</code></pre>
 
 <h3>config/database.yml 書き換え</h3>
 
 <p>database.yml で postgresql の方を使うように書き換えます。</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>  adapter: postgresql
-</span><span class='line'>  encoding: unicode
-</span><span class='line'>  database: dbname
-</span><span class='line'>  pool: 5
-</span><span class='line'>  username: dbuser
-</span><span class='line'>  password: dbpass
-</span><span class='line'>  host: localhost
-</span><span class='line'>  #port: 5432
-</span><span class='line'>  min_messages: warning</span></code></pre></td></tr></table></div></figure>
-
+<pre><code>  adapter: postgresql
+  encoding: unicode
+  database: dbname
+  pool: 5
+  username: dbuser
+  password: dbpass
+  host: localhost
+  #port: 5432
+  min_messages: warning
+</code></pre>
 
 <h3>データの読み込み</h3>
 
 <p><code>rake db:migrate</code> でマイグレーションを実行した後、
 <code>rake db:data:load</code> でデータを読み込みます。</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:migrate
-</span><span class='line'>/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:load</span></code></pre></td></tr></table></div></figure>
-
+<pre><code>/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:migrate
+/path/to/app$ $ sudo env PATH=$(dirname $(awk '/PassengerDefaultRuby/{print $2}' /etc/apache2/conf.d/passenger.conf)):$PATH RAILS_ENV=production bundle exec rake db:data:load
+</code></pre>
 
 <h3>メンテナンス解除と確認</h3>
 
@@ -310,7 +286,7 @@ yaml_db の方が fork が乱立して、新しい rails に対応したもの�
   
 
 
-<time datetime="2014-01-28T21:25:00+09:00" pubdate data-updated="true">2014-01-28 (Tue)</time>
+<time datetime="2014-01-28T21:25:00+09:00" pubdate data-updated="true"></time>
       
 
 <span class="categories">
@@ -402,6 +378,10 @@ Hatena.BookmarkWidget.load();
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014-08-11-jquery-raty.html">Rails 4.1 で jQuery Raty を使ってみた</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014-08-06-docker-volume.html">boot2docker で VM のファイルをコンテナやホストと共有する</a>
       </li>
     
@@ -417,15 +397,11 @@ Hatena.BookmarkWidget.load();
         <a href="/blog/2014-07-27-ruby-build-without-rbenv.html">ruby-buildをrbenvと組み合わせずに使う</a>
       </li>
     
-      <li class="post">
-        <a href="/blog/2014-07-26-kansaiworkshop062.html">62nd Ruby/Rails勉強会@関西に参加した</a>
-      </li>
-    
   </ul>
 </section>
 <section>
   <h1>Tag Cloud</h1>
-    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 102.14285714285714%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 107.5%'>amagasakirb(7)</a> <a href='/blog/categories/ansible' style='font-size: 109.64285714285714%'>ansible(9)</a> <a href='/blog/categories/anyenv' style='font-size: 101.07142857142857%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.07142857142857%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 103.21428571428571%'>boot2docker(3)</a> <a href='/blog/categories/bootstrap' style='font-size: 101.07142857142857%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 101.07142857142857%'>bts(1)</a> <a href='/blog/categories/cdr' style='font-size: 103.21428571428571%'>cdr(3)</a> <a href='/blog/categories/certification' style='font-size: 101.07142857142857%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 102.14285714285714%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 103.21428571428571%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 124.64285714285714%'>debian(23)</a> <a href='/blog/categories/devise' style='font-size: 105.35714285714286%'>devise(5)</a> <a href='/blog/categories/dkms' style='font-size: 101.07142857142857%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 112.85714285714286%'>docker(12)</a> <a href='/blog/categories/dokku' style='font-size: 102.14285714285714%'>dokku(2)</a> <a href='/blog/categories/doorkeeper' style='font-size: 103.21428571428571%'>doorkeeper(3)</a> <a href='/blog/categories/drb' style='font-size: 101.07142857142857%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.07142857142857%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 108.57142857142857%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 138.57142857142856%'>event(36)</a> <a href='/blog/categories/fluentd' style='font-size: 101.07142857142857%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 104.28571428571429%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 102.14285714285714%'>ghq(2)</a> <a href='/blog/categories/git' style='font-size: 105.35714285714286%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 107.5%'>github(7)</a> <a href='/blog/categories/go' style='font-size: 101.07142857142857%'>go(1)</a> <a href='/blog/categories/gpg' style='font-size: 101.07142857142857%'>gpg(1)</a> <a href='/blog/categories/haml' style='font-size: 101.07142857142857%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 102.14285714285714%'>heroku(2)</a> <a href='/blog/categories/homebrew' style='font-size: 107.5%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 103.21428571428571%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 103.21428571428571%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 101.07142857142857%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 101.07142857142857%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.07142857142857%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 104.28571428571429%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 101.07142857142857%'>jenkins(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 102.14285714285714%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.07142857142857%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.14285714285714%'>jus(2)</a> <a href='/blog/categories/k-of' style='font-size: 101.07142857142857%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 105.35714285714286%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.07142857142857%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.07142857142857%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 104.28571428571429%'>land-of-lisp(4)</a> <a href='/blog/categories/lilo' style='font-size: 101.07142857142857%'>lilo(1)</a> <a href='/blog/categories/linux' style='font-size: 108.57142857142857%'>linux(8)</a> <a href='/blog/categories/live' style='font-size: 103.21428571428571%'>live(3)</a> <a href='/blog/categories/lxc' style='font-size: 101.07142857142857%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.07142857142857%'>lxcjp(1)</a> <a href='/blog/categories/mail' style='font-size: 101.07142857142857%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 102.14285714285714%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 104.28571428571429%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.07142857142857%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.07142857142857%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.07142857142857%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 102.14285714285714%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.07142857142857%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 104.28571428571429%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 105.35714285714286%'>octopress(5)</a> <a href='/blog/categories/omniauth' style='font-size: 102.14285714285714%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 102.14285714285714%'>openssl(2)</a> <a href='/blog/categories/osx' style='font-size: 127.85714285714286%'>osx(26)</a> <a href='/blog/categories/owncloud' style='font-size: 101.07142857142857%'>owncloud(1)</a> <a href='/blog/categories/packer' style='font-size: 101.07142857142857%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.07142857142857%'>passenger(1)</a> <a href='/blog/categories/peco' style='font-size: 101.07142857142857%'>peco(1)</a> <a href='/blog/categories/postfix' style='font-size: 102.14285714285714%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 102.14285714285714%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.07142857142857%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.07142857142857%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 102.14285714285714%'>r(2)</a> <a href='/blog/categories/rabbit' style='font-size: 102.14285714285714%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 131.07142857142858%'>rails(29)</a> <a href='/blog/categories/ransack' style='font-size: 101.07142857142857%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 104.28571428571429%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.07142857142857%'>redmine(1)</a> <a href='/blog/categories/rspec' style='font-size: 101.07142857142857%'>rspec(1)</a> <a href='/blog/categories/rsyslog' style='font-size: 101.07142857142857%'>rsyslog(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.07142857142857%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(56)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.07142857142857%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 103.21428571428571%'>rubykansai(3)</a> <a href='/blog/categories/rubymotion' style='font-size: 113.92857142857143%'>rubymotion(13)</a> <a href='/blog/categories/security' style='font-size: 103.21428571428571%'>security(3)</a> <a href='/blog/categories/shell' style='font-size: 103.21428571428571%'>shell(3)</a> <a href='/blog/categories/slim' style='font-size: 101.07142857142857%'>slim(1)</a> <a href='/blog/categories/sylpheed' style='font-size: 101.07142857142857%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.07142857142857%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 104.28571428571429%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 120.35714285714286%'>ubuntu(19)</a> <a href='/blog/categories/upstart' style='font-size: 102.14285714285714%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 101.07142857142857%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 106.42857142857143%'>vagrant(6)</a> <a href='/blog/categories/vagrantcloud' style='font-size: 102.14285714285714%'>vagrantcloud(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 102.14285714285714%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 101.07142857142857%'>weechat(1)</a> <a href='/blog/categories/yaml' style='font-size: 101.07142857142857%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.07142857142857%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 109.64285714285714%'>zsh(9)</a> </span>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 102.14285714285714%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 107.5%'>amagasakirb(7)</a> <a href='/blog/categories/ansible' style='font-size: 109.64285714285714%'>ansible(9)</a> <a href='/blog/categories/anyenv' style='font-size: 101.07142857142857%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.07142857142857%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 103.21428571428571%'>boot2docker(3)</a> <a href='/blog/categories/bootstrap' style='font-size: 101.07142857142857%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 101.07142857142857%'>bts(1)</a> <a href='/blog/categories/cdr' style='font-size: 103.21428571428571%'>cdr(3)</a> <a href='/blog/categories/certification' style='font-size: 101.07142857142857%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 102.14285714285714%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 103.21428571428571%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 124.64285714285714%'>debian(23)</a> <a href='/blog/categories/devise' style='font-size: 105.35714285714286%'>devise(5)</a> <a href='/blog/categories/dkms' style='font-size: 101.07142857142857%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 112.85714285714286%'>docker(12)</a> <a href='/blog/categories/dokku' style='font-size: 102.14285714285714%'>dokku(2)</a> <a href='/blog/categories/doorkeeper' style='font-size: 103.21428571428571%'>doorkeeper(3)</a> <a href='/blog/categories/drb' style='font-size: 101.07142857142857%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.07142857142857%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 108.57142857142857%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 138.57142857142856%'>event(36)</a> <a href='/blog/categories/fluentd' style='font-size: 101.07142857142857%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 104.28571428571429%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 102.14285714285714%'>ghq(2)</a> <a href='/blog/categories/git' style='font-size: 105.35714285714286%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 107.5%'>github(7)</a> <a href='/blog/categories/go' style='font-size: 101.07142857142857%'>go(1)</a> <a href='/blog/categories/gpg' style='font-size: 101.07142857142857%'>gpg(1)</a> <a href='/blog/categories/haml' style='font-size: 101.07142857142857%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 102.14285714285714%'>heroku(2)</a> <a href='/blog/categories/homebrew' style='font-size: 107.5%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 103.21428571428571%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 103.21428571428571%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 101.07142857142857%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 101.07142857142857%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.07142857142857%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 104.28571428571429%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 101.07142857142857%'>jenkins(1)</a> <a href='/blog/categories/jquery' style='font-size: 101.07142857142857%'>jquery(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 102.14285714285714%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.07142857142857%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.14285714285714%'>jus(2)</a> <a href='/blog/categories/k-of' style='font-size: 101.07142857142857%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 105.35714285714286%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.07142857142857%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.07142857142857%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 104.28571428571429%'>land-of-lisp(4)</a> <a href='/blog/categories/lilo' style='font-size: 101.07142857142857%'>lilo(1)</a> <a href='/blog/categories/linux' style='font-size: 108.57142857142857%'>linux(8)</a> <a href='/blog/categories/live' style='font-size: 103.21428571428571%'>live(3)</a> <a href='/blog/categories/lxc' style='font-size: 101.07142857142857%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.07142857142857%'>lxcjp(1)</a> <a href='/blog/categories/mail' style='font-size: 101.07142857142857%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 102.14285714285714%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 104.28571428571429%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.07142857142857%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.07142857142857%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.07142857142857%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 102.14285714285714%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.07142857142857%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 104.28571428571429%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 105.35714285714286%'>octopress(5)</a> <a href='/blog/categories/omniauth' style='font-size: 102.14285714285714%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 102.14285714285714%'>openssl(2)</a> <a href='/blog/categories/osx' style='font-size: 127.85714285714286%'>osx(26)</a> <a href='/blog/categories/owncloud' style='font-size: 101.07142857142857%'>owncloud(1)</a> <a href='/blog/categories/packer' style='font-size: 101.07142857142857%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.07142857142857%'>passenger(1)</a> <a href='/blog/categories/peco' style='font-size: 101.07142857142857%'>peco(1)</a> <a href='/blog/categories/postfix' style='font-size: 102.14285714285714%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 102.14285714285714%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.07142857142857%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.07142857142857%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 102.14285714285714%'>r(2)</a> <a href='/blog/categories/rabbit' style='font-size: 102.14285714285714%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 132.14285714285714%'>rails(30)</a> <a href='/blog/categories/ransack' style='font-size: 101.07142857142857%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 104.28571428571429%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.07142857142857%'>redmine(1)</a> <a href='/blog/categories/rspec' style='font-size: 101.07142857142857%'>rspec(1)</a> <a href='/blog/categories/rsyslog' style='font-size: 101.07142857142857%'>rsyslog(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.07142857142857%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(56)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.07142857142857%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 103.21428571428571%'>rubykansai(3)</a> <a href='/blog/categories/rubymotion' style='font-size: 113.92857142857143%'>rubymotion(13)</a> <a href='/blog/categories/security' style='font-size: 103.21428571428571%'>security(3)</a> <a href='/blog/categories/shell' style='font-size: 103.21428571428571%'>shell(3)</a> <a href='/blog/categories/slim' style='font-size: 101.07142857142857%'>slim(1)</a> <a href='/blog/categories/sylpheed' style='font-size: 101.07142857142857%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.07142857142857%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 104.28571428571429%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 120.35714285714286%'>ubuntu(19)</a> <a href='/blog/categories/upstart' style='font-size: 102.14285714285714%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 101.07142857142857%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 106.42857142857143%'>vagrant(6)</a> <a href='/blog/categories/vagrantcloud' style='font-size: 102.14285714285714%'>vagrantcloud(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 102.14285714285714%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 101.07142857142857%'>weechat(1)</a> <a href='/blog/categories/yaml' style='font-size: 101.07142857142857%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.07142857142857%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 109.64285714285714%'>zsh(9)</a> </span>
 </section>
 
 <section>

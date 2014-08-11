@@ -4,7 +4,7 @@
   <title><![CDATA[Category: tty | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/tty/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -32,9 +32,8 @@
 <p><code>│</code> (U+2502) の代わりに <code>|</code> (U+007C VERTICAL LINE)
 を使うだけなら、</p>
 
-<p><code>
-/set weechat.look.separator_vertical "|"
-</code></p>
+<pre><code>/set weechat.look.separator_vertical "|"
+</code></pre>
 
 <p>でいけます。</p>
 
@@ -42,9 +41,8 @@
 
 <p>weechat の画面で問題が起きている行は</p>
 
-<p><code>
-時刻 nickなどのprefix 左の縦線(|) メッセージ 右の縦線(│) nick一覧
-</code></p>
+<pre><code>時刻 nickなどのprefix 左の縦線(|) メッセージ 右の縦線(│) nick一覧
+</code></pre>
 
 <p>のようになっていて、最初は両方の縦線が問題になっているのかと
 勘違いしていたのですが、実際には右側の方だけでした。</p>
@@ -117,16 +115,12 @@ Mac OS X は IME のオン・オフのような状態の切り替えではなく
 <p><a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html">TeraTerm Pro の対応制御シーケンス</a>
 には以下の3種類の IME 関連の制御シーケンスがあります。</p>
 
-<p>```
-  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
+<pre><code>  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
   CSI &lt; s    TTIMESVIME の開閉状態を保存する。
-  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。</p>
-
-<pre><code>           Ps = 0      IME を閉じる。
-              = 1      IME を開く。
+  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。
+               Ps = 0      IME を閉じる。
+                  = 1      IME を開く。
 </code></pre>
-
-<p>```</p>
 
 <p>この中の <code>TTIMESTIME</code> の <code>Ps</code> を拡張して、
 2 以上も受け付けるようにして、
@@ -161,16 +155,12 @@ Mac OS X は IME のオン・オフのような状態の切り替えではなく
 から引用すると、
 次の3種類になります。</p>
 
-<p>```
-  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
+<pre><code>  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
   CSI &lt; s    TTIMESVIME の開閉状態を保存する。
-  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。</p>
-
-<pre><code>           Ps = 0      IME を閉じる。
-              = 1      IME を開く。
+  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。
+               Ps = 0      IME を閉じる。
+                  = 1      IME を開く。
 </code></pre>
-
-<p>```</p>
 
 <h2>iTerm2 の対応</h2>
 
@@ -266,14 +256,10 @@ pager
 これはすぐに見つかって、
 <code>lv</code> の <code>src/stream.c</code> の <code>perror( "/dev/tty" )</code> でした。</p>
 
-<p>```c lv451/src/stream.c
-  close( 0 );
-  if( IsAtty( 1 ) &amp;&amp; 0 != open( &ldquo;/dev/tty&rdquo;, O_RDONLY ) )</p>
-
-<pre><code>perror( "/dev/tty" ), exit( -1 );
+<pre><code class="c lv451/src/stream.c">  close( 0 );
+  if( IsAtty( 1 ) &amp;&amp; 0 != open( "/dev/tty", O_RDONLY ) )
+    perror( "/dev/tty" ), exit( -1 );
 </code></pre>
-
-<p>```</p>
 
 <p>STDIN を開き直している処理があって、
 ここで <code>"/dev/tty"</code> を開けないのが原因でした。</p>
@@ -331,26 +317,20 @@ ENV["PAGER"] = "less" if ENV["PAGER"] == "lv"
 
 <p>パッチとしては以下のように直せば良さそうです。</p>
 
-<p>```diff
-diff &mdash;git a/lib/spring/application.rb b/lib/spring/application.rb
+<pre><code class="diff">diff --git a/lib/spring/application.rb b/lib/spring/application.rb
 index b7df9bb..4e34f6c 100644
-&mdash;&ndash; a/lib/spring/application.rb
+--- a/lib/spring/application.rb
 +++ b/lib/spring/application.rb
-@@ -93,7 +93,7 @@ module Spring</p>
+@@ -93,7 +93,7 @@ module Spring
+       log "got client"
+       manager.puts
 
-<pre><code>   log "got client"
-   manager.puts
+-      streams = 3.times.map { client.recv_io }
++      streams = %w[w w r].map { |mode| client.recv_io(IO, mode) }
+       [STDOUT, STDERR].zip(streams).each { |a, b| a.reopen(b) }
+
+       preload unless preloaded?
 </code></pre>
-
-<ul>
-<li>   streams = 3.times.map { client.recv_io }</li>
-<li><p>   streams = %w[w w r].map { |mode| client.recv_io(IO, mode) }
-   [STDOUT, STDERR].zip(streams).each { |a, b| a.reopen(b) }</p>
-
-<p>   preload unless preloaded?
-```</p></li>
-</ul>
-
 
 <p>テストも以下のように書いてみたのですが、
 Mac OS X の環境だとそもそも既存のテストも通らないものがあったり、
@@ -359,32 +339,28 @@ pull request を出すのは諦めました。
 これらのパッチの著作権は主張しないので、
 代わりに pull request を出してもらうのは歓迎します。</p>
 
-<p>```diff
-diff &mdash;git a/test/acceptance/app_test.rb b/test/acceptance/app_test.rb
+<pre><code class="diff">diff --git a/test/acceptance/app_test.rb b/test/acceptance/app_test.rb
 index a21b556..ee04e5a 100644
-&mdash;&ndash; a/test/acceptance/app_test.rb
+--- a/test/acceptance/app_test.rb
 +++ b/test/acceptance/app_test.rb
-@@ -440,4 +440,16 @@ class AppTest &lt; ActiveSupport::TestCase</p>
-
-<pre><code>   assert_success "bundle check"
+@@ -440,4 +440,16 @@ class AppTest &lt; ActiveSupport::TestCase
+       assert_success "bundle check"
+     end
+   end
++
++  test "STDIN mode" do
++    assert_success "#{spring} rails runner 'STDIN.write(%(test)) rescue $!.display'", stdout: "not opened for writing"
++  end
++
++  test "STDOUT mode" do
++    assert_success "#{spring} rails runner 'STDOUT.gets rescue $!.display'", stdout: "not opened for reading"
++  end
++
++  test "STDERR mode" do
++    assert_success "#{spring} rails runner 'STDERR.gets rescue $!.display'", stdout: "not opened for reading"
++  end
  end
 </code></pre>
-
-<p>   end
-+
-+  test &ldquo;STDIN mode&rdquo; do
-+    assert_success &ldquo;#{spring} rails runner &lsquo;STDIN.write(%(test)) rescue $!.display&rsquo;&rdquo;, stdout: &ldquo;not opened for writing&rdquo;
-+  end
-+
-+  test &ldquo;STDOUT mode&rdquo; do
-+    assert_success &ldquo;#{spring} rails runner &lsquo;STDOUT.gets rescue $!.display&rsquo;&rdquo;, stdout: &ldquo;not opened for reading&rdquo;
-+  end
-+
-+  test &ldquo;STDERR mode&rdquo; do
-+    assert_success &ldquo;#{spring} rails runner &lsquo;STDERR.gets rescue $!.display&rsquo;&rdquo;, stdout: &ldquo;not opened for reading&rdquo;
-+  end
- end
-```</p>
 ]]></content>
   </entry>
   

@@ -9,7 +9,9 @@
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="hamlからslimへの移行でひっかかったこと 2014-03-11 (Tue) | <a href="#disqus_thread" data-disqus-identifier="http://blog.n-z.jp">Comments haml より slim &hellip;">
+  <meta name="description" content="hamlからslimへの移行でひっかかったこと | Comments haml より slim の方が速いらしいという話を良く見かけるので、
+haml から少しずつ slim に移行しようとして、
+haml2slim で変換してみたらひっかかりまくりました。 インデントがない haml &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -102,7 +104,7 @@
   
 
 
-<time datetime="2014-03-11T22:39:11+09:00" pubdate data-updated="true">2014-03-11 (Tue)</time>
+<time datetime="2014-03-11T22:39:11+09:00" pubdate data-updated="true"></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -130,14 +132,10 @@ slim は不要なスペースは入れずにコンパクトな HTML が生成さ
 <a href="https://github.com/slim-template/slim#default-options">https://github.com/slim-template/slim#default-options</a>
 で設定できるようだったので、以下のように設定しました。</p>
 
-<figure class='code'><figcaption><span>config/initializers/slim.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">if</span> <span class="no">Rails</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">development?</span>
-</span><span class='line'>  <span class="ss">Slim</span><span class="p">:</span><span class="ss">:Engine</span><span class="o">.</span><span class="n">set_default_options</span> <span class="ss">pretty</span><span class="p">:</span> <span class="kp">true</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="ruby config/initializers/slim.rb">if Rails.env.development?
+  Slim::Engine.set_default_options pretty: true
+end
+</code></pre>
 
 <h2>1.9 hash style</h2>
 
@@ -153,39 +151,27 @@ haml で属性を <code>{foo: bar}</code> のように書く形式には対応�
 
 <h2>HTML コメントの中でタグにならない</h2>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="c">/</span><span class="cs">[if lt IE 9]</span><span class="c"></span>
-</span><span class='line'>  <span class="nt">%script</span><span class="p">{</span><span class="ss">src</span><span class="p">:</span> <span class="n">url_for</span><span class="p">(</span><span class="n">html5shiv</span><span class="p">)}</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="haml">    /[if lt IE 9]
+      %script{src: url_for(html5shiv)}
+</code></pre>
 
 <p>のように書いていたのが</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>/![if lt IE 9]
-</span><span class='line'>  script src: url_for(html5shiv)
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="text">    /![if lt IE 9]
+      script src: url_for(html5shiv)
+</code></pre>
 
 <p>のように変換されてさっぱりダメだったので、</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>/[if lt IE 9]
-</span><span class='line'>  script(src=&quot;#{url_for(html5shiv)}&quot;)
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="text">    /[if lt IE 9]
+      script(src="#{url_for(html5shiv)}")
+</code></pre>
 
 <p>または</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>/[if lt IE 9]
-</span><span class='line'>  script(src=url_for(html5shiv))
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="text">    /[if lt IE 9]
+      script(src=url_for(html5shiv))
+</code></pre>
 
 <p>のように書き換えました。
 HTML コメント <code>/!</code> の中だとタグが使えない (そのまま文字列としてコメントの中に入る) ようなので、
@@ -212,10 +198,8 @@ slim だと <code>div(data-pjax-container)</code> が <code>&lt;div data-pjax-co
 によると
 <code>:format</code> を <code>:html</code> にすれば良いということで</p>
 
-<figure class='code'><figcaption><span>config/initializers/slim.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">Slim</span><span class="p">:</span><span class="ss">:Engine</span><span class="o">.</span><span class="n">set_default_options</span> <span class="nb">format</span><span class="p">:</span> <span class="ss">:html</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<pre><code class="ruby config/initializers/slim.rb">Slim::Engine.set_default_options format: :html
+</code></pre>
 
 <p>と設定してみても slim 2.0.2 だと変化がありませんでした。</p>
 
@@ -229,164 +213,118 @@ rails 3.2.17 との組み合わせは tilt の要求バージョンの解決が
 slim と temple の両方をまだリリースされていないバージョンにすると
 使えることが確認できました。</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> mkdir /tmp/slim-test
-</span><span class='line'><span class="gp">%</span> <span class="nb">cd</span> /tmp/slim-test
-</span><span class='line'><span class="gp">%</span> bundle init
-</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="s1">&#39;gem &quot;slim&quot;, github: &quot;slim-template/slim&quot;&#39;</span> &gt;&gt; Gemfile
-</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="s1">&#39;gem &quot;temple&quot;, github: &quot;judofyr/temple&quot;&#39;</span> &gt;&gt; Gemfile
-</span><span class='line'><span class="gp">%</span> bundle
-</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="s1">&#39;div(ng-app)&#39;</span> | bundle <span class="nb">exec </span>slimrb
-</span><span class='line'><span class="go">&lt;div ng-app=&quot;&quot;&gt;&lt;/div&gt;</span>
-</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="s1">&#39;div(ng-app)&#39;</span> | bundle <span class="nb">exec </span>slimrb -o <span class="nv">format</span><span class="o">=</span>:html
-</span><span class='line'><span class="go">&lt;div ng-app&gt;&lt;/div&gt;</span>
-</span></code></pre></td></tr></table></div></figure>
+<p>```console
+% mkdir /tmp/slim-test
+% cd /tmp/slim-test
+% bundle init
+% echo &lsquo;gem &ldquo;slim&rdquo;, github: &ldquo;slim-template/slim&rdquo;&rsquo; >> Gemfile
+% echo &lsquo;gem &ldquo;temple&rdquo;, github: &ldquo;judofyr/temple&rdquo;&rsquo; >> Gemfile
+% bundle
+% echo &lsquo;div(ng-app)&rsquo; | bundle exec slimrb</p>
+
+<div ng-app=""></div>
 
 
-<p>今のところ、 <code>rack-pjax</code> の使用は止めていて、
- <code>=""</code> がつく挙動で直接困ることはなさそうなので、
-この問題は保留することにしました。</p>
+<p>% echo &lsquo;div(ng-app)&rsquo; | bundle exec slimrb -o format=:html</p>
 
-<h2>javascript や css の埋め込み</h2>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="nd">:javascript</span>
-</span><span class='line'>  <span class="nd">window.current_user_id = </span><span class="si">#{</span><span class="n">current_user</span><span class="o">.</span><span class="n">id</span><span class="o">.</span><span class="n">to_i</span><span class="si">}</span>
-</span></code></pre></td></tr></table></div></figure>
+<div ng-app></div>
 
 
-<p>のように書いていたら、</p>
+<pre><code>
+今のところ、 `rack-pjax` の使用は止めていて、
+ `=""` がつく挙動で直接困ることはなさそうなので、
+この問題は保留することにしました。
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>javascript:
-</span><span class='line'>  | window.current_user_id = #{current_user.id.to_i}
-</span></code></pre></td></tr></table></div></figure>
+## javascript や css の埋め込み
+</code></pre>
 
+<pre><code>:javascript
+  window.current_user_id = #{current_user.id.to_i}
+</code></pre>
 
-<p>と変換されて <code>|</code> がそのまま <code>script</code> の中身に付いてしまったので、
-削除しました。</p>
+<pre><code>
+のように書いていたら、
+</code></pre>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>javascript:
-</span><span class='line'>  window.current_user_id = #{current_user.id.to_i}
-</span></code></pre></td></tr></table></div></figure>
+<pre><code>javascript:
+  | window.current_user_id = #{current_user.id.to_i}
+</code></pre>
 
+<pre><code>
+と変換されて `| ` がそのまま `script` の中身に付いてしまったので、
+削除しました。
+</code></pre>
 
-<p><code>:css</code> から <code>css:</code> の変換でも同様でした。
-CSS の場合は行頭が記号だと <code>|</code> がついていないこともありました。</p>
+<pre><code>javascript:
+  window.current_user_id = #{current_user.id.to_i}
+</code></pre>
 
-<h2>空白の有無の問題</h2>
+<pre><code>
+`:css` から `css:` の変換でも同様でした。
+CSS の場合は行頭が記号だと `| ` がついていないこともありました。
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='haml'><span class='line'>        <span class="p">=</span> <span class="n">link_to</span> <span class="n">home_path</span><span class="p">,</span> <span class="ss">class</span><span class="p">:</span> <span class="s1">&#39;brand&#39;</span> <span class="k">do</span>
-</span><span class='line'>          <span class="p">=</span> <span class="n">image_tag</span><span class="p">(</span><span class="s2">&quot;brand.png&quot;</span><span class="p">,</span> <span class="ss">alt</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="ss">size</span><span class="p">:</span> <span class="s2">&quot;35x35&quot;</span><span class="p">)</span>
-</span><span class='line'>          <span class="p">=</span> <span class="n">base_title</span>
-</span></code></pre></td></tr></table></div></figure>
+## 空白の有無の問題
+</code></pre>
 
+<pre><code>        = link_to home_path, class: 'brand' do
+          = image_tag("brand.png", alt: "", size: "35x35")
+          = base_title
+</code></pre>
 
-<p>がそのまま slim になっていて、基本的には問題なかったのですが、
+<pre><code>
+がそのまま slim になっていて、基本的には問題なかったのですが、
 haml と違って slim だとタグとタイトルの間に空白が入らなくなってしまって、
 見た目が変わってしまっていたので、
-<code>'</code> だけの行を追加して空白が入るようにしました。</p>
+`'` だけの行を追加して空白が入るようにしました。
+</code></pre>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>        = link_to home_path, class: &#39;brand&#39; do
-</span><span class='line'>          = image_tag(&quot;brand.png&quot;, alt: &quot;&quot;, size: &quot;35x35&quot;)
-</span><span class='line'>          &#39;
-</span><span class='line'>          = base_title
-</span></code></pre></td></tr></table></div></figure>
+<pre><code>        = link_to home_path, class: 'brand' do
+          = image_tag("brand.png", alt: "", size: "35x35")
+          '
+          = base_title
+</code></pre>
 
+<pre><code>
+## end が抜けるバグで SyntaxError
 
-<h2>end が抜けるバグで SyntaxError</h2>
-
-<p><code>syntax error, unexpected keyword_ensure, expecting keyword_end</code>
+`syntax error, unexpected keyword_ensure, expecting keyword_end`
 になるので原因を調べてみたところ、
 インデントの中の最初がコメントだと、
-そのブロックの <code>end</code> が抜けてしまうようです。</p>
+そのブロックの `end` が抜けてしまうようです。
+</code></pre>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="s1">$&#39;- if true\n  / comment&#39;</span> | bundle <span class="nb">exec </span>slimrb -e
-</span><span class='line'><span class="go">&lt;% if true</span>
-</span><span class='line'>
-</span><span class='line'><span class="go"> %&gt;</span>
-</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="s1">$&#39;- if true\n  |&#39;</span> | bundle <span class="nb">exec </span>slimrb -e
-</span><span class='line'><span class="go">&lt;% if true</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">end %&gt;</span>
-</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="s1">$&#39;- articles.each do |a|\n  / comment&#39;</span> | bundle <span class="nb">exec </span>slimrb -e
-</span><span class='line'><span class="go">&lt;% articles.each do |a|</span>
-</span><span class='line'>
-</span><span class='line'><span class="go"> %&gt;</span>
-</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="s1">$&#39;- articles.each do |a|\n  | text&#39;</span> | bundle <span class="nb">exec </span>slimrb -e
-</span><span class='line'><span class="go">&lt;% articles.each do |a|</span>
-</span><span class='line'><span class="go"> %&gt;text&lt;%</span>
-</span><span class='line'><span class="gp">%</span>&gt;&lt;% end %&gt;
-</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="s1">$&#39;- articles.each do |a|\n  / comment\n/ more comment&#39;</span> | bundle <span class="nb">exec </span>slimrb -e
-</span><span class='line'><span class="go">&lt;% articles.each do |a|</span>
-</span><span class='line'>
-</span><span class='line'>
-</span><span class='line'><span class="go"> %&gt;</span>
-</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="s1">$&#39;- articles.each do |a|\n  / comment\n| text\n/ more comment&#39;</span> | bundle <span class="nb">exec </span>slimrb -e
-</span><span class='line'><span class="go">&lt;% articles.each do |a|</span>
-</span><span class='line'>
-</span><span class='line'><span class="go"> %&gt;text&lt;%</span>
-</span><span class='line'><span class="gp">%</span>&gt;&lt;%
-</span><span class='line'><span class="gp">%</span>&gt;
-</span><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="s1">$&#39;- articles.each do |a|\n  / comment\n| text\n&#39;</span> | bundle <span class="nb">exec </span>slimrb -e
-</span><span class='line'><span class="go">&lt;% articles.each do |a|</span>
-</span><span class='line'>
-</span><span class='line'><span class="go"> %&gt;text&lt;%</span>
-</span><span class='line'><span class="gp">%</span>&gt;
-</span></code></pre></td></tr></table></div></figure>
+<p>% echo $&lsquo;- if true\n  / comment&rsquo; | bundle exec slimrb -e
+&lt;% if true</p>
 
+<p> %>
+% echo $&lsquo;- if true\n  |&rsquo; | bundle exec slimrb -e
+&lt;% if true</p>
+
+<p>end %>
+% echo $&lsquo;- articles.each do |a|\n  / comment&rsquo; | bundle exec slimrb -e
+&lt;% articles.each do |a|</p>
+
+<p> %>
+% echo $&lsquo;- articles.each do |a|\n  | text&rsquo; | bundle exec slimrb -e
+&lt;% articles.each do |a|
+ %>text&lt;%
+%>&lt;% end %>
+% echo $&lsquo;- articles.each do |a|\n  / comment\n/ more comment&rsquo; | bundle exec slimrb -e
+&lt;% articles.each do |a|</p>
+
+<p> %>
+% echo $&lsquo;- articles.each do |a|\n  / comment\n| text\n/ more comment&rsquo; | bundle exec slimrb -e
+&lt;% articles.each do |a|</p>
+
+<p> %>text&lt;%
+%>&lt;%
+%>
+% echo $&lsquo;- articles.each do |a|\n  / comment\n| text\n&rsquo; | bundle exec slimrb -e
+&lt;% articles.each do |a|</p>
+
+<p> %>text&lt;%
+%>
+```</p>
 
 <p>この件は <a href="https://github.com/slim-template/slim/issues/485">https://github.com/slim-template/slim/issues/485</a> で報告してみました。</p>
 
@@ -449,7 +387,7 @@ haml と比べていろんな書き方で使われていなさそうというこ
   
 
 
-<time datetime="2014-03-11T22:39:11+09:00" pubdate data-updated="true">2014-03-11 (Tue)</time>
+<time datetime="2014-03-11T22:39:11+09:00" pubdate data-updated="true"></time>
       
 
 <span class="categories">
@@ -541,6 +479,10 @@ Hatena.BookmarkWidget.load();
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014-08-11-jquery-raty.html">Rails 4.1 で jQuery Raty を使ってみた</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014-08-06-docker-volume.html">boot2docker で VM のファイルをコンテナやホストと共有する</a>
       </li>
     
@@ -556,15 +498,11 @@ Hatena.BookmarkWidget.load();
         <a href="/blog/2014-07-27-ruby-build-without-rbenv.html">ruby-buildをrbenvと組み合わせずに使う</a>
       </li>
     
-      <li class="post">
-        <a href="/blog/2014-07-26-kansaiworkshop062.html">62nd Ruby/Rails勉強会@関西に参加した</a>
-      </li>
-    
   </ul>
 </section>
 <section>
   <h1>Tag Cloud</h1>
-    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 102.14285714285714%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 107.5%'>amagasakirb(7)</a> <a href='/blog/categories/ansible' style='font-size: 109.64285714285714%'>ansible(9)</a> <a href='/blog/categories/anyenv' style='font-size: 101.07142857142857%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.07142857142857%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 103.21428571428571%'>boot2docker(3)</a> <a href='/blog/categories/bootstrap' style='font-size: 101.07142857142857%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 101.07142857142857%'>bts(1)</a> <a href='/blog/categories/cdr' style='font-size: 103.21428571428571%'>cdr(3)</a> <a href='/blog/categories/certification' style='font-size: 101.07142857142857%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 102.14285714285714%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 103.21428571428571%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 124.64285714285714%'>debian(23)</a> <a href='/blog/categories/devise' style='font-size: 105.35714285714286%'>devise(5)</a> <a href='/blog/categories/dkms' style='font-size: 101.07142857142857%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 112.85714285714286%'>docker(12)</a> <a href='/blog/categories/dokku' style='font-size: 102.14285714285714%'>dokku(2)</a> <a href='/blog/categories/doorkeeper' style='font-size: 103.21428571428571%'>doorkeeper(3)</a> <a href='/blog/categories/drb' style='font-size: 101.07142857142857%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.07142857142857%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 108.57142857142857%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 138.57142857142856%'>event(36)</a> <a href='/blog/categories/fluentd' style='font-size: 101.07142857142857%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 104.28571428571429%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 102.14285714285714%'>ghq(2)</a> <a href='/blog/categories/git' style='font-size: 105.35714285714286%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 107.5%'>github(7)</a> <a href='/blog/categories/go' style='font-size: 101.07142857142857%'>go(1)</a> <a href='/blog/categories/gpg' style='font-size: 101.07142857142857%'>gpg(1)</a> <a href='/blog/categories/haml' style='font-size: 101.07142857142857%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 102.14285714285714%'>heroku(2)</a> <a href='/blog/categories/homebrew' style='font-size: 107.5%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 103.21428571428571%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 103.21428571428571%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 101.07142857142857%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 101.07142857142857%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.07142857142857%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 104.28571428571429%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 101.07142857142857%'>jenkins(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 102.14285714285714%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.07142857142857%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.14285714285714%'>jus(2)</a> <a href='/blog/categories/k-of' style='font-size: 101.07142857142857%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 105.35714285714286%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.07142857142857%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.07142857142857%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 104.28571428571429%'>land-of-lisp(4)</a> <a href='/blog/categories/lilo' style='font-size: 101.07142857142857%'>lilo(1)</a> <a href='/blog/categories/linux' style='font-size: 108.57142857142857%'>linux(8)</a> <a href='/blog/categories/live' style='font-size: 103.21428571428571%'>live(3)</a> <a href='/blog/categories/lxc' style='font-size: 101.07142857142857%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.07142857142857%'>lxcjp(1)</a> <a href='/blog/categories/mail' style='font-size: 101.07142857142857%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 102.14285714285714%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 104.28571428571429%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.07142857142857%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.07142857142857%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.07142857142857%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 102.14285714285714%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.07142857142857%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 104.28571428571429%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 105.35714285714286%'>octopress(5)</a> <a href='/blog/categories/omniauth' style='font-size: 102.14285714285714%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 102.14285714285714%'>openssl(2)</a> <a href='/blog/categories/osx' style='font-size: 127.85714285714286%'>osx(26)</a> <a href='/blog/categories/owncloud' style='font-size: 101.07142857142857%'>owncloud(1)</a> <a href='/blog/categories/packer' style='font-size: 101.07142857142857%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.07142857142857%'>passenger(1)</a> <a href='/blog/categories/peco' style='font-size: 101.07142857142857%'>peco(1)</a> <a href='/blog/categories/postfix' style='font-size: 102.14285714285714%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 102.14285714285714%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.07142857142857%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.07142857142857%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 102.14285714285714%'>r(2)</a> <a href='/blog/categories/rabbit' style='font-size: 102.14285714285714%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 131.07142857142858%'>rails(29)</a> <a href='/blog/categories/ransack' style='font-size: 101.07142857142857%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 104.28571428571429%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.07142857142857%'>redmine(1)</a> <a href='/blog/categories/rspec' style='font-size: 101.07142857142857%'>rspec(1)</a> <a href='/blog/categories/rsyslog' style='font-size: 101.07142857142857%'>rsyslog(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.07142857142857%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(56)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.07142857142857%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 103.21428571428571%'>rubykansai(3)</a> <a href='/blog/categories/rubymotion' style='font-size: 113.92857142857143%'>rubymotion(13)</a> <a href='/blog/categories/security' style='font-size: 103.21428571428571%'>security(3)</a> <a href='/blog/categories/shell' style='font-size: 103.21428571428571%'>shell(3)</a> <a href='/blog/categories/slim' style='font-size: 101.07142857142857%'>slim(1)</a> <a href='/blog/categories/sylpheed' style='font-size: 101.07142857142857%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.07142857142857%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 104.28571428571429%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 120.35714285714286%'>ubuntu(19)</a> <a href='/blog/categories/upstart' style='font-size: 102.14285714285714%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 101.07142857142857%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 106.42857142857143%'>vagrant(6)</a> <a href='/blog/categories/vagrantcloud' style='font-size: 102.14285714285714%'>vagrantcloud(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 102.14285714285714%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 101.07142857142857%'>weechat(1)</a> <a href='/blog/categories/yaml' style='font-size: 101.07142857142857%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.07142857142857%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 109.64285714285714%'>zsh(9)</a> </span>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 102.14285714285714%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 107.5%'>amagasakirb(7)</a> <a href='/blog/categories/ansible' style='font-size: 109.64285714285714%'>ansible(9)</a> <a href='/blog/categories/anyenv' style='font-size: 101.07142857142857%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.07142857142857%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 103.21428571428571%'>boot2docker(3)</a> <a href='/blog/categories/bootstrap' style='font-size: 101.07142857142857%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 101.07142857142857%'>bts(1)</a> <a href='/blog/categories/cdr' style='font-size: 103.21428571428571%'>cdr(3)</a> <a href='/blog/categories/certification' style='font-size: 101.07142857142857%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 102.14285714285714%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 103.21428571428571%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 124.64285714285714%'>debian(23)</a> <a href='/blog/categories/devise' style='font-size: 105.35714285714286%'>devise(5)</a> <a href='/blog/categories/dkms' style='font-size: 101.07142857142857%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 112.85714285714286%'>docker(12)</a> <a href='/blog/categories/dokku' style='font-size: 102.14285714285714%'>dokku(2)</a> <a href='/blog/categories/doorkeeper' style='font-size: 103.21428571428571%'>doorkeeper(3)</a> <a href='/blog/categories/drb' style='font-size: 101.07142857142857%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.07142857142857%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 108.57142857142857%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 138.57142857142856%'>event(36)</a> <a href='/blog/categories/fluentd' style='font-size: 101.07142857142857%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 104.28571428571429%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 102.14285714285714%'>ghq(2)</a> <a href='/blog/categories/git' style='font-size: 105.35714285714286%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 107.5%'>github(7)</a> <a href='/blog/categories/go' style='font-size: 101.07142857142857%'>go(1)</a> <a href='/blog/categories/gpg' style='font-size: 101.07142857142857%'>gpg(1)</a> <a href='/blog/categories/haml' style='font-size: 101.07142857142857%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 102.14285714285714%'>heroku(2)</a> <a href='/blog/categories/homebrew' style='font-size: 107.5%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 103.21428571428571%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 103.21428571428571%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 101.07142857142857%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 101.07142857142857%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.07142857142857%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 104.28571428571429%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 101.07142857142857%'>jenkins(1)</a> <a href='/blog/categories/jquery' style='font-size: 101.07142857142857%'>jquery(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 102.14285714285714%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.07142857142857%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.14285714285714%'>jus(2)</a> <a href='/blog/categories/k-of' style='font-size: 101.07142857142857%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 105.35714285714286%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.07142857142857%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.07142857142857%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 104.28571428571429%'>land-of-lisp(4)</a> <a href='/blog/categories/lilo' style='font-size: 101.07142857142857%'>lilo(1)</a> <a href='/blog/categories/linux' style='font-size: 108.57142857142857%'>linux(8)</a> <a href='/blog/categories/live' style='font-size: 103.21428571428571%'>live(3)</a> <a href='/blog/categories/lxc' style='font-size: 101.07142857142857%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.07142857142857%'>lxcjp(1)</a> <a href='/blog/categories/mail' style='font-size: 101.07142857142857%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 102.14285714285714%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 104.28571428571429%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.07142857142857%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.07142857142857%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.07142857142857%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 102.14285714285714%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.07142857142857%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 104.28571428571429%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 105.35714285714286%'>octopress(5)</a> <a href='/blog/categories/omniauth' style='font-size: 102.14285714285714%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 102.14285714285714%'>openssl(2)</a> <a href='/blog/categories/osx' style='font-size: 127.85714285714286%'>osx(26)</a> <a href='/blog/categories/owncloud' style='font-size: 101.07142857142857%'>owncloud(1)</a> <a href='/blog/categories/packer' style='font-size: 101.07142857142857%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.07142857142857%'>passenger(1)</a> <a href='/blog/categories/peco' style='font-size: 101.07142857142857%'>peco(1)</a> <a href='/blog/categories/postfix' style='font-size: 102.14285714285714%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 102.14285714285714%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.07142857142857%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.07142857142857%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 102.14285714285714%'>r(2)</a> <a href='/blog/categories/rabbit' style='font-size: 102.14285714285714%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 132.14285714285714%'>rails(30)</a> <a href='/blog/categories/ransack' style='font-size: 101.07142857142857%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 104.28571428571429%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.07142857142857%'>redmine(1)</a> <a href='/blog/categories/rspec' style='font-size: 101.07142857142857%'>rspec(1)</a> <a href='/blog/categories/rsyslog' style='font-size: 101.07142857142857%'>rsyslog(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.07142857142857%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(56)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.07142857142857%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 103.21428571428571%'>rubykansai(3)</a> <a href='/blog/categories/rubymotion' style='font-size: 113.92857142857143%'>rubymotion(13)</a> <a href='/blog/categories/security' style='font-size: 103.21428571428571%'>security(3)</a> <a href='/blog/categories/shell' style='font-size: 103.21428571428571%'>shell(3)</a> <a href='/blog/categories/slim' style='font-size: 101.07142857142857%'>slim(1)</a> <a href='/blog/categories/sylpheed' style='font-size: 101.07142857142857%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.07142857142857%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 104.28571428571429%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 120.35714285714286%'>ubuntu(19)</a> <a href='/blog/categories/upstart' style='font-size: 102.14285714285714%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 101.07142857142857%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 106.42857142857143%'>vagrant(6)</a> <a href='/blog/categories/vagrantcloud' style='font-size: 102.14285714285714%'>vagrantcloud(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 102.14285714285714%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 101.07142857142857%'>weechat(1)</a> <a href='/blog/categories/yaml' style='font-size: 101.07142857142857%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.07142857142857%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 109.64285714285714%'>zsh(9)</a> </span>
 </section>
 
 <section>

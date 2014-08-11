@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ransack | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ransack/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -32,67 +32,55 @@
 <p>コア部分は以前に実装したものをそのまま使いました。
 i18n 対応などが出来ていませんが、冒頭に書いてある id や class が関連要素になります。</p>
 
-<p>```coffeescript app/assets/javascripts/autonext.js.coffee
-jQuery &ndash;>
+<pre><code class="coffeescript app/assets/javascripts/autonext.js.coffee">jQuery -&gt;
   timerId = null
-  loadingId = &lsquo;#autopager_loading&rsquo;
-  nextId = &lsquo;#next_for_pager&rsquo;
-  pageElement = &lsquo;.page_element&rsquo;
-  lastContent = &lsquo;.page_content:last&rsquo;</p>
+  loadingId = '#autopager_loading'
+  nextId = '#next_for_pager'
+  pageElement = '.page_element'
+  lastContent = '.page_content:last'
 
-<p>  loadNext = &ndash;></p>
+  loadNext = -&gt;
+    nextLink = $(nextId)[0]
+    if nextLink
+      $(loadingId).show()
+      $(nextId).remove()
+      request = $.get nextLink.href, (data) -&gt;
+        $(loadingId).before($(data).find(pageElement)).hide()
+        # 必要なら turbolinks の `page:change` のような DOM 変更通知をする
+      request.error (xhr, status, error) -&gt;
+        if error == "Unauthorized"
+          alert("認証の期限切れです。再読み込みしてください。")
+        else
+          alert("何かエラーです。少し待ってから、再読み込みしてください。")
+        $(loadingId).html("&lt;a href='javascript:location.reload()' class='btn btn-block btn-primary'&gt;再読み込み&lt;/a&gt;")
+  autoNext = -&gt;
+    content = $(lastContent)
+    if content[0] &amp;&amp; content.offset().top &lt; $(document).scrollTop() + $(window).height()
+      if $(loadingId).css('display') is 'none'
+        loadNext()
+    timerId = null
+    $(window).on 'scroll.autoNext', autoNextDefer
 
-<pre><code>nextLink = $(nextId)[0]
-if nextLink
-  $(loadingId).show()
-  $(nextId).remove()
-  request = $.get nextLink.href, (data) -&gt;
-    $(loadingId).before($(data).find(pageElement)).hide()
-    # 必要なら turbolinks の `page:change` のような DOM 変更通知をする
-  request.error (xhr, status, error) -&gt;
-    if error == "Unauthorized"
-      alert("認証の期限切れです。再読み込みしてください。")
-    else
-      alert("何かエラーです。少し待ってから、再読み込みしてください。")
-    $(loadingId).html("&lt;a href='javascript:location.reload()' class='btn btn-block btn-primary'&gt;再読み込み&lt;/a&gt;")
+  autoNextDefer = -&gt;
+    $(window).off 'scroll.autoNext'
+    timerId = setTimeout autoNext, 1000
+
+  $(window).on 'scroll.autoNext', autoNextDefer
 </code></pre>
-
-<p>  autoNext = &ndash;></p>
-
-<pre><code>content = $(lastContent)
-if content[0] &amp;&amp; content.offset().top &lt; $(document).scrollTop() + $(window).height()
-  if $(loadingId).css('display') is 'none'
-    loadNext()
-timerId = null
-$(window).on 'scroll.autoNext', autoNextDefer
-</code></pre>
-
-<p>  autoNextDefer = &ndash;></p>
-
-<pre><code>$(window).off 'scroll.autoNext'
-timerId = setTimeout autoNext, 1000
-</code></pre>
-
-<p>  $(window).on &lsquo;scroll.autoNext&rsquo;, autoNextDefer
-```</p>
 
 <h2>views</h2>
 
 <p>view は次のような感じにしました。
 <code>page_entries_info</code> を <code>.page_element</code> の中にするか、外にするかは悩ましいところです。</p>
 
-<p>```haml app/views/posts/index.html.haml</p>
-
-<pre><code>.page_element
-  %small.page-entries-info= page_entries_info @posts
-  = render @posts
-  = link_to_auto_next_page_with_ransack @q, @posts, t('views.pagination.next'), class: "btn btn-large btn-block btn-success", id: "next_for_pager", params: params
-#autopager_loading(style="display:none")
-  = fa_icon "spinner spin"
-  = t("loading", default: "Loading...")
+<pre><code class="haml app/views/posts/index.html.haml">    .page_element
+      %small.page-entries-info= page_entries_info @posts
+      = render @posts
+      = link_to_auto_next_page_with_ransack @q, @posts, t('views.pagination.next'), class: "btn btn-large btn-block btn-success", id: "next_for_pager", params: params
+    #autopager_loading(style="display:none")
+      = fa_icon "spinner spin"
+      = t("loading", default: "Loading...")
 </code></pre>
-
-<p>```</p>
 
 <p><code>kaminari</code> の <code>link_to_next_page</code> を使っている時に問題になったのですが、
 <code>params</code> をちゃんと渡さないと <code>paginate @posts</code> で生成されるリンクと違って
@@ -111,32 +99,28 @@ timerId = setTimeout autoNext, 1000
 <p>時刻は標準の <code>to_s</code> だと開発環境の一気に入力したデータで問題が起きたので、
 <code>strftime</code> を使って <code>%N</code> (ナノ秒) まで入れるようにしました。</p>
 
-<p>```ruby app/helpers/link_to_helper.rb
-  def link_to_auto_next_page_with_ransack(search, scope, name, options = {}, &amp;block)</p>
-
-<pre><code>return if scope.last_page?
-params = options.delete(:params) || {}
-sorts = search.sorts
-if sorts.empty?
-  raise "You must set sorts to ransack (e.g. `@q.sorts = 'updated_at desc' if @q.sorts.empty?`)"
-end
-order = sorts.first
-column = order.name
-dir = order.dir == "desc" ? "lt" : "gt"
-value = scope.last[column]
-if value.respond_to?(:strftime) &amp;&amp; value.respond_to?(:hour)
-  # expect Time, DateTime, ActiveSupport::TimeWithZone
-  # and not Date
-  value = value.strftime("%Y-%m-%d %H:%M:%S.%N %Z")
-end
-q = params[:q] || {}
-q = q.merge("#{column}_#{dir}" =&gt; value)
-params = params.merge(search.context.search_key =&gt; q)
-link_to name, params, options.reverse_merge(:rel =&gt; 'next'), &amp;block
+<pre><code class="ruby app/helpers/link_to_helper.rb">  def link_to_auto_next_page_with_ransack(search, scope, name, options = {}, &amp;block)
+    return if scope.last_page?
+    params = options.delete(:params) || {}
+    sorts = search.sorts
+    if sorts.empty?
+      raise "You must set sorts to ransack (e.g. `@q.sorts = 'updated_at desc' if @q.sorts.empty?`)"
+    end
+    order = sorts.first
+    column = order.name
+    dir = order.dir == "desc" ? "lt" : "gt"
+    value = scope.last[column]
+    if value.respond_to?(:strftime) &amp;&amp; value.respond_to?(:hour)
+      # expect Time, DateTime, ActiveSupport::TimeWithZone
+      # and not Date
+      value = value.strftime("%Y-%m-%d %H:%M:%S.%N %Z")
+    end
+    q = params[:q] || {}
+    q = q.merge("#{column}_#{dir}" =&gt; value)
+    params = params.merge(search.context.search_key =&gt; q)
+    link_to name, params, options.reverse_merge(:rel =&gt; 'next'), &amp;block
+  end
 </code></pre>
-
-<p>  end
-```</p>
 
 <h2>controller</h2>
 
@@ -144,18 +128,14 @@ link_to name, params, options.reverse_merge(:rel =&gt; 'next'), &amp;block
 <code>@posts = Post</code> の行は <code>cancan</code> の <code>load_and_authorize_resource</code> を使っている場合には不要なので、
 別の行にしています。</p>
 
-<p>```ruby app/controllers/posts_controller.rb
-  def index</p>
-
-<pre><code>@posts = Post
-@q = @posts.search(params[:q])
-@q.sorts = 'updated_at desc' if @q.sorts.empty?
-@posts = @q.result(distinct: true)
-@posts = @posts.page(params[:page]).per(5)
+<pre><code class="ruby app/controllers/posts_controller.rb">  def index
+    @posts = Post
+    @q = @posts.search(params[:q])
+    @q.sorts = 'updated_at desc' if @q.sorts.empty?
+    @posts = @q.result(distinct: true)
+    @posts = @posts.page(params[:page]).per(5)
+  end
 </code></pre>
-
-<p>  end
-```</p>
 
 <h2>スタイルシート</h2>
 
@@ -163,11 +143,8 @@ link_to name, params, options.reverse_merge(:rel =&gt; 'next'), &amp;block
 エラーの時はこの中身が再読み込みボタンに変わります。
 開発環境だと <code>rails server</code> を停止した状態で自動読み込みさせれば、すぐに確認できます。</p>
 
-<p>```css app/assets/stylesheets/application.css.scss</p>
-
-<h1>autopager_loading {</h1>
-
-<p>  background-color: #000;
+<pre><code class="css app/assets/stylesheets/application.css.scss">#autopager_loading {
+  background-color: #000;
   bottom: 0px;
   color: #fff;
   font-size: 12px;
@@ -179,7 +156,7 @@ link_to name, params, options.reverse_merge(:rel =&gt; 'next'), &amp;block
   width: 100%;
   z-index: 1000;
 }
-```</p>
+</code></pre>
 
 <h2>まとめ</h2>
 

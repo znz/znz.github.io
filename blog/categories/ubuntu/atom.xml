@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -32,31 +32,25 @@
 
 <p>Vagrantfile では</p>
 
-<p>```ruby Vagrantfile
-  config.vm.provision :shell do |shell|</p>
-
-<pre><code>shell.path = "provision.sh"
+<pre><code class="ruby Vagrantfile">  config.vm.provision :shell do |shell|
+    shell.path = "provision.sh"
+  end
 </code></pre>
-
-<p>  end
-```</p>
 
 <p>のようにシェルスクリプトでプロビジョニングしているだけだったので、
 その中で以下のようにインストールして設定するようにしました。</p>
 
-<p><code>bash provision.sh
-apt-get install -y apt-cacher-ng
+<pre><code class="bash provision.sh">apt-get install -y apt-cacher-ng
 echo 'Acquire::http::Proxy "http://localhost:3142/";' &gt;/etc/apt/apt.conf.d/02proxy
-</code></p>
+</code></pre>
 
 <p>Vagrantfile で以下のようにポートフォワーディングを設定していれば
 <a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0315" title="第315回　apt-cacher-ngを使ってAPT用キャッシュプロキシの構築：Ubuntu Weekly Recipe｜gihyo.jp … 技術評論社">第315回　apt-cacher-ngを使ってAPT用キャッシュプロキシの構築：Ubuntu Weekly Recipe｜gihyo.jp … 技術評論社</a>
 の2ページ目に説明があるようにヒット率などを確認できます。</p>
 
-<p><code>ruby Vagrantfile
-  # apt-cacher-ng
+<pre><code class="ruby Vagrantfile">  # apt-cacher-ng
   config.vm.network "forwarded_port", guest: 3142, host: 3142
-</code></p>
+</code></pre>
 
 <h2>rake コマンドで環境変数を渡す</h2>
 
@@ -65,18 +59,14 @@ rake コマンドは引数の <code>FOO=bar</code> を <code>ENV</code> に設�
 <code>rake APT_HTTP_PROXY=http://localhost:3142</code> で渡して、
 Rakefile の中では以下のように受け取って <code>lb config</code> に渡しました。</p>
 
-<p>```ruby Rakefile
-desc &ldquo;config RubyLive&rdquo;
-task :config => [:clean] do
-  sh &lsquo;lb config&rsquo;
-  if ENV[&lsquo;APT_HTTP_PROXY&rsquo;]</p>
-
-<pre><code>sh "lb config --apt-http-proxy #{ENV['APT_HTTP_PROXY']}"
-</code></pre>
-
-<p>  end
+<pre><code class="ruby Rakefile">desc "config RubyLive"
+task :config =&gt; [:clean] do
+  sh 'lb config'
+  if ENV['APT_HTTP_PROXY']
+    sh "lb config --apt-http-proxy #{ENV['APT_HTTP_PROXY']}"
+  end
 end
-```</p>
+</code></pre>
 
 <h2>live-build で apt-cacher-ng を使う</h2>
 
@@ -143,34 +133,23 @@ daily build の状態によっては動作が変わっているかもしれま�
 192.168.11.11 と 192.168.12.12 をつなぐ、という感じにしています。
 デフォルトの eth0 は外部への接続用としてそのままにしています。</p>
 
-<p>```
-192.168.11.11 (vm1:eth2)</p>
-
-<pre><code>   |
+<pre><code>192.168.11.11 (vm1:eth2)
+       |
+192.168.50.11 (vm1:eth1)
+       |
+192.168.50.12 (vm2:eth1)
+       |
+192.168.12.12 (vm2:eth2)
 </code></pre>
-
-<p>192.168.50.11 (vm1:eth1)</p>
-
-<pre><code>   |
-</code></pre>
-
-<p>192.168.50.12 (vm2:eth1)</p>
-
-<pre><code>   |
-</code></pre>
-
-<p>192.168.12.12 (vm2:eth2)
-```</p>
 
 <h2>準備</h2>
 
 <p>Usage に書いてあるように準備をしておきます。
 先日作った <code>ja_jp</code> role は git submodule にしているので、</p>
 
-<p><code>
-% git submodule init
+<pre><code>% git submodule init
 % git submodule update
-</code></p>
+</code></pre>
 
 <p>で取得する必要があります。</p>
 
@@ -229,17 +208,16 @@ syslog の方で <code>#012</code> となっている部分がありますが、
 これは rsyslog で改行が変換されたたもので空白として無視すれば良くて、
 例えば</p>
 
-<p><code>
-Jun  4 17:54:43 vm1 racoon: DEBUG: new cookie:#012831d33d46e20f8e6
+<pre><code>Jun  4 17:54:43 vm1 racoon: DEBUG: new cookie:#012831d33d46e20f8e6
 Jun  4 17:54:43 vm1 racoon: DEBUG: final encryption key computed:
 Jun  4 17:54:43 vm1 racoon: DEBUG: #012932d361f fc62ddc2 6164d513 d40d211f b7364166 232cf490
-</code></p>
+</code></pre>
 
 <p>というログなら cookie は <code>831d33d46e20f8e6</code> になります。</p>
 
 <p>鍵は <code>932d361ffc62ddc26164d513d40d211fb7364166232cf490</code> になると思ったのですが、
 これを
-Edit &ndash;> Preferences &ndash;> Protocols &ndash;> ISAKMP &ndash;> IKEv1 Decryption Table:
+Edit -> Preferences -> Protocols -> ISAKMP -> IKEv1 Decryption Table:
 に設定すれば良いはずなのですが、試したところ decrypt されなかったので、
 あっているのかどうかはわかりませんでした。
 cookie の方は他のログなどで確認できたので、あっているはずです。</p>
@@ -275,19 +253,16 @@ cookie の方は他のログなどで確認できたので、あっているは�
 
 <p></p>
 
-<h2>```yaml tasks/apt.yaml</h2>
+<pre><code class="yaml tasks/apt.yaml">---
+- template: src=sources.list.{{ ansible_distribution }}.j2 dest=/etc/apt/sources.list owner=root group=root mode=0644
+  register: apt_sources_list
+- apt: update_cache=yes
+  when: apt_sources_list|changed
+- apt: update_cache=yes cache_valid_time=3600
+  when: apt_sources_list|skipped
+</code></pre>
 
-<ul>
-<li>template: src=sources.list.{{ ansible_distribution }}.j2 dest=/etc/apt/sources.list owner=root group=root mode=0644
-register: apt_sources_list</li>
-<li>apt: update_cache=yes
-when: apt_sources_list|changed</li>
-<li>apt: update_cache=yes cache_valid_time=3600
-when: apt_sources_list|skipped
-```
-</li>
-</ul>
-
+<p></p>
 
 <h2>テンプレートの内容</h2>
 
@@ -300,7 +275,7 @@ components が別の行になっているものもあったのですが、
 1 行にまとめました。</p>
 
 <p>
-```text templates/sources.list.Ubuntu.j2
+&#8220;`text templates/sources.list.Ubuntu.j2
 deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }} {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
 deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }} {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
 deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-updates {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
@@ -312,7 +287,7 @@ deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-updates {{ apt_u
 
 <p>deb <a href="http://security.ubuntu.com/ubuntu">http://security.ubuntu.com/ubuntu</a> {{ ansible_distribution_release }}-security {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
 deb-src <a href="http://security.ubuntu.com/ubuntu">http://security.ubuntu.com/ubuntu</a> {{ ansible_distribution_release }}-security {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
-```
+&#8220;`
 </p>
 
 <p><code>backports</code> は使っていなかったのでコメントアウトしていますが、
@@ -322,15 +297,14 @@ deb-src <a href="http://security.ubuntu.com/ubuntu">http://security.ubuntu.com/u
 
 <p>例として jaist ミラーを使うようにしました。</p>
 
-<h2>```yaml vars/main.yml</h2>
-
-<p>apt_ubuntu_uri: &ldquo;<a href="http://ftp.jaist.ac.jp/pub/Linux/ubuntu/">http://ftp.jaist.ac.jp/pub/Linux/ubuntu/</a>&rdquo;
+<pre><code class="yaml vars/main.yml">---
+apt_ubuntu_uri: "http://ftp.jaist.ac.jp/pub/Linux/ubuntu/"
 apt_ubuntu_components:
-&ndash; main
-&ndash; restricted
-&ndash; universe
-&ndash; multiverse
-```</p>
+- main
+- restricted
+- universe
+- multiverse
+</code></pre>
 ]]></content>
   </entry>
   
@@ -361,9 +335,8 @@ ansible を使えばサーバー自体に余計なパッケージを入れなく
 
 <p><code>apt_repository</code> モジュールの引数の <code>repo</code> に <code>ppa</code> を指定するだけです。</p>
 
-<p><code>console
-ansible all -s -K -i ./inventory_hosts -m apt_repository -a "repo='ppa:chris-lea/node.js'"
-</code></p>
+<pre><code class="console">ansible all -s -K -i ./inventory_hosts -m apt_repository -a "repo='ppa:chris-lea/node.js'"
+</code></pre>
 
 <h2>playbook.yml に書く</h2>
 
@@ -377,15 +350,11 @@ ansible all -s -K -i ./inventory_hosts -m apt_repository -a "repo='ppa:chris-lea
 <p><a href="https://github.com/znz/ansible-playbook-passenger/blob/master/provisioning/roles/passenger/tasks/nodejs-ppa.yml">nodejs-ppa.yml</a>
 が実際の使用例です。</p>
 
-<h2>```yaml nodejs-ppa.yml</h2>
-
-<ul>
-<li>apt: pkg=python-apt</li>
-<li>apt_repository: repo=&lsquo;ppa:chris-lea/node.js&rsquo;
-when: ansible_distribution_release == &ldquo;precise&rdquo;
-```</li>
-</ul>
-
+<pre><code class="yaml nodejs-ppa.yml">---
+- apt: pkg=python-apt
+- apt_repository: repo='ppa:chris-lea/node.js'
+  when: ansible_distribution_release == "precise"
+</code></pre>
 
 <p>Debian の場合や ubuntu 14.04 の場合は除外しても良いかと思って、
 ubuntu 12.04 の時だけ実行するために
@@ -411,11 +380,10 @@ ubuntu 12.04 の時だけ実行するために
 <p>まず dokku を clone して中の Vagrantfile をみて、
 環境変数で設定できる項目があるのを確認しておきます。</p>
 
-<p><code>console
-% git clone https://github.com/progrium/dokku
+<pre><code class="console">% git clone https://github.com/progrium/dokku
 % cd dokku
 % vi Vagrantfile
-</code></p>
+</code></pre>
 
 <h2>Vagantfile を変更する</h2>
 
@@ -425,30 +393,23 @@ ubuntu 12.04 の時だけ実行するために
 shell provision のところで書き換えておきます。
 (関係ないところにマッチして問題が起きる可能性はほぼないので、置換元の URL の <code>.</code> はエスケープしていません。)</p>
 
-<p>```diff
-diff &mdash;git a/Vagrantfile b/Vagrantfile
+<pre><code class="diff">diff --git a/Vagrantfile b/Vagrantfile
 index a310f6b..7c1a133 100644
-&mdash;&ndash; a/Vagrantfile
+--- a/Vagrantfile
 +++ b/Vagrantfile
-@@ -29,5 +29,10 @@ Vagrant::configure(&ldquo;2&rdquo;) do |config|</p>
+@@ -29,5 +29,10 @@ Vagrant::configure("2") do |config|
+     vb.customize ["modifyvm", :id, "--memory", BOX_MEMORY]
+   end
 
-<pre><code> vb.customize ["modifyvm", :id, "--memory", BOX_MEMORY]
+-  config.vm.provision :shell, :inline =&gt; "apt-get -y install git &amp;&amp; cd /root/dokku &amp;&amp; #{make_cmd}"
++  config.vm.provision :shell, :inline =&gt; &lt;&lt;-SHELL
++    sed -i~ -e 's;http://archive.ubuntu.com/ubuntu;http://ftp.jaist.ac.jp/pub/Linux/ubuntu;' /etc/apt/sources.list &amp;&amp;
++    apt-get update &amp;&amp;
++    apt-get -y install git &amp;&amp;
++    cd /root/dokku &amp;&amp; #{make_cmd}
++  SHELL
+ end
 </code></pre>
-
-<p>   end</p>
-
-<ul>
-<li>config.vm.provision :shell, :inline => &ldquo;apt-get -y install git &amp;&amp; cd /root/dokku &amp;&amp; #{make_cmd}&rdquo;</li>
-<li>config.vm.provision :shell, :inline => &lt;&lt;-SHELL</li>
-<li> sed -i~ -e &rsquo;s;<a href="http://archive.ubuntu.com/ubuntu;http://ftp.jaist.ac.jp/pub/Linux/ubuntu;">http://archive.ubuntu.com/ubuntu;http://ftp.jaist.ac.jp/pub/Linux/ubuntu;</a>&lsquo; /etc/apt/sources.list &amp;&amp;</li>
-<li> apt-get update &amp;&amp;</li>
-<li> apt-get -y install git &amp;&amp;</li>
-<li> cd /root/dokku &amp;&amp; #{make_cmd}</li>
-<li>SHELL
-end
-```</li>
-</ul>
-
 
 <h2>初回起動</h2>
 
@@ -459,9 +420,8 @@ end
 Rails アプリを動かそうとするとメモリ不足で <code>bundle install</code> の途中で失敗して
 deploy できなかったので増やしています。</p>
 
-<p><code>console
-% BOX_NAME=trusty-amd64-20140418 BOX_URI=https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box BOX_MEMORY=2048 vagrant up
-</code></p>
+<pre><code class="console">% BOX_NAME=trusty-amd64-20140418 BOX_URI=https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box BOX_MEMORY=2048 vagrant up
+</code></pre>
 
 <p>box のダウンロードとインストール、
 VM の作成などには時間がかかるので、
@@ -476,114 +436,92 @@ box の設定は参照されないので省略できます。
 
 <p><code>BOX_MEMORY</code> は毎回設定されるので、指定を忘れると 512 に戻ってしまいます。</p>
 
-<p><code>console
-% BOX_MEMORY=2048 vagrant up
-</code></p>
+<pre><code class="console">% BOX_MEMORY=2048 vagrant up
+</code></pre>
 
 <h2>dokku の初期設定</h2>
 
 <p>ssh の鍵を追加します。</p>
 
-<p>```console
-% vagrant ssh
-vagrant@dokku:~$ egrep &lsquo;^ssh&rsquo; ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
+<pre><code class="console">% vagrant ssh
+vagrant@dokku:~$ egrep '^ssh' ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
 dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6
-vagrant@dokku:~$ cat ~/.ssh/authorized_keys</p>
-
-<h1>CLOUD_IMG: This file was created/modified by the Cloud Image build process</h1>
-
-<p>ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+vagrant@dokku:~$ cat ~/.ssh/authorized_keys
+# CLOUD_IMG: This file was created/modified by the Cloud Image build process
+ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
 vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
-command=&ldquo;FINGERPRINT=dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6 NAME=vagrant <code>cat /home/dokku/.sshcommand</code> $SSH_ORIGINAL_COMMAND&rdquo;,no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
-```</p>
+command="FINGERPRINT=dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6 NAME=vagrant `cat /home/dokku/.sshcommand` $SSH_ORIGINAL_COMMAND",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+</code></pre>
 
 <h2>dokku の鍵追加失敗例</h2>
 
 <p><code>cat ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant</code>
 で追加してしまうと以下のように変になってしまいます。</p>
 
-<p><code>text
-vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
+<pre><code class="text">vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
 command="FINGERPRINT=is NAME=vagrant `cat /home/dokku/.sshcommand` $SSH_ORIGINAL_COMMAND",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding # CLOUD_IMG: This file was created/modified by the Cloud Image build process
 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
-</code></p>
-
-<p>```bash</p>
-
-<pre><code>KEY=$(cat)
-FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
-KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
-echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
-echo $FINGERPRINT
 </code></pre>
 
-<p>```</p>
+<pre><code class="bash">    KEY=$(cat)
+    FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
+    KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
+    echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
+    echo $FINGERPRINT
+</code></pre>
 
 <p>の部分を以下のように <code>while read</code> ループに変えた方が良いのかもしれません。</p>
 
-<p>```bash</p>
-
-<pre><code>while read KEY; do
-  FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
-  KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
-  echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
-  echo $FINGERPRINT
-done
+<pre><code class="bash">    while read KEY; do
+      FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
+      KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
+      echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
+      echo $FINGERPRINT
+    done
 </code></pre>
-
-<p>```</p>
 
 <h2>node-js-sample の deploy</h2>
 
 <p><code>node-js-sample</code> を <code>deploy</code> して動作確認します。
 以下の例では <code>ssh dokku</code> で VM に接続できるように <code>~/.ssh/config</code> に設定済みです。</p>
 
-<p>```console
-% git clone <a href="https://github.com/heroku/node-js-sample">https://github.com/heroku/node-js-sample</a>
-Cloning into &lsquo;node-js-sample&rsquo;&hellip;
+<pre><code class="console">% git clone https://github.com/heroku/node-js-sample
+Cloning into 'node-js-sample'...
 remote: Reusing existing pack: 319, done.
 remote: Total 319 (delta 0), reused 0 (delta 0)
 Receiving objects: 100% (319/319), 201.92 KiB | 210.00 KiB/s, done.
 Resolving deltas: 100% (17/17), done.
-Checking connectivity&hellip; done.
+Checking connectivity... done.
 % cd node-js-sample
 % git remote add dokku dokku:node-js-app
-%  git push &mdash;set-upstream dokku master
+%  git push --set-upstream dokku master
 Counting objects: 319, done.
 Delta compression using up to 4 threads.
 Compressing objects: 100% (274/274), done.
 Writing objects: 100% (319/319), 201.92 KiB | 0 bytes/s, done.
 Total 319 (delta 17), reused 319 (delta 17)
-&mdash;&mdash;&ndash;> Cleaning up &hellip;
-remote: Cloning into &lsquo;/tmp/tmp.ChNvZEb5S9&rsquo;&hellip;
-&mdash;&mdash;&ndash;> Building node-js-app &hellip;
+-----&gt; Cleaning up ...
+remote: Cloning into '/tmp/tmp.ChNvZEb5S9'...
+-----&gt; Building node-js-app ...
 remote: warning: You appear to have cloned an empty repository.
 remote: done.
-remote: HEAD is now at 2e52ce7&hellip; Update documentation links</p>
-
-<pre><code>   Node.js app detected
-</code></pre>
-
-<p>&mdash;&mdash;&ndash;> Requested node range:  0.10.x
-&mdash;&mdash;&ndash;> Resolved node version: 0.10.26
-&mdash;&mdash;&ndash;> Downloading and installing node
+remote: HEAD is now at 2e52ce7... Update documentation links
+       Node.js app detected
+-----&gt; Requested node range:  0.10.x
+-----&gt; Resolved node version: 0.10.26
+-----&gt; Downloading and installing node
 (省略)
-&mdash;&mdash;&ndash;> Discovering process types</p>
+-----&gt; Discovering process types
+       Procfile declares types -&gt; web
+-----&gt; Releasing node-js-app ...
+-----&gt; Deploying node-js-app ...
+=====&gt; Application deployed:
+       http://node-js-app.dokku.me
 
-<pre><code>   Procfile declares types -&gt; web
-</code></pre>
-
-<p>&mdash;&mdash;&ndash;> Releasing node-js-app &hellip;
-&mdash;&mdash;&ndash;> Deploying node-js-app &hellip;
-=====> Application deployed:</p>
-
-<pre><code>   http://node-js-app.dokku.me
-</code></pre>
-
-<p>To dokku:node-js-app
- * [new branch]      master &ndash;> master
+To dokku:node-js-app
+ * [new branch]      master -&gt; master
 Branch master set up to track remote branch master from dokku.
-```</p>
+</code></pre>
 
 <p>Vagrantfile で guest の 80 番ポートを host の 8080 番ポートで見えるように設定されているので
 <code>http://node-js-app.dokku.me:8080/</code>

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: html5 | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/html5/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -28,9 +28,8 @@
 
 <p>まず CSS 用のクラスとして自動変更する目印の <code>background</code> と初期状態の <code>background-0</code> を <code>body</code> に設定しました。</p>
 
-<p><code>haml app/views/layouts/application.html.haml
-  %body.background.background-0
-</code></p>
+<pre><code class="haml app/views/layouts/application.html.haml">  %body.background.background-0
+</code></pre>
 
 <h2>スクリプト</h2>
 
@@ -41,29 +40,25 @@
 <p>以下のコードを書いた時には知らなかったので対処が入っていないのですが、
 Safari のプライベートブラウズでは <code>sessionStorage</code> があるのに使えないという厄介なことになっているので、必要ならそのあたりのエラー処理も入れた方が良いです。</p>
 
-<p>```coffeescript app/assets/javascripts/background.js.coffee
-jQuery &ndash;>
-  if typeof sessionStorage != &lsquo;undefined&rsquo;</p>
-
-<pre><code>background_num = 2
-change_background = -&gt;
-  body = $("body")
-  if !body.hasClass("background")
-    return
-  background = sessionStorage.getItem("background")
-  if background
-    background = parseInt(background)
-    $("body").removeClass("background-" + background)
-    background = (background + 1) % background_num
-    $("body").addClass("background-" + background)
-  else
-    background = 0
-  sessionStorage.setItem("background", background)
-$(document).on 'ajax:success.background', change_background
-change_background()
+<pre><code class="coffeescript app/assets/javascripts/background.js.coffee">jQuery -&gt;
+  if typeof sessionStorage != 'undefined'
+    background_num = 2
+    change_background = -&gt;
+      body = $("body")
+      if !body.hasClass("background")
+        return
+      background = sessionStorage.getItem("background")
+      if background
+        background = parseInt(background)
+        $("body").removeClass("background-" + background)
+        background = (background + 1) % background_num
+        $("body").addClass("background-" + background)
+      else
+        background = 0
+      sessionStorage.setItem("background", background)
+    $(document).on 'ajax:success.background', change_background
+    change_background()
 </code></pre>
-
-<p>```</p>
 
 <h2>スタイルシート</h2>
 
@@ -84,8 +79,7 @@ change_background()
 <a href="https://github.com/sstephenson/sprockets/issues/488">Dependent assets might not be recompiled</a>
 のあたりにすでに話が出ているので、仕様なのかもしれません。</p>
 
-<p><code>css app/assets/stylesheets/background.css.scss
-//= depend_on "background-0.jpg"
+<pre><code class="css app/assets/stylesheets/background.css.scss">//= depend_on "background-0.jpg"
 //= depend_on "background-1.jpg"
 .background-0 {
   background-image: image-url("background-0.jpg");
@@ -93,7 +87,7 @@ change_background()
 .background-1 {
   background-image: image-url("background-1.jpg");
 }
-</code></p>
+</code></pre>
 ]]></content>
   </entry>
   
@@ -198,17 +192,14 @@ video
 その function を呼ぶという使い方は出来ないようだったので、
 以下のように <code>call</code> で呼ぶようにしました。</p>
 
-<p>```coffeescript
-  getUserMedia =</p>
+<pre><code class="coffeescript">  getUserMedia =
+    navigator.getUserMedia ||
+    navigator.webkitGetUserMedia ||
+    navigator.mozGetUserMedia ||
+    navigator.msGetUserMedia
 
-<pre><code>navigator.getUserMedia ||
-navigator.webkitGetUserMedia ||
-navigator.mozGetUserMedia ||
-navigator.msGetUserMedia
+  getUserMedia.call(navigator, {audio:false,video:true,toString:-&gt;"video"}, onStream, onError)
 </code></pre>
-
-<p>  getUserMedia.call(navigator, {audio:false,video:true,toString:&ndash;>&ldquo;video&rdquo;}, onStream, onError)
-```</p>
 
 <p><code>onStream</code>
 の引数にわたってきた
@@ -264,14 +255,13 @@ jQuery UI の Autocomplete に少しコードを足したら
 <code>simple_form</code> gem を使っているので、
 以下のように書きました。</p>
 
-<p><code>haml
-= f.input :drink, input_html: { autocomplete: "on", list: "drink_list" }
+<pre><code class="haml">= f.input :drink, input_html: { autocomplete: "on", list: "drink_list" }
 %datalist#drink_list
   %options(value="不要")
   %options(value="水")
   %options(value="お茶")
   %options(value="コーヒー")
-</code></p>
+</code></pre>
 
 <p>この方法の問題点としては、
 IE は IE10 (以降?) しか対応していなかったり、
@@ -298,43 +288,30 @@ jQuery UI Autocomplete を使うことにしました。</p>
 必要なものだけ CSS や JS を require していたので、
 まず <code>app/assets/stylesheets/application.css</code> に</p>
 
-<p><code>text application.css
- *= require jquery.ui.autocomplete
-</code></p>
+<pre><code class="text application.css"> *= require jquery.ui.autocomplete
+</code></pre>
 
 <p>を追加しました。</p>
 
 <p>次に <code>app/assets/javascripts/autocomplete.js.coffee</code> として
 以下のような内容で作成しました。</p>
 
-<p>```coffeescript autocomplete.js.coffee</p>
-
-<h1>= require jquery.ui.autocomplete</h1>
-
-<p>jQuery &ndash;>
-  drink_list = [</p>
-
-<pre><code>"不要"
-"水"
-"お茶"
-"コーヒー"
+<pre><code class="coffeescript autocomplete.js.coffee">#= require jquery.ui.autocomplete
+jQuery -&gt;
+  drink_list = [
+    "不要"
+    "水"
+    "お茶"
+    "コーヒー"
+  ]
+  $("#somemodel_drink").autocomplete
+    source: drink_list
+    autoFocus: true
+    delay: 0
+    minLength: 0
+  .on "focus", -&gt;
+    $("#somemodel_drink").autocomplete("search", "")
 </code></pre>
-
-<p>  ]
-  $(&ldquo;#somemodel_drink&rdquo;).autocomplete</p>
-
-<pre><code>source: drink_list
-autoFocus: true
-delay: 0
-minLength: 0
-</code></pre>
-
-<p>  .on &ldquo;focus&rdquo;, &ndash;></p>
-
-<pre><code>$("#somemodel_drink").autocomplete("search", "")
-</code></pre>
-
-<p>```</p>
 
 <h2>余談</h2>
 

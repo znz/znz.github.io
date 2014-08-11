@@ -4,7 +4,7 @@
   <title><![CDATA[Category: octopress | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/octopress/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -26,7 +26,7 @@
 
 <h2>コードブロックのエスケープ</h2>
 
-<p><a href="http://stackoverflow.com/questions/15786144/how-to-escape-in-markdown-on-octopress">How to escape  in markdown on Octopress? &ndash; Stack Overflow</a>
+<p><a href="http://stackoverflow.com/questions/15786144/how-to-escape-in-markdown-on-octopress">How to escape  in markdown on Octopress? - Stack Overflow</a>
 にあるように</p>
 
 <pre><code>```種類 ファイル名
@@ -42,12 +42,9 @@
 
 <p>先ほどのリンクのアンカーやこの節の見出しのような文の途中は</p>
 
-<p></p>
-
-<pre><code>{{ "{{" }}
-</code></pre>
-
-<p></p>
+<p>
+    {{ &ldquo;{{&rdquo; }}
+</p>
 
 <p>のように書けばエスケープできました。</p>
 
@@ -57,41 +54,29 @@
 
 <p><code>{% raw %}</code> と <code>{% endraw %}</code> 自体をエスケープするのに</p>
 
-<p></p>
-
-<pre><code>{{ "{%" }}
-</code></pre>
-
-<p></p>
+<p>
+    {{ &ldquo;{%&rdquo; }}
+</p>
 
 <p>を使って</p>
 
-<p></p>
-
-<pre><code>`{{ "{%" }} raw %}` と `{{ "{%" }} endraw %}`
-</code></pre>
-
-<p></p>
+<p>
+    <code>{{ "{%" }} raw %}</code> と <code>{{ "{%" }} endraw %}</code>
+</p>
 
 <p>のように書きました。</p>
 
 <p><code>%}</code> まで <code>""</code> の中に入れようとして</p>
 
-<p></p>
-
-<pre><code>`{{ "{% raw %}" }}`
-</code></pre>
-
-<p></p>
+<p>
+    <code>{{ "{% raw %}" }}</code>
+</p>
 
 <p>と書くと</p>
 
-<p></p>
-
-<pre><code>Liquid Exception: Variable '{{ "{% raw %}' was not properly terminated with regexp: /\}\}/
-</code></pre>
-
-<p></p>
+<p>
+    Liquid Exception: Variable &lsquo;{{ &ldquo;{% raw %}&rsquo; was not properly terminated with regexp: /}}/
+</p>
 
 <p>というエラーになってうまくいきませんでした。</p>
 ]]></content>
@@ -118,8 +103,7 @@ zsh の <code>(mm-1)</code> を使っているので、
 最近は <code>--prune</code> を付けてリモートで削除されたブランチは手元でも削除されるようにしていることが多いので、
 今回も付けています。</p>
 
-<p><code>console
-% git remote -v
+<pre><code class="console">% git remote -v
 octopress   git://github.com/imathis/octopress.git (fetch)
 octopress   git@github.com:imathis/octopress.git (push)
 origin  git@github.com:znz/znz.github.io (fetch)
@@ -134,12 +118,11 @@ From git://github.com/imathis/octopress
  * [new branch]      jekyll-1-3 -&gt; octopress/jekyll-1-3
    64ba603..78defff  master     -&gt; octopress/master
 %
-</code></p>
+</code></pre>
 
 <p>差分を確認してからマージしました。</p>
 
-<p><code>console
-% git diff source...octopress/master
+<pre><code class="console">% git diff source...octopress/master
 % git merge octopress/master
 Auto-merging Rakefile
 Merge made by the 'recursive' strategy.
@@ -158,14 +141,13 @@ Merge made by the 'recursive' strategy.
  plugins/include_code.rb                                   |  2 +-
  plugins/jsfiddle.rb                                       |  2 +-
  14 files changed, 41 insertions(+), 55 deletions(-)
-</code></p>
+</code></pre>
 
 <p>themes も更新されているので、
 <a href="http://octopress.org/docs/updating/">Updating Octopress</a>
 の手順に従ってアップデートしました。</p>
 
-<p><code>console
- % bundle install
+<pre><code class="console"> % bundle install
  Using rake (0.9.2.2)
  Using RedCloth (4.2.9)
  Using chunky_png (1.2.5)
@@ -211,7 +193,7 @@ Merge made by the 'recursive' strategy.
  cp -r sass/custom/. sass.old/custom
  ## Updated Sass ##
  %
-</code></p>
+</code></pre>
 
 <p><code>git diff</code> で確認するとローカルでの変更が消えてしまっていたので、
 <code>git checkout ファイルパス</code> で戻したり、
@@ -231,11 +213,10 @@ zsh の機能だけでうまく表現できなかったので、
 <a href="http://qiita.com/mollifier/items/1c4a4930a89aa75e5ced">zsh で find を使わずに簡単にファイルを絞り込む</a>
 を参考にして1分以内に変更されたファイルだけという絞り込みで妥協することにしました。</p>
 
-<p><code>console
- bundle exec rake "isolate[$(echo source/_posts/*.markdown(mm-1))]"
+<pre><code class="console"> bundle exec rake "isolate[$(echo source/_posts/*.markdown(mm-1))]"
  bundle exec rake preview
  bundle exec rake integrate
-</code></p>
+</code></pre>
 
 <h3>rake integrate 忘れを防ぐ</h3>
 
@@ -245,11 +226,10 @@ zsh の機能だけでうまく表現できなかったので、
 
 <p>Rakefile をみてみると</p>
 
-<p><code>ruby Rakefile
-desc "Generate website and deploy"
+<pre><code class="ruby Rakefile">desc "Generate website and deploy"
 task :gen_deploy =&gt; [:integrate, :generate, :deploy] do
 end
-</code></p>
+</code></pre>
 
 <p>となっているので、
 <code>bundle exec rake deploy</code> ではなく
@@ -259,9 +239,8 @@ end
 
 <p>octopress の fork で作成したこの変更は</p>
 
-<p><code>console
-git pull git@github.com:znz/octopress.git check-stash-before-deploy
-</code></p>
+<pre><code class="console">git pull git@github.com:znz/octopress.git check-stash-before-deploy
+</code></pre>
 
 <p>で手元の source ブランチに取り込みました。</p>
 ]]></content>
@@ -329,19 +308,17 @@ ruby-build を使っていて
 
 <p>まず remote を確認します。</p>
 
-<p><code>
- git remote -v
+<pre><code> git remote -v
 octopress       git://github.com/imathis/octopress.git (fetch)
 octopress       git://github.com/imathis/octopress.git (push)
 origin  git@github.com:znz/znz.github.io (fetch)
 origin  git@github.com:znz/znz.github.io (push)
-</code></p>
+</code></pre>
 
 <p>octopress という名前にしていることが確認出来たので、
 fetch します。</p>
 
-<p><code>
-% git fetch octopress
+<pre><code>% git fetch octopress
 remote: Counting objects: 85, done.
 remote: Compressing objects: 100% (34/34), done.
 remote: Total 46 (delta 30), reused 26 (delta 10)
@@ -350,20 +327,19 @@ From git://github.com/imathis/octopress
    9699df7..5a6b8e4  2.5        -&gt; octopress/2.5
    f75547f..ff71657  master     -&gt; octopress/master
    8d7ef9a..98bd6c9  site-2.1   -&gt; octopress/site-2.1
-</code></p>
+</code></pre>
 
 <p>merge する前に
 <code>git diff source...octopress/master</code>
 で変更点を確認してから merge します。</p>
 
-<p><code>
-% git diff source...octopress/master
+<pre><code>% git diff source...octopress/master
 % git merge octopress/master
 Auto-merging Rakefile
 CONFLICT (modify/delete): .ruby-version deleted in octopress/master and modified in HEAD. Version HEAD of .ruby-version left in tree.
 Automatic merge failed; fix conflicts and then commit the result.
 zsh: exit 1     git merge octopress/master
-</code></p>
+</code></pre>
 
 <p>conflict しました。
 <code>.ruby-version</code>
@@ -373,18 +349,16 @@ zsh: exit 1     git merge octopress/master
 消してしまいます。
 その変更を commit すると merge 完了でした。</p>
 
-<p><code>
-% git rm .ruby-version
+<pre><code>% git rm .ruby-version
 .ruby-version: needs merge
 rm '.ruby-version'
 % git commit -av
 [source 136b37f] Merge remote-tracking branch 'octopress/master' into source
-</code></p>
+</code></pre>
 
 <p>うまくいったので、バックアップをかねて github に push しておきます。</p>
 
-<p><code>
-% git push
+<pre><code>% git push
 Counting objects: 55, done.
 Delta compression using up to 4 threads.
 Compressing objects: 100% (39/39), done.
@@ -392,7 +366,7 @@ Writing objects: 100% (41/41), 4.90 KiB | 0 bytes/s, done.
 Total 41 (delta 28), reused 0 (delta 0)
 To git@github.com:znz/znz.github.io
    5dabdd2..136b37f  source -&gt; source
-</code></p>
+</code></pre>
 
 <p>rake のバージョンの関係で
 <code>rake preview</code>
@@ -400,11 +374,10 @@ To git@github.com:znz/znz.github.io
 <code>bundle exec rake preview</code>
 のように実行することが必須になってしまいました。</p>
 
-<p><code>
-% rake preview
+<pre><code>% rake preview
 rake aborted!
 You have already activated rake 10.1.0, but your Gemfile requires rake 0.9.2.2. Using bundle exec may solve this.
-</code></p>
+</code></pre>
 
 <h2>まとめ</h2>
 

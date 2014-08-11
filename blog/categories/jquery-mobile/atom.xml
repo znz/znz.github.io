@@ -4,7 +4,7 @@
   <title><![CDATA[Category: jquery-mobile | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/jquery-mobile/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -57,23 +57,21 @@
 は入っていないのですが、
 念のため追加しておきました。</p>
 
-<p><code>ruby config/environments/production.rb
-   config.assets.precompile += %w( mobile.js mobile.css *.gif *.png *.jpg )
-</code></p>
+<pre><code class="ruby config/environments/production.rb">   config.assets.precompile += %w( mobile.js mobile.css *.gif *.png *.jpg )
+</code></pre>
 
 <p>この状態で再度
 <code>RAILS_ENV=production rake assets:precompile</code>
 で調べてみると <code>public/assets/</code>
 は以下のようになっていました。</p>
 
-<p><code>console
-% ls public/assets/jquery-mobile
+<pre><code class="console">% ls public/assets/jquery-mobile
 ajax-loader-5c6592c3263e7de88985668db733b08f.gif
 icons-18-black-dbc49700bc8bd5a9d3e0120cb111ea62.png
 icons-18-white-f8f5999f3ea0d9ebea6a4ec193442c1f.png
 icons-36-black-76b4944fda10128b365344f06377dad5.png
 icons-36-white-178cc38be265514b341e111ed7d38712.png
-</code></p>
+</code></pre>
 
 <p>rails 4 になって、ハッシュなしの
 <code>ajax-loader.gif</code>
@@ -127,33 +125,28 @@ production
 <code>mobileinit</code>
 を書くということになります。</p>
 
-<p><code>
-//= require jquery
+<pre><code>//= require jquery
 //= require jquery_ujs
 //= require_tree ./mobile
 //= require jquery.mobile
-</code></p>
+</code></pre>
 
 <p>例えば以下のような感じになります。</p>
 
-<p>```coffeescript app/assets/javascripts/mobile/jqm_ja.js.coffee
-$(document).on &ldquo;mobileinit&rdquo;, &ndash;>
+<pre><code class="coffeescript app/assets/javascripts/mobile/jqm_ja.js.coffee">$(document).on "mobileinit", -&gt;
   #$.mobile.loadingMessageTextVisible = true
-  #$.mobile.loadingMessage = &ldquo;読み込み中&hellip;&rdquo;
-  $.mobile.loader.prototype.options.text = &ldquo;読み込み中です&hellip;&rdquo;
+  #$.mobile.loadingMessage = "読み込み中..."
+  $.mobile.loader.prototype.options.text = "読み込み中です..."
   $.mobile.loader.prototype.options.textVisible = false
-  $.mobile.pageLoadErrorMessage = &ldquo;読み込みに失敗しました。&rdquo;
-  $.mobile.page.prototype.options.backBtnText = &ldquo;戻る&rdquo;
-  $.mobile.listview.prototype.options.filterPlaceholder = &ldquo;検索&hellip;&rdquo;
-  $.mobile.table.prototype.options.columnBtnText = &ldquo;列の増減&hellip;&rdquo;
-  $.mobile.dialog.prototype.options.closeBtnText =</p>
-
-<pre><code>$.mobile.selectmenu.prototype.options.closeText = "閉じる"
+  $.mobile.pageLoadErrorMessage = "読み込みに失敗しました。"
+  $.mobile.page.prototype.options.backBtnText = "戻る"
+  $.mobile.listview.prototype.options.filterPlaceholder = "検索..."
+  $.mobile.table.prototype.options.columnBtnText = "列の増減..."
+  $.mobile.dialog.prototype.options.closeBtnText =
+    $.mobile.selectmenu.prototype.options.closeText = "閉じる"
+  $.mobile.collapsible.prototype.options.expandCueText = "クリックで開く"
+  $.mobile.collapsible.prototype.options.collapseCueText = "クリックで閉じる"
 </code></pre>
-
-<p>  $.mobile.collapsible.prototype.options.expandCueText = &ldquo;クリックで開く&rdquo;
-  $.mobile.collapsible.prototype.options.collapseCueText = &ldquo;クリックで閉じる&rdquo;
-```</p>
 
 <h2>Error Loading Page</h2>
 
@@ -218,14 +211,10 @@ jQuery Mobile 1.2 からは
 も呼ばず、
 リダイレクト前のページの処理はデフォルトのままにしています。</p>
 
-<p>```coffeescript app/assets/javascripts/mobile/pageloadfailed.js.coffee
-$(document).on &ldquo;pageloadfailed&rdquo;, (event, data) &ndash;>
-  if data.xhr.status == 401</p>
-
-<pre><code>window.location.href = data.absUrl
+<pre><code class="coffeescript app/assets/javascripts/mobile/pageloadfailed.js.coffee">$(document).on "pageloadfailed", (event, data) -&gt;
+  if data.xhr.status == 401
+    window.location.href = data.absUrl
 </code></pre>
-
-<p>```</p>
 
 <h2>Back</h2>
 

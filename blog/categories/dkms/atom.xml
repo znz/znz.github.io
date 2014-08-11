@@ -4,7 +4,7 @@
   <title><![CDATA[Category: dkms | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/dkms/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -46,11 +46,10 @@ VirtualBox のカーネルモジュールをビルドしようとしています
 
 <p><code>dkms status</code> で調べると以下のエラーメッセージが出る状態でした。</p>
 
-<p><code>console
-  $ sudo dkms status
+<pre><code class="console">  $ sudo dkms status
   Error! Could not locate dkms.conf file.
   File:  does not exist.
-</code></p>
+</code></pre>
 
 <h2>対処その1</h2>
 
@@ -62,8 +61,7 @@ VirtualBox のカーネルモジュールをビルドしようとしています
 後の状況からすると
 今起動中のカーネルのモジュールだけビルドされたようです。</p>
 
-<p><code>console
-  $ sudo mv /var/lib/dkms/vboxhost /tmp/
+<pre><code class="console">  $ sudo mv /var/lib/dkms/vboxhost /tmp/
   $ sudo dpkg-reconfigure virtualbox-4.3
   Stopping VirtualBox kernel modules ...done.
   addgroup: グループ `vboxusers' はシステムグループとしてすでに存在しています。終了します。
@@ -83,7 +81,7 @@ VirtualBox のカーネルモジュールをビルドしようとしています
   Removing old VirtualBox kernel module ...done.
   Trying to register the VirtualBox kernel modules using DKMS ...done.
   Starting VirtualBox kernel modules ...done.
-</code></p>
+</code></pre>
 
 <h2>対処その2</h2>
 
@@ -103,8 +101,7 @@ VirtualBox のカーネルモジュールをビルドしようとしています
 <p>この段階で <code>dkms status</code> を確認してみると
 起動中のカーネルのモジュールだけビルドされていることがわかります。</p>
 
-<p><code>console
-  $ sudo mv /lib/modules/3.8.0-33-generic/ /tmp/
+<pre><code class="console">  $ sudo mv /lib/modules/3.8.0-33-generic/ /tmp/
   $ sudo /etc/init.d/vboxdrv setup
   Stopping VirtualBox kernel modules ...done.
   Uninstalling old VirtualBox DKMS kernel modules ...done.
@@ -112,7 +109,7 @@ VirtualBox のカーネルモジュールをビルドしようとしています
   Starting VirtualBox kernel modules ...done.
   $ sudo dkms status
   vboxhost, 4.3.6, 3.8.0-34-generic, x86_64: installed
-</code></p>
+</code></pre>
 
 <h2>対処その3</h2>
 
@@ -125,23 +122,19 @@ VirtualBox のカーネルモジュールをビルドしようとしています
 <p>その結果、正常にビルドされていることが確認できたので、
 再起動して VirtualBox の動作確認をしました。</p>
 
-<p>```console
-  $ sudo aptitude reinstall linux-image-3.8.0-35-generic
-  以下のパッケージが再インストールされます:</p>
-
-<pre><code>linux-image-3.8.0-35-generic
-</code></pre>
-
-<p>  0 個のパッケージを更新、 0 個を新たにインストール、 再インストール: 1 個、 0 個を削除予定 、0 個が更新されていない。
+<pre><code class="console">  $ sudo aptitude reinstall linux-image-3.8.0-35-generic
+  以下のパッケージが再インストールされます:
+    linux-image-3.8.0-35-generic
+  0 個のパッケージを更新、 0 個を新たにインストール、 再インストール: 1 個、 0 個を削除予定 、0 個が更新されていない。
   アーカイブ 48.2 M バイト中 0  バイトを取得する必要があります。 展開後に 0  バイトのディス ク領域が新たに消費されます。
-  (データベースを読み込んでいます &hellip; 現在 117478 個のファイルとディレクトリがインストールされています。)
-  linux-image-3.8.0-35-generic 3.8.0-35.50~precise1 を (&hellip;/linux-image-3.8.0-35-generic_3.8.0-35.50~precise1_amd64.deb で) 置換するための準備をしています &hellip;
+  (データベースを読み込んでいます ... 現在 117478 個のファイルとディレクトリがインストールされています。)
+  linux-image-3.8.0-35-generic 3.8.0-35.50~precise1 を (.../linux-image-3.8.0-35-generic_3.8.0-35.50~precise1_amd64.deb で) 置換するための準備をしています ...
   Done.
-  linux-image-3.8.0-35-generic を展開し、置換しています&hellip;
+  linux-image-3.8.0-35-generic を展開し、置換しています...
   Examining /etc/kernel/postrm.d .
   run-parts: executing /etc/kernel/postrm.d/initramfs-tools 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic
   run-parts: executing /etc/kernel/postrm.d/zz-update-grub 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic
-  linux-image-3.8.0-35-generic (3.8.0-35.50~precise1) を設定しています &hellip;
+  linux-image-3.8.0-35-generic (3.8.0-35.50~precise1) を設定しています ...
   Running depmod.
   update-initramfs: deferring update (hook will be called later)
   Not updating initrd symbolic links since we are being updated/reinstalled
@@ -156,7 +149,7 @@ VirtualBox のカーネルモジュールをビルドしようとしています
   run-parts: executing /etc/kernel/postinst.d/pm-utils 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic
   run-parts: executing /etc/kernel/postinst.d/update-notifier 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic
   run-parts: executing /etc/kernel/postinst.d/zz-update-grub 3.8.0-35-generic /boot/vmlinuz-3.8.0-35-generic
-  Generating grub.cfg &hellip;
+  Generating grub.cfg ...
   Found linux image: /boot/vmlinuz-3.8.0-35-generic
   Found initrd image: /boot/initrd.img-3.8.0-35-generic
   Found linux image: /boot/vmlinuz-3.8.0-34-generic
@@ -167,7 +160,7 @@ VirtualBox のカーネルモジュールをビルドしようとしています
   vboxhost, 4.3.6, 3.8.0-34-generic, x86_64: installed
   vboxhost, 4.3.6, 3.8.0-35-generic, x86_64: installed
   $
-```</p>
+</code></pre>
 
 <h2>まとめ</h2>
 

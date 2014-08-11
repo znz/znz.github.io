@@ -4,7 +4,7 @@
   <title><![CDATA[Category: cdr | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/cdr/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -18,7 +18,7 @@
     <link href="http://blog.n-z.jp/blog/2014-07-25-compact-chpwd-recent-dirs.html"/>
     <updated>2014-07-25T21:54:57+09:00</updated>
     <id>http://blog.n-z.jp/blog/compact-chpwd-recent-dirs</id>
-    <content type="html"><![CDATA[<p><a href="http://d.hatena.ne.jp/syohex/20140425/1398394421" title="既に存在しないディレクトリを cdrのリストから削除する - Life is very short">既に存在しないディレクトリを cdrのリストから削除する &ndash; Life is very short</a>
+    <content type="html"><![CDATA[<p><a href="http://d.hatena.ne.jp/syohex/20140425/1398394421" title="既に存在しないディレクトリを cdrのリストから削除する - Life is very short">既に存在しないディレクトリを cdrのリストから削除する - Life is very short</a>
 をみて perl を使っていて、
 ファイル名の変更にも対応していなくてポータブルではないと思ったので、
 zsh の機能のみで実装してみました。</p>
@@ -48,22 +48,18 @@ zsh の機能のみで実装してみました。</p>
 以下の実装になりました。
 <code>emulate -L zsh</code> などは参考にした部分にあったので、そのまま使っています。</p>
 
-<p>```sh
-my-compact-chpwd-recent-dirs () {</p>
-
-<pre><code>emulate -L zsh
-setopt extendedglob
-local -aU reply
-integer history_size
-autoload -Uz chpwd_recent_filehandler
-chpwd_recent_filehandler
-history_size=$#reply
-reply=(${^reply}(N))
-(( $history_size == $#reply )) || chpwd_recent_filehandler $reply
+<pre><code class="sh">my-compact-chpwd-recent-dirs () {
+    emulate -L zsh
+    setopt extendedglob
+    local -aU reply
+    integer history_size
+    autoload -Uz chpwd_recent_filehandler
+    chpwd_recent_filehandler
+    history_size=$#reply
+    reply=(${^reply}(N))
+    (( $history_size == $#reply )) || chpwd_recent_filehandler $reply
+}
 </code></pre>
-
-<p>}
-```</p>
 
 <p>使い方としては</p>
 
@@ -129,7 +125,7 @@ brew untap peco/peco
 
 <h2>peco の設定</h2>
 
-<p><a href="http://shibayu36.hatenablog.com/entry/2014/06/27/223538" title="pecoを使い始めた - $shibayu36-&gt;blog;">pecoを使い始めた &ndash; $shibayu36-&gt;blog;</a>
+<p><a href="http://shibayu36.hatenablog.com/entry/2014/06/27/223538" title="pecoを使い始めた - $shibayu36-&gt;blog;">pecoを使い始めた - $shibayu36-&gt;blog;</a>
 はいろいろキーバインドを設定していますが、
 デフォルトのまま使っています。</p>
 
@@ -140,37 +136,33 @@ brew untap peco/peco
 
 <p>以下に該当部分を抜き出しておきます。</p>
 
-<p>```sh 50peco.zsh
-if (( ${+commands[peco]} )); then
-  peco-go-to-dir () {</p>
-
-<pre><code>local line
-local selected="$(
-  {
-    (
-      autoload -Uz chpwd_recent_filehandler
-      chpwd_recent_filehandler &amp;&amp; for line in $reply; do
-        if [[ -d "$line" ]]; then
-          echo "$line"
-        fi
-      done
-    )
-    ghq list --full-path
-    for line in *(-/) ${^cdpath}/*(N-/); do echo "$line"; done | sort -u
-  } | peco --query "$LBUFFER"
-)"
-if [ -n "$selected" ]; then
-  BUFFER="cd ${(q)selected}"
-  zle accept-line
-fi
-zle clear-screen
-</code></pre>
-
-<p>  }
+<pre><code class="sh 50peco.zsh">if (( ${+commands[peco]} )); then
+  peco-go-to-dir () {
+    local line
+    local selected="$(
+      {
+        (
+          autoload -Uz chpwd_recent_filehandler
+          chpwd_recent_filehandler &amp;&amp; for line in $reply; do
+            if [[ -d "$line" ]]; then
+              echo "$line"
+            fi
+          done
+        )
+        ghq list --full-path
+        for line in *(-/) ${^cdpath}/*(N-/); do echo "$line"; done | sort -u
+      } | peco --query "$LBUFFER"
+    )"
+    if [ -n "$selected" ]; then
+      BUFFER="cd ${(q)selected}"
+      zle accept-line
+    fi
+    zle clear-screen
+  }
   zle -N peco-go-to-dir
-  bindkey &lsquo;^[g&rsquo; peco-go-to-dir
+  bindkey '^[g' peco-go-to-dir
 fi
-```</p>
+</code></pre>
 
 <p>まず <code>(( ${+commands[peco]} ))</code> で <code>peco</code> コマンドの存在チェックをしています。
 zsh スクリプトの中では <code>type peco &gt;/dev/null 2&gt;&amp;1</code> のようなチェック方法の代わりに使えます。</p>
@@ -243,8 +235,7 @@ GNU screen の他の WINDOW のディレクトリに移動するための
 
 <p>以降は設定内容を個別に解説していきます。</p>
 
-<p><code>sh
-if [[ -n $(echo ${^fpath}/chpwd_recent_dirs(N)) &amp;&amp; -n $(echo ${^fpath}/cdr(N)) ]]; then
+<pre><code class="sh">if [[ -n $(echo ${^fpath}/chpwd_recent_dirs(N)) &amp;&amp; -n $(echo ${^fpath}/cdr(N)) ]]; then
 autoload -Uz chpwd_recent_dirs cdr add-zsh-hook
   add-zsh-hook chpwd chpwd_recent_dirs
   zstyle ':completion:*:*:cdr:*:*' menu selection
@@ -254,7 +245,7 @@ autoload -Uz chpwd_recent_dirs cdr add-zsh-hook
   zstyle ':chpwd:*' recent-dirs-file "${XDG_CACHE_HOME:-$HOME/.cache}/shell/chpwd-recent-dirs"
   zstyle ':chpwd:*' recent-dirs-pushd true
 fi
-</code></p>
+</code></pre>
 
 <h2>使えるかどうかのガード条件</h2>
 
@@ -270,10 +261,10 @@ zsh の設定を環境ごとに分岐させようとした時、
 機能の存在をチェックするべき、
 という話があったことも影響しています。</p>
 
-<p><code>sh
-  if [[ -n $(echo ${^fpath}/chpwd_recent_dirs(N)) &amp;&amp; -n $(echo ${^fpath}/cdr(N)) ]]; then
-</code>
-Glob Qualifiers の <code>(N)</code> (<code>NULL_GLOB</code>) を使っている関係で、
+<pre><code class="sh">  if [[ -n $(echo ${^fpath}/chpwd_recent_dirs(N)) &amp;&amp; -n $(echo ${^fpath}/cdr(N)) ]]; then
+</code></pre>
+
+<p>Glob Qualifiers の <code>(N)</code> (<code>NULL_GLOB</code>) を使っている関係で、
 一度 <code>echo</code> してから <code>-n</code> でチェックしています。
 もっと簡潔に書ける方法があれば教えてください。</p>
 
@@ -295,10 +286,9 @@ Glob Qualifiers の <code>(N)</code> (<code>NULL_GLOB</code>) を使っている
 
 <p><code>chpwd_functions</code> への追加は</p>
 
-<p><code>sh
-typeset -ga chpwd_functions
+<pre><code class="sh">typeset -ga chpwd_functions
 chpwd_functions+=chpwd_recent_dirs
-</code></p>
+</code></pre>
 
 <p>としても良かったのですが、
 念のため <code>typeset</code> するのが最近の zsh しか使わないのなら無駄に感じたのと、
@@ -324,9 +314,8 @@ chpwd_functions+=chpwd_recent_dirs
 <code>selection</code>
 で設定しています。</p>
 
-<p><code>sh
-  zstyle ':completion:*:*:cdr:*:*' menu selection
-</code></p>
+<pre><code class="sh">  zstyle ':completion:*:*:cdr:*:*' menu selection
+</code></pre>
 
 <h2>recent-dirs-insert</h2>
 
@@ -352,18 +341,16 @@ chpwd_functions+=chpwd_recent_dirs
 
 <p>他の部分で既に <code>mkdir -p</code> しているので、ここでは省略しています。</p>
 
-<p><code>sh
-  #mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/shell"
+<pre><code class="sh">  #mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/shell"
   zstyle ':chpwd:*' recent-dirs-file "${XDG_CACHE_HOME:-$HOME/.cache}/shell/chpwd-recent-dirs"
-</code></p>
+</code></pre>
 
 <p>ドキュメントにあるように、
 以下のような設定にして TTY ごとのファイルと
 グローバルのファイルにわけるのも良いかもしれません。</p>
 
-<p><code>sh
-  zstyle recent-dirs-file ':chpwd:*' ~/.chpwd-recent-dirs-${TTY##*/} +
-</code></p>
+<pre><code class="sh">  zstyle recent-dirs-file ':chpwd:*' ~/.chpwd-recent-dirs-${TTY##*/} +
+</code></pre>
 
 <h2>recent-dirs-pushd</h2>
 

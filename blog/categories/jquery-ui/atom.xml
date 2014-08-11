@@ -4,7 +4,7 @@
   <title><![CDATA[Category: jquery-ui | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/jquery-ui/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -35,14 +35,13 @@ jQuery UI の Autocomplete に少しコードを足したら
 <code>simple_form</code> gem を使っているので、
 以下のように書きました。</p>
 
-<p><code>haml
-= f.input :drink, input_html: { autocomplete: "on", list: "drink_list" }
+<pre><code class="haml">= f.input :drink, input_html: { autocomplete: "on", list: "drink_list" }
 %datalist#drink_list
   %options(value="不要")
   %options(value="水")
   %options(value="お茶")
   %options(value="コーヒー")
-</code></p>
+</code></pre>
 
 <p>この方法の問題点としては、
 IE は IE10 (以降?) しか対応していなかったり、
@@ -69,43 +68,30 @@ jQuery UI Autocomplete を使うことにしました。</p>
 必要なものだけ CSS や JS を require していたので、
 まず <code>app/assets/stylesheets/application.css</code> に</p>
 
-<p><code>text application.css
- *= require jquery.ui.autocomplete
-</code></p>
+<pre><code class="text application.css"> *= require jquery.ui.autocomplete
+</code></pre>
 
 <p>を追加しました。</p>
 
 <p>次に <code>app/assets/javascripts/autocomplete.js.coffee</code> として
 以下のような内容で作成しました。</p>
 
-<p>```coffeescript autocomplete.js.coffee</p>
-
-<h1>= require jquery.ui.autocomplete</h1>
-
-<p>jQuery &ndash;>
-  drink_list = [</p>
-
-<pre><code>"不要"
-"水"
-"お茶"
-"コーヒー"
+<pre><code class="coffeescript autocomplete.js.coffee">#= require jquery.ui.autocomplete
+jQuery -&gt;
+  drink_list = [
+    "不要"
+    "水"
+    "お茶"
+    "コーヒー"
+  ]
+  $("#somemodel_drink").autocomplete
+    source: drink_list
+    autoFocus: true
+    delay: 0
+    minLength: 0
+  .on "focus", -&gt;
+    $("#somemodel_drink").autocomplete("search", "")
 </code></pre>
-
-<p>  ]
-  $(&ldquo;#somemodel_drink&rdquo;).autocomplete</p>
-
-<pre><code>source: drink_list
-autoFocus: true
-delay: 0
-minLength: 0
-</code></pre>
-
-<p>  .on &ldquo;focus&rdquo;, &ndash;></p>
-
-<pre><code>$("#somemodel_drink").autocomplete("search", "")
-</code></pre>
-
-<p>```</p>
 
 <h2>余談</h2>
 

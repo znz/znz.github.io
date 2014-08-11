@@ -9,7 +9,7 @@
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Ubuntu Server 12.04.3 LTS をインストールした 2013-09-15 (Sun) | <a href="#disqus_thread" data-disqus-identifier="http://blog.n-z.jp">Comments 自宅サーバーのシステムディスク &hellip;">
+  <meta name="description" content="Ubuntu Server 12.04.3 LTS をインストールした | Comments 自宅サーバーのシステムディスク (sda) が壊れたので、 HDD を入れ替えて、せっかくなのでシステムをきれいな状態にするために ubuntu-12.04.3-server-amd64.iso &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -102,7 +102,7 @@
   
 
 
-<time datetime="2013-09-15T20:02:00+09:00" pubdate data-updated="true">2013-09-15 (Sun)</time>
+<time datetime="2013-09-15T20:02:00+09:00" pubdate data-updated="true"></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -155,151 +155,79 @@ Finder から取り出したり <code>diskutil unmountDisk</code> だと
 
 <p>読み込みの例として MBR の部分をバックアップしてダンプしてみました。</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-<span class='line-number'>51</span>
-<span class='line-number'>52</span>
-<span class='line-number'>53</span>
-<span class='line-number'>54</span>
-<span class='line-number'>55</span>
-<span class='line-number'>56</span>
-<span class='line-number'>57</span>
-<span class='line-number'>58</span>
-<span class='line-number'>59</span>
-<span class='line-number'>60</span>
-<span class='line-number'>61</span>
-<span class='line-number'>62</span>
-<span class='line-number'>63</span>
-<span class='line-number'>64</span>
-<span class='line-number'>65</span>
-<span class='line-number'>66</span>
-<span class='line-number'>67</span>
-<span class='line-number'>68</span>
-<span class='line-number'>69</span>
-<span class='line-number'>70</span>
-<span class='line-number'>71</span>
-<span class='line-number'>72</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% diskutil list
-</span><span class='line'>/dev/disk0
-</span><span class='line'>   #:                       TYPE NAME                    SIZE       IDENTIFIER
-</span><span class='line'>   0:      GUID_partition_scheme                        *251.0 GB   disk0
-</span><span class='line'>   1:                        EFI                         209.7 MB   disk0s1
-</span><span class='line'>   2:          Apple_CoreStorage                         250.1 GB   disk0s2
-</span><span class='line'>   3:                 Apple_Boot Recovery HD             650.0 MB   disk0s3
-</span><span class='line'>/dev/disk1
-</span><span class='line'>   #:                       TYPE NAME                    SIZE       IDENTIFIER
-</span><span class='line'>   0:                  Apple_HFS Macintosh HD           *249.8 GB   disk1
-</span><span class='line'>/dev/disk2
-</span><span class='line'>   #:                       TYPE NAME                    SIZE       IDENTIFIER
-</span><span class='line'>   0:     FDisk_partition_scheme                        *16.1 GB    disk2
-</span><span class='line'>   1:             Windows_FAT_32 NO NAME                 16.1 GB    disk2s1
-</span><span class='line'>% sudo dd if=/dev/disk2 of=MF-AU316GBS.mbr bs=512 count=1
-</span><span class='line'>% hexdump -C MF-AU316GBS.mbr
-</span><span class='line'>00000000  33 c0 8e d0 bc 00 7c fb  50 07 50 1f fc be 1b 7c  |3.....|.P.P....||
-</span><span class='line'>00000010  bf 1b 06 50 57 b9 e5 01  f3 a4 cb bd be 07 b1 04  |...PW...........|
-</span><span class='line'>00000020  38 6e 00 7c 09 75 13 83  c5 10 e2 f4 cd 18 8b f5  |8n.|.u..........|
-</span><span class='line'>00000030  83 c6 10 49 74 19 38 2c  74 f6 a0 b5 07 b4 07 8b  |...It.8,t.......|
-</span><span class='line'>00000040  f0 ac 3c 00 74 fc bb 07  00 b4 0e cd 10 eb f2 88  |..&lt;.t...........|
-</span><span class='line'>00000050  4e 10 e8 46 00 73 2a fe  46 10 80 7e 04 0b 74 0b  |N..F.s*.F..~..t.|
-</span><span class='line'>00000060  80 7e 04 0c 74 05 a0 b6  07 75 d2 80 46 02 06 83  |.~..t....u..F...|
-</span><span class='line'>00000070  46 08 06 83 56 0a 00 e8  21 00 73 05 a0 b6 07 eb  |F...V...!.s.....|
-</span><span class='line'>00000080  bc 81 3e fe 7d 55 aa 74  0b 80 7e 10 00 74 c8 a0  |..&gt;.}U.t..~..t..|
-</span><span class='line'>00000090  b7 07 eb a9 8b fc 1e 57  8b f5 cb bf 05 00 8a 56  |.......W.......V|
-</span><span class='line'>000000a0  00 b4 08 cd 13 72 23 8a  c1 24 3f 98 8a de 8a fc  |.....r#..$?.....|
-</span><span class='line'>000000b0  43 f7 e3 8b d1 86 d6 b1  06 d2 ee 42 f7 e2 39 56  |C..........B..9V|
-</span><span class='line'>000000c0  0a 77 23 72 05 39 46 08  73 1c b8 01 02 bb 00 7c  |.w#r.9F.s......||
-</span><span class='line'>000000d0  8b 4e 02 8b 56 00 cd 13  73 51 4f 74 4e 32 e4 8a  |.N..V...sQOtN2..|
-</span><span class='line'>000000e0  56 00 cd 13 eb e4 8a 56  00 60 bb aa 55 b4 41 cd  |V......V.`..U.A.|
-</span><span class='line'>000000f0  13 72 36 81 fb 55 aa 75  30 f6 c1 01 74 2b 61 60  |.r6..U.u0...t+a`|
-</span><span class='line'>00000100  6a 00 6a 00 ff 76 0a ff  76 08 6a 00 68 00 7c 6a  |j.j..v..v.j.h.|j|
-</span><span class='line'>00000110  01 6a 10 b4 42 8b f4 cd  13 61 61 73 0e 4f 74 0b  |.j..B....aas.Ot.|
-</span><span class='line'>00000120  32 e4 8a 56 00 cd 13 eb  d6 61 f9 c3 49 6e 76 61  |2..V.....a..Inva|
-</span><span class='line'>00000130  6c 69 64 20 70 61 72 74  69 74 69 6f 6e 20 74 61  |lid partition ta|
-</span><span class='line'>00000140  62 6c 65 00 45 72 72 6f  72 20 6c 6f 61 64 69 6e  |ble.Error loadin|
-</span><span class='line'>00000150  67 20 6f 70 65 72 61 74  69 6e 67 20 73 79 73 74  |g operating syst|
-</span><span class='line'>00000160  65 6d 00 4d 69 73 73 69  6e 67 20 6f 70 65 72 61  |em.Missing opera|
-</span><span class='line'>00000170  74 69 6e 67 20 73 79 73  74 65 6d 00 00 00 00 00  |ting system.....|
-</span><span class='line'>00000180  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
-</span><span class='line'>*
-</span><span class='line'>000001b0  00 00 00 00 00 2c 44 63  18 2e 07 c3 00 00 00 00  |.....,Dc........|
-</span><span class='line'>000001c0  31 00 0c fe ff ff 30 00  00 00 50 f6 de 01 00 00  |1.....0...P.....|
-</span><span class='line'>000001d0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
-</span><span class='line'>*
-</span><span class='line'>000001f0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 55 aa  |..............U.|
-</span><span class='line'>00000200
-</span><span class='line'>%  sudo dd if=Downloads/ubuntu-12.04.3-server-amd64.iso of=/dev/rdisk2 bs=1m
-</span><span class='line'>Password:
-</span><span class='line'>dd: /dev/rdisk2: Resource busy
-</span><span class='line'>%  diskutil unmount disk2s1
-</span><span class='line'>Volume NO NAME on disk2s1 unmounted
-</span><span class='line'>%  diskutil list
-</span><span class='line'>/dev/disk0
-</span><span class='line'>   #:                       TYPE NAME                    SIZE       IDENTIFIER
-</span><span class='line'>   0:      GUID_partition_scheme                        *251.0 GB   disk0
-</span><span class='line'>   1:                        EFI                         209.7 MB   disk0s1
-</span><span class='line'>   2:          Apple_CoreStorage                         250.1 GB   disk0s2
-</span><span class='line'>   3:                 Apple_Boot Recovery HD             650.0 MB   disk0s3
-</span><span class='line'>/dev/disk1
-</span><span class='line'>   #:                       TYPE NAME                    SIZE       IDENTIFIER
-</span><span class='line'>   0:                  Apple_HFS Macintosh HD           *249.8 GB   disk1
-</span><span class='line'>/dev/disk2
-</span><span class='line'>   #:                       TYPE NAME                    SIZE       IDENTIFIER
-</span><span class='line'>   0:     FDisk_partition_scheme                        *16.1 GB    disk2
-</span><span class='line'>   1:             Windows_FAT_32 NO NAME                 16.1 GB    disk2s1
-</span><span class='line'>%  sudo dd if=Downloads/ubuntu-12.04.3-server-amd64.iso of=/dev/rdisk2 bs=1m
-</span><span class='line'>665+0 records in
-</span><span class='line'>665+0 records out
-</span><span class='line'>697303040 bytes transferred in 41.551843 secs (16781519 bytes/sec)
-</span><span class='line'>%</span></code></pre></td></tr></table></div></figure>
-
+<pre><code>% diskutil list
+/dev/disk0
+   #:                       TYPE NAME                    SIZE       IDENTIFIER
+   0:      GUID_partition_scheme                        *251.0 GB   disk0
+   1:                        EFI                         209.7 MB   disk0s1
+   2:          Apple_CoreStorage                         250.1 GB   disk0s2
+   3:                 Apple_Boot Recovery HD             650.0 MB   disk0s3
+/dev/disk1
+   #:                       TYPE NAME                    SIZE       IDENTIFIER
+   0:                  Apple_HFS Macintosh HD           *249.8 GB   disk1
+/dev/disk2
+   #:                       TYPE NAME                    SIZE       IDENTIFIER
+   0:     FDisk_partition_scheme                        *16.1 GB    disk2
+   1:             Windows_FAT_32 NO NAME                 16.1 GB    disk2s1
+% sudo dd if=/dev/disk2 of=MF-AU316GBS.mbr bs=512 count=1
+% hexdump -C MF-AU316GBS.mbr
+00000000  33 c0 8e d0 bc 00 7c fb  50 07 50 1f fc be 1b 7c  |3.....|.P.P....||
+00000010  bf 1b 06 50 57 b9 e5 01  f3 a4 cb bd be 07 b1 04  |...PW...........|
+00000020  38 6e 00 7c 09 75 13 83  c5 10 e2 f4 cd 18 8b f5  |8n.|.u..........|
+00000030  83 c6 10 49 74 19 38 2c  74 f6 a0 b5 07 b4 07 8b  |...It.8,t.......|
+00000040  f0 ac 3c 00 74 fc bb 07  00 b4 0e cd 10 eb f2 88  |..&lt;.t...........|
+00000050  4e 10 e8 46 00 73 2a fe  46 10 80 7e 04 0b 74 0b  |N..F.s*.F..~..t.|
+00000060  80 7e 04 0c 74 05 a0 b6  07 75 d2 80 46 02 06 83  |.~..t....u..F...|
+00000070  46 08 06 83 56 0a 00 e8  21 00 73 05 a0 b6 07 eb  |F...V...!.s.....|
+00000080  bc 81 3e fe 7d 55 aa 74  0b 80 7e 10 00 74 c8 a0  |..&gt;.}U.t..~..t..|
+00000090  b7 07 eb a9 8b fc 1e 57  8b f5 cb bf 05 00 8a 56  |.......W.......V|
+000000a0  00 b4 08 cd 13 72 23 8a  c1 24 3f 98 8a de 8a fc  |.....r#..$?.....|
+000000b0  43 f7 e3 8b d1 86 d6 b1  06 d2 ee 42 f7 e2 39 56  |C..........B..9V|
+000000c0  0a 77 23 72 05 39 46 08  73 1c b8 01 02 bb 00 7c  |.w#r.9F.s......||
+000000d0  8b 4e 02 8b 56 00 cd 13  73 51 4f 74 4e 32 e4 8a  |.N..V...sQOtN2..|
+000000e0  56 00 cd 13 eb e4 8a 56  00 60 bb aa 55 b4 41 cd  |V......V.`..U.A.|
+000000f0  13 72 36 81 fb 55 aa 75  30 f6 c1 01 74 2b 61 60  |.r6..U.u0...t+a`|
+00000100  6a 00 6a 00 ff 76 0a ff  76 08 6a 00 68 00 7c 6a  |j.j..v..v.j.h.|j|
+00000110  01 6a 10 b4 42 8b f4 cd  13 61 61 73 0e 4f 74 0b  |.j..B....aas.Ot.|
+00000120  32 e4 8a 56 00 cd 13 eb  d6 61 f9 c3 49 6e 76 61  |2..V.....a..Inva|
+00000130  6c 69 64 20 70 61 72 74  69 74 69 6f 6e 20 74 61  |lid partition ta|
+00000140  62 6c 65 00 45 72 72 6f  72 20 6c 6f 61 64 69 6e  |ble.Error loadin|
+00000150  67 20 6f 70 65 72 61 74  69 6e 67 20 73 79 73 74  |g operating syst|
+00000160  65 6d 00 4d 69 73 73 69  6e 67 20 6f 70 65 72 61  |em.Missing opera|
+00000170  74 69 6e 67 20 73 79 73  74 65 6d 00 00 00 00 00  |ting system.....|
+00000180  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+000001b0  00 00 00 00 00 2c 44 63  18 2e 07 c3 00 00 00 00  |.....,Dc........|
+000001c0  31 00 0c fe ff ff 30 00  00 00 50 f6 de 01 00 00  |1.....0...P.....|
+000001d0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+000001f0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 55 aa  |..............U.|
+00000200
+%  sudo dd if=Downloads/ubuntu-12.04.3-server-amd64.iso of=/dev/rdisk2 bs=1m
+Password:
+dd: /dev/rdisk2: Resource busy
+%  diskutil unmount disk2s1
+Volume NO NAME on disk2s1 unmounted
+%  diskutil list
+/dev/disk0
+   #:                       TYPE NAME                    SIZE       IDENTIFIER
+   0:      GUID_partition_scheme                        *251.0 GB   disk0
+   1:                        EFI                         209.7 MB   disk0s1
+   2:          Apple_CoreStorage                         250.1 GB   disk0s2
+   3:                 Apple_Boot Recovery HD             650.0 MB   disk0s3
+/dev/disk1
+   #:                       TYPE NAME                    SIZE       IDENTIFIER
+   0:                  Apple_HFS Macintosh HD           *249.8 GB   disk1
+/dev/disk2
+   #:                       TYPE NAME                    SIZE       IDENTIFIER
+   0:     FDisk_partition_scheme                        *16.1 GB    disk2
+   1:             Windows_FAT_32 NO NAME                 16.1 GB    disk2s1
+%  sudo dd if=Downloads/ubuntu-12.04.3-server-amd64.iso of=/dev/rdisk2 bs=1m
+665+0 records in
+665+0 records out
+697303040 bytes transferred in 41.551843 secs (16781519 bytes/sec)
+%
+</code></pre>
 
 <p>この USB メモリを自作マシンにさして起動してインストールすることになります。</p>
 
@@ -359,19 +287,13 @@ IPv6 用に allow と limit の両方を実行しています。</li>
 接続元として使っていて、逆引きが <code>.jp</code> でないところなどは
 別途 <code>sshd: 10.1.2.3</code> のように許可していきます。</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>$ egrep '^[^#]' /etc/hosts.deny
-</span><span class='line'>ALL: ALL
-</span><span class='line'>$ egrep '^[^#]' /etc/hosts.allow
-</span><span class='line'>sshd: 127.0.0.1 [::1]
-</span><span class='line'>sshd: 192.168.0.0/16
-</span><span class='line'>sshd: .jp</span></code></pre></td></tr></table></div></figure>
-
+<pre><code>$ egrep '^[^#]' /etc/hosts.deny
+ALL: ALL
+$ egrep '^[^#]' /etc/hosts.allow
+sshd: 127.0.0.1 [::1]
+sshd: 192.168.0.0/16
+sshd: .jp
+</code></pre>
 
 <p>最後に <code>/etc/sshd/sshd_config</code> の設定例です。
 <code>ssh_config</code> とは別物なので注意が必要です。</p>
@@ -420,35 +342,21 @@ IPv6 用に allow と limit の両方を実行しています。</li>
 <code>sudoedit /etc/network/interfaces</code> で
 <code>br0</code> ありの固定 IP アドレスの設定に変更しました。</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'># The primary network interface
-</span><span class='line'>auto eth0
-</span><span class='line'>iface eth0 inet manual
-</span><span class='line'>auto br0
-</span><span class='line'>iface br0 inet static
-</span><span class='line'>  address 192.168.xx.yy
-</span><span class='line'>  netmask 255.255.255.0
-</span><span class='line'>  gateway 192.168.253.1
-</span><span class='line'>  dns-nameservers 192.168.xx.yy
-</span><span class='line'>  dns-search home.example.jp
-</span><span class='line'>  bridge_ports eth0
-</span><span class='line'>  bridge_stp off
-</span><span class='line'>  bridge_fd 0
-</span><span class='line'>  bridge_maxwait 0</span></code></pre></td></tr></table></div></figure>
-
+<pre><code># The primary network interface
+auto eth0
+iface eth0 inet manual
+auto br0
+iface br0 inet static
+    address 192.168.xx.yy
+    netmask 255.255.255.0
+    gateway 192.168.253.1
+    dns-nameservers 192.168.xx.yy
+    dns-search home.example.jp
+    bridge_ports eth0
+    bridge_stp off
+    bridge_fd 0
+    bridge_maxwait 0
+</code></pre>
 
 <h3>パスフレーズなし起動設定</h3>
 
@@ -459,31 +367,19 @@ IPv6 用に allow と limit の両方を実行しています。</li>
 そのトレードオフを許容出来るかどうかを
 考えておく必要があります。</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>$ sudo dd if=/dev/random of=/root/sda5_crypt.key bs=512 count=4
-</span><span class='line'>dd: warning: partial read (128 bytes); suggest iflag=fullblock
-</span><span class='line'>0+4 レコード入力
-</span><span class='line'>0+4 レコード出力
-</span><span class='line'>447 バイト (447 B) コピーされました、 0.000294833 秒、 1.5 MB/秒
-</span><span class='line'>$ sudo chmod 400 /root/sda5_crypt.key
-</span><span class='line'>$ sudo cryptsetup luksAddKey /dev/sda5 /root/sda5_crypt.key
-</span><span class='line'>パスフレーズを入力:
-</span><span class='line'>$ sudo mv /root/sda5_crypt.key /boot/sda5_crypt.key
-</span><span class='line'>$ sudoedit /etc/crypttab
-</span><span class='line'>$ sudo update-initramfs -u
-</span><span class='line'>update-initramfs: Generating /boot/initrd.img-3.8.0-30-generic</span></code></pre></td></tr></table></div></figure>
-
+<pre><code>$ sudo dd if=/dev/random of=/root/sda5_crypt.key bs=512 count=4
+dd: warning: partial read (128 bytes); suggest iflag=fullblock
+0+4 レコード入力
+0+4 レコード出力
+447 バイト (447 B) コピーされました、 0.000294833 秒、 1.5 MB/秒
+$ sudo chmod 400 /root/sda5_crypt.key
+$ sudo cryptsetup luksAddKey /dev/sda5 /root/sda5_crypt.key
+パスフレーズを入力:
+$ sudo mv /root/sda5_crypt.key /boot/sda5_crypt.key
+$ sudoedit /etc/crypttab
+$ sudo update-initramfs -u
+update-initramfs: Generating /boot/initrd.img-3.8.0-30-generic
+</code></pre>
 
 <p>Ubuntu 12.04 では、
 <code>crypttab</code> は
@@ -517,25 +413,16 @@ GRUB で止まってしまう環境があったのですが、
 <code>/boot/grub/grub.cfg</code> に
 反映させる必要があります。</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>$ sudoedit /etc/default/grub
-</span><span class='line'>$ sudo update-grub
-</span><span class='line'>Generating grub.cfg ...
-</span><span class='line'>Found linux image: /boot/vmlinuz-3.8.0-30-generic
-</span><span class='line'>Found initrd image: /boot/initrd.img-3.8.0-30-generic
-</span><span class='line'>Found linux image: /boot/vmlinuz-3.8.0-29-generic
-</span><span class='line'>Found initrd image: /boot/initrd.img-3.8.0-29-generic
-</span><span class='line'>Found memtest86+ image: /memtest86+.bin
-</span><span class='line'>done</span></code></pre></td></tr></table></div></figure>
-
+<pre><code>$ sudoedit /etc/default/grub
+$ sudo update-grub
+Generating grub.cfg ...
+Found linux image: /boot/vmlinuz-3.8.0-30-generic
+Found initrd image: /boot/initrd.img-3.8.0-30-generic
+Found linux image: /boot/vmlinuz-3.8.0-29-generic
+Found initrd image: /boot/initrd.img-3.8.0-29-generic
+Found memtest86+ image: /memtest86+.bin
+done
+</code></pre>
 </div>
 
 <!-- zenback_body_end -->
@@ -561,7 +448,7 @@ GRUB で止まってしまう環境があったのですが、
   
 
 
-<time datetime="2013-09-15T20:02:00+09:00" pubdate data-updated="true">2013-09-15 (Sun)</time>
+<time datetime="2013-09-15T20:02:00+09:00" pubdate data-updated="true"></time>
       
 
 <span class="categories">
@@ -653,6 +540,10 @@ Hatena.BookmarkWidget.load();
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014-08-11-jquery-raty.html">Rails 4.1 で jQuery Raty を使ってみた</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014-08-06-docker-volume.html">boot2docker で VM のファイルをコンテナやホストと共有する</a>
       </li>
     
@@ -668,15 +559,11 @@ Hatena.BookmarkWidget.load();
         <a href="/blog/2014-07-27-ruby-build-without-rbenv.html">ruby-buildをrbenvと組み合わせずに使う</a>
       </li>
     
-      <li class="post">
-        <a href="/blog/2014-07-26-kansaiworkshop062.html">62nd Ruby/Rails勉強会@関西に参加した</a>
-      </li>
-    
   </ul>
 </section>
 <section>
   <h1>Tag Cloud</h1>
-    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 102.14285714285714%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 107.5%'>amagasakirb(7)</a> <a href='/blog/categories/ansible' style='font-size: 109.64285714285714%'>ansible(9)</a> <a href='/blog/categories/anyenv' style='font-size: 101.07142857142857%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.07142857142857%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 103.21428571428571%'>boot2docker(3)</a> <a href='/blog/categories/bootstrap' style='font-size: 101.07142857142857%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 101.07142857142857%'>bts(1)</a> <a href='/blog/categories/cdr' style='font-size: 103.21428571428571%'>cdr(3)</a> <a href='/blog/categories/certification' style='font-size: 101.07142857142857%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 102.14285714285714%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 103.21428571428571%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 124.64285714285714%'>debian(23)</a> <a href='/blog/categories/devise' style='font-size: 105.35714285714286%'>devise(5)</a> <a href='/blog/categories/dkms' style='font-size: 101.07142857142857%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 112.85714285714286%'>docker(12)</a> <a href='/blog/categories/dokku' style='font-size: 102.14285714285714%'>dokku(2)</a> <a href='/blog/categories/doorkeeper' style='font-size: 103.21428571428571%'>doorkeeper(3)</a> <a href='/blog/categories/drb' style='font-size: 101.07142857142857%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.07142857142857%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 108.57142857142857%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 138.57142857142856%'>event(36)</a> <a href='/blog/categories/fluentd' style='font-size: 101.07142857142857%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 104.28571428571429%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 102.14285714285714%'>ghq(2)</a> <a href='/blog/categories/git' style='font-size: 105.35714285714286%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 107.5%'>github(7)</a> <a href='/blog/categories/go' style='font-size: 101.07142857142857%'>go(1)</a> <a href='/blog/categories/gpg' style='font-size: 101.07142857142857%'>gpg(1)</a> <a href='/blog/categories/haml' style='font-size: 101.07142857142857%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 102.14285714285714%'>heroku(2)</a> <a href='/blog/categories/homebrew' style='font-size: 107.5%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 103.21428571428571%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 103.21428571428571%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 101.07142857142857%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 101.07142857142857%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.07142857142857%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 104.28571428571429%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 101.07142857142857%'>jenkins(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 102.14285714285714%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.07142857142857%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.14285714285714%'>jus(2)</a> <a href='/blog/categories/k-of' style='font-size: 101.07142857142857%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 105.35714285714286%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.07142857142857%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.07142857142857%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 104.28571428571429%'>land-of-lisp(4)</a> <a href='/blog/categories/lilo' style='font-size: 101.07142857142857%'>lilo(1)</a> <a href='/blog/categories/linux' style='font-size: 108.57142857142857%'>linux(8)</a> <a href='/blog/categories/live' style='font-size: 103.21428571428571%'>live(3)</a> <a href='/blog/categories/lxc' style='font-size: 101.07142857142857%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.07142857142857%'>lxcjp(1)</a> <a href='/blog/categories/mail' style='font-size: 101.07142857142857%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 102.14285714285714%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 104.28571428571429%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.07142857142857%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.07142857142857%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.07142857142857%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 102.14285714285714%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.07142857142857%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 104.28571428571429%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 105.35714285714286%'>octopress(5)</a> <a href='/blog/categories/omniauth' style='font-size: 102.14285714285714%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 102.14285714285714%'>openssl(2)</a> <a href='/blog/categories/osx' style='font-size: 127.85714285714286%'>osx(26)</a> <a href='/blog/categories/owncloud' style='font-size: 101.07142857142857%'>owncloud(1)</a> <a href='/blog/categories/packer' style='font-size: 101.07142857142857%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.07142857142857%'>passenger(1)</a> <a href='/blog/categories/peco' style='font-size: 101.07142857142857%'>peco(1)</a> <a href='/blog/categories/postfix' style='font-size: 102.14285714285714%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 102.14285714285714%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.07142857142857%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.07142857142857%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 102.14285714285714%'>r(2)</a> <a href='/blog/categories/rabbit' style='font-size: 102.14285714285714%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 131.07142857142858%'>rails(29)</a> <a href='/blog/categories/ransack' style='font-size: 101.07142857142857%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 104.28571428571429%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.07142857142857%'>redmine(1)</a> <a href='/blog/categories/rspec' style='font-size: 101.07142857142857%'>rspec(1)</a> <a href='/blog/categories/rsyslog' style='font-size: 101.07142857142857%'>rsyslog(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.07142857142857%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(56)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.07142857142857%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 103.21428571428571%'>rubykansai(3)</a> <a href='/blog/categories/rubymotion' style='font-size: 113.92857142857143%'>rubymotion(13)</a> <a href='/blog/categories/security' style='font-size: 103.21428571428571%'>security(3)</a> <a href='/blog/categories/shell' style='font-size: 103.21428571428571%'>shell(3)</a> <a href='/blog/categories/slim' style='font-size: 101.07142857142857%'>slim(1)</a> <a href='/blog/categories/sylpheed' style='font-size: 101.07142857142857%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.07142857142857%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 104.28571428571429%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 120.35714285714286%'>ubuntu(19)</a> <a href='/blog/categories/upstart' style='font-size: 102.14285714285714%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 101.07142857142857%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 106.42857142857143%'>vagrant(6)</a> <a href='/blog/categories/vagrantcloud' style='font-size: 102.14285714285714%'>vagrantcloud(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 102.14285714285714%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 101.07142857142857%'>weechat(1)</a> <a href='/blog/categories/yaml' style='font-size: 101.07142857142857%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.07142857142857%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 109.64285714285714%'>zsh(9)</a> </span>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 102.14285714285714%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 107.5%'>amagasakirb(7)</a> <a href='/blog/categories/ansible' style='font-size: 109.64285714285714%'>ansible(9)</a> <a href='/blog/categories/anyenv' style='font-size: 101.07142857142857%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.07142857142857%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 103.21428571428571%'>boot2docker(3)</a> <a href='/blog/categories/bootstrap' style='font-size: 101.07142857142857%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 101.07142857142857%'>bts(1)</a> <a href='/blog/categories/cdr' style='font-size: 103.21428571428571%'>cdr(3)</a> <a href='/blog/categories/certification' style='font-size: 101.07142857142857%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 102.14285714285714%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 103.21428571428571%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 124.64285714285714%'>debian(23)</a> <a href='/blog/categories/devise' style='font-size: 105.35714285714286%'>devise(5)</a> <a href='/blog/categories/dkms' style='font-size: 101.07142857142857%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 112.85714285714286%'>docker(12)</a> <a href='/blog/categories/dokku' style='font-size: 102.14285714285714%'>dokku(2)</a> <a href='/blog/categories/doorkeeper' style='font-size: 103.21428571428571%'>doorkeeper(3)</a> <a href='/blog/categories/drb' style='font-size: 101.07142857142857%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.07142857142857%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 108.57142857142857%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 138.57142857142856%'>event(36)</a> <a href='/blog/categories/fluentd' style='font-size: 101.07142857142857%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 104.28571428571429%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 102.14285714285714%'>ghq(2)</a> <a href='/blog/categories/git' style='font-size: 105.35714285714286%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 107.5%'>github(7)</a> <a href='/blog/categories/go' style='font-size: 101.07142857142857%'>go(1)</a> <a href='/blog/categories/gpg' style='font-size: 101.07142857142857%'>gpg(1)</a> <a href='/blog/categories/haml' style='font-size: 101.07142857142857%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 102.14285714285714%'>heroku(2)</a> <a href='/blog/categories/homebrew' style='font-size: 107.5%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 103.21428571428571%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 103.21428571428571%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 101.07142857142857%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 101.07142857142857%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.07142857142857%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 104.28571428571429%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 101.07142857142857%'>jenkins(1)</a> <a href='/blog/categories/jquery' style='font-size: 101.07142857142857%'>jquery(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 102.14285714285714%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.07142857142857%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.14285714285714%'>jus(2)</a> <a href='/blog/categories/k-of' style='font-size: 101.07142857142857%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 105.35714285714286%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.07142857142857%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.07142857142857%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 104.28571428571429%'>land-of-lisp(4)</a> <a href='/blog/categories/lilo' style='font-size: 101.07142857142857%'>lilo(1)</a> <a href='/blog/categories/linux' style='font-size: 108.57142857142857%'>linux(8)</a> <a href='/blog/categories/live' style='font-size: 103.21428571428571%'>live(3)</a> <a href='/blog/categories/lxc' style='font-size: 101.07142857142857%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.07142857142857%'>lxcjp(1)</a> <a href='/blog/categories/mail' style='font-size: 101.07142857142857%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 102.14285714285714%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 104.28571428571429%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.07142857142857%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.07142857142857%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.07142857142857%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 102.14285714285714%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.07142857142857%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 104.28571428571429%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 105.35714285714286%'>octopress(5)</a> <a href='/blog/categories/omniauth' style='font-size: 102.14285714285714%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 102.14285714285714%'>openssl(2)</a> <a href='/blog/categories/osx' style='font-size: 127.85714285714286%'>osx(26)</a> <a href='/blog/categories/owncloud' style='font-size: 101.07142857142857%'>owncloud(1)</a> <a href='/blog/categories/packer' style='font-size: 101.07142857142857%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.07142857142857%'>passenger(1)</a> <a href='/blog/categories/peco' style='font-size: 101.07142857142857%'>peco(1)</a> <a href='/blog/categories/postfix' style='font-size: 102.14285714285714%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 102.14285714285714%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.07142857142857%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.07142857142857%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 102.14285714285714%'>r(2)</a> <a href='/blog/categories/rabbit' style='font-size: 102.14285714285714%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 132.14285714285714%'>rails(30)</a> <a href='/blog/categories/ransack' style='font-size: 101.07142857142857%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 104.28571428571429%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.07142857142857%'>redmine(1)</a> <a href='/blog/categories/rspec' style='font-size: 101.07142857142857%'>rspec(1)</a> <a href='/blog/categories/rsyslog' style='font-size: 101.07142857142857%'>rsyslog(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.07142857142857%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(56)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.07142857142857%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 103.21428571428571%'>rubykansai(3)</a> <a href='/blog/categories/rubymotion' style='font-size: 113.92857142857143%'>rubymotion(13)</a> <a href='/blog/categories/security' style='font-size: 103.21428571428571%'>security(3)</a> <a href='/blog/categories/shell' style='font-size: 103.21428571428571%'>shell(3)</a> <a href='/blog/categories/slim' style='font-size: 101.07142857142857%'>slim(1)</a> <a href='/blog/categories/sylpheed' style='font-size: 101.07142857142857%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.07142857142857%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 104.28571428571429%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 120.35714285714286%'>ubuntu(19)</a> <a href='/blog/categories/upstart' style='font-size: 102.14285714285714%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 101.07142857142857%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 106.42857142857143%'>vagrant(6)</a> <a href='/blog/categories/vagrantcloud' style='font-size: 102.14285714285714%'>vagrantcloud(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 102.14285714285714%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 101.07142857142857%'>weechat(1)</a> <a href='/blog/categories/yaml' style='font-size: 101.07142857142857%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.07142857142857%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 109.64285714285714%'>zsh(9)</a> </span>
 </section>
 
 <section>

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: yaml | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/yaml/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -47,13 +47,9 @@ libyaml binding なので
 YAML は空白に敏感なので、
 <code>-foo</code> のように書くとエラーになります。</p>
 
-<p>```yaml</p>
-
-<pre><code>- foo
-- bar
+<pre><code class="yaml">    - foo
+    - bar
 </code></pre>
-
-<p>```</p>
 
 <h3>マッピング</h3>
 
@@ -62,38 +58,26 @@ YAML は空白に敏感なので、
 
 <p>読みやすくするために <code>:</code> の前後の空白を増やしても良いようです。</p>
 
-<p>```yaml</p>
-
-<pre><code>foo:  bar
-hoge: fuga
-bar : baz
+<pre><code class="yaml">    foo:  bar
+    hoge: fuga
+    bar : baz
 </code></pre>
-
-<p>```</p>
 
 <h3>マッピングと配列</h3>
 
 <p>マッピングの値に配列を入れるとき</p>
 
-<p>```yaml</p>
-
-<pre><code>roles:
-  - foo
-  - bar
+<pre><code class="yaml">    roles:
+      - foo
+      - bar
 </code></pre>
-
-<p>```</p>
 
 <p>のようにインデントするのが普通のようですが、</p>
 
-<p>```yaml</p>
-
-<pre><code>roles:
-- foo
-- bar
+<pre><code class="yaml">    roles:
+    - foo
+    - bar
 </code></pre>
-
-<p>```</p>
 
 <p>のようにインデントせずに配列を書いても大丈夫です。</p>
 
@@ -123,36 +107,28 @@ YAML ドキュメントの開始部分を示すのに使うようです。</p>
 
 <p>迷うなら付けておけば YAML ファイルということがちょっとわかりやすくなると思います。</p>
 
-<p>```console</p>
-
-<pre><code>% cat example.yml
----
-foo: bar
----
-hoge: fuga
-% ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' example.yml
-{"foo"=&gt;"bar"}
-% ruby -r yaml -r pp -e 'pp YAML.load_stream(ARGF)' example.yml
-[{"foo"=&gt;"bar"}, {"hoge"=&gt;"fuga"}]
+<pre><code class="console">    % cat example.yml
+    ---
+    foo: bar
+    ---
+    hoge: fuga
+    % ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' example.yml
+    {"foo"=&gt;"bar"}
+    % ruby -r yaml -r pp -e 'pp YAML.load_stream(ARGF)' example.yml
+    [{"foo"=&gt;"bar"}, {"hoge"=&gt;"fuga"}]
 </code></pre>
-
-<p>```</p>
 
 <h3>コメント</h3>
 
 <p><code>#</code> から行末までがコメントです。
 行頭以外からでもコメントになります。</p>
 
-<p>```yaml</p>
-
-<pre><code>foo: # ここはコメント
-  - bar
-hoge:
-  # ここもコメント
-  - fuga
+<pre><code class="yaml">    foo: # ここはコメント
+      - bar
+    hoge:
+      # ここもコメント
+      - fuga
 </code></pre>
-
-<p>```</p>
 
 <h2>スカラー値</h2>
 
@@ -167,19 +143,15 @@ ansible の設定では shell と組み合わせに便利です。</p>
 では以下のように <code>creates=</code> によるガード条件を最初の行に書いて、
 次の行からシェルスクリプトの内容を書いています。</p>
 
-<p>```yaml</p>
-
-<pre><code>- name: rbenv install 
-  shell: |
-   creates=/versions/
-   set -e
-   . /etc/profile.d/rbenv.sh
-   export CONFIGURE_OPTS="--disable-install-doc"
-   rbenv install 
-   rbenv global 
+<pre><code class="yaml">    - name: rbenv install 
+      shell: |
+       creates=/versions/
+       set -e
+       . /etc/profile.d/rbenv.sh
+       export CONFIGURE_OPTS="--disable-install-doc"
+       rbenv install 
+       rbenv global 
 </code></pre>
-
-<p>```</p>
 
 <p><code>&gt;</code> を使うと folded style になります。
 literal style と違って改行も普通の空白に置き換えられるので、
@@ -198,26 +170,22 @@ ansible の設定ファイルでは使ったことがありません。</p>
 
 <p>以下の例では大文字小文字の差が多いので、フロースタイルでまとめています。</p>
 
-<p>```console</p>
-
-<pre><code>% cat example.yml
----
-- [true, True, TRUE]
-- [false, False, FALSE]
-- [yes, Yes, YES]
-- [no, No, NO]
-- [on, On, ON]
-- [off, Off, OFF]
-% ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' example.yml
-[[[true, true, true],
-  [false, false, false],
-  [true, true, true],
-  [false, false, false],
-  [true, true, true],
-  [false, false, false]]]
+<pre><code class="console">    % cat example.yml
+    ---
+    - [true, True, TRUE]
+    - [false, False, FALSE]
+    - [yes, Yes, YES]
+    - [no, No, NO]
+    - [on, On, ON]
+    - [off, Off, OFF]
+    % ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' example.yml
+    [[[true, true, true],
+      [false, false, false],
+      [true, true, true],
+      [false, false, false],
+      [true, true, true],
+      [false, false, false]]]
 </code></pre>
-
-<p>```</p>
 
 <h2>文字列として解釈させる</h2>
 
@@ -225,18 +193,14 @@ ansible の設定ファイルでは使ったことがありません。</p>
 そういうときは <code>""</code> などでくくっておくか、
 <code>!!str</code> で明示的に文字列型ということを指定します。</p>
 
-<p>```console</p>
-
-<pre><code>% cat /tmp/example.yml
----
-- "true"
-- 'false'
-- !!str yes
-% ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' /tmp/example.yml
-["true", "false", "yes"]
+<pre><code class="console">    % cat /tmp/example.yml
+    ---
+    - "true"
+    - 'false'
+    - !!str yes
+    % ruby -r yaml -r pp -e 'pp YAML.load(ARGF)' /tmp/example.yml
+    ["true", "false", "yes"]
 </code></pre>
-
-<p>```</p>
 
 <h2>まとめ</h2>
 

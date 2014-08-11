@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ghq | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ghq/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -60,7 +60,7 @@ brew untap peco/peco
 
 <h2>peco の設定</h2>
 
-<p><a href="http://shibayu36.hatenablog.com/entry/2014/06/27/223538" title="pecoを使い始めた - $shibayu36-&gt;blog;">pecoを使い始めた &ndash; $shibayu36-&gt;blog;</a>
+<p><a href="http://shibayu36.hatenablog.com/entry/2014/06/27/223538" title="pecoを使い始めた - $shibayu36-&gt;blog;">pecoを使い始めた - $shibayu36-&gt;blog;</a>
 はいろいろキーバインドを設定していますが、
 デフォルトのまま使っています。</p>
 
@@ -71,37 +71,33 @@ brew untap peco/peco
 
 <p>以下に該当部分を抜き出しておきます。</p>
 
-<p>```sh 50peco.zsh
-if (( ${+commands[peco]} )); then
-  peco-go-to-dir () {</p>
-
-<pre><code>local line
-local selected="$(
-  {
-    (
-      autoload -Uz chpwd_recent_filehandler
-      chpwd_recent_filehandler &amp;&amp; for line in $reply; do
-        if [[ -d "$line" ]]; then
-          echo "$line"
-        fi
-      done
-    )
-    ghq list --full-path
-    for line in *(-/) ${^cdpath}/*(N-/); do echo "$line"; done | sort -u
-  } | peco --query "$LBUFFER"
-)"
-if [ -n "$selected" ]; then
-  BUFFER="cd ${(q)selected}"
-  zle accept-line
-fi
-zle clear-screen
-</code></pre>
-
-<p>  }
+<pre><code class="sh 50peco.zsh">if (( ${+commands[peco]} )); then
+  peco-go-to-dir () {
+    local line
+    local selected="$(
+      {
+        (
+          autoload -Uz chpwd_recent_filehandler
+          chpwd_recent_filehandler &amp;&amp; for line in $reply; do
+            if [[ -d "$line" ]]; then
+              echo "$line"
+            fi
+          done
+        )
+        ghq list --full-path
+        for line in *(-/) ${^cdpath}/*(N-/); do echo "$line"; done | sort -u
+      } | peco --query "$LBUFFER"
+    )"
+    if [ -n "$selected" ]; then
+      BUFFER="cd ${(q)selected}"
+      zle accept-line
+    fi
+    zle clear-screen
+  }
   zle -N peco-go-to-dir
-  bindkey &lsquo;^[g&rsquo; peco-go-to-dir
+  bindkey '^[g' peco-go-to-dir
 fi
-```</p>
+</code></pre>
 
 <p>まず <code>(( ${+commands[peco]} ))</code> で <code>peco</code> コマンドの存在チェックをしています。
 zsh スクリプトの中では <code>type peco &gt;/dev/null 2&gt;&amp;1</code> のようなチェック方法の代わりに使えます。</p>
@@ -135,7 +131,7 @@ zsh スクリプトの中では <code>type peco &gt;/dev/null 2&gt;&amp;1</code>
     <link href="http://blog.n-z.jp/blog/2014-07-05-ghq-gitconfig.html"/>
     <updated>2014-07-05T09:55:07+09:00</updated>
     <id>http://blog.n-z.jp/blog/ghq-gitconfig</id>
-    <content type="html"><![CDATA[<p><a href="http://blog.kentarok.org/entry/2014/06/03/135300" title="ghqを使ったローカルリポジトリの統一的・効率的な管理について - delirious thoughts">ghqを使ったローカルリポジトリの統一的・効率的な管理について &ndash; delirious thoughts</a>
+    <content type="html"><![CDATA[<p><a href="http://blog.kentarok.org/entry/2014/06/03/135300" title="ghqを使ったローカルリポジトリの統一的・効率的な管理について - delirious thoughts">ghqを使ったローカルリポジトリの統一的・効率的な管理について - delirious thoughts</a>
 を参考にして、
 go と ghq で同じディレクトリを使っていたのですが、
 go で自動で追加ダウンロードされたものと
@@ -172,15 +168,11 @@ go で自動で追加ダウンロードされたものと
 <p>統合している時は go とか git とかの意味をかねて g だけにしていましたが、
 今は go 専用にしています。</p>
 
-<p>```sh 50gopath.sh</p>
-
-<pre><code>if [ -z "${GOPATH:-}" ]; then
-    export GOPATH=$HOME/g
-    PATH=$PATH:$GOPATH/bin
-fi
+<pre><code class="sh 50gopath.sh">    if [ -z "${GOPATH:-}" ]; then
+        export GOPATH=$HOME/g
+        PATH=$PATH:$GOPATH/bin
+    fi
 </code></pre>
-
-<p>```</p>
 
 <p>その後に zsh 専用の追加設定で
 <a href="https://github.com/znz/dot-shell/blob/bb84c5aefc83eab5ce1841508abd726ee9db6577/profile.d/50gopath.zsh" title="50gopath.zsh">50gopath.zsh</a>
@@ -193,13 +185,9 @@ fi
 
 <p>そして fpath に <code>_ghq</code> のパスを追加して <code>ghq</code> の引数を補完できるようにしています。</p>
 
-<p>```sh 50gopath.zsh</p>
-
-<pre><code>path=( $path ${^${(s/:/)GOPATH}}/bin(N) )
-fpath=( $fpath ${^${(s/:/)GOPATH}}/src/*/*/ghq/zsh(N) )
+<pre><code class="sh 50gopath.zsh">    path=( $path ${^${(s/:/)GOPATH}}/bin(N) )
+    fpath=( $fpath ${^${(s/:/)GOPATH}}/src/*/*/ghq/zsh(N) )
 </code></pre>
-
-<p>```</p>
 
 <h2>ghq のインストール</h2>
 
@@ -237,17 +225,13 @@ ghq セクション、つまり <code>[ghq]</code> の行が増えていって�
 他に <code>ghq</code> セクションに設定を入れていたら、
 それも消えてしまうので注意してください。</p>
 
-<p>```sh</p>
-
-<pre><code># ghq section
-git config --global --remove-section "ghq" || :
-GHQ_ROOT="ghq.root"
-#git config --global --unset-all "$GHQ_ROOT" || :
-git config --global "$GHQ_ROOT" "$HOME/s"
-git config --global --add "$GHQ_ROOT" "$HOME/g/src"
+<pre><code class="sh">    # ghq section
+    git config --global --remove-section "ghq" || :
+    GHQ_ROOT="ghq.root"
+    #git config --global --unset-all "$GHQ_ROOT" || :
+    git config --global "$GHQ_ROOT" "$HOME/s"
+    git config --global --add "$GHQ_ROOT" "$HOME/g/src"
 </code></pre>
-
-<p>```</p>
 
 <p>これで <code>ghq get</code> は <code>$HOME/s</code> に入って
 <code>ghq look</code> では両方見えるようになりました。</p>
@@ -260,20 +244,16 @@ push は ssh プロトコル、
 pull などは git プロトコル (昔は Git Read-Only と書いてあった URL)
 を使うようにしています。</p>
 
-<p>```sh</p>
-
-<pre><code># github upload
-GITHUB_URL_PREFIX="url.git@github.com:"
-git config --global --remove-section "$GITHUB_URL_PREFIX" || :
-git config --global "$GITHUB_URL_PREFIX".pushInsteadOf "git://github.com/"
-git config --global --add "$GITHUB_URL_PREFIX".pushInsteadOf "https://github.com/"
-# gist upload
-git config --global "url.git@gist.github.com:".pushInsteadOf "https://gist.github.com/$(git config github.user)/"
-# github download
-git config --global url."git://github.com/".insteadOf "https://github.com/"
+<pre><code class="sh">    # github upload
+    GITHUB_URL_PREFIX="url.git@github.com:"
+    git config --global --remove-section "$GITHUB_URL_PREFIX" || :
+    git config --global "$GITHUB_URL_PREFIX".pushInsteadOf "git://github.com/"
+    git config --global --add "$GITHUB_URL_PREFIX".pushInsteadOf "https://github.com/"
+    # gist upload
+    git config --global "url.git@gist.github.com:".pushInsteadOf "https://gist.github.com/$(git config github.user)/"
+    # github download
+    git config --global url."git://github.com/".insteadOf "https://github.com/"
 </code></pre>
-
-<p>```</p>
 
 <p>詳細は
 <a href="http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html" title="githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法">githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法</a>

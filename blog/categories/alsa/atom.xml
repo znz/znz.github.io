@@ -4,7 +4,7 @@
   <title><![CDATA[Category: alsa | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/alsa/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -59,10 +59,9 @@ VirtualBox の中の wheezy で音が出ない原因を調べてもらって、
 PCM ノードの指定は <code>default</code> 以外にも
 <code>aplay -L</code> (または <code>arecord -L</code>) で表示されるものが指定できるという話がありました。</p>
 
-<p><code>c
-/* playback PCM node */
+<pre><code class="c">/* playback PCM node */
 static char *device = "default";
-</code></p>
+</code></pre>
 
 <p><code>dmix</code>, <code>dsnoop</code>, <code>hw</code>, <code>plughw</code> はデフォルトでは隠されていて、
 <code>~/.asoundrc</code> で以下のように設定をオーバーライドすれば <code>aplay -L</code> などで
@@ -122,58 +121,45 @@ VirtualBox の中の wheezy で試していました。</p>
 <code>+</code> がついていて ACL がついているということに気がついて、
 どこで設定されているのか気になったので帰ってから調べてみました。</p>
 
-<p>```
-$ ls -al /dev/snd
+<pre><code>$ ls -al /dev/snd
 合計 0
 drwxr-xr-x   3 root root      180 10月 27 22:44 .
 drwxr-xr-x  13 root root     3180 10月 27 22:44 ..
 drwxr-xr-x   2 root root       60 10月 27 22:44 by-path
-crw-rw&mdash;-T+  1 root audio 116,  5 10月 27 22:44 controlC0
-crw-rw&mdash;-T+  1 root audio 116,  4 10月 27 22:44 pcmC0D0c
-crw-rw&mdash;-T+  1 root audio 116,  3 10月 27 22:44 pcmC0D0p
-crw-rw&mdash;-T+  1 root audio 116,  2 10月 27 22:44 pcmC0D1c
-crw-rw&mdash;-T+  1 root audio 116,  1 10月 27 22:44 seq
-crw-rw&mdash;-T+  1 root audio 116, 33 10月 27 22:44 timer
+crw-rw---T+  1 root audio 116,  5 10月 27 22:44 controlC0
+crw-rw---T+  1 root audio 116,  4 10月 27 22:44 pcmC0D0c
+crw-rw---T+  1 root audio 116,  3 10月 27 22:44 pcmC0D0p
+crw-rw---T+  1 root audio 116,  2 10月 27 22:44 pcmC0D1c
+crw-rw---T+  1 root audio 116,  1 10月 27 22:44 seq
+crw-rw---T+  1 root audio 116, 33 10月 27 22:44 timer
 $ getfacl /dev/snd/seq
-getfacl: Removing leading &lsquo;/&rsquo; from absolute path names</p>
-
-<h1>file: dev/snd/seq</h1>
-
-<h1>owner: root</h1>
-
-<h1>group: audio</h1>
-
-<h1>flags: &mdash;t</h1>
-
-<p>user::rw-
+getfacl: Removing leading '/' from absolute path names
+# file: dev/snd/seq
+# owner: root
+# group: audio
+# flags: --t
+user::rw-
 user:admin0:rw-
 group::rw-
 mask::rw-
-other::&mdash;&ndash;
-```</p>
+other::---
+</code></pre>
 
 <p>まず、 <code>grep -r snd /lib/udev/rules.d</code> でデバイスを作成している場所を
 探してみましたが、 <code>audio</code> グループに設定している箇所しか見つかりませんでした。</p>
 
-<p>```text /lib/udev/rules.d/91-permissions.rules</p>
-
-<h1>sound devices</h1>
-
-<p>SUBSYSTEM==&ldquo;sound&rdquo;,                             GROUP=&ldquo;audio&rdquo;,</p>
-
-<pre><code>    OPTIONS+="static_node=snd/seq", OPTIONS+="static_node=snd/timer"
+<pre><code class="text /lib/udev/rules.d/91-permissions.rules"># sound devices
+SUBSYSTEM=="sound",                             GROUP="audio",
+        OPTIONS+="static_node=snd/seq", OPTIONS+="static_node=snd/timer"
 </code></pre>
-
-<p>```</p>
 
 <p>次に、ログインしているユーザーの ACL が追加されているということで、
 PAM が関係しているだろうという見当をつけて、
 <code>/etc/pam.d</code> を確認してみたところ、
 <code>common-session</code> の <code>pam_ck_connector</code> が関係してそうだと気付きました。</p>
 
-<p><code>text /etc/pam.d/common-session
-session optional            pam_ck_connector.so nox11
-</code></p>
+<pre><code class="text /etc/pam.d/common-session">session optional            pam_ck_connector.so nox11
+</code></pre>
 
 <p>そこで <code>dpkg -L consolekit</code> などで <code>ConsoleKit</code> 関連のファイルをみていくと
 <code>/usr/lib/ConsoleKit/run-seat.d/udev-acl.ck -&gt; /lib/udev/udev-acl</code>
@@ -181,12 +167,9 @@ session optional            pam_ck_connector.so nox11
 もう一度 udev のルールを確認してみると <code>70-udev-acl.rules</code> で
 <code>udev-acl</code> というタグを設定していました。</p>
 
-<p>```text /lib/udev/rules.d/70-udev-acl.rules</p>
-
-<h1>sound devices</h1>
-
-<p>SUBSYSTEM==&ldquo;sound&rdquo;, TAG+=&ldquo;udev-acl&rdquo;
-```</p>
+<pre><code class="text /lib/udev/rules.d/70-udev-acl.rules"># sound devices
+SUBSYSTEM=="sound", TAG+="udev-acl"
+</code></pre>
 
 <p><code>70-udev-acl.rules</code> をみたり <code>udev-acl</code> のソースをみると <code>ACL</code> を設定しているのは
 <code>udev-acl</code> で間違いなさそうでした。

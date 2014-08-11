@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ime | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ime/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -56,16 +56,12 @@ Mac OS X は IME のオン・オフのような状態の切り替えではなく
 <p><a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html">TeraTerm Pro の対応制御シーケンス</a>
 には以下の3種類の IME 関連の制御シーケンスがあります。</p>
 
-<p>```
-  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
+<pre><code>  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
   CSI &lt; s    TTIMESVIME の開閉状態を保存する。
-  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。</p>
-
-<pre><code>           Ps = 0      IME を閉じる。
-              = 1      IME を開く。
+  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。
+               Ps = 0      IME を閉じる。
+                  = 1      IME を開く。
 </code></pre>
-
-<p>```</p>
 
 <p>この中の <code>TTIMESTIME</code> の <code>Ps</code> を拡張して、
 2 以上も受け付けるようにして、
@@ -100,16 +96,12 @@ Mac OS X は IME のオン・オフのような状態の切り替えではなく
 から引用すると、
 次の3種類になります。</p>
 
-<p>```
-  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
+<pre><code>  CSI &lt; r    TTIMERSIME の開閉状態を復元する。
   CSI &lt; s    TTIMESVIME の開閉状態を保存する。
-  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。</p>
-
-<pre><code>           Ps = 0      IME を閉じる。
-              = 1      IME を開く。
+  CSI &lt; Ps t TTIMESTIME の開閉状態を設定する。省略時の Ps の値は 0。
+               Ps = 0      IME を閉じる。
+                  = 1      IME を開く。
 </code></pre>
-
-<p>```</p>
 
 <h2>iTerm2 の対応</h2>
 
@@ -157,39 +149,35 @@ IME 関連の設定をしてみました。</p>
 
 <p>以降は設定内容を個別に解説していきます。</p>
 
-<p>```scheme
-(global-set-key (kbd &ldquo;M-¥&rdquo;) (lambda () (interactive) (insert &ldquo;\&rdquo;)))</p>
+<pre><code class="scheme">(global-set-key (kbd "M-¥") (lambda () (interactive) (insert "\\")))
 
-<p>(static-when (eq window-system &lsquo;ns)
-  (static-when (assoc &ldquo;MacOSX&rdquo; input-method-alist)</p>
-
-<pre><code>;; ime inline patch
-(setq default-input-method "MacOSX")
-(static-when t
-  (mac-translate-from-yen-to-backslash)
-  (global-set-key (kbd "M-¥") (lambda () (interactive) (insert "¥")))
-  )
-
-(mapc
- (lambda (param)
-   (let ((name (car param)))
-     (cond
-      ((string-match "Japanese\\(\\.base\\)?\\'" name) ;; ひらがなの日本語入力
-       (mac-set-input-method-parameter name 'cursor-color "blue"))
-      ((string-match "Japanese" name) ;; カナなどの日本語入力
-       (mac-set-input-method-parameter name 'cursor-color "red"))
-      ((string-match "Roman" name) ;; 英字
-       (mac-set-input-method-parameter name 'cursor-color "black"))
-      (t ;; その他
-       (mac-set-input-method-parameter name 'cursor-color "yellow"))
+(static-when (eq window-system 'ns)
+  (static-when (assoc "MacOSX" input-method-alist)
+    ;; ime inline patch
+    (setq default-input-method "MacOSX")
+    (static-when t
+      (mac-translate-from-yen-to-backslash)
+      (global-set-key (kbd "M-¥") (lambda () (interactive) (insert "¥")))
       )
-     ))
- mac-input-method-parameters)
-(mac-set-input-method-parameter "com.apple.keylayout.US" 'cursor-color "black")
-)
-</code></pre>
 
-<p>```</p>
+    (mapc
+     (lambda (param)
+       (let ((name (car param)))
+         (cond
+          ((string-match "Japanese\\(\\.base\\)?\\'" name) ;; ひらがなの日本語入力
+           (mac-set-input-method-parameter name 'cursor-color "blue"))
+          ((string-match "Japanese" name) ;; カナなどの日本語入力
+           (mac-set-input-method-parameter name 'cursor-color "red"))
+          ((string-match "Roman" name) ;; 英字
+           (mac-set-input-method-parameter name 'cursor-color "black"))
+          (t ;; その他
+           (mac-set-input-method-parameter name 'cursor-color "yellow"))
+          )
+         ))
+     mac-input-method-parameters)
+    (mac-set-input-method-parameter "com.apple.keylayout.US" 'cursor-color "black")
+    )
+</code></pre>
 
 <h2>環境のチェック</h2>
 
@@ -277,119 +265,115 @@ TeraTerm Pro のように IME の状態によってカーソルの表示を変�
 後で設定しています。
 (先に設定すると、その他の黄色で上書きしてしまう。)</p>
 
-<p>```scheme ns-win.el.gz
-(defvar mac-input-method-parameters
-  &lsquo;(</p>
-
-<pre><code>("com.apple.inputmethod.Kotoeri.Roman"
- (title . "A")
- (cursor-color)
- (cursor-type))
-("com.apple.inputmethod.Kotoeri.Japanese"
- (title . "あ")
- (cursor-color)
- (cursor-type))
-("com.apple.inputmethod.Kotoeri.Japanese.Katakana"
- (title . "ア")
- (cursor-color)
- (cursor-type))
-("com.apple.inputmethod.Kotoeri.Japanese.FullWidthRoman"
- (title . "Ａ")
- (cursor-color)
- (cursor-type))
-("com.apple.inputmethod.Kotoeri.Japanese.HalfWidthKana"
- (title . "ｱ")
- (cursor-color)
- (cursor-type))
-("com.apple.inputmethod.kotoeri.Ainu"
- (title . "アイヌ")
- (cursor-color)
- (cursor-type))
-...
-("com.google.inputmethod.Japanese.Roman"
- (title . "G")
- (cursor-color)
- (cursor-type))
-("com.google.inputmethod.Japanese.base"
- (title . "ぐ")
- (cursor-color)
- (cursor-type))
-("com.google.inputmethod.Japanese.Katakana"
- (title . "グ")
- (cursor-color)
- (cursor-type))
-("com.google.inputmethod.Japanese.FullWidthRoman"
- (title . "Ｇ")
- (cursor-color)
- (cursor-type))
-("com.google.inputmethod.Japanese.HalfWidthKana"
- (title . "ｸﾞ")
- (cursor-color)
- (cursor-type))
-("jp.monokakido.inputmethod.Kawasemi.Roman"
- (title . "K")
- (cursor-color)
- (cursor-type))
-("jp.monokakido.inputmethod.Kawasemi.Japanese"
- (title . "か")
- (cursor-color)
- (cursor-type))
-("jp.monokakido.inputmethod.Kawasemi.Japanese.Katakana"
- (title . "カ")
- (cursor-color)
- (cursor-type))
-("jp.monokakido.inputmethod.Kawasemi.Japanese.FullWidthRoman"
- (title . "Ｋ")
- (cursor-color)
- (cursor-type))
-("jp.monokakido.inputmethod.Kawasemi.Japanese.HalfWidthKana"
- (title . "ｶ")
- (cursor-color)
- (cursor-type))
-("jp.monokakido.inputmethod.Kawasemi.Japanese.HalfWidthRoman"
- (title . "_K")
- (cursor-color)
- (cursor-type))
-("jp.monokakido.inputmethod.Kawasemi.Japanese.Code"
- (title . "C")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok21.Roman"
- (title . "A")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok21.Japanese"
- (title . "あ")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok21.Japanese.Katakana"
- (title . "ア")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok21.Japanese.FullWidthRoman"
- (title . "英")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok21.Japanese.HalfWidthEiji"
- (title . "半英")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok22.Roman"
- (title . "A")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok22.Japanese"
- (title . "あ")
- (cursor-color)
- (cursor-type))
-("com.justsystems.inputmethod.atok22.Japanese.Katakana"
- (title . "ア")
- (cursor-color)
- (cursor-type))
-...
+<pre><code class="scheme ns-win.el.gz">(defvar mac-input-method-parameters
+  '(
+    ("com.apple.inputmethod.Kotoeri.Roman"
+     (title . "A")
+     (cursor-color)
+     (cursor-type))
+    ("com.apple.inputmethod.Kotoeri.Japanese"
+     (title . "あ")
+     (cursor-color)
+     (cursor-type))
+    ("com.apple.inputmethod.Kotoeri.Japanese.Katakana"
+     (title . "ア")
+     (cursor-color)
+     (cursor-type))
+    ("com.apple.inputmethod.Kotoeri.Japanese.FullWidthRoman"
+     (title . "Ａ")
+     (cursor-color)
+     (cursor-type))
+    ("com.apple.inputmethod.Kotoeri.Japanese.HalfWidthKana"
+     (title . "ｱ")
+     (cursor-color)
+     (cursor-type))
+    ("com.apple.inputmethod.kotoeri.Ainu"
+     (title . "アイヌ")
+     (cursor-color)
+     (cursor-type))
+    ...
+    ("com.google.inputmethod.Japanese.Roman"
+     (title . "G")
+     (cursor-color)
+     (cursor-type))
+    ("com.google.inputmethod.Japanese.base"
+     (title . "ぐ")
+     (cursor-color)
+     (cursor-type))
+    ("com.google.inputmethod.Japanese.Katakana"
+     (title . "グ")
+     (cursor-color)
+     (cursor-type))
+    ("com.google.inputmethod.Japanese.FullWidthRoman"
+     (title . "Ｇ")
+     (cursor-color)
+     (cursor-type))
+    ("com.google.inputmethod.Japanese.HalfWidthKana"
+     (title . "ｸﾞ")
+     (cursor-color)
+     (cursor-type))
+    ("jp.monokakido.inputmethod.Kawasemi.Roman"
+     (title . "K")
+     (cursor-color)
+     (cursor-type))
+    ("jp.monokakido.inputmethod.Kawasemi.Japanese"
+     (title . "か")
+     (cursor-color)
+     (cursor-type))
+    ("jp.monokakido.inputmethod.Kawasemi.Japanese.Katakana"
+     (title . "カ")
+     (cursor-color)
+     (cursor-type))
+    ("jp.monokakido.inputmethod.Kawasemi.Japanese.FullWidthRoman"
+     (title . "Ｋ")
+     (cursor-color)
+     (cursor-type))
+    ("jp.monokakido.inputmethod.Kawasemi.Japanese.HalfWidthKana"
+     (title . "ｶ")
+     (cursor-color)
+     (cursor-type))
+    ("jp.monokakido.inputmethod.Kawasemi.Japanese.HalfWidthRoman"
+     (title . "_K")
+     (cursor-color)
+     (cursor-type))
+    ("jp.monokakido.inputmethod.Kawasemi.Japanese.Code"
+     (title . "C")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok21.Roman"
+     (title . "A")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok21.Japanese"
+     (title . "あ")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok21.Japanese.Katakana"
+     (title . "ア")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok21.Japanese.FullWidthRoman"
+     (title . "英")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok21.Japanese.HalfWidthEiji"
+     (title . "半英")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok22.Roman"
+     (title . "A")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok22.Japanese"
+     (title . "あ")
+     (cursor-color)
+     (cursor-type))
+    ("com.justsystems.inputmethod.atok22.Japanese.Katakana"
+     (title . "ア")
+     (cursor-color)
+     (cursor-type))
+    ...
 </code></pre>
-
-<p>```</p>
 ]]></content>
   </entry>
   

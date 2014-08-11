@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ipsec | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ipsec/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-07T00:26:11+09:00</updated>
+  <updated>2014-08-11T19:53:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -60,34 +60,23 @@ daily build の状態によっては動作が変わっているかもしれま�
 192.168.11.11 と 192.168.12.12 をつなぐ、という感じにしています。
 デフォルトの eth0 は外部への接続用としてそのままにしています。</p>
 
-<p>```
-192.168.11.11 (vm1:eth2)</p>
-
-<pre><code>   |
+<pre><code>192.168.11.11 (vm1:eth2)
+       |
+192.168.50.11 (vm1:eth1)
+       |
+192.168.50.12 (vm2:eth1)
+       |
+192.168.12.12 (vm2:eth2)
 </code></pre>
-
-<p>192.168.50.11 (vm1:eth1)</p>
-
-<pre><code>   |
-</code></pre>
-
-<p>192.168.50.12 (vm2:eth1)</p>
-
-<pre><code>   |
-</code></pre>
-
-<p>192.168.12.12 (vm2:eth2)
-```</p>
 
 <h2>準備</h2>
 
 <p>Usage に書いてあるように準備をしておきます。
 先日作った <code>ja_jp</code> role は git submodule にしているので、</p>
 
-<p><code>
-% git submodule init
+<pre><code>% git submodule init
 % git submodule update
-</code></p>
+</code></pre>
 
 <p>で取得する必要があります。</p>
 
@@ -146,17 +135,16 @@ syslog の方で <code>#012</code> となっている部分がありますが、
 これは rsyslog で改行が変換されたたもので空白として無視すれば良くて、
 例えば</p>
 
-<p><code>
-Jun  4 17:54:43 vm1 racoon: DEBUG: new cookie:#012831d33d46e20f8e6
+<pre><code>Jun  4 17:54:43 vm1 racoon: DEBUG: new cookie:#012831d33d46e20f8e6
 Jun  4 17:54:43 vm1 racoon: DEBUG: final encryption key computed:
 Jun  4 17:54:43 vm1 racoon: DEBUG: #012932d361f fc62ddc2 6164d513 d40d211f b7364166 232cf490
-</code></p>
+</code></pre>
 
 <p>というログなら cookie は <code>831d33d46e20f8e6</code> になります。</p>
 
 <p>鍵は <code>932d361ffc62ddc26164d513d40d211fb7364166232cf490</code> になると思ったのですが、
 これを
-Edit &ndash;> Preferences &ndash;> Protocols &ndash;> ISAKMP &ndash;> IKEv1 Decryption Table:
+Edit -> Preferences -> Protocols -> ISAKMP -> IKEv1 Decryption Table:
 に設定すれば良いはずなのですが、試したところ decrypt されなかったので、
 あっているのかどうかはわかりませんでした。
 cookie の方は他のログなどで確認できたので、あっているはずです。</p>
