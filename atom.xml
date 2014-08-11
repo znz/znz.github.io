@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-11T19:55:50+09:00</updated>
+  <updated>2014-08-11T22:47:05+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,127 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[vagrantなどのローカルへのssh接続のみarcfour256で高速化する]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-08-11-openssh-arcfour256.html"/>
+    <updated>2014-08-11T21:53:54+09:00</updated>
+    <id>http://blog.n-z.jp/blog/openssh-arcfour256</id>
+    <content type="html"><![CDATA[<p><a href="http://d.hatena.ne.jp/rx7/20101025/p1" title="大容量ファイルのSCP転送を高速にする方法 - 元RX-7乗りの適当な日々">大容量ファイルのSCP転送を高速にする方法 - 元RX-7乗りの適当な日々</a>
+をみて、安全な可能性が高い経路だけ <code>arcfour256</code> のような高速な <code>Ciphers</code> を使いたいと思って、そうなるように設定しました。</p>
+
+<p><a href="http://blog.n-z.jp/blog/2013-11-15-dokku.html" title="VirtualBoxでdokkuを試した">VirtualBoxでdokkuを試した</a>
+での設定は意図通りには動いていませんでした。</p>
+
+<!--more-->
+
+
+<h2>確認バージョン</h2>
+
+<ul>
+<li>Mac OS X 10.9.4</li>
+<li>OpenSSH_6.2p2, OSSLShim 0.9.8r 8 Dec 2011</li>
+</ul>
+
+
+<h2>OpenSSH の <code>~/.ssh/config</code> の設定例</h2>
+
+<p>最初に例を出しておきます。
+詳しいことは説明は後でしますが、
+<code>Host *</code> の設定は例として書いているだけで、
+書かないことを推奨します。</p>
+
+<p><code>text ~/.ssh/config
+HashKnownHosts no
+Host 127.0.0.1
+    Ciphers arcfour256,arcfour128
+Host *
+    Ciphers aes256-ctr,aes192-ctr,aes128-ctr
+</code></p>
+
+<h3>設定の固まり (セクション)</h3>
+
+<p><code>~/.ssh/config</code> の設定は <code>Host</code> で始まる行ごとの固まり (セクション) に分かれていて、
+上の例の場合は <code>HashKnownHosts</code> が全体の設定、
+次が <code>127.0.0.1</code> のみの設定、
+最後が <code>*</code> つまりワイルドカードですべてのホストに対する設定になります。</p>
+
+<h3>設定の優先順位</h3>
+
+<p>最初に見つかった設定が使われます。
+これが以前は勘違いしていた点で、
+ホストごとの設定を優先したいのなら、
+<code>Host</code> の上のファイルの冒頭には書かずに、
+ファイルの最後に <code>Host *</code> で設定する必要があります。</p>
+
+<p>さらに詳しい優先順位は <code>man ssh_config</code> で参照できますが、</p>
+
+<ol>
+<li>コマンドラインオプション</li>
+<li>ユーザー設定 (<code>~/.ssh/config</code>)</li>
+<li>システムの設定 (<code>/etc/ssh/ssh_config</code>)</li>
+</ol>
+
+
+<p>という順番で、その中で最初に見つかったものを使うようになっています。</p>
+
+<p>つまり、ホストごとの設定はファイルの先頭に近い方に、
+一般的な設定は最後に書く必要があります。</p>
+
+<h2>Ciphers の一般設定</h2>
+
+<p>デフォルトは <code>man</code> で確認すると
+<code>aes128-ctr,aes192-ctr,aes256-ctr,arcfour256,arcfour128,aes128-gcm@openssh.com,aes256-gcm@openssh.com,aes128-cbc,3des-cbc,blowfish-cbc,cast128-cbc,aes192-cbc,aes256-cbc,arcfour</code>
+になっていて、
+AES の CTR のビット数が多いものを優先するために上記の設定にしています。</p>
+
+<p>設定するなら OS などの更新ごとに毎回ちゃんと <code>man</code> でデフォルトを確認すべきです。
+よくわからないのなら、
+<code>Host *</code> での設定はしない方が良いでしょう。</p>
+
+<h2>127.0.0.1 向けの Ciphers 設定</h2>
+
+<p>参考にしたサイトのコメントに「
+<a href="http://d.hatena.ne.jp/rx7/20101025/p1#c1291741909" title="ただ、arcfourには別の問題が有るので、使わない方がいいです。 arcfour128/256はその問題の対処版なので、これらのみを使うようにした方がいいでしょう。">ただ、arcfourには別の問題が有るので、使わない方がいいです。 arcfour128/256はその問題の対処版なので、これらのみを使うようにした方がいいでしょう。</a>
+」とあり、速度もほとんど変わらないので、
+「arcfour128/256」だけ使う設定にしています。</p>
+
+<h2>vagrant 用設定</h2>
+
+<p><code>vagrant ssh --help</code> で追加のオプションが渡せるとわかったので、
+<code>vagrant ssh -- -v</code> で接続時の状況を調べました。</p>
+
+<p>コマンドラインオプションが優先されるということで、
+<code>vagrant ssh -- -v -o Ciphers=arcfour256</code>
+のように接続すると <code>arcfour256</code> になることが確認できました。</p>
+
+<p>以前は <code>Host vagrant</code> で設定して <code>vagrant ssh</code> の代わりに <code>ssh vagrant</code> を使っていたのですが、
+複数 <code>vagrant up</code> したときに最初に起動した VM のポート (2222) にしか接続できないという問題がありました。</p>
+
+<p>そこで、他の VM のときにも使える設定を考えたところ、
+<code>Host 127.0.0.1</code> でうまくいくことがわかりました。</p>
+
+<h2>まとめ</h2>
+
+<p>元々のデフォルトは時代に合わせて最適なものに更新されているので、
+不用意に固定してしまうと
+<a href="http://d.hatena.ne.jp/jovi0608/20140808/1407483168" title="OpenSSLの脆弱性(CVE-2014-3511)でTLSプロトコルの基礎を学ぶ - ぼちぼち日記">OpenSSLの脆弱性(CVE-2014-3511)でTLSプロトコルの基礎を学ぶ - ぼちぼち日記</a>
+のように強いものに固定していたつもりが弱いものに固定されてしまうことになる可能性があるので注意が必要です。</p>
+
+<p><code>127.0.0.1</code> 以外にも LAN 内のホストなど、経路の信頼性が比較的高くて高速に転送したい場合は <code>Host</code> 設定で <code>Ciphers arcfour256</code> を追加すると良いのではないでしょうか。</p>
+
+<h2>参考 URL</h2>
+
+<ul>
+<li><a href="http://d.hatena.ne.jp/rx7/20101025/p1" title="大容量ファイルのSCP転送を高速にする方法 - 元RX-7乗りの適当な日々">大容量ファイルのSCP転送を高速にする方法 - 元RX-7乗りの適当な日々</a></li>
+<li><a href="http://tech.nitoyon.com/ja/blog/2013/01/11/github-clone-http/" title="GitHub で clone するときは SSH じゃなく HTTP を使ったほうが高速 - てっく煮ブログ">GitHub で clone するときは SSH じゃなく HTTP を使ったほうが高速 - てっく煮ブログ</a></li>
+<li><a href="http://endoyuta.com/2014/03/12/github%E3%81%AEssh%E6%8E%A5%E7%B6%9A%E3%81%8C%E9%80%9F%E3%81%8F%E3%81%AA%E3%82%8B%E3%82%89%E3%81%97%E3%81%84/" title="githubのssh接続が速くなるらしい | Logicky Blog">githubのssh接続が速くなるらしい | Logicky Blog</a></li>
+<li><a href="http://blog.eiel.info/blog/2013/11/09/no-mathcing-cipher-found-on-github/" title="GitHub で SSH 接続できなくなった。SSH をつかった場合に高速化する設定が原因だった。 - そんなこと覚えてない">GitHub で SSH 接続できなくなった。SSH をつかった場合に高速化する設定が原因だった。 - そんなこと覚えてない</a></li>
+<li><a href="http://d.hatena.ne.jp/jovi0608/20140808/1407483168" title="OpenSSLの脆弱性(CVE-2014-3511)でTLSプロトコルの基礎を学ぶ - ぼちぼち日記">OpenSSLの脆弱性(CVE-2014-3511)でTLSプロトコルの基礎を学ぶ - ぼちぼち日記</a></li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Rails 4.1 で jQuery Raty を使ってみた]]></title>
@@ -2296,60 +2417,6 @@ APIs で <code>Google+ API</code> も有効にする必要がありました。<
 <li><a href="http://qiita.com/aikyo02/items/459d03af304e1188f110" title="Google OAuth 2.0 loginが2014年9月に使えなくなる(Googleアカウントからのユーザ登録機能がある場合は注意)">Google OAuth 2.0 loginが2014年9月に使えなくなる(Googleアカウントからのユーザ登録機能がある場合は注意)</a></li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[JAWS-UG三都物語2014に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-07-05-jawsug-santo.html"/>
-    <updated>2014-07-05T13:07:03+09:00</updated>
-    <id>http://blog.n-z.jp/blog/jawsug-santo</id>
-    <content type="html"><![CDATA[<p><a href="http://santo2014.jaws-ug.jp/" title="夏のJAWS-UG 三都物語 2014">夏のJAWS-UG 三都物語 2014</a>
-に午後から参加して、
-主に Vagrant の話を聞いたのと、
-CDP道場（初中級）に参加していました。</p>
-
-<!--more-->
-
-
-<h2>開発現場で活用する Vagrant</h2>
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=B00F418SQ8" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-<p>まず最初に Vagrant の話をきいてきました。</p>
-
-<p><a href="http://www.amazon.co.jp/gp/product/B00F418SQ8/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=B00F418SQ8&amp;linkCode=as2&amp;tag=znz-22">Vagrant入門ガイド</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=B00F418SQ8" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />
-がなぜか今200円になっていると言っていました。</p>
-
-<p><a href="https://github.com/shin1x1/vagrant-demo-20140705">https://github.com/shin1x1/vagrant-demo-20140705</a> にデモの内容が公開されていますが、後で聞いてみたらスライドの番号では 4 が vagrant share だけだったので、番号がずれていると言っていました。</p>
-
-<p>vagrant up だけで開発環境が構築できるようにしておくというのはマネしてみようと思いました。</p>
-
-<p>ansible をゲスト OS 側に入れるのは vagrant up だけで済む (ホスト側に ansible を入れる必要がない) という他にホスト側の ansible のバージョンが上がって provisioning に影響が出るのを避けられるという利点もあると思いました。</p>
-
-<h2>オンプレから AWS への劇的ビフォーアフター</h2>
-
-<p>オンプレという言葉がさしているものが期待していたものと違ったので、あまり聞いていなくて他のことをしていました。</p>
-
-<h2>AWS と mackerel で実践する Immutable Infrastructure</h2>
-
-<p>他の作業がはかどっていたので、作業しながら聞いていました。</p>
-
-<p>とりあえず、まだ流動的な部分もありそうで、
-しばらく様子見な部分も多そうだと思いました。</p>
-
-<h2>CDP 道場（初中級）</h2>
-
-<p>CDP というのはクラウドデザインパターンという意味だったらしく、
-クラウドを実際にどういう構成で使うのかというのが勉強になりました。</p>
-
-<h2>その後</h2>
-
-<p>懇親会が無料というのを知らなかったこともあり、
-そのまま帰りました。</p>
 ]]></content>
   </entry>
   

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-11T19:55:50+09:00</updated>
+  <updated>2014-08-11T22:47:05+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,127 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[vagrantなどのローカルへのssh接続のみarcfour256で高速化する]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-08-11-openssh-arcfour256.html"/>
+    <updated>2014-08-11T21:53:54+09:00</updated>
+    <id>http://blog.n-z.jp/blog/openssh-arcfour256</id>
+    <content type="html"><![CDATA[<p><a href="http://d.hatena.ne.jp/rx7/20101025/p1" title="大容量ファイルのSCP転送を高速にする方法 - 元RX-7乗りの適当な日々">大容量ファイルのSCP転送を高速にする方法 - 元RX-7乗りの適当な日々</a>
+をみて、安全な可能性が高い経路だけ <code>arcfour256</code> のような高速な <code>Ciphers</code> を使いたいと思って、そうなるように設定しました。</p>
+
+<p><a href="/blog/2013-11-15-dokku.html" title="VirtualBoxでdokkuを試した">VirtualBoxでdokkuを試した</a>
+での設定は意図通りには動いていませんでした。</p>
+
+<!--more-->
+
+
+<h2>確認バージョン</h2>
+
+<ul>
+<li>Mac OS X 10.9.4</li>
+<li>OpenSSH_6.2p2, OSSLShim 0.9.8r 8 Dec 2011</li>
+</ul>
+
+
+<h2>OpenSSH の <code>~/.ssh/config</code> の設定例</h2>
+
+<p>最初に例を出しておきます。
+詳しいことは説明は後でしますが、
+<code>Host *</code> の設定は例として書いているだけで、
+書かないことを推奨します。</p>
+
+<p><code>text ~/.ssh/config
+HashKnownHosts no
+Host 127.0.0.1
+    Ciphers arcfour256,arcfour128
+Host *
+    Ciphers aes256-ctr,aes192-ctr,aes128-ctr
+</code></p>
+
+<h3>設定の固まり (セクション)</h3>
+
+<p><code>~/.ssh/config</code> の設定は <code>Host</code> で始まる行ごとの固まり (セクション) に分かれていて、
+上の例の場合は <code>HashKnownHosts</code> が全体の設定、
+次が <code>127.0.0.1</code> のみの設定、
+最後が <code>*</code> つまりワイルドカードですべてのホストに対する設定になります。</p>
+
+<h3>設定の優先順位</h3>
+
+<p>最初に見つかった設定が使われます。
+これが以前は勘違いしていた点で、
+ホストごとの設定を優先したいのなら、
+<code>Host</code> の上のファイルの冒頭には書かずに、
+ファイルの最後に <code>Host *</code> で設定する必要があります。</p>
+
+<p>さらに詳しい優先順位は <code>man ssh_config</code> で参照できますが、</p>
+
+<ol>
+<li>コマンドラインオプション</li>
+<li>ユーザー設定 (<code>~/.ssh/config</code>)</li>
+<li>システムの設定 (<code>/etc/ssh/ssh_config</code>)</li>
+</ol>
+
+
+<p>という順番で、その中で最初に見つかったものを使うようになっています。</p>
+
+<p>つまり、ホストごとの設定はファイルの先頭に近い方に、
+一般的な設定は最後に書く必要があります。</p>
+
+<h2>Ciphers の一般設定</h2>
+
+<p>デフォルトは <code>man</code> で確認すると
+<code>aes128-ctr,aes192-ctr,aes256-ctr,arcfour256,arcfour128,aes128-gcm@openssh.com,aes256-gcm@openssh.com,aes128-cbc,3des-cbc,blowfish-cbc,cast128-cbc,aes192-cbc,aes256-cbc,arcfour</code>
+になっていて、
+AES の CTR のビット数が多いものを優先するために上記の設定にしています。</p>
+
+<p>設定するなら OS などの更新ごとに毎回ちゃんと <code>man</code> でデフォルトを確認すべきです。
+よくわからないのなら、
+<code>Host *</code> での設定はしない方が良いでしょう。</p>
+
+<h2>127.0.0.1 向けの Ciphers 設定</h2>
+
+<p>参考にしたサイトのコメントに「
+<a href="http://d.hatena.ne.jp/rx7/20101025/p1#c1291741909" title="ただ、arcfourには別の問題が有るので、使わない方がいいです。 arcfour128/256はその問題の対処版なので、これらのみを使うようにした方がいいでしょう。">ただ、arcfourには別の問題が有るので、使わない方がいいです。 arcfour128/256はその問題の対処版なので、これらのみを使うようにした方がいいでしょう。</a>
+」とあり、速度もほとんど変わらないので、
+「arcfour128/256」だけ使う設定にしています。</p>
+
+<h2>vagrant 用設定</h2>
+
+<p><code>vagrant ssh --help</code> で追加のオプションが渡せるとわかったので、
+<code>vagrant ssh -- -v</code> で接続時の状況を調べました。</p>
+
+<p>コマンドラインオプションが優先されるということで、
+<code>vagrant ssh -- -v -o Ciphers=arcfour256</code>
+のように接続すると <code>arcfour256</code> になることが確認できました。</p>
+
+<p>以前は <code>Host vagrant</code> で設定して <code>vagrant ssh</code> の代わりに <code>ssh vagrant</code> を使っていたのですが、
+複数 <code>vagrant up</code> したときに最初に起動した VM のポート (2222) にしか接続できないという問題がありました。</p>
+
+<p>そこで、他の VM のときにも使える設定を考えたところ、
+<code>Host 127.0.0.1</code> でうまくいくことがわかりました。</p>
+
+<h2>まとめ</h2>
+
+<p>元々のデフォルトは時代に合わせて最適なものに更新されているので、
+不用意に固定してしまうと
+<a href="http://d.hatena.ne.jp/jovi0608/20140808/1407483168" title="OpenSSLの脆弱性(CVE-2014-3511)でTLSプロトコルの基礎を学ぶ - ぼちぼち日記">OpenSSLの脆弱性(CVE-2014-3511)でTLSプロトコルの基礎を学ぶ - ぼちぼち日記</a>
+のように強いものに固定していたつもりが弱いものに固定されてしまうことになる可能性があるので注意が必要です。</p>
+
+<p><code>127.0.0.1</code> 以外にも LAN 内のホストなど、経路の信頼性が比較的高くて高速に転送したい場合は <code>Host</code> 設定で <code>Ciphers arcfour256</code> を追加すると良いのではないでしょうか。</p>
+
+<h2>参考 URL</h2>
+
+<ul>
+<li><a href="http://d.hatena.ne.jp/rx7/20101025/p1" title="大容量ファイルのSCP転送を高速にする方法 - 元RX-7乗りの適当な日々">大容量ファイルのSCP転送を高速にする方法 - 元RX-7乗りの適当な日々</a></li>
+<li><a href="http://tech.nitoyon.com/ja/blog/2013/01/11/github-clone-http/" title="GitHub で clone するときは SSH じゃなく HTTP を使ったほうが高速 - てっく煮ブログ">GitHub で clone するときは SSH じゃなく HTTP を使ったほうが高速 - てっく煮ブログ</a></li>
+<li><a href="http://endoyuta.com/2014/03/12/github%E3%81%AEssh%E6%8E%A5%E7%B6%9A%E3%81%8C%E9%80%9F%E3%81%8F%E3%81%AA%E3%82%8B%E3%82%89%E3%81%97%E3%81%84/" title="githubのssh接続が速くなるらしい | Logicky Blog">githubのssh接続が速くなるらしい | Logicky Blog</a></li>
+<li><a href="http://blog.eiel.info/blog/2013/11/09/no-mathcing-cipher-found-on-github/" title="GitHub で SSH 接続できなくなった。SSH をつかった場合に高速化する設定が原因だった。 - そんなこと覚えてない">GitHub で SSH 接続できなくなった。SSH をつかった場合に高速化する設定が原因だった。 - そんなこと覚えてない</a></li>
+<li><a href="http://d.hatena.ne.jp/jovi0608/20140808/1407483168" title="OpenSSLの脆弱性(CVE-2014-3511)でTLSプロトコルの基礎を学ぶ - ぼちぼち日記">OpenSSLの脆弱性(CVE-2014-3511)でTLSプロトコルの基礎を学ぶ - ぼちぼち日記</a></li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[シェルで glob 結果を事前に確認する方法]]></title>
@@ -355,88 +476,6 @@ install コマンドだけでまとめて出来るという話です。</p>
 
 <p>たくさん <code>chown</code> や <code>chmod</code> を実行していることがあれば、
 <code>install</code> コマンドでまとめられないか検討してみてください。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[postfixとmilter-managerの設定をした]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-23-postfix-and-milter-manager.html"/>
-    <updated>2013-11-23T21:25:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/postfix-and-milter-manager</id>
-    <content type="html"><![CDATA[<p>Debian 7.2 (amd64) のサーバーにメールサーバーの設定をしたところ、
-<a href="http://milter-manager.sourceforge.net/">milter-manager</a>
-関連と gmail への IPv6 経由でのメール送信関連でちょっとひっかかりましたが、
-すぐに解決できました。</p>
-
-<!--more-->
-
-
-<h2>milter-manager の話</h2>
-
-<p>まず <code>milter-manager</code> は
-<a href="http://milter-manager.sourceforge.net/reference/ja/install-to-debian.html">Debianへインストール - milter manager</a>
-の手順通りに設定してみたのですが、確認のところで、</p>
-
-<pre><code> $ sudo -u postfix milter-test-server -s unix:/var/spool/postfix/milter-manager/milter-manager.sock
- status: temporary-failure
- elapsed-time: 0.007781 seconds
-</code></pre>
-
-<p>のように <code>temporary-failure</code> になりました。
-そこで依存しているデーモンを調べてみたところ、
-<code>clamd</code> が起動していなかったので、</p>
-
-<pre><code>sudo service clamav-daemon start
-</code></pre>
-
-<p>で起動した後、</p>
-
-<pre><code>sudo service clamav-milter restart
-</code></pre>
-
-<p>で clamav-milter も再起動したら</p>
-
-<pre><code>status: accept
-</code></pre>
-
-<p>になりました。</p>
-
-<p>後で気付いたので、最初のインストール時のメッセージを
-ちゃんと確認できていないのですが、
-<code>/etc/init.d/clamav-daemon</code> の <code>start</code>
-の処理に cvd ファイルなどの存在をチェックして起動を止める処理があるので、
-<code>freshclam</code> の処理を待ってから起動しないとダメだったようです。</p>
-
-<h2>gmail と IPv6 の話</h2>
-
-<p><a href="http://ya.maya.st/d/201308c.html#s20130822_1">gmail の逆引き制限</a>
-の人と同じように IPv6 で逆引き必須にするのは否定的なのですが、
-それはおいといて、現実問題として送信できないのは困るので、
-<code>smtp_address_preference = ipv4</code> の設定を追加しました。</p>
-
-<p>その設定をする前にテストメールを送ったら、
-以下のようなエラーメールが返ってきて、
-エラーメッセージの中の URL が
-<a href="http://www.postfix-jp.info/ML/arc-2.5/msg00237.html">以前ひっかかったとき</a>
-とは変わっているということに気付きました。</p>
-
-<pre><code>&lt;自分のアドレス@gmail.com&gt; (expanded from &lt;自分@あるサーバー&gt;): host
-    gmail-smtp-in.l.google.com[2607:f8b0:4002:c01::1a] said: 550-5.7.1
-    [2401:xxxx:xxx:xxxx:xxx:xxx:xxx:xxx      16] Our system has detected
-    550-5.7.1 that this message does not meet IPv6 sending guidelines regarding
-    PTR 550-5.7.1 records and authentication. Please review 550-5.7.1
-    https://support.google.com/mail/?p=ipv6_authentication_error for more 550
-    5.7.1 information. e2si14078426yhm.125 - gsmtp (in reply to end of DATA
-    command)
-</code></pre>
-
-<h2>余談</h2>
-
-<p>以前はメールサーバーの spam 対策の設定は秘伝のたれ状態で
-だんだんメンテナンスが難しくなってしまっていましたが、
-spam 対策は milter-manager だったり、
-firewall は <a href="packages.debian.org/ufw">ufw</a> だったり、
-いろいろと共通で使えるものが増えてきて楽になってきたように思います。</p>
 ]]></content>
   </entry>
   
