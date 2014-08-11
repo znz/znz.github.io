@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Rails 4.1 で jQuery Raty を使ってみた"
-date: 2014-08-11 19:37:53 +0900
+date: 2014-08-09 19:37:53 +0900
 comments: true
 categories: rails jquery
 ---
