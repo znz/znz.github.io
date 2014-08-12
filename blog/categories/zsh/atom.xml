@@ -4,7 +4,7 @@
   <title><![CDATA[Category: zsh | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/zsh/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-11T22:47:05+09:00</updated>
+  <updated>2014-08-13T01:33:19+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,58 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[zshでfpathからwhichのように検索する話など]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-08-12-zsh-which-fpath.html"/>
+    <updated>2014-08-12T23:08:30+09:00</updated>
+    <id>http://blog.n-z.jp/blog/zsh-which-fpath</id>
+    <content type="html"><![CDATA[<p>zsh で <code>PATH</code> から <code>which</code> コマンドや <code>type</code> コマンドで実行ファイルを検索するように <code>fpath</code> から <code>autoload</code> される関数の実体を探したいことがあります。
+そういうときは <code>${^fpath}/cdr(N)</code> のように書けば検索できます。</p>
+
+<!--more-->
+
+
+<h2>解説</h2>
+
+<p>まず
+<code>setopt</code> の <code>RC_EXPAND_PARAM</code> が設定されていないときには <code>$fpath/cdr</code> で配列の最後だけに <code>/cdr</code> がつくので、
+<code>${^spec}</code> を使ってすべてにつけるようにしています。</p>
+
+<p>最後に <code>(N)</code> で存在するものだけ残すようにしています。</p>
+
+<pre><code class="console 実行例">% echo ${^fpath}/cdr(N)
+/usr/share/zsh/5.0.2/functions/cdr
+</code></pre>
+
+<h2>PATH で後ろに隠れているコマンドも探す</h2>
+
+<p><code>rbenv</code> を使っていると <code>PATH</code> の後ろに <code>/usr/bin/ruby</code> が隠されるなど、
+同じコマンドが <code>PATH</code> に複数存在することがあります。</p>
+
+<p>そういうときに zsh なら <code>${^path}/ruby(N)</code> で隠れているコマンドも含めて展開できます。</p>
+
+<pre><code class="console 実行例">% echo ${^path}/ruby(N)
+/Users/kazu/.rbenv/shims/ruby /usr/bin/ruby
+</code></pre>
+
+<h2>zsh スクリプトでコマンドの存在を調べる</h2>
+
+<p>シェルスクリプトの中で、
+外部コマンドが実行できるかどうか調べるのに</p>
+
+<pre><code>type peco &gt;/dev/null 2&gt;&amp;1
+</code></pre>
+
+<p>のように <code>type</code> コマンドで調べることがありますが、
+zsh なら</p>
+
+<pre><code>(( ${+commands[peco]} ))
+</code></pre>
+
+<p>のように <code>commands</code> という連想配列を調べるという方法が使えます。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[zshの機能のみで既に存在しないディレクトリをcdrのリストから削除する]]></title>
@@ -395,259 +447,6 @@ Tab キーで展開してからコマンドラインを編集して実行する�
 <p>一般的な bash 環境ならどこでも使えて、
 複雑な glob の展開結果の確認にも便利なので、
 <code>C-x g</code> は非常にオススメです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[hamlからslimへの移行でひっかかったこと]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-03-11-haml-to-slim.html"/>
-    <updated>2014-03-11T22:39:11+09:00</updated>
-    <id>http://blog.n-z.jp/blog/haml-to-slim</id>
-    <content type="html"><![CDATA[<p>haml より slim の方が速いらしいという話を良く見かけるので、
-haml から少しずつ slim に移行しようとして、
-haml2slim で変換してみたらひっかかりまくりました。</p>
-
-<!--more-->
-
-
-<h2>インデントがない</h2>
-
-<p>haml は生成される HTML がインデントされていてみやすいのですが、
-slim は不要なスペースは入れずにコンパクトな HTML が生成されるようで、
-単純に比較できなくて困りましたが、
-<a href="https://github.com/slim-template/slim#default-options">https://github.com/slim-template/slim#default-options</a>
-で設定できるようだったので、以下のように設定しました。</p>
-
-<pre><code class="ruby config/initializers/slim.rb">if Rails.env.development?
-  Slim::Engine.set_default_options pretty: true
-end
-</code></pre>
-
-<h2>1.9 hash style</h2>
-
-<p><a href="https://github.com/slim-template/haml2slim/pull/23">https://github.com/slim-template/haml2slim/pull/23</a>
-に pull request がでているように
-haml で属性を <code>{foo: bar}</code> のように書く形式には対応していないようです。</p>
-
-<h2>string interpolation がおかしい</h2>
-
-<p><a href="https://github.com/slim-template/haml2slim/issues/7">https://github.com/slim-template/haml2slim/issues/7</a>
-などで報告されているように <code>#{ ... }</code> という書き方の変換で問題があるようです。
-<code>%tag(foo="#{bar}")</code> が <code>tag(foo="# bar ")</code> になっていて気づきました。</p>
-
-<h2>HTML コメントの中でタグにならない</h2>
-
-<pre><code class="haml">    /[if lt IE 9]
-      %script{src: url_for(html5shiv)}
-</code></pre>
-
-<p>のように書いていたのが</p>
-
-<pre><code class="text">    /![if lt IE 9]
-      script src: url_for(html5shiv)
-</code></pre>
-
-<p>のように変換されてさっぱりダメだったので、</p>
-
-<pre><code class="text">    /[if lt IE 9]
-      script(src="#{url_for(html5shiv)}")
-</code></pre>
-
-<p>または</p>
-
-<pre><code class="text">    /[if lt IE 9]
-      script(src=url_for(html5shiv))
-</code></pre>
-
-<p>のように書き換えました。
-HTML コメント <code>/!</code> の中だとタグが使えない (そのまま文字列としてコメントの中に入る) ようなので、
-IE コンディショナルコメント <code>/[...]</code> を使う必要があるようです。</p>
-
-<h2>エラーメッセージがわかりにくい</h2>
-
-<p>書き換え途中で、属性値をくくる <code>""</code> を忘れると
-エラーメッセージが
-<code>syntax error, unexpected ';'</code>
-としかでないので原因がわかりにくくて困りました。</p>
-
-<p>他のところでも ruby のエラーメッセージそのままなので、
-閉じ忘れ系は原因の行と離れたところでエラーになって、
-行番号もあまり当てにならなくて不便です。</p>
-
-<h2>真偽値属性の属性値が省略できない</h2>
-
-<p>haml だと <code>%div(data-pjax-container)</code> で <code>&lt;div data-pjax-container&gt;</code> に変換できるのに、
-slim だと <code>div(data-pjax-container)</code> が <code>&lt;div data-pjax-container=""&gt;</code> になってしまって、
-<code>=""</code> が余計です。</p>
-
-<p><a href="https://github.com/slim-template/slim/issues/480">Render boolean attributes without value in html5</a>
-によると
-<code>:format</code> を <code>:html</code> にすれば良いということで</p>
-
-<pre><code class="ruby config/initializers/slim.rb">Slim::Engine.set_default_options format: :html
-</code></pre>
-
-<p>と設定してみても slim 2.0.2 だと変化がありませんでした。</p>
-
-<p>まだリリースされていないバージョンを使う必要があるようで、
-<code>Gemfile</code> で <code>gem 'slim', github: 'slim-template/slim'</code> と指定して
-試そうとしたのですが、
-rails 3.2.17 との組み合わせは tilt の要求バージョンの解決が
-出来なくて使えませんでした。</p>
-
-<p>実験のため slim 専用の Gemfile を用意して以下のように試したところ、
-slim と temple の両方をまだリリースされていないバージョンにすると
-使えることが確認できました。</p>
-
-<p>&#8220;`console
-% mkdir /tmp/slim-test
-% cd /tmp/slim-test
-% bundle init
-% echo &lsquo;gem &ldquo;slim&rdquo;, github: &ldquo;slim-template/slim&rdquo;&rsquo; >> Gemfile
-% echo &lsquo;gem &ldquo;temple&rdquo;, github: &ldquo;judofyr/temple&rdquo;&rsquo; >> Gemfile
-% bundle
-% echo &lsquo;div(ng-app)&rsquo; | bundle exec slimrb</p>
-
-<div ng-app=""></div>
-
-
-<p>% echo &lsquo;div(ng-app)&rsquo; | bundle exec slimrb -o format=:html</p>
-
-<div ng-app></div>
-
-
-<pre><code>
-今のところ、 `rack-pjax` の使用は止めていて、
- `=""` がつく挙動で直接困ることはなさそうなので、
-この問題は保留することにしました。
-
-## javascript や css の埋め込み
-</code></pre>
-
-<pre><code>:javascript
-  window.current_user_id = #{current_user.id.to_i}
-</code></pre>
-
-<pre><code>
-のように書いていたら、
-</code></pre>
-
-<pre><code>javascript:
-  | window.current_user_id = #{current_user.id.to_i}
-</code></pre>
-
-<pre><code>
-と変換されて `| ` がそのまま `script` の中身に付いてしまったので、
-削除しました。
-</code></pre>
-
-<pre><code>javascript:
-  window.current_user_id = #{current_user.id.to_i}
-</code></pre>
-
-<pre><code>
-`:css` から `css:` の変換でも同様でした。
-CSS の場合は行頭が記号だと `| ` がついていないこともありました。
-
-## 空白の有無の問題
-</code></pre>
-
-<pre><code>        = link_to home_path, class: 'brand' do
-          = image_tag("brand.png", alt: "", size: "35x35")
-          = base_title
-</code></pre>
-
-<pre><code>
-がそのまま slim になっていて、基本的には問題なかったのですが、
-haml と違って slim だとタグとタイトルの間に空白が入らなくなってしまって、
-見た目が変わってしまっていたので、
-`'` だけの行を追加して空白が入るようにしました。
-</code></pre>
-
-<pre><code>        = link_to home_path, class: 'brand' do
-          = image_tag("brand.png", alt: "", size: "35x35")
-          '
-          = base_title
-</code></pre>
-
-<pre><code>
-## end が抜けるバグで SyntaxError
-
-`syntax error, unexpected keyword_ensure, expecting keyword_end`
-になるので原因を調べてみたところ、
-インデントの中の最初がコメントだと、
-そのブロックの `end` が抜けてしまうようです。
-</code></pre>
-
-<p>% echo $&lsquo;- if true\n  / comment&rsquo; | bundle exec slimrb -e
-&lt;% if true</p>
-
-<p> %>
-% echo $&lsquo;- if true\n  |&rsquo; | bundle exec slimrb -e
-&lt;% if true</p>
-
-<p>end %>
-% echo $&lsquo;- articles.each do |a|\n  / comment&rsquo; | bundle exec slimrb -e
-&lt;% articles.each do |a|</p>
-
-<p> %>
-% echo $&lsquo;- articles.each do |a|\n  | text&rsquo; | bundle exec slimrb -e
-&lt;% articles.each do |a|
- %>text&lt;%
-%>&lt;% end %>
-% echo $&lsquo;- articles.each do |a|\n  / comment\n/ more comment&rsquo; | bundle exec slimrb -e
-&lt;% articles.each do |a|</p>
-
-<p> %>
-% echo $&lsquo;- articles.each do |a|\n  / comment\n| text\n/ more comment&rsquo; | bundle exec slimrb -e
-&lt;% articles.each do |a|</p>
-
-<p> %>text&lt;%
-%>&lt;%
-%>
-% echo $&lsquo;- articles.each do |a|\n  / comment\n| text\n&rsquo; | bundle exec slimrb -e
-&lt;% articles.each do |a|</p>
-
-<p> %>text&lt;%
-%>
-&#8220;`</p>
-
-<p>この件は <a href="https://github.com/slim-template/slim/issues/485">https://github.com/slim-template/slim/issues/485</a> で報告してみました。</p>
-
-<h2>ファイル名の指定が面倒</h2>
-
-<p>これは slim や haml2slim の問題ではないのですが、
-zsh で久しぶりに compctl を使って</p>
-
-<pre><code>compctl -g '*.haml' + -g '*(-/)' haml2slim
-</code></pre>
-
-<p>と設定しましたが、ちゃんと compsys を使った方が良いと思い直して、</p>
-
-<pre><code>compdef '_files -g "*.haml"' haml2slim
-</code></pre>
-
-<p>と設定しました。</p>
-
-<h2>感想</h2>
-
-<p>シンプルとか入力が楽とかいう主観的なものは個人的には同意できなくて利点とは思えないので、
-速いという客観的な理由で slim への移行をしているのですが、
-haml2slim の出来が悪かったり、
-空白の扱いの違いで同じようなソースからでも最終的な見た目が違うものが出来たりして、
-移行は思ったより大変な印象を受けました。</p>
-
-<p>はまりどころさえわかっていれば、そこを注意して haml2slim での変換結果を修正していけば良いので、途中からはどんどん変換していけるようになりました。
-(まだ一部しか終わっていませんが。)</p>
-
-<p>それなりの数の変換をしてみた結果、最初から slim で書くようにすれば haml と大きな違いはなさそうにも感じました。</p>
-
-<p><code>end</code> 抜けなどの問題が起きたことから、
-haml と比べていろんな書き方で使われていなさそうということで、
-まだ安定してなさそうと感じました。</p>
-
-<p>また属性値なしの <code>&lt;div ng-app&gt;</code> のような出力に対応しているリリースがまだないなど、
-融通が利かない点があって問題が起きそうな可能性がありそうだと感じました。</p>
 ]]></content>
   </entry>
   
