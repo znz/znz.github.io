@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-13T01:33:19+09:00</updated>
+  <updated>2014-08-14T21:36:20+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,146 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[boot2dockerでdockerのvolumeの保存状況を調べてみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-08-14-boot2docker-volume.html"/>
+    <updated>2014-08-14T20:36:13+09:00</updated>
+    <id>http://blog.n-z.jp/blog/boot2docker-volume</id>
+    <content type="html"><![CDATA[<p><a href="https://docs.docker.com/userguide/dockervolumes/" title="Managing data in containers - Docker Documentation">Managing data in containers - Docker Documentation</a>
+に
+「Volumes persist until no containers use them」
+(ボリュームは使っているコンテナがなくなるまで存続する)
+と書いてあり、実際のところどうなのかを boot2docker で確認してみました。</p>
+
+<p>確認した範囲ではコンテナを消した後でも残っていました。
+確認の仕方が悪いなど気づいた点があればコメントなり twitter で指摘などをよろしくお願いします。</p>
+
+<!--more-->
+
+
+<h2>確認バージョン</h2>
+
+<ul>
+<li>Mac OS X 10.9.4</li>
+<li>VirtualBox 4.3.14</li>
+<li>docker 1.1.2</li>
+<li>boot2docker v1.1.2</li>
+</ul>
+
+
+<h2>クリーンな環境で起動する</h2>
+
+<p>まず一度 boot2docker の環境を消してから、作成し直しました。</p>
+
+<pre><code class="console">%  boot2docker delete
+%  boot2docker init
+2014/08/14 20:35:43 Creating VM boot2docker-vm...
+2014/08/14 20:35:43 Apply interim patch to VM boot2docker-vm (https://www.virtualbox.org/ticket/12748)
+2014/08/14 20:35:43 Setting NIC #1 to use NAT network...
+2014/08/14 20:35:43 Port forwarding [ssh] tcp://127.0.0.1:2022 --&gt; :22
+2014/08/14 20:35:43 Port forwarding [docker] tcp://127.0.0.1:2375 --&gt; :2375
+2014/08/14 20:35:43 Setting NIC #2 to use host-only network "vboxnet0"...
+2014/08/14 20:35:43 Setting VM storage...
+2014/08/14 20:35:50 Done. Type `boot2docker up` to start the VM.
+% export DOCKER_HOST=tcp://192.168.59.103:2375
+% boot2docker up
+2014/08/14 20:38:02 Waiting for VM to be started...
+...........
+2014/08/14 20:38:35 Started.
+2014/08/14 20:38:35 Your DOCKER_HOST env variable is already set correctly.
+</code></pre>
+
+<h2>volume 作成</h2>
+
+<p><a href="https://github.com/boot2docker/boot2docker#folder-sharing" title="Folder sharing">Folder sharing</a>
+の方法で volume を使ったコンテナを作成しました。</p>
+
+<pre><code class="console">% docker run -v /data --name my-data busybox true
+Unable to find image 'busybox' locally
+Pulling repository busybox
+a9eb17255234: Download complete
+511136ea3c5a: Download complete
+42eed7f1bf2a: Download complete
+120e218dd395: Download complete
+</code></pre>
+
+<h2>実体確認</h2>
+
+<p><code>/</code> が入ると <code>docker inspect -f '{{ index .Volumes./data }}' my-data</code> のようには確認できないので、
+<a href="https://github.com/docker/docker/issues/6966">https://github.com/docker/docker/issues/6966</a> を参考にしてボリュームの実体ディレクトリを確認しました。</p>
+
+<p>一覧で見るだけなら <code>docker inspect -f '{{ .Volumes }}' my-data</code> で確認できます。</p>
+
+<pre><code class="console">% docker inspect -f '{{ index .Volumes "/data" }}' my-data
+/mnt/sda1/var/lib/docker/vfs/dir/7625e8091bafdaa0cf1342bc33f29b2708e59b1388505fdd860960b09adf1846
+% docker inspect -f '{{ .Volumes }}' my-data
+map[/data:/mnt/sda1/var/lib/docker/vfs/dir/7625e8091bafdaa0cf1342bc33f29b2708e59b1388505fdd860960b09adf1846]
+</code></pre>
+
+<h2>適当なファイル作成</h2>
+
+<p>目的のボリュームを確認しやすくするために適当なファイルを作成しました。</p>
+
+<pre><code class="console">% docker run -it --rm --volumes-from my-data ubuntu
+Unable to find image 'ubuntu' locally
+Pulling repository ubuntu
+c4ff7513909d: Download complete
+511136ea3c5a: Download complete
+1c9383292a8f: Download complete
+9942dd43ff21: Download complete
+d92c3c92fa73: Download complete
+0ea0d582fd90: Download complete
+cc58e55aa5a5: Download complete
+root@bf9a312400fa:/# echo foo &gt; /data/foo.txt
+root@bf9a312400fa:/# exit
+exit
+</code></pre>
+
+<h2>コンテナ削除</h2>
+
+<p>連携しているコンテナを削除します。</p>
+
+<pre><code class="console">% docker ps -a
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                     PORTS               NAMES
+ddd48c305f62        busybox:latest      true                6 minutes ago       Exited (0) 6 minutes ago                       my-data
+%  docker ps -a -q | xargs docker rm
+ddd48c305f62
+</code></pre>
+
+<h2>実体確認</h2>
+
+<p><code>boot2docker ssh</code> で入って確認したところ、残っていました。</p>
+
+<pre><code class="console">% boot2docker ssh
+                        ##        .
+                  ## ## ##       ==
+               ## ## ## ##      ===
+           /""""""""""""""""\___/ ===
+      ~~~ {~~ ~~~~ ~~~ ~~~~ ~~ ~ /  ===- ~~~
+           \______ o          __/
+             \    \        __/
+              \____\______/
+ _                 _   ____     _            _
+| |__   ___   ___ | |_|___ \ __| | ___   ___| | _____ _ __
+| '_ \ / _ \ / _ \| __| __) / _` |/ _ \ / __| |/ / _ \ '__|
+| |_) | (_) | (_) | |_ / __/ (_| | (_) | (__|   &lt;  __/ |
+|_.__/ \___/ \___/ \__|_____\__,_|\___/ \___|_|\_\___|_|
+boot2docker: 1.1.2
+             master : 740106c - Thu Jul 24 03:24:10 UTC 2014
+docker@boot2docker:~$ ls -al /mnt/sda1/var/lib/docker/vfs/dir/7625e8091bafdaa0cf1342bc33f29b2708e59b
+1388505fdd860960b09adf1846
+ls: /mnt/sda1/var/lib/docker/vfs/dir/7625e8091bafdaa0cf1342bc33f29b2708e59b1388505fdd860960b09adf1846: Permission denied
+docker@boot2docker:~$ sudo ls -al /mnt/sda1/var/lib/docker/vfs/dir/7625e8091bafdaa0cf1342bc33f29b270
+8e59b1388505fdd860960b09adf1846
+total 12
+drwxr-xr-x    2 root     root          4096 Aug 14 11:52 .
+drwx------    4 root     root          4096 Aug 14 11:49 ..
+-rw-r--r--    1 root     root             4 Aug 14 11:52 foo.txt
+docker@boot2docker:~$
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[zshでfpathからwhichのように検索する話など]]></title>
@@ -1898,139 +2038,6 @@ zip ファイルなので、先ほどの <code>.gnomerc</code> でデスクト�
 で設定することにしました。</p>
 
 <p>これで約 200MB ぐらい小さくなりました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Rails 4.1 で Doorkeeper を使った OAuth2 Provider のサンプルを実装した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-07-11-doorkeeper-provider-example-app.html"/>
-    <updated>2014-07-11T23:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/doorkeeper-provider-example-app</id>
-    <content type="html"><![CDATA[<p>ソースは github の
-<a href="https://github.com/znz/doorkeeper-provider-app" title="znz/doorkeeper-provider-app">znz/doorkeeper-provider-app</a>
-で公開しています。</p>
-
-<p>基本的にはソースをみて参考にしてもらうと良いと思いますが、
-説明が必要な部分を続きに書いてみました。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>ruby 2.1.2</li>
-<li>rails 4.1.4</li>
-<li>bootstrap-sass 3.2.0.0</li>
-<li>devise 3.2.4</li>
-<li>devise-i18n-views 0.2.8</li>
-<li>doorkeeper 1.3.1</li>
-<li>cancancan 1.8.4</li>
-<li>rolify 3.4.0</li>
-<li>rspec-rails 3.0.1</li>
-</ul>
-
-
-<h2>試し方</h2>
-
-<p>README に書いたようにローカルで動かすか heroku に deploy して
-<a href="https://github.com/doorkeeper-gem/doorkeeper/wiki/Example-Applications" title="Example Applications">Example Applications</a>
-にある Client examples の Sinatra and OAuth2 gem の
-<a href="https://github.com/doorkeeper-gem/doorkeeper-sinatra-client" title="Doorkeeper Sinatra Client">Doorkeeper Sinatra Client</a>
-を使って試しました。</p>
-
-<h2>初期設定</h2>
-
-<p>devise, doorkeeper, cancancan, rolify, rspec の個別の初期設定は普通に <code>rails generate</code> を使いました。</p>
-
-<h2>ユーザー情報追加</h2>
-
-<p>とれる情報を増やすために <code>User</code> に <code>name</code> を追加しました。
-<code>devise-i18n-views</code> を使っている関係で view のカスタマイズはしていないので、
-<code>rake db:seed</code> で設定したユーザーだけ <code>name</code> が設定されています。</p>
-
-<p>必要に応じて view もカスタマイズしてください。</p>
-
-<p>また <code>devise-i18n</code> の ja.yml を devise.ja.yml として入れています。
-これは flash のメッセージやメールのメッセージなど、
-<code>app/views</code> 以外の翻訳になるようです。</p>
-
-<p><code>devise-i18n-views</code> は <code>app/views</code> を翻訳可能な view にするプロジェクトです。
-なぜ <code>devise</code> とは別プロジェクトでやっているのかはよくわかりません。</p>
-
-<h2><code>I18n.available_locales</code></h2>
-
-<p><code>devise-i18n-views</code> を入れてしまうと <code>I18n.available_locales</code> が増えてしまうので、
-困るのなら、カスタマイズ用の view を generate して、必要な言語だけ取り込んで
-<code>Gemfile</code> から外してしまうのが良いと思います。</p>
-
-<p>今回はそのまま残して右上の <code>Locale</code> で選択できるようにしています。
-選択肢の翻訳は Wikipedia の左や www.debian.org の下などを参考にしたのですが <code>es-AR</code> はわからなかったので、
-<code>es</code> と同じになってしまっています。</p>
-
-<h2><code>/oauth/applications</code> のアクセス制限</h2>
-
-<p><code>cancancan</code> と <code>rolify</code> を使って admin role があるユーザーだけに制限しています。
-secret も見えてしまうので、 read 権限までしっかり制限する必要があるようです。</p>
-
-<p><code>load_and_authorize_resource</code> でのロードと親クラス (<code>Doorkeeper::ApplicationsController</code>) の中でのロードでモデルの読み込みが二重になってしまうのですが、変更を少なくするためにそこは許容しました。</p>
-
-<h2><code>GET /api/v1/me.json</code></h2>
-
-<p>Doorkeeper gem の Wiki の例にあるようにユーザー情報をとれるようにしています。
-制限していないと以下のような情報がとれました。</p>
-
-<pre><code class="json">{ "id": 1,
-  "email": "admin@example.com",
-  "created_at": "2014-07-11T06:32:22.077Z",
-  "updated_at": "2014-07-11T09:33:42.143Z",
-  "name": "admin" }
-</code></pre>
-
-<p>制限したり関連するモデルの情報を増やしたりするなら
-<a href="http://sugamasao.hatenablog.com/entry/20100914/1284415669" title="Rails のモデル関係と to_json(to_xml) - すがブロ">Rails のモデル関係と to_json(to_xml) - すがブロ</a>
-に書いてあるように <code>respond_with</code> に <code>:only</code> をつけたり <code>:include</code> をつけたりすると出来るようです。</p>
-
-<p>入ったり入らなかったりする条件がよくわからなかったのですが、
-<code>devise</code> 関連では <code>authentication_token</code> が入っていることがあったので、
-User モデルにいろんな情報を入れているなら、
-きちんと制限した方が良さそうに思いました。</p>
-
-<h2>microposts</h2>
-
-<p><a href="http://railstutorial.jp/" title="Ruby on Rails チュートリアル：実例を使って Rails を学ぼう">Ruby on Rails チュートリアル：実例を使って Rails を学ぼう</a>
-のように <code>Micropost</code> モデルを作成して、 API からも投稿できるようにしました。</p>
-
-<p>投稿は scope で制限していて、デフォルトの <code>public</code> のみでは書き込めずに <code>write</code> も必要にしています。</p>
-
-<p>API としては</p>
-
-<ul>
-<li><code>GET /api/v1/microposts</code> で投稿一覧</li>
-<li><code>POST /api/v1/microposts</code> で新規投稿</li>
-</ul>
-
-
-<p>を用意しています。</p>
-
-<h3><code>Can't verify CSRF token authenticity</code></h3>
-
-<p>(2014-07-15 追記)</p>
-
-<p>新規投稿の <code>POST</code> は <code>CSRF</code> チェックにひっかかってしまうので、
-<code>skip_before_action :verify_authenticity_token</code>
-を入れました。</p>
-
-<p>以前から doorkeeper gem を使っているアプリでは
-<code>Can't verify CSRF token authenticity</code>
-というメッセージが出るだけで投稿自体は出来ていたのですが、
-サンプルアプリでは投稿できなかったので、
-<code>skip_before_action</code> を入れました。
-(Rails 4 なので <code>skip_before_filter</code> ではなく <code>skip_before_action</code>)</p>
-
-<h2>その後の変更点 (2014-07-15 追記)</h2>
-
-<p>その後 <code>kaminari</code> 対応などを入れました。</p>
 ]]></content>
   </entry>
   
