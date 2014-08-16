@@ -4,7 +4,7 @@
   <title><![CDATA[Category: octopress | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/octopress/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-16T22:21:09+09:00</updated>
+  <updated>2014-08-16T22:59:23+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,72 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[octopress をアップデートした]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-08-16-update-octopress.html"/>
+    <updated>2014-08-16T22:26:34+09:00</updated>
+    <id>http://blog.n-z.jp/blog/update-octopress</id>
+    <content type="html"><![CDATA[<p><a href="http://octopress.org/docs/updating/" title="Updating Octopress">Updating Octopress</a> を参考にして octopress をアップデートしてみました。</p>
+
+<!--more-->
+
+
+<h2>更新をマージ</h2>
+
+<p><code>git pull octopress master</code> でマージしました。
+conflict したらがんばって修正してから <code>git commit</code> します。</p>
+
+<p>久しぶりに更新すると <code>_config.yml</code> がひっかかりやすいと思いますが、変更は少ないのでマージしやすいと思います。</p>
+
+<h2>gem の更新</h2>
+
+<p><code>bundle install</code> か <code>bundle update</code> で更新します。</p>
+
+<p><code>Gemfile.lock</code> が <code>.gitignore</code> に入って octopress master からは消されてしまったので、
+<code>bundle update</code> で動かなくなったときに戻せるように、
+<code>git add -f Gemfile.lock</code> で自分のレポジトリでは追加しておくのも良いかもしれません。</p>
+
+<h2>テンプレートのソースの更新</h2>
+
+<p><code>rake update_source</code> で更新します。
+カスタマイズしていると戻ってしまうので、がんばって再適用します。</p>
+
+<p>zenback 対応の追加などの <code>_config.yml</code> の <code>default_asides</code> などでは対応しきれないカスタマイズが戻ってしまうので、
+変更し直しました。</p>
+
+<h2>テンプレートのスタイルの更新</h2>
+
+<p><code>rake update_style</code> は特に何も変化がありませんでした。</p>
+
+<h2><code>*.old</code> の削除</h2>
+
+<p>テンプレートの更新でバックアップとして作成される <code>source.old/</code> と <code>sass.old/</code> は更新後には不要なので削除します。</p>
+
+<h2>Build Warning の対処</h2>
+
+<p>更新後に</p>
+
+<pre><code> Build Warning: Layout 'nil' requested in blog/categories/octopress/atom.xml does not exist.
+</code></pre>
+
+<p>のような警告が出るようになってそのうち対処されると思っていたら、
+<a href="http://www.bravo-kernel.com/blog/2014/08/how-to-fix-octopress-build-warning-layout-nil-requested/" title="How to fix Octopress build warning Layout nil requested - Bravo Kernel">How to fix Octopress build warning Layout nil requested - Bravo Kernel</a>
+に書いてあるように</p>
+
+<pre><code> layout: nil
+</code></pre>
+
+<p>を</p>
+
+<pre><code> layout: null
+</code></pre>
+
+<p>にするという修正で対応が入ったのですが、
+<code>source/_includes/custom/category_feed.xml</code>
+は <code>source/_includes/custom/</code> 以下なので自分で修正する必要がありました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[octopress で ansible の記事を書く時のエスケープ]]></title>
@@ -410,79 +476,6 @@ You have already activated rake 10.1.0, but your Gemfile requires rake 0.9.2.2. 
     <content type="html"><![CDATA[<p>探してみて見つけた中で今もちゃんとメンテナンスされてそうだった
 <a href="https://github.com/tokkonopapa/octopress-tagcloud">Tag cloud plugin for Octopress</a>
 を入れてタグクラウドが出るようにしてみました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[octopress 始めました]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-08-octopress.html"/>
-    <updated>2013-09-08T22:58:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/octopress</id>
-    <content type="html"><![CDATA[<p>octopress で github pages を作ってみました。
-インストール記事などは複数あるので気になった点を列挙するだけにします。</p>
-
-<!--more-->
-
-
-<ul>
-<li>ruby のバージョン
-
-<ul>
-<li>2.0.0 ではなく 1.9.3 になっていたが、 github-pages という gem でわかるように github pages で使われているのが 1.9.3 のようなので、 1.9.3 を使うことにした。</li>
-<li>後でわかったんですが、 octopress の場合はローカルで生成するようなので、 2.0.0 でも問題なく使えそうでした。</li>
-<li><code>.ruby-version</code> に <code>1.9.3</code> とだけあって、 rbenv のパッチレベル付きのバージョンにマッチしなかったので、最初は <code>rbenv shell 1.9.3-p448</code> で作業していました。 (後で <code>rbenv local 1.9.3-p448</code> にしました。)</li>
-</ul>
-</li>
-<li>使い始め
-
-<ul>
-<li><code>git clone git://github.com/imathis/octopress.git octopress</code></li>
-<li><code>cd octopress</code></li>
-<li><code>rake setup_github_pages</code>
-
-<ul>
-<li><code>Repository url: git@github.com:znz/znz.github.io</code></li>
-</ul>
-</li>
-<li><code>_config.yml</code> を設定</li>
-<li><code>rake install</code></li>
-<li><code>_config.yml</code> を設定</li>
-<li><code>rake deploy</code></li>
-<li><code>rake new_post</code>
-
-<ul>
-<li><code>Enter a title for your post:</code> ときいてくるので <code>rake new_post[title]</code> よりも楽</li>
-</ul>
-</li>
-<li><code>rake preview</code> で確認しながら書く</li>
-<li><code>rake gen_deploy</code>
-
-<ul>
-<li><code>rake generate</code> 相当がないと変更が反映されない (<code>_config.yml</code> を変更したときなど)</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><code>CNAME</code>
-
-<ul>
-<li>octopress 側では <code>source/CNAME</code> に置く必要がありました。</li>
-</ul>
-</li>
-<li>Excerpts
-
-<ul>
-<li><a href="http://octopress.org/docs/blogging/plugins/">http://octopress.org/docs/blogging/plugins/</a> にあるように <code>&lt;!--more--&gt;</code> と書いておくとトップに表示される内容を最初の方だけに出来ました。</li>
-</ul>
-</li>
-<li>ブランチ
-
-<ul>
-<li>手元では source ブランチで作業するようになっていて、 github pages へ deploy される master ブランチは <code>_deploy</code> ディレクトリにある別レポジトリにありました。</li>
-</ul>
-</li>
-</ul>
-
 ]]></content>
   </entry>
   

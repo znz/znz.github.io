@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-08-16T22:21:09+09:00</updated>
+  <updated>2014-08-16T22:59:23+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -14,13 +14,79 @@
 
   
   <entry>
+    <title type="html"><![CDATA[octopress をアップデートした]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-08-16-update-octopress.html"/>
+    <updated>2014-08-16T22:26:34+09:00</updated>
+    <id>http://blog.n-z.jp/blog/update-octopress</id>
+    <content type="html"><![CDATA[<p><a href="http://octopress.org/docs/updating/" title="Updating Octopress">Updating Octopress</a> を参考にして octopress をアップデートしてみました。</p>
+
+<!--more-->
+
+
+<h2>更新をマージ</h2>
+
+<p><code>git pull octopress master</code> でマージしました。
+conflict したらがんばって修正してから <code>git commit</code> します。</p>
+
+<p>久しぶりに更新すると <code>_config.yml</code> がひっかかりやすいと思いますが、変更は少ないのでマージしやすいと思います。</p>
+
+<h2>gem の更新</h2>
+
+<p><code>bundle install</code> か <code>bundle update</code> で更新します。</p>
+
+<p><code>Gemfile.lock</code> が <code>.gitignore</code> に入って octopress master からは消されてしまったので、
+<code>bundle update</code> で動かなくなったときに戻せるように、
+<code>git add -f Gemfile.lock</code> で自分のレポジトリでは追加しておくのも良いかもしれません。</p>
+
+<h2>テンプレートのソースの更新</h2>
+
+<p><code>rake update_source</code> で更新します。
+カスタマイズしていると戻ってしまうので、がんばって再適用します。</p>
+
+<p>zenback 対応の追加などの <code>_config.yml</code> の <code>default_asides</code> などでは対応しきれないカスタマイズが戻ってしまうので、
+変更し直しました。</p>
+
+<h2>テンプレートのスタイルの更新</h2>
+
+<p><code>rake update_style</code> は特に何も変化がありませんでした。</p>
+
+<h2><code>*.old</code> の削除</h2>
+
+<p>テンプレートの更新でバックアップとして作成される <code>source.old/</code> と <code>sass.old/</code> は更新後には不要なので削除します。</p>
+
+<h2>Build Warning の対処</h2>
+
+<p>更新後に</p>
+
+<pre><code> Build Warning: Layout 'nil' requested in blog/categories/octopress/atom.xml does not exist.
+</code></pre>
+
+<p>のような警告が出るようになってそのうち対処されると思っていたら、
+<a href="http://www.bravo-kernel.com/blog/2014/08/how-to-fix-octopress-build-warning-layout-nil-requested/" title="How to fix Octopress build warning Layout nil requested - Bravo Kernel">How to fix Octopress build warning Layout nil requested - Bravo Kernel</a>
+に書いてあるように</p>
+
+<pre><code> layout: nil
+</code></pre>
+
+<p>を</p>
+
+<pre><code> layout: null
+</code></pre>
+
+<p>にするという修正で対応が入ったのですが、
+<code>source/_includes/custom/category_feed.xml</code>
+は <code>source/_includes/custom/</code> 以下なので自分で修正する必要がありました。</p>
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[R と Ruby によるデータ解析入門　読書会　第3回に参加しました]]></title>
     <link href="http://blog.n-z.jp/blog/2014-08-16-amagasakirb.html"/>
     <updated>2014-08-16T13:05:27+09:00</updated>
     <id>http://blog.n-z.jp/blog/amagasakirb</id>
-    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/event/index/202642/">http://kokucheese.com/event/index/202642/</a> 8月16日 R と Ruby によるデータ解析入門　読書会　第3回(兵庫県)
+    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/event/index/202642/" title="8月16日 R と Ruby によるデータ解析入門　読書会　第3回(兵庫県)">8月16日 R と Ruby によるデータ解析入門　読書会　第3回(兵庫県)</a>
 に参加しました。
-今回は7章からでした。</p>
+今回は7章から最後まででした。</p>
 
 <p>次回は9月27日(土)です。</p>
 
@@ -2338,137 +2404,6 @@ Live イメージ作成の時に proxy を使ってくれるようになりま�
 <p>live-build は cache ディレクトリにも、かなりキャッシュしてくれるのですが、
 <code>apt-get update</code> などの proxy じゃないとキャッシュしにくいものもあるので、
 どんな場合でもダウンロード量削減に役に立ちそうだと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[RubyLiveを仮想環境で作成]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-07-13-build-rubylive-on-vm.html"/>
-    <updated>2014-07-13T09:35:02+09:00</updated>
-    <id>http://blog.n-z.jp/blog/build-rubylive-on-vm</id>
-    <content type="html"><![CDATA[<p>最近流行りの仮想環境を使ってクリーンな wheezy 環境で RubyLive を作成できるようにしました。</p>
-
-<p>VirtualBox + Vagrant は特殊な制限のない仮想環境なので Live イメージが作成できたのですが、
-docker は後述の制限のために作成できませんでした。</p>
-
-<!--more-->
-
-
-<h2>RubyLive を Vagrant で作成</h2>
-
-<p>Vagrant を使ってクリーンな wheezy 環境で RubyLive の ISO を作成できるようにしました。
-こちらは問題なく作成できました。</p>
-
-<h3>動作確認バージョン</h3>
-
-<ul>
-<li>VirtualBox 4.3.12</li>
-<li>Vagrant 1.6.3</li>
-</ul>
-
-
-<h3>使い方</h3>
-
-<ul>
-<li>VirtualBox と Vagrant をインストールしておきます。</li>
-<li><code>git clone https://github.com/znz/rubylive-builder</code> で取得します。</li>
-<li><code>cd rubylive-builder</code> で中に入ります。</li>
-<li><code>VM_MEMORY=512 vagrant up</code> のように適当なメモリ容量を指定して起動します。 (指定なしなら 1024)
-
-<ul>
-<li>他の項目も環境変数である程度変更できるようにしています。</li>
-<li>初回起動時は box をダウンロードするので非常に時間がかかります。</li>
-<li>provision で live-build などの必要なパッケージをインストールしています。</li>
-</ul>
-</li>
-<li><code>vagrant ssh</code> でゲストにログインします。</li>
-<li><code>/vagrant/rubylive.sh</code> を実行すると <code>/home/vagrant/rubylive</code> で RubyLive のイメージを作成します。
-
-<ul>
-<li>実行するたびにタイムスタンプの入ったファイル名の ISO ファイルが作成されます。</li>
-<li>ネットワークの速度やマシンスペックに影響を受けると思いますが、試した環境では約1時間かかりました。</li>
-</ul>
-</li>
-<li>作成できた <code>/home/vagrant/rubylive/*.iso</code> を <code>/vagrant</code> にコピーまたは移動して、ホスト OS 側に取り出します。</li>
-<li>取り出した ISO ファイルを使用します。</li>
-</ul>
-
-
-<p>なぜか
-    chroot: failed to run command <code>/usr/bin/env': No such file or directory
-で失敗することがありましたが、再度</code>/vagrant/rubylive.sh` を実行すれば問題なく作成できました。</p>
-
-<h3>片付け方</h3>
-
-<ul>
-<li><code>vagrant destroy</code> で VM を破棄します。</li>
-<li><code>git clone</code> した作業ディレクトリを削除します。</li>
-<li>wheezy の box が不要なら <code>vagrant box remove opscode_debian-7.4_chef-provisionerless</code> で削除します。</li>
-<li>Vagrant や VirtualBox も不要ならアンインストールします。</li>
-</ul>
-
-
-<h2>RubyLive を Docker で作成 (失敗)</h2>
-
-<p>docker 環境の中では <code>chroot /rubylive/chroot mount -t proc proc /proc</code> が <code>EPERM</code> で失敗するため、作成できませんでした。</p>
-
-<h3>動作確認バージョン</h3>
-
-<ul>
-<li>docker 1.1.1</li>
-</ul>
-
-
-<h3>試し方</h3>
-
-<ul>
-<li>docker をインストールしておきます。</li>
-<li><code>git clone https://github.com/znz/rubylive-builder</code> で取得します。</li>
-<li><code>docker build rubylive-builder</code> で作成に挑戦します。
-
-<ul>
-<li>または <code>cd rubylive-builder</code> で中に入って <code>docker build .</code> です。</li>
-</ul>
-</li>
-<li><code>docker ps -a</code> で最近の CREATED の IMAGE を確認します。
-
-<ul>
-<li>もしくは <code>docker images</code> で確認します。</li>
-<li>最後の失敗した後の状態は残っていないようでした。</li>
-</ul>
-</li>
-<li><code>docker run -i -t --rm 4b8bc4523794 /bin/bash</code> のように中に入ります。
-
-<ul>
-<li>4b8bc4523794 のところは確認した IMAGE の ID にしてください。</li>
-</ul>
-</li>
-<li><code>cd rubylive</code> で rubylive ディレクトリに入って <code>rake</code> で作成に再挑戦します。</li>
-<li><code>less /rubylive/chroot/debootstrap/debootstrap.log</code> でログを確認したり、
-<code>chroot /rubylive/chroot mount -t proc proc /proc</code> や
-<code>mount -t proc proc /rubylive/chroot/proc</code> を直接実行してみたりして
-原因を確認します。</li>
-</ul>
-
-
-<h3>失敗部分のメッセージ</h3>
-
-<pre><code>W: Failure trying to run: chroot /rubylive/chroot mount -t proc proc /proc
-W: See /rubylive/chroot/debootstrap/debootstrap.log for details
-P: Begin unmounting filesystems...
-P: Saving caches...
-/usr/bin/env: apt-get: No such file or directory
-rake aborted!
-Command failed with status (1): [sudo lb build...]
-</code></pre>
-
-<p><code>/rubylive/chroot/debootstrap/debootstrap.log</code> をみると <code>mount: permission denied</code> と出ていました。</p>
-
-<h3>Dockerfile 直接指定 (失敗)</h3>
-
-<p><code>docker build https://raw.githubusercontent.com/znz/rubylive-builder/master/Dockerfile</code>
-のように直接 URL を指定する方法は
-<code>sources.list</code> を国内ミラーに差し替える部分が失敗して使えませんでした。</p>
 ]]></content>
   </entry>
   
