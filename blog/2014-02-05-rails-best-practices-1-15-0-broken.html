@@ -9,7 +9,7 @@
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="rails_best_practices 1.15.0でtryが壊れた | Comments 今日の bundle update をしてみたところ、開発環境での devise でのログイン時に devise (3.2.2) lib/devise/hooks/csrf_cleaner.rb, &hellip;">
+  <meta name="description" content="rails_best_practices 1.15.0でtryが壊れた Feb 5th, 2014 10:35 am | Comments 今日の bundle update をしてみたところ、開発環境での devise でのログイン時に devise (3.2.2) lib/devise/ &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -95,14 +95,7 @@
 
 
 
-
-
-
-
-  
-
-
-<time datetime="2014-02-05T10:35:06+09:00" pubdate data-updated="true"></time>
+<time class='entry-date' datetime='2014-02-05T10:35:06+09:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>5</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>10:35 am</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -124,45 +117,76 @@
 
 <p>例外が発生した行は以下の内容で、今まで問題なく動いていたし、特に問題はなさそうだったので、他の gem の影響だということがわかりました。</p>
 
-<pre><code class="ruby lib/devise/hooks/csrf_cleaner.rb">Warden::Manager.after_authentication do |record, warden, options|
-  if Devise.clean_up_csrf_token_on_authentication
-    warden.request.session.try(:delete, :_csrf_token)
-  end
-end
-</code></pre>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>lib/devise/hooks/csrf_cleaner.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="ss">Warden</span><span class="p">:</span><span class="ss">:Manager</span><span class="o">.</span><span class="n">after_authentication</span> <span class="k">do</span> <span class="o">|</span><span class="n">record</span><span class="p">,</span> <span class="n">warden</span><span class="p">,</span> <span class="n">options</span><span class="o">|</span>
+</span><span class='line'>  <span class="k">if</span> <span class="no">Devise</span><span class="o">.</span><span class="n">clean_up_csrf_token_on_authentication</span>
+</span><span class='line'>    <span class="n">warden</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">try</span><span class="p">(</span><span class="ss">:delete</span><span class="p">,</span> <span class="ss">:_csrf_token</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
 
 <p>ソースコードを追いかけるのは難しそうだったので、 better_errors の live shell を使って調査しました。</p>
 
-<pre><code class="console">&gt;&gt; env.keys
-=&gt; 略
-&gt;&gt; env["warden"]
-=&gt; Warden::Proxy:70192217236640 @config={:default_scope=&gt;:user, :scope_defaults=&gt;{}, :default_strategies=&gt;{:user=&gt;[:rememberable, :database_authenticatable]}, :intercept_401=&gt;false, :failure_app=&gt;#&lt;Devise::Delegator:0x007fadcc44d438&gt;}
-&gt;&gt; env["warden"].request
-=&gt; #&lt;ActionDispatch::Request:0x007fadd10c4dc0 略&gt;
-&gt;&gt; env["warden"].request.session
-=&gt; {"session_id"=&gt;"略", "user_return_to"=&gt;"/", "_csrf_token"=&gt;"略", "warden.user.user.key"=&gt;[[8], "$2a$10$略"]}
-&gt;&gt; env["warden"].request.session.try(:delete, :_csrf_token)
-!! #&lt;ArgumentError: wrong number of arguments (2 for 1)&gt;
-</code></pre>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">&gt;</span>&gt; env.keys
+</span><span class='line'><span class="go">=&gt; 略</span>
+</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>
+</span><span class='line'><span class="go">=&gt; Warden::Proxy:70192217236640 @config={:default_scope=&gt;:user, :scope_defaults=&gt;{}, :default_strategies=&gt;{:user=&gt;[:rememberable, :database_authenticatable]}, :intercept_401=&gt;false, :failure_app=&gt;#&lt;Devise::Delegator:0x007fadcc44d438&gt;}</span>
+</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request
+</span><span class='line'><span class="go">=&gt; #&lt;ActionDispatch::Request:0x007fadd10c4dc0 略&gt;</span>
+</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session
+</span><span class='line'><span class="go">=&gt; {&quot;session_id&quot;=&gt;&quot;略&quot;, &quot;user_return_to&quot;=&gt;&quot;/&quot;, &quot;_csrf_token&quot;=&gt;&quot;略&quot;, &quot;warden.user.user.key&quot;=&gt;[[8], &quot;$2a$10$略&quot;]}</span>
+</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.try<span class="o">(</span>:delete, :_csrf_token<span class="o">)</span>
+</span><span class='line'><span class="go">!! #&lt;ArgumentError: wrong number of arguments (2 for 1)&gt;</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
 
 <p><code>env["warden"]</code> 経由で再現しました。</p>
 
 <p>次に原因を探るために <code>arity</code> を調べました。</p>
 
-<pre><code class="console">&gt;&gt; env["warden"].request.session.methods.grep /delete/
-=&gt; [:delete, :delete_if]
-&gt;&gt; env["warden"].request.session.method("delete")
-=&gt; #&lt;Method: Rack::Session::Abstract::SessionHash#delete&gt;
-&gt;&gt; env["warden"].request.session.method("delete").arity
-=&gt; 1
-&gt;&gt; env["warden"].request.session.method("try")
-=&gt; #&lt;Method: Rack::Session::Abstract::SessionHash(Object)#try&gt;
-&gt;&gt; env["warden"].request.session.method("try").arity
-=&gt; 1
-&gt;&gt; env["warden"].request.session.method("try").source_location
-=&gt; ["略/rails_best_practices-1.15.0/lib/rails_best_practices/core_ext/object.rb", 7]
-&gt;&gt;
-</code></pre>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.methods.grep /delete/
+</span><span class='line'><span class="go">=&gt; [:delete, :delete_if]</span>
+</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.method<span class="o">(</span><span class="s2">&quot;delete&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="go">=&gt; #&lt;Method: Rack::Session::Abstract::SessionHash#delete&gt;</span>
+</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.method<span class="o">(</span><span class="s2">&quot;delete&quot;</span><span class="o">)</span>.arity
+</span><span class='line'><span class="go">=&gt; 1</span>
+</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.method<span class="o">(</span><span class="s2">&quot;try&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="go">=&gt; #&lt;Method: Rack::Session::Abstract::SessionHash(Object)#try&gt;</span>
+</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.method<span class="o">(</span><span class="s2">&quot;try&quot;</span><span class="o">)</span>.arity
+</span><span class='line'><span class="go">=&gt; 1</span>
+</span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.method<span class="o">(</span><span class="s2">&quot;try&quot;</span><span class="o">)</span>.source_location
+</span><span class='line'><span class="go">=&gt; [&quot;略/rails_best_practices-1.15.0/lib/rails_best_practices/core_ext/object.rb&quot;, 7]</span>
+</span><span class='line'><span class="gp">&gt;</span>&gt;
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
 
 <p>rails_best_practices 1.15.0 が原因とわかったので issues を確認すると既に同様の現象の報告があったので、<a href="https://github.com/railsbp/rails_best_practices/issues/202#issuecomment-34129010">コメントしておきました</a>。</p>
 </div>
@@ -183,14 +207,7 @@ end
 
 
 
-
-
-
-
-  
-
-
-<time datetime="2014-02-05T10:35:06+09:00" pubdate data-updated="true"></time>
+<time class='entry-date' datetime='2014-02-05T10:35:06+09:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>5</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>10:35 am</span></time>
       
 
 <span class="categories">
@@ -282,6 +299,10 @@ Hatena.BookmarkWidget.load();
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014-08-16-amagasakirb.html">R と Ruby によるデータ解析入門　読書会　第3回に参加しました</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014-08-14-boot2docker-volume.html">boot2dockerでdockerのvolumeの保存状況を調べてみた</a>
       </li>
     
@@ -297,15 +318,11 @@ Hatena.BookmarkWidget.load();
         <a href="/blog/2014-08-09-jquery-raty.html">Rails 4.1 で jQuery Raty を使ってみた</a>
       </li>
     
-      <li class="post">
-        <a href="/blog/2014-08-06-docker-volume.html">boot2docker で VM のファイルをコンテナやホストと共有する</a>
-      </li>
-    
   </ul>
 </section>
 <section>
   <h1>Tag Cloud</h1>
-    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 102.14285714285714%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 107.5%'>amagasakirb(7)</a> <a href='/blog/categories/ansible' style='font-size: 109.64285714285714%'>ansible(9)</a> <a href='/blog/categories/anyenv' style='font-size: 101.07142857142857%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.07142857142857%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 104.28571428571429%'>boot2docker(4)</a> <a href='/blog/categories/bootstrap' style='font-size: 101.07142857142857%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 101.07142857142857%'>bts(1)</a> <a href='/blog/categories/cdr' style='font-size: 103.21428571428571%'>cdr(3)</a> <a href='/blog/categories/certification' style='font-size: 101.07142857142857%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 102.14285714285714%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 103.21428571428571%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 124.64285714285714%'>debian(23)</a> <a href='/blog/categories/devise' style='font-size: 105.35714285714286%'>devise(5)</a> <a href='/blog/categories/dkms' style='font-size: 101.07142857142857%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 113.92857142857143%'>docker(13)</a> <a href='/blog/categories/dokku' style='font-size: 102.14285714285714%'>dokku(2)</a> <a href='/blog/categories/doorkeeper' style='font-size: 103.21428571428571%'>doorkeeper(3)</a> <a href='/blog/categories/drb' style='font-size: 101.07142857142857%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.07142857142857%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 108.57142857142857%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 138.57142857142856%'>event(36)</a> <a href='/blog/categories/fluentd' style='font-size: 101.07142857142857%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 104.28571428571429%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 102.14285714285714%'>ghq(2)</a> <a href='/blog/categories/git' style='font-size: 105.35714285714286%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 107.5%'>github(7)</a> <a href='/blog/categories/go' style='font-size: 101.07142857142857%'>go(1)</a> <a href='/blog/categories/gpg' style='font-size: 101.07142857142857%'>gpg(1)</a> <a href='/blog/categories/haml' style='font-size: 101.07142857142857%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 102.14285714285714%'>heroku(2)</a> <a href='/blog/categories/homebrew' style='font-size: 107.5%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 103.21428571428571%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 103.21428571428571%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 101.07142857142857%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 101.07142857142857%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.07142857142857%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 104.28571428571429%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 101.07142857142857%'>jenkins(1)</a> <a href='/blog/categories/jquery' style='font-size: 101.07142857142857%'>jquery(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 102.14285714285714%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.07142857142857%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.14285714285714%'>jus(2)</a> <a href='/blog/categories/k-of' style='font-size: 101.07142857142857%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 105.35714285714286%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.07142857142857%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.07142857142857%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 104.28571428571429%'>land-of-lisp(4)</a> <a href='/blog/categories/lilo' style='font-size: 101.07142857142857%'>lilo(1)</a> <a href='/blog/categories/linux' style='font-size: 109.64285714285714%'>linux(9)</a> <a href='/blog/categories/live' style='font-size: 103.21428571428571%'>live(3)</a> <a href='/blog/categories/lxc' style='font-size: 101.07142857142857%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.07142857142857%'>lxcjp(1)</a> <a href='/blog/categories/mail' style='font-size: 101.07142857142857%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 102.14285714285714%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 104.28571428571429%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.07142857142857%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.07142857142857%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.07142857142857%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 102.14285714285714%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.07142857142857%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 104.28571428571429%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 105.35714285714286%'>octopress(5)</a> <a href='/blog/categories/omniauth' style='font-size: 102.14285714285714%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 102.14285714285714%'>openssl(2)</a> <a href='/blog/categories/osx' style='font-size: 127.85714285714286%'>osx(26)</a> <a href='/blog/categories/owncloud' style='font-size: 101.07142857142857%'>owncloud(1)</a> <a href='/blog/categories/packer' style='font-size: 101.07142857142857%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.07142857142857%'>passenger(1)</a> <a href='/blog/categories/peco' style='font-size: 101.07142857142857%'>peco(1)</a> <a href='/blog/categories/postfix' style='font-size: 102.14285714285714%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 102.14285714285714%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.07142857142857%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.07142857142857%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 102.14285714285714%'>r(2)</a> <a href='/blog/categories/rabbit' style='font-size: 102.14285714285714%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 132.14285714285714%'>rails(30)</a> <a href='/blog/categories/ransack' style='font-size: 101.07142857142857%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 104.28571428571429%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.07142857142857%'>redmine(1)</a> <a href='/blog/categories/rspec' style='font-size: 101.07142857142857%'>rspec(1)</a> <a href='/blog/categories/rsyslog' style='font-size: 101.07142857142857%'>rsyslog(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.07142857142857%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(56)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.07142857142857%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 103.21428571428571%'>rubykansai(3)</a> <a href='/blog/categories/rubymotion' style='font-size: 113.92857142857143%'>rubymotion(13)</a> <a href='/blog/categories/security' style='font-size: 103.21428571428571%'>security(3)</a> <a href='/blog/categories/shell' style='font-size: 103.21428571428571%'>shell(3)</a> <a href='/blog/categories/slim' style='font-size: 101.07142857142857%'>slim(1)</a> <a href='/blog/categories/ssh' style='font-size: 101.07142857142857%'>ssh(1)</a> <a href='/blog/categories/sylpheed' style='font-size: 101.07142857142857%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.07142857142857%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 104.28571428571429%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 120.35714285714286%'>ubuntu(19)</a> <a href='/blog/categories/upstart' style='font-size: 102.14285714285714%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 101.07142857142857%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 107.5%'>vagrant(7)</a> <a href='/blog/categories/vagrantcloud' style='font-size: 102.14285714285714%'>vagrantcloud(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 102.14285714285714%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 101.07142857142857%'>weechat(1)</a> <a href='/blog/categories/yaml' style='font-size: 101.07142857142857%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.07142857142857%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 110.71428571428571%'>zsh(10)</a> </span>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 102.10526315789474%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 108.42105263157895%'>amagasakirb(8)</a> <a href='/blog/categories/ansible' style='font-size: 109.47368421052632%'>ansible(9)</a> <a href='/blog/categories/anyenv' style='font-size: 101.05263157894737%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.05263157894737%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 104.21052631578948%'>boot2docker(4)</a> <a href='/blog/categories/bootstrap' style='font-size: 101.05263157894737%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 101.05263157894737%'>bts(1)</a> <a href='/blog/categories/cdr' style='font-size: 103.15789473684211%'>cdr(3)</a> <a href='/blog/categories/certification' style='font-size: 101.05263157894737%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 102.10526315789474%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 103.15789473684211%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 124.21052631578948%'>debian(23)</a> <a href='/blog/categories/devise' style='font-size: 105.26315789473685%'>devise(5)</a> <a href='/blog/categories/dkms' style='font-size: 101.05263157894737%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 113.6842105263158%'>docker(13)</a> <a href='/blog/categories/dokku' style='font-size: 102.10526315789474%'>dokku(2)</a> <a href='/blog/categories/doorkeeper' style='font-size: 103.15789473684211%'>doorkeeper(3)</a> <a href='/blog/categories/drb' style='font-size: 101.05263157894737%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.05263157894737%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 108.42105263157895%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 138.94736842105263%'>event(37)</a> <a href='/blog/categories/fluentd' style='font-size: 101.05263157894737%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 104.21052631578948%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 102.10526315789474%'>ghq(2)</a> <a href='/blog/categories/git' style='font-size: 105.26315789473685%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 107.36842105263158%'>github(7)</a> <a href='/blog/categories/go' style='font-size: 101.05263157894737%'>go(1)</a> <a href='/blog/categories/gpg' style='font-size: 101.05263157894737%'>gpg(1)</a> <a href='/blog/categories/haml' style='font-size: 101.05263157894737%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 102.10526315789474%'>heroku(2)</a> <a href='/blog/categories/homebrew' style='font-size: 107.36842105263158%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 103.15789473684211%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 103.15789473684211%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 101.05263157894737%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 101.05263157894737%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.05263157894737%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 104.21052631578948%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 101.05263157894737%'>jenkins(1)</a> <a href='/blog/categories/jquery' style='font-size: 101.05263157894737%'>jquery(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 102.10526315789474%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.05263157894737%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.10526315789474%'>jus(2)</a> <a href='/blog/categories/k-of' style='font-size: 101.05263157894737%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 105.26315789473685%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.05263157894737%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.05263157894737%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 104.21052631578948%'>land-of-lisp(4)</a> <a href='/blog/categories/lilo' style='font-size: 101.05263157894737%'>lilo(1)</a> <a href='/blog/categories/linux' style='font-size: 109.47368421052632%'>linux(9)</a> <a href='/blog/categories/live' style='font-size: 103.15789473684211%'>live(3)</a> <a href='/blog/categories/lxc' style='font-size: 101.05263157894737%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.05263157894737%'>lxcjp(1)</a> <a href='/blog/categories/mail' style='font-size: 101.05263157894737%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 102.10526315789474%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 104.21052631578948%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.05263157894737%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.05263157894737%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.05263157894737%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 102.10526315789474%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.05263157894737%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 104.21052631578948%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 105.26315789473685%'>octopress(5)</a> <a href='/blog/categories/omniauth' style='font-size: 102.10526315789474%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 102.10526315789474%'>openssl(2)</a> <a href='/blog/categories/osx' style='font-size: 127.36842105263158%'>osx(26)</a> <a href='/blog/categories/owncloud' style='font-size: 101.05263157894737%'>owncloud(1)</a> <a href='/blog/categories/packer' style='font-size: 101.05263157894737%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.05263157894737%'>passenger(1)</a> <a href='/blog/categories/peco' style='font-size: 101.05263157894737%'>peco(1)</a> <a href='/blog/categories/postfix' style='font-size: 102.10526315789474%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 102.10526315789474%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.05263157894737%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.05263157894737%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 103.15789473684211%'>r(3)</a> <a href='/blog/categories/rabbit' style='font-size: 102.10526315789474%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 131.57894736842104%'>rails(30)</a> <a href='/blog/categories/ransack' style='font-size: 101.05263157894737%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 104.21052631578948%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.05263157894737%'>redmine(1)</a> <a href='/blog/categories/rspec' style='font-size: 101.05263157894737%'>rspec(1)</a> <a href='/blog/categories/rsyslog' style='font-size: 101.05263157894737%'>rsyslog(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.05263157894737%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(57)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.05263157894737%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 103.15789473684211%'>rubykansai(3)</a> <a href='/blog/categories/rubymotion' style='font-size: 113.6842105263158%'>rubymotion(13)</a> <a href='/blog/categories/security' style='font-size: 103.15789473684211%'>security(3)</a> <a href='/blog/categories/shell' style='font-size: 103.15789473684211%'>shell(3)</a> <a href='/blog/categories/slim' style='font-size: 101.05263157894737%'>slim(1)</a> <a href='/blog/categories/ssh' style='font-size: 101.05263157894737%'>ssh(1)</a> <a href='/blog/categories/sylpheed' style='font-size: 101.05263157894737%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.05263157894737%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 104.21052631578948%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 120.0%'>ubuntu(19)</a> <a href='/blog/categories/upstart' style='font-size: 102.10526315789474%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 101.05263157894737%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 107.36842105263158%'>vagrant(7)</a> <a href='/blog/categories/vagrantcloud' style='font-size: 102.10526315789474%'>vagrantcloud(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 102.10526315789474%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 101.05263157894737%'>weechat(1)</a> <a href='/blog/categories/yaml' style='font-size: 101.05263157894737%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.05263157894737%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 110.52631578947368%'>zsh(10)</a> </span>
 </section>
 
 <section>

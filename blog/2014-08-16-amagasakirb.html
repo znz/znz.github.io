@@ -5,13 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>launchdでdistnotedを定期的に終了させる - @znz blog</title>
+  <title>R と Ruby によるデータ解析入門　読書会　第3回に参加しました - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="launchdでdistnotedを定期的に終了させる Nov 13th, 2013 6:23 pm | Comments Mac OS X 10.9 Mavericks で気がつくと
-distnoted というプロセスのメモリ消費が増えて
-大変なことになっていることがあって、 &hellip;">
+  <meta name="description" content="R と Ruby によるデータ解析入門　読書会　第3回に参加しました Aug 16th, 2014 1:05 pm | Comments http://kokucheese.com/event/index/202642/ 8月16日 R と Ruby によるデータ解析入門　読書会　第3回(兵庫県 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -20,7 +18,7 @@ distnoted というプロセスのメモリ消費が増えて
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-11-13-killall-distnoted-periodically.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-08-16-amagasakirb.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -85,7 +83,7 @@ distnoted というプロセスのメモリ消費が増えて
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">launchdでdistnotedを定期的に終了させる</h1>
+      <h1 class="entry-title">R と Ruby によるデータ解析入門　読書会　第3回に参加しました</h1>
       
       <!-- zenback_title_end -->
       
@@ -97,7 +95,7 @@ distnoted というプロセスのメモリ消費が増えて
 
 
 
-<time class='entry-date' datetime='2013-11-13T18:23:00+09:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2013</span></span> <span class='time'>6:23 pm</span></time>
+<time class='entry-date' datetime='2014-08-16T13:05:27+09:00'><span class='date'><span class='date-month'>Aug</span> <span class='date-day'>16</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>1:05 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -110,106 +108,83 @@ distnoted というプロセスのメモリ消費が増えて
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p>Mac OS X 10.9 Mavericks で気がつくと
-<code>distnoted</code> というプロセスのメモリ消費が増えて
-大変なことになっていることがあって、
-気がついた時は手動で <code>killall distnoted</code> で対処したり、
-OS 自体を再起動したりしていました。</p>
+<div class="entry-content"><p><a href="http://kokucheese.com/event/index/202642/">http://kokucheese.com/event/index/202642/</a> 8月16日 R と Ruby によるデータ解析入門　読書会　第3回(兵庫県)
+に参加しました。
+今回は7章からでした。</p>
 
-<p>たまに気がつかないうちに大量にメモリを消費して、
-確認のためのアクティビティモニタを開くのも大変なことがあったので、
-さすがにまずいと思って <code>launchd</code> で定期的に実行するようにしました。</p>
-
-<p>2013-12-28 追記:
-続きとして
-<a href="/blog/2013-12-27-emacs-inline-patch.html">コメントにあったパッチを試してみた話</a>
-を書きました。</p>
-
-<p>2014-01-29追記:
-さらに続きとして
-<a href="/blog/2014-01-29-emacs-distnoted-patch.html">emacsやdistnotedを安定させるパッチをhomebrewで適用した</a>
-話を書きました。</p>
+<p>次回は9月27日(土)です。</p>
 
 <!--more-->
 
 
-<h2>distnoted とは?</h2>
+<h2>メモ</h2>
 
-<p>man によると <code>distributed notification server</code> というものらしいのですが、
-詳細はよくわかりませんでした。</p>
-
-<p>man には自動で起動するものなので、
-手動で起動するものではないとは書いてありました。</p>
-
-<p>必要に応じて自動で起動してくるので、
-<code>killall</code> などで止めてしまっても問題が無いという情報は
-どこかでみかけました。</p>
-
-<p><code>ps</code> でプロセスを確認すると <code>root</code> 権限で
-<code>/usr/sbin/distnoted daemon</code> が動いていて、
-他にいくつかの
-<code>/usr/sbin/distnoted agent</code>
-がユーザー権限で動いていました。
-そのうちの1個がログインしたユーザーの権限で動いていて、
-それがメモリを大量に消費していて、
-<code>killall distnoted</code>
-ではそのプロセスだけを終了させています。</p>
-
-<h2>launchd による定期実行</h2>
-
-<p><code>launchd</code> で定期的に実行するには</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>~/Library/LaunchAgents/local.killall.distnoted.plist</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="cp">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span>
-</span><span class='line'><span class="cp">&lt;!DOCTYPE plist PUBLIC &quot;-//Apple//DTD PLIST 1.0//EN&quot; &quot;http://www.apple.com/DTDs/PropertyList-1.0.dtd&quot;&gt;</span>
-</span><span class='line'><span class="nt">&lt;plist</span> <span class="na">version=</span><span class="s">&quot;1.0&quot;</span><span class="nt">&gt;</span>
-</span><span class='line'><span class="nt">&lt;dict&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;key&gt;</span>Label<span class="nt">&lt;/key&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;string&gt;</span>local.killall.distnoted<span class="nt">&lt;/string&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;key&gt;</span>ProgramArguments<span class="nt">&lt;/key&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;array&gt;</span>
-</span><span class='line'>      <span class="nt">&lt;string&gt;</span>/usr/bin/killall<span class="nt">&lt;/string&gt;</span>
-</span><span class='line'>      <span class="nt">&lt;string&gt;</span>distnoted<span class="nt">&lt;/string&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;/array&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;key&gt;</span>StartInterval<span class="nt">&lt;/key&gt;</span>
-</span><span class='line'>  <span class="nt">&lt;integer&gt;</span>600<span class="nt">&lt;/integer&gt;</span>
-</span><span class='line'><span class="nt">&lt;/dict&gt;</span>
-</span><span class='line'><span class="nt">&lt;/plist&gt;</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+<div style="float:right">
+<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4873116155" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
+</div>
 
 
-<p>という内容のファイルを
-<code>~/Library/LaunchAgents/local.killall.distnoted.plist</code>
-に作成して
-<code>launchctl load ~/Library/LaunchAgents/local.killall.distnoted.plist</code>
-で反映します。</p>
+<p>以下今回のメモです。</p>
 
-<p>設定を変更したときは</p>
+<ul>
+<li>Mac の Spotlight 便利</li>
+<li>Windows 7 などの検索も便利</li>
+<li>WAV ファイルはリトルエンディアンとビッグエンディアンが混在
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>~/Library/LaunchAgents/local.killall.distnoted.plist</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='xml'><span class='line'>launchctl unload ~/Library/LaunchAgents/local.killall.distnoted.plist
-</span><span class='line'>launchctl load ~/Library/LaunchAgents/local.killall.distnoted.plist
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+<ul>
+<li>ビッグエンディアンの部分は文字列でリトルエンディアンのところは数値というだけに見える</li>
+</ul>
+</li>
+<li><a href="https://github.com/setoyama60jp/everyday">https://github.com/setoyama60jp/everyday</a> に書籍中のソースコード</li>
+<li>p.196 泊数 → 拍数 ?</li>
+<li>p.198 GraphicsMagic → GraphicsMagick ?</li>
+<li>RMagic → RMagick ?</li>
+<li>Boid の 3 つのルールを知っていた or 知らなかった</li>
+<li>8 章は R が出てこなかった</li>
+<li>p.218 case の when のところにせめてインデントがほしい</li>
+<li>いろいろとコーディングスタイルに突っ込みが入っていた</li>
+<li>寿命は一定ではなく死ぬ確率があがっていくようにした方が良いのではないか</li>
+</ul>
 
 
-<p>で反映します。</p>
+<h2>次回の本候補</h2>
 
-<p><code>StartInterval</code> は秒単位なので <code>600</code> だと10分間隔です。</p>
+<div style="float:right">
+<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4797380357" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
+</div>
+
+
+<p>可能性がありそうなものからなさそうなものまで、いろいろと候補が挙がりましたが、「Rubyによるクローラー開発技法」に決まりました。</p>
+
+<ul>
+<li><a href="http://www.amazon.co.jp/gp/product/4797380357/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4797380357&amp;linkCode=as2&amp;tag=znz-22">Rubyによるクローラー開発技法</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4797380357" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" /></li>
+<li><a href="http://www.amazon.co.jp/gp/product/4873116767/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116767&amp;linkCode=as2&amp;tag=znz-22">ハイパフォーマンス ブラウザネットワーキング ―ネットワークアプリケーションのためのパフォーマンス最適化</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116767" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />は cuzic さんが既読ということで候補から外れました。</li>
+<li><a href="http://www.amazon.co.jp/gp/product/4048660683/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4048660683&amp;linkCode=as2&amp;tag=znz-22">フルスクラッチから1日でCMSを作る シェルスクリプト高速開発手法入門</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4048660683" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" /></li>
+<li><a href="http://www.amazon.co.jp/gp/product/4873116899/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116899&amp;linkCode=as2&amp;tag=znz-22">Haskellによる並列・並行プログラミング</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116899" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />は Haskell をそんなにわかっている人がいないということで候補から外れました。</li>
+<li><a href="http://www.amazon.co.jp/gp/product/427405019X/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=427405019X&amp;linkCode=as2&amp;tag=znz-22">新装版 リファクタリング―既存のコードを安全に改善する― (OBJECT TECHNOLOGY SERIES)</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=427405019X" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" /> は流れで出てきただけだったのか、最終候補には残りませんでした。</li>
+<li><a href="http://www.amazon.co.jp/gp/product/4274069125/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4274069125&amp;linkCode=as2&amp;tag=znz-22">すごいErlangゆかいに学ぼう!</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4274069125" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />も Erlang だからという理由で候補から外れました。</li>
+<li><a href="http://www.amazon.co.jp/gp/product/4873116694/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116694&amp;linkCode=as2&amp;tag=znz-22">アルゴリズムパズル ―プログラマのための数学パズル入門</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116694" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />や<a href="http://www.amazon.co.jp/gp/product/4774162531/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4774162531&amp;linkCode=as2&amp;tag=znz-22">プログラマのためのコードパズル ~JavaScriptで挑むコードゴルフとアルゴリズム</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4774162531" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />は予習が必要そうということで候補から外れました。</li>
+<li><a href="http://www.amazon.co.jp/gp/product/4873116600/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116600&amp;linkCode=as2&amp;tag=znz-22">JavaScriptで学ぶ関数型プログラミング</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116600" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />も流れで出てきただけだったので、最終候補には残りませんでした。</li>
+<li><a href="http://www.amazon.co.jp/gp/product/4873116341/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116341&amp;linkCode=as2&amp;tag=znz-22">入門 データ構造とアルゴリズム</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116341" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />も流れで出てきただけだったので、最終候補には残りませんでした。</li>
+<li><a href="http://www.amazon.co.jp/gp/product/4873116813/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116813&amp;linkCode=as2&amp;tag=znz-22">オブジェクト指向JavaScriptの原則</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116813" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />も流れで出てきただけだったので、最終候補には残りませんでした。</li>
+<li><a href="http://www.amazon.co.jp/gp/product/4873113911/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873113911&amp;linkCode=as2&amp;tag=znz-22">JavaScript: The Good Parts ―「良いパーツ」によるベストプラクティス</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873113911" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />も流れで出てきただけだったので、最終候補には残りませんでした。</li>
+<li><a href="http://www.amazon.co.jp/gp/product/4873101662/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873101662&amp;linkCode=as2&amp;tag=znz-22">パターン認識と機械学習の学習―ベイズ理論に挫折しないための数学</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873101662" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />
+
+<ul>
+<li>同じ ISBN で第2版として黒い表紙ではなく黄色い表紙の本が出ているそうです。</li>
+<li>PRML (パターン認識と機械学習) をいきなりは難しいのでこれはどうかという話が出ましたが、 <a href="https://github.com/herumi/prml">https://github.com/herumi/prml</a> を git clone するなどして main.pdf を確認したところ、難しすぎるということで候補から外れました。</li>
+</ul>
+</li>
+<li><a href="http://www.amazon.co.jp/gp/product/432011048X/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=432011048X&amp;linkCode=as2&amp;tag=znz-22">とある弁当屋の統計技師(データサイエンティスト) ―データ分析のはじめかた―</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=432011048X" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />
+
+<ul>
+<li><a href="http://www.amazon.co.jp/gp/product/432011082X/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=432011082X&amp;linkCode=as2&amp;tag=znz-22">とある弁当屋の統計技師(データサイエンティスト) 2 ―因子分析大作戦―</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=432011082X" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />という続編も出ていて、良さそうな本だと思いましたが、一人でも読めそうということで候補から外れました。</li>
+</ul>
+</li>
+<li><a href="http://www.amazon.co.jp/gp/product/4274069117/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4274069117&amp;linkCode=as2&amp;tag=znz-22">型システム入門 −プログラミング言語と型の理論−</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4274069117" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />は積ん読のままということで候補から外れました。</li>
+<li><a href="http://www.amazon.co.jp/gp/product/4873116856/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116856&amp;linkCode=as2&amp;tag=znz-22">戦略的データサイエンス入門 ―ビジネスに活かすコンセプトとテクニック</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116856" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />も流れで出てきただけだったので、最終候補には残りませんでした。</li>
+</ul>
+
 </div>
 
 <!-- zenback_body_end -->
@@ -228,12 +203,12 @@ OS 自体を再起動したりしていました。</p>
 
 
 
-<time class='entry-date' datetime='2013-11-13T18:23:00+09:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2013</span></span> <span class='time'>6:23 pm</span></time>
+<time class='entry-date' datetime='2014-08-16T13:05:27+09:00'><span class='date'><span class='date-month'>Aug</span> <span class='date-day'>16</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>1:05 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/mavericks/'>mavericks</a>, <a class='category' href='/blog/categories/osx/'>osx</a>
+    <a class='category' href='/blog/categories/amagasakirb/'>amagasakirb</a>, <a class='category' href='/blog/categories/event/'>event</a>, <a class='category' href='/blog/categories/r/'>r</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
   
 </span>
 
@@ -260,10 +235,8 @@ OS 自体を再起動したりしていました。</p>
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-11-13-tty-ime.html" title="Previous Post: iTerm2でのIME制御がきかない">&laquo; iTerm2でのIME制御がきかない</a>
+        <a class="basic-alignment left" href="/blog/2014-08-14-boot2docker-volume.html" title="Previous Post: boot2dockerでdockerのvolumeの保存状況を調べてみた">&laquo; boot2dockerでdockerのvolumeの保存状況を調べてみた</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-11-14-macosx-ime.html" title="Next Post: Mac OS XでのIME制御についての考察">Mac OS XでのIME制御についての考察 &raquo;</a>
       
     </p>
   </footer>
@@ -398,8 +371,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-11-13-killall-distnoted-periodically.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-11-13-killall-distnoted-periodically.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-08-16-amagasakirb.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-08-16-amagasakirb.html';
         var disqus_script = 'embed.js';
       
     (function () {

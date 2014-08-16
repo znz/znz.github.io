@@ -9,10 +9,9 @@
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="autopagerizeのような動作をkaminariとransackを使った環境で実装した | Comments autopagerize のような動作をするときに id 重複問題があるので、
+  <meta name="description" content="autopagerizeのような動作をkaminariとransackを使った環境で実装した Feb 25th, 2014 6:58 pm | Comments autopagerize のような動作をするときに id 重複問題があるので、
 QA@IT で質問
-してみたところ、
-今のページに表示されている最後の id &hellip;">
+してみたところ、 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -98,14 +97,7 @@ QA@IT で質問
 
 
 
-
-
-
-
-  
-
-
-<time datetime="2014-02-25T18:58:39+09:00" pubdate data-updated="true"></time>
+<time class='entry-date' datetime='2014-02-25T18:58:39+09:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>25</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>6:58 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -132,55 +124,98 @@ QA@IT で質問
 <p>コア部分は以前に実装したものをそのまま使いました。
 i18n 対応などが出来ていませんが、冒頭に書いてある id や class が関連要素になります。</p>
 
-<pre><code class="coffeescript app/assets/javascripts/autonext.js.coffee">jQuery -&gt;
-  timerId = null
-  loadingId = '#autopager_loading'
-  nextId = '#next_for_pager'
-  pageElement = '.page_element'
-  lastContent = '.page_content:last'
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>app/assets/javascripts/autonext.js.coffee</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+</pre></td><td class='code'><pre><code class='coffeescript'><span class='line'><span class="nx">jQuery</span> <span class="nf">-&gt;</span>
+</span><span class='line'>  <span class="nv">timerId = </span><span class="kc">null</span>
+</span><span class='line'>  <span class="nv">loadingId = </span><span class="s">&#39;#autopager_loading&#39;</span>
+</span><span class='line'>  <span class="nv">nextId = </span><span class="s">&#39;#next_for_pager&#39;</span>
+</span><span class='line'>  <span class="nv">pageElement = </span><span class="s">&#39;.page_element&#39;</span>
+</span><span class='line'>  <span class="nv">lastContent = </span><span class="s">&#39;.page_content:last&#39;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nv">loadNext = </span><span class="nf">-&gt;</span>
+</span><span class='line'>    <span class="nv">nextLink = </span><span class="nx">$</span><span class="p">(</span><span class="nx">nextId</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</span><span class='line'>    <span class="k">if</span> <span class="nx">nextLink</span>
+</span><span class='line'>      <span class="nx">$</span><span class="p">(</span><span class="nx">loadingId</span><span class="p">).</span><span class="nx">show</span><span class="p">()</span>
+</span><span class='line'>      <span class="nx">$</span><span class="p">(</span><span class="nx">nextId</span><span class="p">).</span><span class="nx">remove</span><span class="p">()</span>
+</span><span class='line'>      <span class="nv">request = </span><span class="nx">$</span><span class="p">.</span><span class="nx">get</span> <span class="nx">nextLink</span><span class="p">.</span><span class="nx">href</span><span class="p">,</span> <span class="nf">(data) -&gt;</span>
+</span><span class='line'>        <span class="nx">$</span><span class="p">(</span><span class="nx">loadingId</span><span class="p">).</span><span class="nx">before</span><span class="p">(</span><span class="nx">$</span><span class="p">(</span><span class="nx">data</span><span class="p">).</span><span class="nx">find</span><span class="p">(</span><span class="nx">pageElement</span><span class="p">)).</span><span class="nx">hide</span><span class="p">()</span>
+</span><span class='line'>        <span class="c1"># 必要なら turbolinks の `page:change` のような DOM 変更通知をする</span>
+</span><span class='line'>      <span class="nx">request</span><span class="p">.</span><span class="nx">error</span> <span class="nf">(xhr, status, error) -&gt;</span>
+</span><span class='line'>        <span class="k">if</span> <span class="nx">error</span> <span class="o">==</span> <span class="s">&quot;Unauthorized&quot;</span>
+</span><span class='line'>          <span class="nx">alert</span><span class="p">(</span><span class="s">&quot;認証の期限切れです。再読み込みしてください。&quot;</span><span class="p">)</span>
+</span><span class='line'>        <span class="k">else</span>
+</span><span class='line'>          <span class="nx">alert</span><span class="p">(</span><span class="s">&quot;何かエラーです。少し待ってから、再読み込みしてください。&quot;</span><span class="p">)</span>
+</span><span class='line'>        <span class="nx">$</span><span class="p">(</span><span class="nx">loadingId</span><span class="p">).</span><span class="nx">html</span><span class="p">(</span><span class="s">&quot;&lt;a href=&#39;javascript:location.reload()&#39; class=&#39;btn btn-block btn-primary&#39;&gt;再読み込み&lt;/a&gt;&quot;</span><span class="p">)</span>
+</span><span class='line'>  <span class="nv">autoNext = </span><span class="nf">-&gt;</span>
+</span><span class='line'>    <span class="nv">content = </span><span class="nx">$</span><span class="p">(</span><span class="nx">lastContent</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">if</span> <span class="nx">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&amp;&amp;</span> <span class="nx">content</span><span class="p">.</span><span class="nx">offset</span><span class="p">().</span><span class="nx">top</span> <span class="o">&lt;</span> <span class="nx">$</span><span class="p">(</span><span class="nb">document</span><span class="p">).</span><span class="nx">scrollTop</span><span class="p">()</span> <span class="o">+</span> <span class="nx">$</span><span class="p">(</span><span class="nb">window</span><span class="p">).</span><span class="nx">height</span><span class="p">()</span>
+</span><span class='line'>      <span class="k">if</span> <span class="nx">$</span><span class="p">(</span><span class="nx">loadingId</span><span class="p">).</span><span class="nx">css</span><span class="p">(</span><span class="s">&#39;display&#39;</span><span class="p">)</span> <span class="o">is</span> <span class="s">&#39;none&#39;</span>
+</span><span class='line'>        <span class="nx">loadNext</span><span class="p">()</span>
+</span><span class='line'>    <span class="nv">timerId = </span><span class="kc">null</span>
+</span><span class='line'>    <span class="nx">$</span><span class="p">(</span><span class="nb">window</span><span class="p">).</span><span class="nx">on</span> <span class="s">&#39;scroll.autoNext&#39;</span><span class="p">,</span> <span class="nx">autoNextDefer</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nv">autoNextDefer = </span><span class="nf">-&gt;</span>
+</span><span class='line'>    <span class="nx">$</span><span class="p">(</span><span class="nb">window</span><span class="p">).</span><span class="nx">off</span> <span class="s">&#39;scroll.autoNext&#39;</span>
+</span><span class='line'>    <span class="nv">timerId = </span><span class="nx">setTimeout</span> <span class="nx">autoNext</span><span class="p">,</span> <span class="mi">1000</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nx">$</span><span class="p">(</span><span class="nb">window</span><span class="p">).</span><span class="nx">on</span> <span class="s">&#39;scroll.autoNext&#39;</span><span class="p">,</span> <span class="nx">autoNextDefer</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-  loadNext = -&gt;
-    nextLink = $(nextId)[0]
-    if nextLink
-      $(loadingId).show()
-      $(nextId).remove()
-      request = $.get nextLink.href, (data) -&gt;
-        $(loadingId).before($(data).find(pageElement)).hide()
-        # 必要なら turbolinks の `page:change` のような DOM 変更通知をする
-      request.error (xhr, status, error) -&gt;
-        if error == "Unauthorized"
-          alert("認証の期限切れです。再読み込みしてください。")
-        else
-          alert("何かエラーです。少し待ってから、再読み込みしてください。")
-        $(loadingId).html("&lt;a href='javascript:location.reload()' class='btn btn-block btn-primary'&gt;再読み込み&lt;/a&gt;")
-  autoNext = -&gt;
-    content = $(lastContent)
-    if content[0] &amp;&amp; content.offset().top &lt; $(document).scrollTop() + $(window).height()
-      if $(loadingId).css('display') is 'none'
-        loadNext()
-    timerId = null
-    $(window).on 'scroll.autoNext', autoNextDefer
-
-  autoNextDefer = -&gt;
-    $(window).off 'scroll.autoNext'
-    timerId = setTimeout autoNext, 1000
-
-  $(window).on 'scroll.autoNext', autoNextDefer
-</code></pre>
 
 <h2>views</h2>
 
 <p>view は次のような感じにしました。
 <code>page_entries_info</code> を <code>.page_element</code> の中にするか、外にするかは悩ましいところです。</p>
 
-<pre><code class="haml app/views/posts/index.html.haml">    .page_element
-      %small.page-entries-info= page_entries_info @posts
-      = render @posts
-      = link_to_auto_next_page_with_ransack @q, @posts, t('views.pagination.next'), class: "btn btn-large btn-block btn-success", id: "next_for_pager", params: params
-    #autopager_loading(style="display:none")
-      = fa_icon "spinner spin"
-      = t("loading", default: "Loading...")
-</code></pre>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>app/views/posts/index.html.haml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='haml'><span class='line'><span class="nc">.page_element</span>
+</span><span class='line'>  <span class="nt">%small</span><span class="nc">.page-entries-info</span><span class="p">=</span> <span class="n">page_entries_info</span> <span class="vi">@posts</span>
+</span><span class='line'>  <span class="p">=</span> <span class="n">render</span> <span class="vi">@posts</span>
+</span><span class='line'>  <span class="p">=</span> <span class="n">link_to_auto_next_page_with_ransack</span> <span class="vi">@q</span><span class="p">,</span> <span class="vi">@posts</span><span class="p">,</span> <span class="n">t</span><span class="p">(</span><span class="s1">&#39;views.pagination.next&#39;</span><span class="p">),</span> <span class="ss">class</span><span class="p">:</span> <span class="s2">&quot;btn btn-large btn-block btn-success&quot;</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="s2">&quot;next_for_pager&quot;</span><span class="p">,</span> <span class="ss">params</span><span class="p">:</span> <span class="n">params</span>
+</span><span class='line'><span class="nf">#autopager_loading</span>(<span class="na">style=</span><span class="s">&quot;display:none&quot;</span>)
+</span><span class='line'>  <span class="p">=</span> <span class="n">fa_icon</span> <span class="s2">&quot;spinner spin&quot;</span>
+</span><span class='line'>  <span class="p">=</span> <span class="n">t</span><span class="p">(</span><span class="s2">&quot;loading&quot;</span><span class="p">,</span> <span class="ss">default</span><span class="p">:</span> <span class="s2">&quot;Loading...&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
 
 <p><code>kaminari</code> の <code>link_to_next_page</code> を使っている時に問題になったのですが、
 <code>params</code> をちゃんと渡さないと <code>paginate @posts</code> で生成されるリンクと違って
@@ -199,28 +234,50 @@ i18n 対応などが出来ていませんが、冒頭に書いてある id や c
 <p>時刻は標準の <code>to_s</code> だと開発環境の一気に入力したデータで問題が起きたので、
 <code>strftime</code> を使って <code>%N</code> (ナノ秒) まで入れるようにしました。</p>
 
-<pre><code class="ruby app/helpers/link_to_helper.rb">  def link_to_auto_next_page_with_ransack(search, scope, name, options = {}, &amp;block)
-    return if scope.last_page?
-    params = options.delete(:params) || {}
-    sorts = search.sorts
-    if sorts.empty?
-      raise "You must set sorts to ransack (e.g. `@q.sorts = 'updated_at desc' if @q.sorts.empty?`)"
-    end
-    order = sorts.first
-    column = order.name
-    dir = order.dir == "desc" ? "lt" : "gt"
-    value = scope.last[column]
-    if value.respond_to?(:strftime) &amp;&amp; value.respond_to?(:hour)
-      # expect Time, DateTime, ActiveSupport::TimeWithZone
-      # and not Date
-      value = value.strftime("%Y-%m-%d %H:%M:%S.%N %Z")
-    end
-    q = params[:q] || {}
-    q = q.merge("#{column}_#{dir}" =&gt; value)
-    params = params.merge(search.context.search_key =&gt; q)
-    link_to name, params, options.reverse_merge(:rel =&gt; 'next'), &amp;block
-  end
-</code></pre>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>app/helpers/link_to_helper.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">link_to_auto_next_page_with_ransack</span><span class="p">(</span><span class="n">search</span><span class="p">,</span> <span class="n">scope</span><span class="p">,</span> <span class="nb">name</span><span class="p">,</span> <span class="n">options</span> <span class="o">=</span> <span class="p">{},</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">return</span> <span class="k">if</span> <span class="n">scope</span><span class="o">.</span><span class="n">last_page?</span>
+</span><span class='line'>    <span class="n">params</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="ss">:params</span><span class="p">)</span> <span class="o">||</span> <span class="p">{}</span>
+</span><span class='line'>    <span class="n">sorts</span> <span class="o">=</span> <span class="n">search</span><span class="o">.</span><span class="n">sorts</span>
+</span><span class='line'>    <span class="k">if</span> <span class="n">sorts</span><span class="o">.</span><span class="n">empty?</span>
+</span><span class='line'>      <span class="k">raise</span> <span class="s2">&quot;You must set sorts to ransack (e.g. `@q.sorts = &#39;updated_at desc&#39; if @q.sorts.empty?`)&quot;</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>    <span class="n">order</span> <span class="o">=</span> <span class="n">sorts</span><span class="o">.</span><span class="n">first</span>
+</span><span class='line'>    <span class="n">column</span> <span class="o">=</span> <span class="n">order</span><span class="o">.</span><span class="n">name</span>
+</span><span class='line'>    <span class="n">dir</span> <span class="o">=</span> <span class="n">order</span><span class="o">.</span><span class="n">dir</span> <span class="o">==</span> <span class="s2">&quot;desc&quot;</span> <span class="p">?</span> <span class="s2">&quot;lt&quot;</span> <span class="p">:</span> <span class="s2">&quot;gt&quot;</span>
+</span><span class='line'>    <span class="n">value</span> <span class="o">=</span> <span class="n">scope</span><span class="o">.</span><span class="n">last</span><span class="o">[</span><span class="n">column</span><span class="o">]</span>
+</span><span class='line'>    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">respond_to?</span><span class="p">(</span><span class="ss">:strftime</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="n">value</span><span class="o">.</span><span class="n">respond_to?</span><span class="p">(</span><span class="ss">:hour</span><span class="p">)</span>
+</span><span class='line'>      <span class="c1"># expect Time, DateTime, ActiveSupport::TimeWithZone</span>
+</span><span class='line'>      <span class="c1"># and not Date</span>
+</span><span class='line'>      <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-%d %H:%M:%S.%N %Z&quot;</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>    <span class="n">q</span> <span class="o">=</span> <span class="n">params</span><span class="o">[</span><span class="ss">:q</span><span class="o">]</span> <span class="o">||</span> <span class="p">{}</span>
+</span><span class='line'>    <span class="n">q</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">#{</span><span class="n">column</span><span class="si">}</span><span class="s2">_</span><span class="si">#{</span><span class="n">dir</span><span class="si">}</span><span class="s2">&quot;</span> <span class="o">=&gt;</span> <span class="n">value</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">params</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">search</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">search_key</span> <span class="o">=&gt;</span> <span class="n">q</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">link_to</span> <span class="nb">name</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">options</span><span class="o">.</span><span class="n">reverse_merge</span><span class="p">(</span><span class="ss">:rel</span> <span class="o">=&gt;</span> <span class="s1">&#39;next&#39;</span><span class="p">),</span> <span class="o">&amp;</span><span class="n">block</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
 
 <h2>controller</h2>
 
@@ -228,14 +285,22 @@ i18n 対応などが出来ていませんが、冒頭に書いてある id や c
 <code>@posts = Post</code> の行は <code>cancan</code> の <code>load_and_authorize_resource</code> を使っている場合には不要なので、
 別の行にしています。</p>
 
-<pre><code class="ruby app/controllers/posts_controller.rb">  def index
-    @posts = Post
-    @q = @posts.search(params[:q])
-    @q.sorts = 'updated_at desc' if @q.sorts.empty?
-    @posts = @q.result(distinct: true)
-    @posts = @posts.page(params[:page]).per(5)
-  end
-</code></pre>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>app/controllers/posts_controller.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nf">index</span>
+</span><span class='line'>    <span class="vi">@posts</span> <span class="o">=</span> <span class="no">Post</span>
+</span><span class='line'>    <span class="vi">@q</span> <span class="o">=</span> <span class="vi">@posts</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:q</span><span class="o">]</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@q</span><span class="o">.</span><span class="n">sorts</span> <span class="o">=</span> <span class="s1">&#39;updated_at desc&#39;</span> <span class="k">if</span> <span class="vi">@q</span><span class="o">.</span><span class="n">sorts</span><span class="o">.</span><span class="n">empty?</span>
+</span><span class='line'>    <span class="vi">@posts</span> <span class="o">=</span> <span class="vi">@q</span><span class="o">.</span><span class="n">result</span><span class="p">(</span><span class="ss">distinct</span><span class="p">:</span> <span class="kp">true</span><span class="p">)</span>
+</span><span class='line'>    <span class="vi">@posts</span> <span class="o">=</span> <span class="vi">@posts</span><span class="o">.</span><span class="n">page</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:page</span><span class="o">]</span><span class="p">)</span><span class="o">.</span><span class="n">per</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
 
 <h2>スタイルシート</h2>
 
@@ -243,20 +308,34 @@ i18n 対応などが出来ていませんが、冒頭に書いてある id や c
 エラーの時はこの中身が再読み込みボタンに変わります。
 開発環境だと <code>rails server</code> を停止した状態で自動読み込みさせれば、すぐに確認できます。</p>
 
-<pre><code class="css app/assets/stylesheets/application.css.scss">#autopager_loading {
-  background-color: #000;
-  bottom: 0px;
-  color: #fff;
-  font-size: 12px;
-  height: 25px;
-  left: 0px;
-  opacity: 0.8;
-  position: fixed;
-  text-align: center;
-  width: 100%;
-  z-index: 1000;
-}
-</code></pre>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>app/assets/stylesheets/application.css.scss</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="nf">#autopager_loading</span> <span class="p">{</span>
+</span><span class='line'>  <span class="k">background-color</span><span class="o">:</span> <span class="m">#000</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">bottom</span><span class="o">:</span> <span class="m">0px</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">color</span><span class="o">:</span> <span class="m">#fff</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">font-size</span><span class="o">:</span> <span class="m">12px</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">height</span><span class="o">:</span> <span class="m">25px</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">left</span><span class="o">:</span> <span class="m">0px</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">opacity</span><span class="o">:</span> <span class="m">0</span><span class="o">.</span><span class="m">8</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">position</span><span class="o">:</span> <span class="k">fixed</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">text-align</span><span class="o">:</span> <span class="k">center</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">width</span><span class="o">:</span> <span class="m">100</span><span class="o">%</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">z-index</span><span class="o">:</span> <span class="m">1000</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
 
 <h2>まとめ</h2>
 
@@ -280,14 +359,7 @@ i18n 対応などが出来ていませんが、冒頭に書いてある id や c
 
 
 
-
-
-
-
-  
-
-
-<time datetime="2014-02-25T18:58:39+09:00" pubdate data-updated="true"></time>
+<time class='entry-date' datetime='2014-02-25T18:58:39+09:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>25</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>6:58 pm</span></time>
       
 
 <span class="categories">
@@ -379,6 +451,10 @@ Hatena.BookmarkWidget.load();
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014-08-16-amagasakirb.html">R と Ruby によるデータ解析入門　読書会　第3回に参加しました</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014-08-14-boot2docker-volume.html">boot2dockerでdockerのvolumeの保存状況を調べてみた</a>
       </li>
     
@@ -394,15 +470,11 @@ Hatena.BookmarkWidget.load();
         <a href="/blog/2014-08-09-jquery-raty.html">Rails 4.1 で jQuery Raty を使ってみた</a>
       </li>
     
-      <li class="post">
-        <a href="/blog/2014-08-06-docker-volume.html">boot2docker で VM のファイルをコンテナやホストと共有する</a>
-      </li>
-    
   </ul>
 </section>
 <section>
   <h1>Tag Cloud</h1>
-    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 102.14285714285714%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 107.5%'>amagasakirb(7)</a> <a href='/blog/categories/ansible' style='font-size: 109.64285714285714%'>ansible(9)</a> <a href='/blog/categories/anyenv' style='font-size: 101.07142857142857%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.07142857142857%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 104.28571428571429%'>boot2docker(4)</a> <a href='/blog/categories/bootstrap' style='font-size: 101.07142857142857%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 101.07142857142857%'>bts(1)</a> <a href='/blog/categories/cdr' style='font-size: 103.21428571428571%'>cdr(3)</a> <a href='/blog/categories/certification' style='font-size: 101.07142857142857%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 102.14285714285714%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 103.21428571428571%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 124.64285714285714%'>debian(23)</a> <a href='/blog/categories/devise' style='font-size: 105.35714285714286%'>devise(5)</a> <a href='/blog/categories/dkms' style='font-size: 101.07142857142857%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 113.92857142857143%'>docker(13)</a> <a href='/blog/categories/dokku' style='font-size: 102.14285714285714%'>dokku(2)</a> <a href='/blog/categories/doorkeeper' style='font-size: 103.21428571428571%'>doorkeeper(3)</a> <a href='/blog/categories/drb' style='font-size: 101.07142857142857%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.07142857142857%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 108.57142857142857%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 138.57142857142856%'>event(36)</a> <a href='/blog/categories/fluentd' style='font-size: 101.07142857142857%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 104.28571428571429%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 102.14285714285714%'>ghq(2)</a> <a href='/blog/categories/git' style='font-size: 105.35714285714286%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 107.5%'>github(7)</a> <a href='/blog/categories/go' style='font-size: 101.07142857142857%'>go(1)</a> <a href='/blog/categories/gpg' style='font-size: 101.07142857142857%'>gpg(1)</a> <a href='/blog/categories/haml' style='font-size: 101.07142857142857%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 102.14285714285714%'>heroku(2)</a> <a href='/blog/categories/homebrew' style='font-size: 107.5%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 103.21428571428571%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 103.21428571428571%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 101.07142857142857%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 101.07142857142857%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.07142857142857%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 104.28571428571429%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 101.07142857142857%'>jenkins(1)</a> <a href='/blog/categories/jquery' style='font-size: 101.07142857142857%'>jquery(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 102.14285714285714%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.07142857142857%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.14285714285714%'>jus(2)</a> <a href='/blog/categories/k-of' style='font-size: 101.07142857142857%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 105.35714285714286%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.07142857142857%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.07142857142857%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 104.28571428571429%'>land-of-lisp(4)</a> <a href='/blog/categories/lilo' style='font-size: 101.07142857142857%'>lilo(1)</a> <a href='/blog/categories/linux' style='font-size: 109.64285714285714%'>linux(9)</a> <a href='/blog/categories/live' style='font-size: 103.21428571428571%'>live(3)</a> <a href='/blog/categories/lxc' style='font-size: 101.07142857142857%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.07142857142857%'>lxcjp(1)</a> <a href='/blog/categories/mail' style='font-size: 101.07142857142857%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 102.14285714285714%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 104.28571428571429%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.07142857142857%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.07142857142857%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.07142857142857%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 102.14285714285714%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.07142857142857%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 104.28571428571429%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 105.35714285714286%'>octopress(5)</a> <a href='/blog/categories/omniauth' style='font-size: 102.14285714285714%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 102.14285714285714%'>openssl(2)</a> <a href='/blog/categories/osx' style='font-size: 127.85714285714286%'>osx(26)</a> <a href='/blog/categories/owncloud' style='font-size: 101.07142857142857%'>owncloud(1)</a> <a href='/blog/categories/packer' style='font-size: 101.07142857142857%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.07142857142857%'>passenger(1)</a> <a href='/blog/categories/peco' style='font-size: 101.07142857142857%'>peco(1)</a> <a href='/blog/categories/postfix' style='font-size: 102.14285714285714%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 102.14285714285714%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.07142857142857%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.07142857142857%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 102.14285714285714%'>r(2)</a> <a href='/blog/categories/rabbit' style='font-size: 102.14285714285714%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 132.14285714285714%'>rails(30)</a> <a href='/blog/categories/ransack' style='font-size: 101.07142857142857%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 104.28571428571429%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.07142857142857%'>redmine(1)</a> <a href='/blog/categories/rspec' style='font-size: 101.07142857142857%'>rspec(1)</a> <a href='/blog/categories/rsyslog' style='font-size: 101.07142857142857%'>rsyslog(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.07142857142857%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(56)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.07142857142857%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 103.21428571428571%'>rubykansai(3)</a> <a href='/blog/categories/rubymotion' style='font-size: 113.92857142857143%'>rubymotion(13)</a> <a href='/blog/categories/security' style='font-size: 103.21428571428571%'>security(3)</a> <a href='/blog/categories/shell' style='font-size: 103.21428571428571%'>shell(3)</a> <a href='/blog/categories/slim' style='font-size: 101.07142857142857%'>slim(1)</a> <a href='/blog/categories/ssh' style='font-size: 101.07142857142857%'>ssh(1)</a> <a href='/blog/categories/sylpheed' style='font-size: 101.07142857142857%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.07142857142857%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 104.28571428571429%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 120.35714285714286%'>ubuntu(19)</a> <a href='/blog/categories/upstart' style='font-size: 102.14285714285714%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 101.07142857142857%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 107.5%'>vagrant(7)</a> <a href='/blog/categories/vagrantcloud' style='font-size: 102.14285714285714%'>vagrantcloud(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 102.14285714285714%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 101.07142857142857%'>weechat(1)</a> <a href='/blog/categories/yaml' style='font-size: 101.07142857142857%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.07142857142857%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 110.71428571428571%'>zsh(10)</a> </span>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 102.10526315789474%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 108.42105263157895%'>amagasakirb(8)</a> <a href='/blog/categories/ansible' style='font-size: 109.47368421052632%'>ansible(9)</a> <a href='/blog/categories/anyenv' style='font-size: 101.05263157894737%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 101.05263157894737%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 104.21052631578948%'>boot2docker(4)</a> <a href='/blog/categories/bootstrap' style='font-size: 101.05263157894737%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 101.05263157894737%'>bts(1)</a> <a href='/blog/categories/cdr' style='font-size: 103.15789473684211%'>cdr(3)</a> <a href='/blog/categories/certification' style='font-size: 101.05263157894737%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 102.10526315789474%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 103.15789473684211%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 124.21052631578948%'>debian(23)</a> <a href='/blog/categories/devise' style='font-size: 105.26315789473685%'>devise(5)</a> <a href='/blog/categories/dkms' style='font-size: 101.05263157894737%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 113.6842105263158%'>docker(13)</a> <a href='/blog/categories/dokku' style='font-size: 102.10526315789474%'>dokku(2)</a> <a href='/blog/categories/doorkeeper' style='font-size: 103.15789473684211%'>doorkeeper(3)</a> <a href='/blog/categories/drb' style='font-size: 101.05263157894737%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 101.05263157894737%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 108.42105263157895%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 138.94736842105263%'>event(37)</a> <a href='/blog/categories/fluentd' style='font-size: 101.05263157894737%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 104.21052631578948%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 102.10526315789474%'>ghq(2)</a> <a href='/blog/categories/git' style='font-size: 105.26315789473685%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 107.36842105263158%'>github(7)</a> <a href='/blog/categories/go' style='font-size: 101.05263157894737%'>go(1)</a> <a href='/blog/categories/gpg' style='font-size: 101.05263157894737%'>gpg(1)</a> <a href='/blog/categories/haml' style='font-size: 101.05263157894737%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 102.10526315789474%'>heroku(2)</a> <a href='/blog/categories/homebrew' style='font-size: 107.36842105263158%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 103.15789473684211%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 103.15789473684211%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 101.05263157894737%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 101.05263157894737%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 101.05263157894737%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 104.21052631578948%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 101.05263157894737%'>jenkins(1)</a> <a href='/blog/categories/jquery' style='font-size: 101.05263157894737%'>jquery(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 102.10526315789474%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 101.05263157894737%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.10526315789474%'>jus(2)</a> <a href='/blog/categories/k-of' style='font-size: 101.05263157894737%'>k-of(1)</a> <a href='/blog/categories/kansaidebian' style='font-size: 105.26315789473685%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 101.05263157894737%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 101.05263157894737%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 104.21052631578948%'>land-of-lisp(4)</a> <a href='/blog/categories/lilo' style='font-size: 101.05263157894737%'>lilo(1)</a> <a href='/blog/categories/linux' style='font-size: 109.47368421052632%'>linux(9)</a> <a href='/blog/categories/live' style='font-size: 103.15789473684211%'>live(3)</a> <a href='/blog/categories/lxc' style='font-size: 101.05263157894737%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.05263157894737%'>lxcjp(1)</a> <a href='/blog/categories/mail' style='font-size: 101.05263157894737%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 102.10526315789474%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 104.21052631578948%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 101.05263157894737%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 101.05263157894737%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 101.05263157894737%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 102.10526315789474%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 101.05263157894737%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 104.21052631578948%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 105.26315789473685%'>octopress(5)</a> <a href='/blog/categories/omniauth' style='font-size: 102.10526315789474%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 102.10526315789474%'>openssl(2)</a> <a href='/blog/categories/osx' style='font-size: 127.36842105263158%'>osx(26)</a> <a href='/blog/categories/owncloud' style='font-size: 101.05263157894737%'>owncloud(1)</a> <a href='/blog/categories/packer' style='font-size: 101.05263157894737%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 101.05263157894737%'>passenger(1)</a> <a href='/blog/categories/peco' style='font-size: 101.05263157894737%'>peco(1)</a> <a href='/blog/categories/postfix' style='font-size: 102.10526315789474%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 102.10526315789474%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 101.05263157894737%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 101.05263157894737%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 103.15789473684211%'>r(3)</a> <a href='/blog/categories/rabbit' style='font-size: 102.10526315789474%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 131.57894736842104%'>rails(30)</a> <a href='/blog/categories/ransack' style='font-size: 101.05263157894737%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 104.21052631578948%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.05263157894737%'>redmine(1)</a> <a href='/blog/categories/rspec' style='font-size: 101.05263157894737%'>rspec(1)</a> <a href='/blog/categories/rsyslog' style='font-size: 101.05263157894737%'>rsyslog(1)</a> <a href='/blog/categories/rubima' style='font-size: 101.05263157894737%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(57)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.05263157894737%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 103.15789473684211%'>rubykansai(3)</a> <a href='/blog/categories/rubymotion' style='font-size: 113.6842105263158%'>rubymotion(13)</a> <a href='/blog/categories/security' style='font-size: 103.15789473684211%'>security(3)</a> <a href='/blog/categories/shell' style='font-size: 103.15789473684211%'>shell(3)</a> <a href='/blog/categories/slim' style='font-size: 101.05263157894737%'>slim(1)</a> <a href='/blog/categories/ssh' style='font-size: 101.05263157894737%'>ssh(1)</a> <a href='/blog/categories/sylpheed' style='font-size: 101.05263157894737%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 101.05263157894737%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 104.21052631578948%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 120.0%'>ubuntu(19)</a> <a href='/blog/categories/upstart' style='font-size: 102.10526315789474%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 101.05263157894737%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 107.36842105263158%'>vagrant(7)</a> <a href='/blog/categories/vagrantcloud' style='font-size: 102.10526315789474%'>vagrantcloud(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 102.10526315789474%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 101.05263157894737%'>weechat(1)</a> <a href='/blog/categories/yaml' style='font-size: 101.05263157894737%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.05263157894737%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 110.52631578947368%'>zsh(10)</a> </span>
 </section>
 
 <section>
