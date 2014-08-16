@@ -52,5 +52,3 @@ categories: event amagasakirb r ruby
 - [ggplot2 の自分用メモ集を作ろう - Triad sou.](http://d.hatena.ne.jp/triadsou/20100528/1275042816)
 - ビッグデータの話として有名な購入するデオドラントと石けんが変わって妊娠がわかったという話
 - PDF から Web アルバムの話
-
-## 
