@@ -5,9 +5,9 @@ date: 2014-08-16 13:05:27 +0900
 comments: true
 categories: event amagasakirb r ruby
 ---
-http://kokucheese.com/event/index/202642/ 8月16日 R と Ruby によるデータ解析入門　読書会　第3回(兵庫県)
+[8月16日 R と Ruby によるデータ解析入門　読書会　第3回(兵庫県)](http://kokucheese.com/event/index/202642/ "8月16日 R と Ruby によるデータ解析入門　読書会　第3回(兵庫県)")
 に参加しました。
-今回は7章からでした。
+今回は7章から最後まででした。
 
 次回は9月27日(土)です。
 
