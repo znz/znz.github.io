@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-09-27T16:51:54+09:00</updated>
+  <updated>2014-10-07T20:23:39+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,66 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ターミナルでの文字幅を調べる]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-10-07-char-width-in-terminal.html"/>
+    <updated>2014-10-07T20:10:20+09:00</updated>
+    <id>http://blog.n-z.jp/blog/char-width-in-terminal</id>
+    <content type="html"><![CDATA[<p><a href="http://uwabami.junkhub.org/log/20141007.html#p01" title="マルチバイト文字列の幅を 2 としてカウントする">マルチバイト文字列の幅を 2 としてカウントする</a>
+という話を見て、
+端末に実際の幅を問い合わせてみればいいのではないかと思って試してみました。</p>
+
+<!--more-->
+
+
+<h2>実行例</h2>
+
+<p>こんな感じでできました。
+zsh と bash で動作確認しています。
+端末は
+<a href="http://iterm2.com/" title="iTerm2">iTerm2</a>
+で動作確認しています。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% echo -ne '日本語\e[6n'; read -d';' a; read -dR a; printf '\e[M\r'; echo $[a-1]
+</span><span class='line'>6
+</span><span class='line'>% echo -ne 'abc日本語\e[6n'; read -d';' a; read -dR a; printf '\e[M\r'; echo $[a-1]
+</span><span class='line'>9</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>スクリプト化</h2>
+
+<p>実行ファイルにするならこんな感じになります。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>#!/bin/bash
+</span><span class='line'>echo -ne "$*"'\e[6n'; read -d';' a; read -dR a; printf '\e[M\r'; echo $[a-1]</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>解説</h2>
+
+<p>実装としては実際に表示して、カーソル位置を端末に問い合わせて、表示を消去して、桁を取り出して 1 引いています。</p>
+
+<p>エスケープシーケンスなどに関しては、
+<a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html" title="対応制御シーケンス">対応制御シーケンス</a>
+を参考にしてください。</p>
+
+<ol>
+<li>まず文字列を表示しています。</li>
+<li><code>CSI Ps n</code> (DSR) を使ってカーソルの位置を報告させています。</li>
+<li><code>CSI r ; c R</code> という応答のうち、 <code>;</code> までを捨てて、 <code>c</code> だけ変数 <code>a</code> に取り込んでいます。</li>
+<li><code>CSI Ps M</code> (DL) でカーソル行に表示された内容を消去しています。</li>
+<li><code>CR</code> で行頭にカーソルを戻しています。</li>
+<li>カーソル位置なので 文字数+1 になっているので、1 引いて表示しています。</li>
+</ol>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 15 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -1608,104 +1668,6 @@ Or on Windows:
 </span><span class='line'>ruby-build/bin/ruby-build --verbose 2.1.2 /usr/local
 </span><span class='line'>rm -rf ruby-build
 </span></code></pre></td></tr></table></div></figure>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[62nd Ruby/Rails勉強会@関西に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-07-26-kansaiworkshop062.html"/>
-    <updated>2014-07-26T13:27:09+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansaiworkshop062</id>
-    <content type="html"><![CDATA[<p><a href="http://rubykansai.doorkeeper.jp/events/13160" title="62nd Ruby/Rails勉強会@関西">62nd Ruby/Rails勉強会@関西</a>
-に参加したので、そのメモです。</p>
-
-<!--more-->
-
-
-<h2>スクレイピングの話</h2>
-
-<p>後で資料は公開してくれるということで、メモはとらずに話をきいていましたが、
-実際にどういうことに使っている話も多くて面白かったです。</p>
-
-<p>資料は
-<a href="http://www.slideshare.net/takurosasaki/ruby-crawler" title="Rubyで作るクローラー Ruby crawler">Rubyで作るクローラー Ruby crawler</a>
-で公開されています。</p>
-
-<h2>Rails Girls Osaka の話</h2>
-
-<p><a href="http://railsgirls.com/osaka" title="Osaka 6-7th June 2014">Rails Girls Osaka 6-7th June 2014</a>
-の話でした。
-写真が多いので資料の公開はないということでした。</p>
-
-<p>今後の予定としては、
-<a href="http://railsgirls.jp/events/" title="近日開催のイベント">近日開催のイベント</a>
-にはないですが、
-<a href="http://railsgirls.com/events" title="Upcoming Events">Upcoming Events</a>
-には
-<a href="http://rubyhiroba.org/2014/" title="RubyHiroba 2014">RubyHiroba 2014</a>
-での
-<a href="http://rubyhiroba.org/2014/rails-girls.html" title="Rails Girls Tokyo 4th">Rails Girls Tokyo 4th</a>
-も書いていました。</p>
-
-<h2>Gemfile.local の話</h2>
-
-<p>redmine とかでも使っている方法で、
-追記せずに何か良い方法はないのかという相談でした。</p>
-
-<h2>るびま (Rubyist Magazine) の話</h2>
-
-<ul>
-<li><a href="http://magazine.rubyist.net/">http://magazine.rubyist.net/</a></li>
-<li>誤植などの指摘は <a href="https://github.com/rubima/rubima-support">https://github.com/rubima/rubima-support</a> へ。</li>
-<li><a href="http://goo.gl/KpASY9">Rubyist Magazine 十周年へのメッセージ</a> 募集中</li>
-</ul>
-
-
-<h2>GitLab の Git Flow の話</h2>
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=477416366X" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-<ul>
-<li><a href="https://gitlab.com/gitlab-org/cookbook-gitlab/blob/master/README.md" title="GitLab Cookbook">GitLab Cookbook</a> のベースを作った。</li>
-<li><a href="http://www.amazon.co.jp/gp/product/477416366X/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=477416366X&amp;linkCode=as2&amp;tag=znz-22">GitHub実践入門 ~Pull Requestによる開発の変革 (WEB+DB PRESS plus)</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=477416366X" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" /> はおすすめと言っていました。</li>
-<li><a href="http://danielkummer.github.io/git-flow-cheatsheet/index.ja_JP.html" title="git-flow cheatsheet">git-flow cheatsheet</a></li>
-<li><a href="https://guides.github.com/introduction/flow/index.html" title="Understanding the GitHub Flow · GitHub Guides">Understanding the GitHub Flow · GitHub Guides</a></li>
-<li>GitLab Flow の提案</li>
-<li>Git Flow について詳細に説明</li>
-</ul>
-
-
-<p>GitLab Flow は git flow を知っている人向けに大雑把に説明すると</p>
-
-<ul>
-<li>release ブランチは使わない。</li>
-<li>develop ブランチの代わりに master ブランチを使う。</li>
-<li>master ブランチの代わりに stable ブランチを作る。</li>
-</ul>
-
-
-<p>ということだと理解しました。</p>
-
-<h2>Ruby 初級者向けレッスン 50回 ブロック</h2>
-
-<p><code>block.call</code> の引数に複数渡すのがいいのか、配列でまとめて渡すのが良いのかという話はきいたことがなかったので、どういう話なのかちょっと気になりました。</p>
-
-<p>多重代入について深入りすると大変そうなので、さらっと流したのはありだと思いました。</p>
-
-<h2>@IT Rails4 入門記事をツッコもう</h2>
-
-<ul>
-<li><a href="http://www.atmarkit.co.jp/ait/articles/1402/28/news047_2.html" title="開発現場でちゃんと使えるRails 4入門（1）：簡単インストールから始める初心者のためのRuby on Railsチュートリアル (2/3) - ＠IT">開発現場でちゃんと使えるRails 4入門（1）：簡単インストールから始める初心者のためのRuby on Railsチュートリアル (2/3) - ＠IT</a></li>
-<li>rbenv 対 RVM</li>
-<li>エディタは Sublime Text, Vim, Emacs が多くて、その他 Atom, Eclipse</li>
-<li><code>rails new</code> の時の <code>--skip-bundle</code> と <code>bundle install --path vendor/bundle</code> の話</li>
-<li><code>bundle exec</code> の話</li>
-<li><a href="http://www.atmarkit.co.jp/ait/articles/1405/16/news024.html" title="開発現場でちゃんと使えるRails 4入門（4）：現場で使えるか見極めたいRails 4.1の新機能8選 - ＠IT">開発現場でちゃんと使えるRails 4入門（4）：現場で使えるか見極めたいRails 4.1の新機能8選 - ＠IT</a></li>
-</ul>
 
 ]]></content>
   </entry>

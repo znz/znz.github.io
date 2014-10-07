@@ -4,7 +4,7 @@
   <title><![CDATA[Category: shell | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/shell/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-09-27T16:51:54+09:00</updated>
+  <updated>2014-10-07T20:23:39+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,60 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ターミナルでの文字幅を調べる]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-10-07-char-width-in-terminal.html"/>
+    <updated>2014-10-07T20:10:20+09:00</updated>
+    <id>http://blog.n-z.jp/blog/char-width-in-terminal</id>
+    <content type="html"><![CDATA[<p><a href="http://uwabami.junkhub.org/log/20141007.html#p01" title="マルチバイト文字列の幅を 2 としてカウントする">マルチバイト文字列の幅を 2 としてカウントする</a>
+という話を見て、
+端末に実際の幅を問い合わせてみればいいのではないかと思って試してみました。</p>
+
+<!--more-->
+
+
+<h2>実行例</h2>
+
+<p>こんな感じでできました。
+zsh と bash で動作確認しています。
+端末は
+<a href="http://iterm2.com/" title="iTerm2">iTerm2</a>
+で動作確認しています。</p>
+
+<pre><code>% echo -ne '日本語\e[6n'; read -d';' a; read -dR a; printf '\e[M\r'; echo $[a-1]
+6
+% echo -ne 'abc日本語\e[6n'; read -d';' a; read -dR a; printf '\e[M\r'; echo $[a-1]
+9
+</code></pre>
+
+<h2>スクリプト化</h2>
+
+<p>実行ファイルにするならこんな感じになります。</p>
+
+<pre><code>#!/bin/bash
+echo -ne "$*"'\e[6n'; read -d';' a; read -dR a; printf '\e[M\r'; echo $[a-1]
+</code></pre>
+
+<h2>解説</h2>
+
+<p>実装としては実際に表示して、カーソル位置を端末に問い合わせて、表示を消去して、桁を取り出して 1 引いています。</p>
+
+<p>エスケープシーケンスなどに関しては、
+<a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html" title="対応制御シーケンス">対応制御シーケンス</a>
+を参考にしてください。</p>
+
+<ol>
+<li>まず文字列を表示しています。</li>
+<li><code>CSI Ps n</code> (DSR) を使ってカーソルの位置を報告させています。</li>
+<li><code>CSI r ; c R</code> という応答のうち、 <code>;</code> までを捨てて、 <code>c</code> だけ変数 <code>a</code> に取り込んでいます。</li>
+<li><code>CSI Ps M</code> (DL) でカーソル行に表示された内容を消去しています。</li>
+<li><code>CR</code> で行頭にカーソルを戻しています。</li>
+<li>カーソル位置なので 文字数+1 になっているので、1 引いて表示しています。</li>
+</ol>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[GOPATHとghqの設定を変更した話とgitconfigのコマンドでの設定の話]]></title>

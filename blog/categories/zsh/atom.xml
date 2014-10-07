@@ -4,7 +4,7 @@
   <title><![CDATA[Category: zsh | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/zsh/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-09-27T16:51:54+09:00</updated>
+  <updated>2014-10-07T20:23:39+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,60 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ターミナルでの文字幅を調べる]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-10-07-char-width-in-terminal.html"/>
+    <updated>2014-10-07T20:10:20+09:00</updated>
+    <id>http://blog.n-z.jp/blog/char-width-in-terminal</id>
+    <content type="html"><![CDATA[<p><a href="http://uwabami.junkhub.org/log/20141007.html#p01" title="マルチバイト文字列の幅を 2 としてカウントする">マルチバイト文字列の幅を 2 としてカウントする</a>
+という話を見て、
+端末に実際の幅を問い合わせてみればいいのではないかと思って試してみました。</p>
+
+<!--more-->
+
+
+<h2>実行例</h2>
+
+<p>こんな感じでできました。
+zsh と bash で動作確認しています。
+端末は
+<a href="http://iterm2.com/" title="iTerm2">iTerm2</a>
+で動作確認しています。</p>
+
+<pre><code>% echo -ne '日本語\e[6n'; read -d';' a; read -dR a; printf '\e[M\r'; echo $[a-1]
+6
+% echo -ne 'abc日本語\e[6n'; read -d';' a; read -dR a; printf '\e[M\r'; echo $[a-1]
+9
+</code></pre>
+
+<h2>スクリプト化</h2>
+
+<p>実行ファイルにするならこんな感じになります。</p>
+
+<pre><code>#!/bin/bash
+echo -ne "$*"'\e[6n'; read -d';' a; read -dR a; printf '\e[M\r'; echo $[a-1]
+</code></pre>
+
+<h2>解説</h2>
+
+<p>実装としては実際に表示して、カーソル位置を端末に問い合わせて、表示を消去して、桁を取り出して 1 引いています。</p>
+
+<p>エスケープシーケンスなどに関しては、
+<a href="http://ttssh2.sourceforge.jp/manual/ja/about/ctrlseq.html" title="対応制御シーケンス">対応制御シーケンス</a>
+を参考にしてください。</p>
+
+<ol>
+<li>まず文字列を表示しています。</li>
+<li><code>CSI Ps n</code> (DSR) を使ってカーソルの位置を報告させています。</li>
+<li><code>CSI r ; c R</code> という応答のうち、 <code>;</code> までを捨てて、 <code>c</code> だけ変数 <code>a</code> に取り込んでいます。</li>
+<li><code>CSI Ps M</code> (DL) でカーソル行に表示された内容を消去しています。</li>
+<li><code>CR</code> で行頭にカーソルを戻しています。</li>
+<li>カーソル位置なので 文字数+1 になっているので、1 引いて表示しています。</li>
+</ol>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[zshでfpathからwhichのように検索する話など]]></title>
@@ -375,78 +429,6 @@ pull などは git プロトコル (昔は Git Read-Only と書いてあった U
 <p>詳細は
 <a href="http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html" title="githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法">githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法</a>
 を参照してください。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[シェルで glob 結果を事前に確認する方法]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-06-21-confirm-glob.html"/>
-    <updated>2014-06-21T13:16:56+09:00</updated>
-    <id>http://blog.n-z.jp/blog/confirm-glob</id>
-    <content type="html"><![CDATA[<p><code>rm *~</code> のつもりで <code>rm * ~</code> (半角スペースが混ざっている) のように実行してしまうような間違いをすると危険です。</p>
-
-<p>その対策として <code>tcsh</code> には <code>rmstar</code> という設定があったり
-<code>zsh</code> には <code>RM_STAR_SILENT</code> や <code>RM_STAR_WAIT</code> という設定があるのですが、
-ちゃんと展開結果を確認してからコマンドを実行する方が安全です。</p>
-
-<p>また <code>rm</code> 以外でも展開結果を事前に確認できると便利なことが多いです。</p>
-
-<!--more-->
-
-
-<h2>展開結果の確認方法</h2>
-
-<p><code>bash</code> や <code>zsh</code> の一般的なキー割り当てだと <code>C-x g</code> (Control を押しながら x を押して Control を離して g) で展開結果を確認できます。</p>
-
-<p>Tab キーだとコマンドライン中に展開されてしまいますが、
-<code>C-x g</code> だと確認だけ出来ます。</p>
-
-<h3>bash の場合</h3>
-
-<p>たとえば <code>bash</code> なら以下のように展開結果が出て、
-プロンプトの行が出てきます。</p>
-
-<pre><code class="console bash">    $ echo /etc/host*&lt;C-x&gt;g
-    host.conf    hostname     hosts        hosts.allow  hosts.deny
-    $ echo /etc/host*
-</code></pre>
-
-<h3>zsh の場合</h3>
-
-<p><code>zsh</code> ならプロンプトの行の下に展開結果が出てきます。</p>
-
-<pre><code class="console zsh">    % echo /etc/host*
-    /etc/host.conf    /etc/hostname     /etc/hosts        /etc/hosts.allow  /etc/hosts.deny
-</code></pre>
-
-<h2>Tab キーの動作</h2>
-
-<p>比較のため Tab キーでの動作例も載せておきます。</p>
-
-<h3>bash の場合</h3>
-
-<p>実際には同じ行でしたが、最初の展開結果に置き換わりました。</p>
-
-<pre><code class="console bash">    $ echo /etc/host*&lt;tab&gt;
-    $ echo /etc/host.conf
-</code></pre>
-
-<h3>zsh の場合</h3>
-
-<p>こちらも実際には同じ行ですが、すべての展開結果に置き換わりました。</p>
-
-<pre><code class="console zsh">    % echo /etc/host*&lt;tab&gt;
-    % echo /etc/host.conf /etc/hostname /etc/hosts /etc/hosts.allow /etc/hosts.deny
-</code></pre>
-
-<p>glob で指定しにくい一部のファイルだけ除外するなど、展開された方が便利な時は
-Tab キーで展開してからコマンドラインを編集して実行することもあります。</p>
-
-<h2>まとめ</h2>
-
-<p>一般的な bash 環境ならどこでも使えて、
-複雑な glob の展開結果の確認にも便利なので、
-<code>C-x g</code> は非常にオススメです。</p>
 ]]></content>
   </entry>
   
