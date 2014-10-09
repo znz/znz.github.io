@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-10-07T21:05:32+09:00</updated>
+  <updated>2014-10-09T22:09:55+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,56 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[redmine の運用停止前のバックアップ]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-10-09-redmine-backup.html"/>
+    <updated>2014-10-09T21:55:27+09:00</updated>
+    <id>http://blog.n-z.jp/blog/redmine-backup</id>
+    <content type="html"><![CDATA[<p>ある redmine の運用を止める前にリポジトリとの連携部分は止まってしまうのは仕方がないとして、
+wiki やチケットなどは後からでも参照できるようにローカルにバックアップを残しておくことにしました。
+その手順のメモです。</p>
+
+<!--more-->
+
+
+<h2>データベースのバックアップ</h2>
+
+<p><a href="http://blog.n-z.jp/blog/2014-01-28-yaml-db.html" title="yaml_dbでMySQLからPostgreSQLに移行した">yaml_dbでMySQLからPostgreSQLに移行した</a>話で使った <code>yaml_db</code> を使いました。</p>
+
+<p>まず、
+<code>Gemfile.local</code> をなければ作成して、以下の内容を追加します。</p>
+
+<figure class='code'><figcaption><span>Gemfile.local</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">gem</span> <span class="s1">&#39;yaml_db&#39;</span><span class="p">,</span> <span class="ss">github</span><span class="p">:</span> <span class="s1">&#39;jetthoughts/yaml_db&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>そして <code>RAILS_ENV=production bundle exec rake db:data:dump</code> で <code>db/data.yml</code> を作成します。</p>
+
+<h2>ローカル環境の作成</h2>
+
+<p>ローカルにも redmine 環境を作成します。</p>
+
+<ol>
+<li>redmine-2.5.2.tar.gz をダウンロードして展開</li>
+<li><code>config/database.yml.example</code> を元に <code>config/database.yml</code> を作成 (今回はバックアップ環境なので sqlite3 を使用)</li>
+<li>Gemfile.local 作成</li>
+<li><code>plugins/</code> に使っていたプラグインをインストール (サーバーから rsync でコピーなど)</li>
+<li>プラグインの設定も必要に応じてコピー (<code>config/wiki_external_filter.yml</code> など)</li>
+<li><code>bundle install</code> で gem のインストール</li>
+<li><code>RAILS_ENV=production bundle exec rake db:migrate</code> と <code>RAILS_ENV=production bundle exec rake redmine:plugins:migrate</code> でデータベース作成</li>
+<li><code>db/data.yml</code> をコピーしてきて <code>RAILS_ENV=production bundle exec rake db:data:load</code> で読み込み (<code>db:migrate</code> していないとテーブル不足で読み込めない)</li>
+<li><code>files/</code> の添付ファイルをコピー (サーバーから rsync でコピーなど)</li>
+<li><code>config/configuration.yml</code> や <code>favicon.ico</code> などカスタマイズしているものがあれば必要に応じて設定やコピー</li>
+<li><code>bundle exec rake generate_secret_token</code> で secret token を生成</li>
+<li><code>bundle exec rails server -e production</code> で起動</li>
+</ol>
+
+
+<p>ログインして今まで通り見えることを確認して終了です。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ターミナルでの文字幅を調べる]]></title>
@@ -1612,71 +1662,6 @@ Or on Windows:
 </span><span class='line'>      --vbm="VBoxManage": path to VirtualBox management utility.
 </span><span class='line'>  -v, --verbose=false: display verbose command invocations.
 </span><span class='line'>      --vm="boot2docker-vm": virtual machine name.</span></code></pre></td></tr></table></div></figure>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[ruby-buildをrbenvと組み合わせずに使う]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-07-27-ruby-build-without-rbenv.html"/>
-    <updated>2014-07-27T17:08:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ruby-build-without-rbenv</id>
-    <content type="html"><![CDATA[<p><a href="https://github.com/sstephenson/ruby-build" title="ruby-build">ruby-build</a>
-は
-<a href="https://github.com/sstephenson/rbenv" title="rbenv">rbenv</a>
-と組み合わせて使われることが多いですが、
-単独でも使えて、その情報が少ないので少し書いておきます。</p>
-
-<!--more-->
-
-
-<h2><code>/usr/local</code> にインストールする方法</h2>
-
-<p><code>ruby-build</code> 自体もインストールしてしまう場合は
-<code>install.sh</code> を使ってインストールします。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>git clone --depth 1 https://github.com/sstephenson/ruby-build
-</span><span class='line'>ruby-build/install.sh
-</span><span class='line'>rm -rf ruby-build
-</span><span class='line'>ruby-build 2.1.2 /usr/local
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>もっと詳しい使い方は
-<a href="http://qiita.com/takahashim/items/406421d515ef1d4f1189" title="[ReVIEW Tips] DockerでRe:VIEW">[ReVIEW Tips] DockerでRe:VIEW</a>
-が参考になると思います。</p>
-
-<h2>ruby だけインストールする方法</h2>
-
-<p><code>bin/ruby-build</code> を直接実行すれば <code>ruby-build</code> をインストールせずに
-<code>ruby</code> だけインストールすることもできます。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>git clone --depth 1 https://github.com/sstephenson/ruby-build
-</span><span class='line'>ruby-build/bin/ruby-build 2.1.2 /usr/local
-</span><span class='line'>rm -rf ruby-build
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>ドキュメントの生成を止めたり、
-インストール中のメッセージを出したりするために
-以下のように実行するのも良いと思います。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>git clone --depth 1 https://github.com/sstephenson/ruby-build
-</span><span class='line'><span class="nb">export </span><span class="nv">CONFIGURE_OPTS</span><span class="o">=</span><span class="s2">&quot;--disable-install-doc&quot;</span>
-</span><span class='line'>ruby-build/bin/ruby-build --verbose 2.1.2 /usr/local
-</span><span class='line'>rm -rf ruby-build
-</span></code></pre></td></tr></table></div></figure>
 
 ]]></content>
   </entry>
