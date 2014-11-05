@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-11-01T20:47:14+09:00</updated>
+  <updated>2014-11-06T00:04:43+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,37 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Rails 4.1.7 にあげたら一部の画像が表示されなくなった]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-11-05-sprockets.html"/>
+    <updated>2014-11-05T21:11:09+09:00</updated>
+    <id>http://blog.n-z.jp/blog/sprockets</id>
+    <content type="html"><![CDATA[<p>Rails 4.1.7 にあげたら一部の画像が表示されなくなるという現象が起きて、しばらく悩んでいたのですが解決しました。</p>
+
+<!--more-->
+
+
+<h2>原因</h2>
+
+<ul>
+<li>Rails か sprockets のバージョンアップでファイル名につけられる digest が変わった。</li>
+<li><code>image_tag</code> で画像を参照している HTML が <code>cache</code> の中にあった。</li>
+</ul>
+
+
+<h2>現象</h2>
+
+<p><code>rails console</code> で <code>Rails.application.assets.find_asset(asset_name).digest</code> を試しても新しい digest がちゃんと返ってくるのに、
+ブラウザー上では古い digest の URL が参照されていてファイルが見つからないという現象になっていました。</p>
+
+<p>アセットはキャッシュ期間の長いファイルとして設定しているので、複数ブラウザーで確認すると最初は現象が起きたり起きなかったりしていて、サーバー側の問題だと気づくのが遅れました。</p>
+
+<h2>対処</h2>
+
+<p><code>dalli</code> gem 経由で <code>memcached</code> をキャッシュ使っていたので <code>sudo service memcached restart</code> してキャッシュを破棄しました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Rubyによるクローラー開発技法 読書会 第2回(兵庫県)に参加しました]]></title>
@@ -216,55 +247,6 @@ WebSocket や WebRTC の最近の話題まで載っています。</p>
 
 <p>内容としては、スライドは全く用意せずに、
 普段やっている <code>git svn rebase --fetch-all</code> して Emacs で ChangeLog を flyspell (と develock.el と flycheck) でチェックして修正して <code>git svn dcommit</code> するというのを実演しました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[RubyKaigi 2014の3日目に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-09-20-rubykaigi-2014-3rd-day.html"/>
-    <updated>2014-09-20T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubykaigi-2014-3rd-day</id>
-    <content type="html"><![CDATA[<p><a href="http://rubykaigi.org/2014" title="RubyKaigi 2014">RubyKaigi 2014</a>
-の3日目 (最終日) に参加しました。</p>
-
-<!--more-->
-
-
-<h2>午前</h2>
-
-<p>ずっと Hall A で聞いていました。
-Rails 4.2 は速くなっているということで、
-リリースされたら早めに移行したいと思いました。</p>
-
-<h2>午後</h2>
-
-<p>主に Hall B で聞いていました。</p>
-
-<p>Reish は便利そうなので、期待したいと思いました。
-Burn も面白そうなので機会があれば試してみたいと思いました。
-single page app の話は rails で作るときに参考にしたいと思いました。</p>
-
-<p>Ruby のソースコードを見ていく話は st.c を見ていっていました。
-今回の話とは関係ない話ですが、
-ソース改造するときに文法をかえたいということで parse.y に挑戦してしまうという話を思い出して、
-初心者は割と難しめのところに
-いきなり挑戦することが多いのかなと思いました。</p>
-
-<p>エコシステムの話はちゃんと upstream にフィードバックするだけではなく、必要なら引き継いだりしているのがすごいと思いました。</p>
-
-<p>Droonga などの話は Groonga が mruby を組み込んでいるというのを知ったりしました。</p>
-
-<p>最後のキーノートは話が速くてほとんど聞き取れなくても
-スライドなどを見ているだけでも
-すごさが伝わってくる内容でした。</p>
-
-<h2>RubyKaigi 2014 全体の感想</h2>
-
-<p>今回は発表が採用されたため、落ち着いて聞けない感じが多かったのですが、
-いろいろと参考になったり、面白かったりしました。</p>
-
-<p>しばらく英語のリスニングの練習をしていなかったら、全然だめになっていたので、
-来年に向けてちゃんとまた練習をしておく必要を感じました。</p>
 ]]></content>
   </entry>
   
