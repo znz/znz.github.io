@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-11-19T23:41:40+09:00</updated>
+  <updated>2014-12-01T21:43:56+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,80 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[capistrano 3.3.3 が依存している capistrano-stats について]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-12-01-capistrano-stats.html"/>
+    <updated>2014-12-01T21:33:21+09:00</updated>
+    <id>http://blog.n-z.jp/blog/capistrano-stats</id>
+    <content type="html"><![CDATA[<p>capistrano が 3.3.3 にあがって
+<a href="https://github.com/capistrano/stats">capistrano-stats</a>
+という gem に依存するようになりました。
+これは <code>metrics.capistranorb.com:1200</code> にバージョン情報などを送信して
+capistrano のサポートの改善に役立てようとするもののようです。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>capistrano 3.3.3</li>
+<li>capistrano-stats 1.0.3</li>
+</ul>
+
+
+<h2>Capfile locked</h2>
+
+<p>capistrano-stats とは関係ないですが、
+<code>Capfile locked at 3.2.1, but 3.3.3 is loaded</code>
+と出るときは <code>config/deploy.rb</code> の最初の方にある
+<code>lock '3.2.1'</code>
+という行を
+<code>lock '3.3.3'</code>
+に書き換えれば OK です。</p>
+
+<h2>capistrano-stats 1.0.3 の挙動</h2>
+
+<p>初回実行時に
+<code>Do you want to enable statistics? (y/N):</code>
+ときかれて、
+そのまま Enter か <code>n</code> を入力すると ruby や capistrano のバージョンは送信されなくなるのですが、
+(少なくとも私の) 期待に反して
+<code>metrics.capistranorb.com:1200</code>
+への送信自体は発生するようになっています。</p>
+
+<h2>何が問題か</h2>
+
+<p>全く送信してほしくない場合にも通信が発生したり、
+firewall で塞がれている場合にエラーになったり
+という問題があります。</p>
+
+<h2>一時的に無効にするには?</h2>
+
+<p><code>CAPISTRANO_METRICS=localhost:1200 bundle exec cap default</code>
+のように環境変数 <code>CAPISTRANO_METRICS</code> で送っても無視されるところに送信すれば良さそうです。</p>
+
+<h2>完全に無効にするには?</h2>
+
+<p>pull request 1 の
+<a href="https://github.com/capistrano/stats/pull/1" title="Honor the users privacy decision and do not send UDP packets if he does not want to send metrics">Honor the users privacy decision and do not send UDP packets if he does not want to send metrics</a>
+にあるように</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">Rake</span><span class="o">::</span><span class="no">Task</span><span class="o">[</span><span class="s1">&#39;metrics:collect&#39;</span><span class="o">].</span><span class="n">clear_actions</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>を <code>config/deploy.rb</code> に追加すると送信されなくなりました。</p>
+
+<h2>今後</h2>
+
+<p><a href="https://github.com/capistrano/stats/pull/2" title="Allow users to opt-out of sending the UDP ping and improve error handling when the sendto syscall fails">Allow users to opt-out of sending the UDP ping and improve error handling when the sendto syscall fails</a>
+という pull request が続きで出ているので、
+将来のバージョンでは全く送信しない選択肢が用意されるかもしれません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 17 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -1222,64 +1296,6 @@ conflict したらがんばって修正してから <code>git commit</code> し�
 </span><span class='line'><span class="gp">docker@boot2docker:~$</span>
 </span></code></pre></td></tr></table></div></figure>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[zshでfpathからwhichのように検索する話など]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-08-12-zsh-which-fpath.html"/>
-    <updated>2014-08-12T23:08:30+09:00</updated>
-    <id>http://blog.n-z.jp/blog/zsh-which-fpath</id>
-    <content type="html"><![CDATA[<p>zsh で <code>PATH</code> から <code>which</code> コマンドや <code>type</code> コマンドで実行ファイルを検索するように <code>fpath</code> から <code>autoload</code> される関数の実体を探したいことがあります。
-そういうときは <code>${^fpath}/cdr(N)</code> のように書けば検索できます。</p>
-
-<!--more-->
-
-
-<h2>解説</h2>
-
-<p>まず
-<code>setopt</code> の <code>RC_EXPAND_PARAM</code> が設定されていないときには <code>$fpath/cdr</code> で配列の最後だけに <code>/cdr</code> がつくので、
-<code>${^spec}</code> を使ってすべてにつけるようにしています。</p>
-
-<p>最後に <code>(N)</code> で存在するものだけ残すようにしています。</p>
-
-<figure class='code'><figcaption><span>実行例</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="k">${</span><span class="p">^fpath</span><span class="k">}</span>/cdr<span class="o">(</span>N<span class="o">)</span>
-</span><span class='line'><span class="go">/usr/share/zsh/5.0.2/functions/cdr</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>PATH で後ろに隠れているコマンドも探す</h2>
-
-<p><code>rbenv</code> を使っていると <code>PATH</code> の後ろに <code>/usr/bin/ruby</code> が隠されるなど、
-同じコマンドが <code>PATH</code> に複数存在することがあります。</p>
-
-<p>そういうときに zsh なら <code>${^path}/ruby(N)</code> で隠れているコマンドも含めて展開できます。</p>
-
-<figure class='code'><figcaption><span>実行例</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> <span class="nb">echo</span> <span class="k">${</span><span class="p">^path</span><span class="k">}</span>/ruby<span class="o">(</span>N<span class="o">)</span>
-</span><span class='line'><span class="go">/Users/kazu/.rbenv/shims/ruby /usr/bin/ruby</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>zsh スクリプトでコマンドの存在を調べる</h2>
-
-<p>シェルスクリプトの中で、
-外部コマンドが実行できるかどうか調べるのに</p>
-
-<pre><code>type peco &gt;/dev/null 2&gt;&amp;1
-</code></pre>
-
-<p>のように <code>type</code> コマンドで調べることがありますが、
-zsh なら</p>
-
-<pre><code>(( ${+commands[peco]} ))
-</code></pre>
-
-<p>のように <code>commands</code> という連想配列を調べるという方法が使えます。</p>
 ]]></content>
   </entry>
   

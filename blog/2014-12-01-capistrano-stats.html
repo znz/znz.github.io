@@ -1,0 +1,389 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>capistrano 3.3.3 が依存している capistrano-stats について - @znz blog</title>
+  <meta name="author" content="Kazuhiro NISHIYAMA">
+
+  
+  <meta name="description" content="capistrano 3.3.3 が依存している capistrano-stats について Dec 1st, 2014 9:33 pm | Comments capistrano が 3.3.3 にあがって
+capistrano-stats
+という gem に依存するようになりました。
+これは &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-12-01-capistrano-stats.html">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-43859023-1', 'n-z.jp');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">@znz blog</a></h1>
+  
+    <h2>ZnZ の memo のようなもの</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://www.google.co.jp/cse" id="cse-search-box">
+  <div>
+    <input type="hidden" name="cx" value="partner-pub-4711975605457723:5173725094" />
+    <input type="hidden" name="ie" value="UTF-8" />
+    <input type="text" name="q" size="40" />
+    <input type="submit" name="sa" value="検索" />
+  </div>
+</form>
+
+<script type="text/javascript" src="http://www.google.co.jp/coop/cse/brand?form=cse-search-box&amp;lang=ja"></script>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      
+      <!-- zenback_title_begin -->
+      
+      <h1 class="entry-title">capistrano 3.3.3 が依存している capistrano-stats について</h1>
+      
+      <!-- zenback_title_end -->
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-12-01T21:33:21+09:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>1</span><span class='date-suffix'>st</span>, <span class='date-year'>2014</span></span> <span class='time'>9:33 pm</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+
+<!-- zenback_body_begin -->
+
+<div class="entry-content"><p>capistrano が 3.3.3 にあがって
+<a href="https://github.com/capistrano/stats">capistrano-stats</a>
+という gem に依存するようになりました。
+これは <code>metrics.capistranorb.com:1200</code> にバージョン情報などを送信して
+capistrano のサポートの改善に役立てようとするもののようです。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>capistrano 3.3.3</li>
+<li>capistrano-stats 1.0.3</li>
+</ul>
+
+
+<h2>Capfile locked</h2>
+
+<p>capistrano-stats とは関係ないですが、
+<code>Capfile locked at 3.2.1, but 3.3.3 is loaded</code>
+と出るときは <code>config/deploy.rb</code> の最初の方にある
+<code>lock '3.2.1'</code>
+という行を
+<code>lock '3.3.3'</code>
+に書き換えれば OK です。</p>
+
+<h2>capistrano-stats 1.0.3 の挙動</h2>
+
+<p>初回実行時に
+<code>Do you want to enable statistics? (y/N):</code>
+ときかれて、
+そのまま Enter か <code>n</code> を入力すると ruby や capistrano のバージョンは送信されなくなるのですが、
+(少なくとも私の) 期待に反して
+<code>metrics.capistranorb.com:1200</code>
+への送信自体は発生するようになっています。</p>
+
+<h2>何が問題か</h2>
+
+<p>全く送信してほしくない場合にも通信が発生したり、
+firewall で塞がれている場合にエラーになったり
+という問題があります。</p>
+
+<h2>一時的に無効にするには?</h2>
+
+<p><code>CAPISTRANO_METRICS=localhost:1200 bundle exec cap default</code>
+のように環境変数 <code>CAPISTRANO_METRICS</code> で送っても無視されるところに送信すれば良さそうです。</p>
+
+<h2>完全に無効にするには?</h2>
+
+<p>pull request 1 の
+<a href="https://github.com/capistrano/stats/pull/1" title="Honor the users privacy decision and do not send UDP packets if he does not want to send metrics">Honor the users privacy decision and do not send UDP packets if he does not want to send metrics</a>
+にあるように</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">Rake</span><span class="o">::</span><span class="no">Task</span><span class="o">[</span><span class="s1">&#39;metrics:collect&#39;</span><span class="o">].</span><span class="n">clear_actions</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>を <code>config/deploy.rb</code> に追加すると送信されなくなりました。</p>
+
+<h2>今後</h2>
+
+<p><a href="https://github.com/capistrano/stats/pull/2" title="Allow users to opt-out of sending the UDP ping and improve error handling when the sendto syscall fails">Allow users to opt-out of sending the UDP ping and improve error handling when the sendto syscall fails</a>
+という pull request が続きで出ているので、
+将来のバージョンでは全く送信しない選択肢が用意されるかもしれません。</p>
+</div>
+
+<!-- zenback_body_end -->
+
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2014-12-01T21:33:21+09:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>1</span><span class='date-suffix'>st</span>, <span class='date-year'>2014</span></span> <span class='time'>9:33 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/capistrano/'>capistrano</a>, <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014-11-19-rubymotion-mokumoku-osaka.html" title="Previous Post: 第 17 回 RubyMotion もくもく会 in Osaka に参加した">&laquo; 第 17 回 RubyMotion もくもく会 in Osaka に参加した</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+<section>
+  <!-- X:S ZenBackWidget --><div id="zenback-widget-loader"></div><script type="text/javascript">!function(d,i){if(!d.getElementById(i)){var r=Math.ceil((new Date()*1)*Math.random());var j=d.createElement("script");j.id=i;j.async=true;j.src="//w.zenback.jp/v1/?base_uri=http%3A//blog.n-z.jp/&nsid=122901358100652638%3A%3A122901381991399941&rand="+r;d.body.appendChild(j);}}(document,"zenback-widget-js");</script><!-- X:E ZenBackWidget -->
+
+</section>
+
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- sidebar -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:160px;height:600px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4210402292"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+<section>
+  <h1>About Me</h1>
+  <img src="/favicon.png" style="float:right">
+  <p>
+    <a href="http://rubycommitters.org/">Ruby のコミッター</a>とかやってます。
+    フルスタックエンジニア(って何?)かもしれません。
+  </p>
+<script data-gittip-username="znz"
+        data-gittip-widget="button"
+        src="//gttp.co/v1.js"></script>
+</section>
+<script language="javascript" type="text/javascript" src="http://b.hatena.ne.jp/js/widget.js" charset="utf-8"></script>
+<script language="javascript" type="text/javascript">
+Hatena.BookmarkWidget.url   = "http://blog.n-z.jp/";
+Hatena.BookmarkWidget.title = "人気エントリー";
+Hatena.BookmarkWidget.sort  = "count";
+Hatena.BookmarkWidget.width = 0;
+Hatena.BookmarkWidget.num   = 6;
+Hatena.BookmarkWidget.theme = "default";
+Hatena.BookmarkWidget.load();
+</script>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014-12-01-capistrano-stats.html">capistrano 3.3.3 が依存している capistrano-stats について</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-11-19-rubymotion-mokumoku-osaka.html">第 17 回 RubyMotion もくもく会 in Osaka に参加した</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-11-14-ct-study-osaka-5.html">第5回 コンテナ型仮想化の情報交換会＠大阪に参加しました</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-11-08-k-of-jp.html">関西オープンフォーラム2014に行ってきました</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014-11-05-sprockets.html">Rails 4.1.7 にあげたら一部の画像が表示されなくなった</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>Tag Cloud</h1>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 101.76470588235294%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 107.94117647058823%'>amagasakirb(9)</a> <a href='/blog/categories/ansible' style='font-size: 107.94117647058823%'>ansible(9)</a> <a href='/blog/categories/anyenv' style='font-size: 100.88235294117646%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 100.88235294117646%'>authorization(1)</a> <a href='/blog/categories/boot2docker' style='font-size: 104.41176470588235%'>boot2docker(5)</a> <a href='/blog/categories/bootstrap' style='font-size: 100.88235294117646%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 100.88235294117646%'>bts(1)</a> <a href='/blog/categories/capistrano' style='font-size: 100.88235294117646%'>capistrano(1)</a> <a href='/blog/categories/cdr' style='font-size: 102.6470588235294%'>cdr(3)</a> <a href='/blog/categories/certification' style='font-size: 100.88235294117646%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 101.76470588235294%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 102.6470588235294%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 120.29411764705883%'>debian(23)</a> <a href='/blog/categories/devise' style='font-size: 104.41176470588235%'>devise(5)</a> <a href='/blog/categories/dkms' style='font-size: 100.88235294117646%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 112.3529411764706%'>docker(14)</a> <a href='/blog/categories/dokku' style='font-size: 101.76470588235294%'>dokku(2)</a> <a href='/blog/categories/doorkeeper' style='font-size: 102.6470588235294%'>doorkeeper(3)</a> <a href='/blog/categories/drb' style='font-size: 100.88235294117646%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 100.88235294117646%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 107.05882352941177%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 143.23529411764707%'>event(49)</a> <a href='/blog/categories/fluentd' style='font-size: 100.88235294117646%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 103.52941176470588%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 101.76470588235294%'>ghq(2)</a> <a href='/blog/categories/git' style='font-size: 104.41176470588235%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 106.17647058823529%'>github(7)</a> <a href='/blog/categories/go' style='font-size: 100.88235294117646%'>go(1)</a> <a href='/blog/categories/gpg' style='font-size: 100.88235294117646%'>gpg(1)</a> <a href='/blog/categories/haml' style='font-size: 100.88235294117646%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 101.76470588235294%'>heroku(2)</a> <a href='/blog/categories/homebrew' style='font-size: 106.17647058823529%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 102.6470588235294%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 102.6470588235294%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 100.88235294117646%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 100.88235294117646%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 100.88235294117646%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 103.52941176470588%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 100.88235294117646%'>jenkins(1)</a> <a href='/blog/categories/jquery' style='font-size: 100.88235294117646%'>jquery(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 101.76470588235294%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 100.88235294117646%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.6470588235294%'>jus(3)</a> <a href='/blog/categories/k-of' style='font-size: 101.76470588235294%'>k-of(2)</a> <a href='/blog/categories/kansaidebian' style='font-size: 104.41176470588235%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 100.88235294117646%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 100.88235294117646%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 103.52941176470588%'>land-of-lisp(4)</a> <a href='/blog/categories/lilo' style='font-size: 101.76470588235294%'>lilo(2)</a> <a href='/blog/categories/linux' style='font-size: 108.82352941176471%'>linux(10)</a> <a href='/blog/categories/live' style='font-size: 102.6470588235294%'>live(3)</a> <a href='/blog/categories/lxc' style='font-size: 100.88235294117646%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.76470588235294%'>lxcjp(2)</a> <a href='/blog/categories/mail' style='font-size: 100.88235294117646%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 101.76470588235294%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 103.52941176470588%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 100.88235294117646%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 100.88235294117646%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 100.88235294117646%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 101.76470588235294%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 100.88235294117646%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 103.52941176470588%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 105.29411764705883%'>octopress(6)</a> <a href='/blog/categories/omniauth' style='font-size: 101.76470588235294%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 101.76470588235294%'>openssl(2)</a> <a href='/blog/categories/osx' style='font-size: 125.58823529411765%'>osx(29)</a> <a href='/blog/categories/owncloud' style='font-size: 100.88235294117646%'>owncloud(1)</a> <a href='/blog/categories/packer' style='font-size: 100.88235294117646%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 100.88235294117646%'>passenger(1)</a> <a href='/blog/categories/peco' style='font-size: 100.88235294117646%'>peco(1)</a> <a href='/blog/categories/postfix' style='font-size: 101.76470588235294%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 101.76470588235294%'>postgresql(2)</a> <a href='/blog/categories/pundit' style='font-size: 100.88235294117646%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 100.88235294117646%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 102.6470588235294%'>r(3)</a> <a href='/blog/categories/rabbit' style='font-size: 101.76470588235294%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 130.0%'>rails(34)</a> <a href='/blog/categories/ransack' style='font-size: 100.88235294117646%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 103.52941176470588%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.76470588235294%'>redmine(2)</a> <a href='/blog/categories/rspec' style='font-size: 100.88235294117646%'>rspec(1)</a> <a href='/blog/categories/rsyslog' style='font-size: 100.88235294117646%'>rsyslog(1)</a> <a href='/blog/categories/rubima' style='font-size: 100.88235294117646%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(68)</a> <a href='/blog/categories/rubykaigi' style='font-size: 100.88235294117646%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 102.6470588235294%'>rubykansai(3)</a> <a href='/blog/categories/rubymotion' style='font-size: 114.11764705882354%'>rubymotion(16)</a> <a href='/blog/categories/security' style='font-size: 102.6470588235294%'>security(3)</a> <a href='/blog/categories/shell' style='font-size: 103.52941176470588%'>shell(4)</a> <a href='/blog/categories/slim' style='font-size: 100.88235294117646%'>slim(1)</a> <a href='/blog/categories/ssh' style='font-size: 100.88235294117646%'>ssh(1)</a> <a href='/blog/categories/sylpheed' style='font-size: 100.88235294117646%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 100.88235294117646%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 103.52941176470588%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 116.76470588235294%'>ubuntu(19)</a> <a href='/blog/categories/upstart' style='font-size: 101.76470588235294%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 100.88235294117646%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 106.17647058823529%'>vagrant(7)</a> <a href='/blog/categories/vagrantcloud' style='font-size: 101.76470588235294%'>vagrantcloud(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 101.76470588235294%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 100.88235294117646%'>weechat(1)</a> <a href='/blog/categories/yaml' style='font-size: 100.88235294117646%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 100.88235294117646%'>zabbix(1)</a> <a href='/blog/categories/zsh' style='font-size: 109.70588235294117%'>zsh(11)</a> </span>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/znz">@znz</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'znz',
+            count: 3,
+            skip_forks: false,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Kazuhiro NISHIYAMA -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'znzblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-12-01-capistrano-stats.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-12-01-capistrano-stats.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" src="http://b.st-hatena.com/js/bookmark_button.js" charset="utf-8" async="async"></script>
+
+
+</body>
+</html>

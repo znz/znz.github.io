@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-11-19T23:41:40+09:00</updated>
+  <updated>2014-12-01T21:43:56+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,78 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[capistrano 3.3.3 が依存している capistrano-stats について]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-12-01-capistrano-stats.html"/>
+    <updated>2014-12-01T21:33:21+09:00</updated>
+    <id>http://blog.n-z.jp/blog/capistrano-stats</id>
+    <content type="html"><![CDATA[<p>capistrano が 3.3.3 にあがって
+<a href="https://github.com/capistrano/stats">capistrano-stats</a>
+という gem に依存するようになりました。
+これは <code>metrics.capistranorb.com:1200</code> にバージョン情報などを送信して
+capistrano のサポートの改善に役立てようとするもののようです。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>capistrano 3.3.3</li>
+<li>capistrano-stats 1.0.3</li>
+</ul>
+
+
+<h2>Capfile locked</h2>
+
+<p>capistrano-stats とは関係ないですが、
+<code>Capfile locked at 3.2.1, but 3.3.3 is loaded</code>
+と出るときは <code>config/deploy.rb</code> の最初の方にある
+<code>lock '3.2.1'</code>
+という行を
+<code>lock '3.3.3'</code>
+に書き換えれば OK です。</p>
+
+<h2>capistrano-stats 1.0.3 の挙動</h2>
+
+<p>初回実行時に
+<code>Do you want to enable statistics? (y/N):</code>
+ときかれて、
+そのまま Enter か <code>n</code> を入力すると ruby や capistrano のバージョンは送信されなくなるのですが、
+(少なくとも私の) 期待に反して
+<code>metrics.capistranorb.com:1200</code>
+への送信自体は発生するようになっています。</p>
+
+<h2>何が問題か</h2>
+
+<p>全く送信してほしくない場合にも通信が発生したり、
+firewall で塞がれている場合にエラーになったり
+という問題があります。</p>
+
+<h2>一時的に無効にするには?</h2>
+
+<p><code>CAPISTRANO_METRICS=localhost:1200 bundle exec cap default</code>
+のように環境変数 <code>CAPISTRANO_METRICS</code> で送っても無視されるところに送信すれば良さそうです。</p>
+
+<h2>完全に無効にするには?</h2>
+
+<p>pull request 1 の
+<a href="https://github.com/capistrano/stats/pull/1" title="Honor the users privacy decision and do not send UDP packets if he does not want to send metrics">Honor the users privacy decision and do not send UDP packets if he does not want to send metrics</a>
+にあるように</p>
+
+<pre><code class="ruby">Rake::Task['metrics:collect'].clear_actions
+</code></pre>
+
+<p>を <code>config/deploy.rb</code> に追加すると送信されなくなりました。</p>
+
+<h2>今後</h2>
+
+<p><a href="https://github.com/capistrano/stats/pull/2" title="Allow users to opt-out of sending the UDP ping and improve error handling when the sendto syscall fails">Allow users to opt-out of sending the UDP ping and improve error handling when the sendto syscall fails</a>
+という pull request が続きで出ているので、
+将来のバージョンでは全く送信しない選択肢が用意されるかもしれません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 17 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -197,53 +269,6 @@ wiki やチケットなどは後からでも参照できるようにローカル
 
 
 <p>ログインして今まで通り見えることを確認して終了です。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 15 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-09-24-rubymotion-mokumoku-osaka.html"/>
-    <updated>2014-09-24T23:12:38+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
-    <content type="html"><![CDATA[<p>第 1 回から第 14 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://rubymotionjp.connpass.com/event/8214/" title="第 15 回 RubyMotion もくもく会 in Osaka - connpass">第 15 回 RubyMotion もくもく会 in Osaka - connpass</a>
-に参加してきました。
-今日もみんなもくもくしていました。</p>
-
-<p>次回の
-<a href="http://rubymotionjp.connpass.com/event/8917/" title="第 16 回 RubyMotion もくもく会 in Osaka - connpass">第 16 回 RubyMotion もくもく会 in Osaka - connpass</a>
-は 10/15(水) になりました。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<p>メモです。</p>
-
-<ul>
-<li><a href="http://www.3bees.com/">http://www.3bees.com/</a></li>
-<li><a href="http://rubymotiondispatch.com/" title="RubyMotion Dispatch">RubyMotion Dispatch</a></li>
-<li>RubyMotion Kaigi 2014 の話</li>
-<li><a href="https://github.com/infinitered/cdq">https://github.com/infinitered/cdq</a></li>
-<li><a href="https://www.bloc.io/swiftris-build-your-first-ios-game-with-swift" title="Swiftris Tutorial: Build Your First iOS Game With Swift | Bloc">Swiftris Tutorial: Build Your First iOS Game With Swift | Bloc</a></li>
-<li><a href="http://www.genymotion.com/">http://www.genymotion.com/</a></li>
-<li><a href="https://github.com/nathankot/webstub">https://github.com/nathankot/webstub</a></li>
-</ul>
-
-
-<h2>やっていたこと</h2>
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4873116767" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-<p>最近は Mac をあまり持ち歩かなくなっていて忘れていたので、
-代わりに持ち歩いていた本 (<a href="http://www.amazon.co.jp/gp/product/4873116767/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116767&amp;linkCode=as2&amp;tag=znz-22">ハイパフォーマンス ブラウザネットワーキング ―ネットワークアプリケーションのためのパフォーマンス最適化</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116767" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />) を読んでいました。</p>
-
-<p>物理層に近い 3G のこととか全く知らなかった話も載っていて、だからアプリケーションはどういう点に気をつければ良いのかという話も書いてあったり、
-WebSocket や WebRTC の最近の話題まで載っています。</p>
 ]]></content>
   </entry>
   
