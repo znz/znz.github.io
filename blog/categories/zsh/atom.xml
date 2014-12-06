@@ -4,7 +4,7 @@
   <title><![CDATA[Category: zsh | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/zsh/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-12-01T21:43:56+09:00</updated>
+  <updated>2014-12-06T18:34:45+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,82 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[zshでEnterを連打したときにいろいろ実行する]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-12-06-zsh-enter.html"/>
+    <updated>2014-12-06T18:01:45+09:00</updated>
+    <id>http://blog.n-z.jp/blog/zsh-enter</id>
+    <content type="html"><![CDATA[<p>これは
+<a href="http://qiita.com/advent-calendar/2014/zsh">zsh Advent Calendar 2014</a>
+の 6 日目の記事です。</p>
+
+<p>zsh で Enter を連打したときに順番にコマンドを実行するというのをやってみました。</p>
+
+<p>参考にしたのは <a href="http://qiita.com/yuyuchu3333/items/e9af05670c95e2cc5b4d" title="Zsh - Enter で ls と git status を表示すると便利 - Qiita">Zsh - Enter で ls と git status を表示すると便利 - Qiita</a> です。</p>
+
+<!--more-->
+
+
+<h2>概要と実装</h2>
+
+<p><code>.zshrc</code> に以下のような感じで追加して空 Enter を押すと
+最初は <code>ls</code> で次に
+<code>svn status</code> または <code>git status -sb</code> を実行するようになります。
+連打したときに終わりがわかりやすいように 3 回目は何も実行しないようにしています。</p>
+
+<pre><code class="sh">function my_enter {
+    if [[ -n "$BUFFER" ]]; then
+        builtin zle .accept-line
+        return 0
+    fi
+    if [ "$WIDGET" != "$LASTWIDGET" ]; then
+        MY_ENTER_COUNT=0
+    fi
+    case $[MY_ENTER_COUNT++] in
+        0)
+            BUFFER=" ls"
+            ;;
+        1)
+            if [[ -d .svn ]]; then
+                BUFFER=" svn status"
+            elif git rev-parse --is-inside-work-tree &gt;/dev/null 2&gt;&amp;1; then
+                BUFFER=" git status -sb"
+            fi
+            ;;
+        *)
+            unset MY_ENTER_COUNT
+            ;;
+    esac
+    builtin zle .accept-line
+}
+zle -N my_enter
+bindkey '^m' my_enter
+</code></pre>
+
+<h2>関数解説</h2>
+
+<p>最初の <code>if</code> 文で <code>$BUFFER</code> をチェックして入力があるときは <code>zle .accept-line</code> で普通に実行するようにしています。</p>
+
+<p>次の <code>if</code> 文で <code>$LASTWIDGET</code> と <code>$WIDGET</code> が違うときに <code>MY_ENTER_COUNT</code> というシェル変数を初期化しています。
+この変数で何回目の空 Enter かを覚えておくようにしています。</p>
+
+<p>そして <code>MY_ENTER_COUNT</code> で何回目かに応じて実行するコマンドを変えています。
+頭にスペースを入れているのは <code>setopt histignorespace</code> と組み合わせることを想定しています。</p>
+
+<p>最後に <code>zle .accept-line</code> で実行しています。</p>
+
+<h2>まとめ</h2>
+
+<p>空 Enter 連打でいろいろなコマンドを順番に実行できるようにしてみました。
+参考にして好きなコマンドを実行できるようにすると良いのではないでしょうか。</p>
+
+<p><a href="http://qiita.com/yuyuchu3333/items/e9af05670c95e2cc5b4d">参考元の Qiita の記事</a>
+にちょっと書いているように Enter がやり過ぎと思ったら
+<code>bindkey '^J' my_enter</code>
+のように別のキーに割り当てると良いでしょう。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ターミナルでの文字幅を調べる]]></title>
@@ -303,141 +379,6 @@ zsh スクリプトの中では <code>type peco &gt;/dev/null 2&gt;&amp;1</code>
 <p><code>selected=$()</code> を <code>selected="$()"</code> に変更するなど適切にクオートした上で、
 さらに最後の <code>cd</code> コマンドに渡す部分では <code>q</code> という Parameter Expansion Flag (<code>${(q)var}</code> の部分) を使って
 適切にエスケープしています。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[GOPATHとghqの設定を変更した話とgitconfigのコマンドでの設定の話]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-07-05-ghq-gitconfig.html"/>
-    <updated>2014-07-05T09:55:07+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ghq-gitconfig</id>
-    <content type="html"><![CDATA[<p><a href="http://blog.kentarok.org/entry/2014/06/03/135300" title="ghqを使ったローカルリポジトリの統一的・効率的な管理について - delirious thoughts">ghqを使ったローカルリポジトリの統一的・効率的な管理について - delirious thoughts</a>
-を参考にして、
-go と ghq で同じディレクトリを使っていたのですが、
-go で自動で追加ダウンロードされたものと
-自分でダウンロードしたものが混ざるとわかりにくいと思ったので、
-分けることにしました。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>go version go1.3 darwin/amd64</li>
-<li>git verseion 2.0.0</li>
-<li>Mercurial Distributed SCM (version 3.0.1)</li>
-<li>ghq version HEAD (2014-06-27 が最新コミットの状態)</li>
-</ul>
-
-
-<h2>go などのインストール</h2>
-
-<p><a href="http://brew.sh/">Homebrew</a> を使って
-<code>brew install go --cross-compile-common</code>
-でインストールしました。</p>
-
-<p>git と mercurial もインストールしておきました。</p>
-
-<h2>シェルの設定 (GOPATH など)</h2>
-
-<p>bash と zsh の共通の設定として
-<a href="https://github.com/znz/dot-shell/blob/bb84c5aefc83eab5ce1841508abd726ee9db6577/profile.d/50gopath.sh" title="50gopath.sh">50gopath.sh</a>
-で以下のように設定しています。</p>
-
-<p>統合している時は go とか git とかの意味をかねて g だけにしていましたが、
-今は go 専用にしています。</p>
-
-<pre><code class="sh 50gopath.sh">    if [ -z "${GOPATH:-}" ]; then
-        export GOPATH=$HOME/g
-        PATH=$PATH:$GOPATH/bin
-    fi
-</code></pre>
-
-<p>その後に zsh 専用の追加設定で
-<a href="https://github.com/znz/dot-shell/blob/bb84c5aefc83eab5ce1841508abd726ee9db6577/profile.d/50gopath.zsh" title="50gopath.zsh">50gopath.zsh</a>
-で以下のように設定しています。</p>
-
-<p>GOPATH が PATH のように <code>:</code> 区切りで複数になる可能性を考慮してしまったのですが、
-<a href="http://golang.org/doc/code.html#GOPATH" title="The GOPATH environment variable">The GOPATH environment variable</a>
-をみるとそういうことはなさそうなので、
-<code>${^${(s/:/)GOPATH}}</code> は単純に <code>${GOPATH}</code> でも良さそうです。</p>
-
-<p>そして fpath に <code>_ghq</code> のパスを追加して <code>ghq</code> の引数を補完できるようにしています。</p>
-
-<pre><code class="sh 50gopath.zsh">    path=( $path ${^${(s/:/)GOPATH}}/bin(N) )
-    fpath=( $fpath ${^${(s/:/)GOPATH}}/src/*/*/ghq/zsh(N) )
-</code></pre>
-
-<h2>ghq のインストール</h2>
-
-<p><code>go get -v github.com/motemen/ghq</code>
-でインストールしました。</p>
-
-<h3><code>https://</code> の要不要</h3>
-
-<p><code>ghq get</code> では <code>github.com</code> から書く時は <code>https://</code> が必須なのですが、
-こちらは <code>https://</code> は不要というか、
-むしろ付けるとエラーになりました。</p>
-
-<h2>.gitconfig の設定</h2>
-
-<p><a href="https://github.com/znz/dot-shell/blob/bb84c5aefc83eab5ce1841508abd726ee9db6577/git-config.sh" title="git-config.sh">git-config.sh</a>
-で <code>user.name</code> や <code>user.email</code> 以外の共通のものはまとめて設定しています。</p>
-
-<h3>コマンドでの設定の追加削除</h3>
-
-<p>詳細はドキュメントをみてもらうとして、まとめておくと以下のようになります。</p>
-
-<ul>
-<li>単独の設定 : <code>git config --global section.key value</code></li>
-<li>複数設定 : <code>git config --global section.key value</code> の後で <code>git config --global --add section.key value</code></li>
-<li>複数設定削除 : <code>git config --global --unset-all section.key</code> (ただしセクションが空になっても残る)</li>
-<li>セクションごと削除 : <code>git config --global --remove-section セクション</code></li>
-</ul>
-
-
-<h3>ghq の設定</h3>
-
-<p><code>ghq.root</code> を <code>--unset-all</code> だけすると git-config.sh を実行する度に
-ghq セクション、つまり <code>[ghq]</code> の行が増えていってしまったので、
-<code>--remove-section</code> を使いました。
-他に <code>ghq</code> セクションに設定を入れていたら、
-それも消えてしまうので注意してください。</p>
-
-<pre><code class="sh">    # ghq section
-    git config --global --remove-section "ghq" || :
-    GHQ_ROOT="ghq.root"
-    #git config --global --unset-all "$GHQ_ROOT" || :
-    git config --global "$GHQ_ROOT" "$HOME/s"
-    git config --global --add "$GHQ_ROOT" "$HOME/g/src"
-</code></pre>
-
-<p>これで <code>ghq get</code> は <code>$HOME/s</code> に入って
-<code>ghq look</code> では両方見えるようになりました。</p>
-
-<h3>github の URL 統一の話</h3>
-
-<p>github の URL は https に統一して、
-gitconfig の設定で
-push は ssh プロトコル、
-pull などは git プロトコル (昔は Git Read-Only と書いてあった URL)
-を使うようにしています。</p>
-
-<pre><code class="sh">    # github upload
-    GITHUB_URL_PREFIX="url.git@github.com:"
-    git config --global --remove-section "$GITHUB_URL_PREFIX" || :
-    git config --global "$GITHUB_URL_PREFIX".pushInsteadOf "git://github.com/"
-    git config --global --add "$GITHUB_URL_PREFIX".pushInsteadOf "https://github.com/"
-    # gist upload
-    git config --global "url.git@gist.github.com:".pushInsteadOf "https://gist.github.com/$(git config github.user)/"
-    # github download
-    git config --global url."git://github.com/".insteadOf "https://github.com/"
-</code></pre>
-
-<p>詳細は
-<a href="http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html" title="githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法">githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法</a>
-を参照してください。</p>
 ]]></content>
   </entry>
   

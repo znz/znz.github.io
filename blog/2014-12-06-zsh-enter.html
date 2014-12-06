@@ -5,11 +5,13 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: mailman - @znz blog</title>
+  <title>zshでEnterを連打したときにいろいろ実行する - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Category: mailman">
+  <meta name="description" content="zshでEnterを連打したときにいろいろ実行する Dec 6th, 2014 6:01 pm | Comments これは
+zsh Advent Calendar 2014
+の 6 日目の記事です。 zsh で Enter を連打したときに順番にコマンドを実行するというのをやってみました。 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +20,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/categories/mailman/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-12-06-zsh-enter.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,51 +78,202 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: mailman</h1>
+    
+      
+      <!-- zenback_title_begin -->
+      
+      <h1 class="entry-title">zshでEnterを連打したときにいろいろ実行する</h1>
+      
+      <!-- zenback_title_end -->
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-12-06T18:01:45+09:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>6</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>6:01 pm</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
 
-  
-  <h2>2013</h2>
+<!-- zenback_body_begin -->
 
-<article>
-  
-<h1><a href="/blog/2013-12-11-mailman-strip-dkim-signature.html">mailmanでDKIM-Signatureヘッダを削除する</a></h1>
-<time datetime="2013-12-11T12:30:00+09:00" pubdate><span class='month'>Dec</span> <span class='day'>11</span> <span class='year'>2013</span></time>
+<div class="entry-content"><p>これは
+<a href="http://qiita.com/advent-calendar/2014/zsh">zsh Advent Calendar 2014</a>
+の 6 日目の記事です。</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/mailman/'>mailman</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a></span>
-</footer>
+<p>zsh で Enter を連打したときに順番にコマンドを実行するというのをやってみました。</p>
 
+<p>参考にしたのは <a href="http://qiita.com/yuyuchu3333/items/e9af05670c95e2cc5b4d" title="Zsh - Enter で ls と git status を表示すると便利 - Qiita">Zsh - Enter で ls と git status を表示すると便利 - Qiita</a> です。</p>
 
-</article>
+<!--more-->
 
 
+<h2>概要と実装</h2>
 
-<article>
-  
-<h1><a href="/blog/2013-11-24-debian-postfix-mailman.html">debianでpostfixと連携するvirtual hostではないmailmanの設定をした</a></h1>
-<time datetime="2013-11-24T19:50:00+09:00" pubdate><span class='month'>Nov</span> <span class='day'>24</span> <span class='year'>2013</span></time>
+<p><code>.zshrc</code> に以下のような感じで追加して空 Enter を押すと
+最初は <code>ls</code> で次に
+<code>svn status</code> または <code>git status -sb</code> を実行するようになります。
+連打したときに終わりがわかりやすいように 3 回目は何も実行しないようにしています。</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/mailman/'>mailman</a>, <a class='category' href='/blog/categories/postfix/'>postfix</a></span>
-</footer>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="k">function</span> my_enter <span class="o">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$BUFFER&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>        <span class="nb">builtin </span>zle .accept-line
+</span><span class='line'>        <span class="k">return</span> 0
+</span><span class='line'>    <span class="k">fi</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$WIDGET&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$LASTWIDGET&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>        <span class="nv">MY_ENTER_COUNT</span><span class="o">=</span>0
+</span><span class='line'>    <span class="k">fi</span>
+</span><span class='line'>    <span class="k">case</span> <span class="nv">$[</span>MY_ENTER_COUNT++<span class="o">]</span> in
+</span><span class='line'>        0<span class="o">)</span>
+</span><span class='line'>            <span class="nv">BUFFER</span><span class="o">=</span><span class="s2">&quot; ls&quot;</span>
+</span><span class='line'>            <span class="p">;;</span>
+</span><span class='line'>        1<span class="o">)</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">[[</span> -d .svn <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>                <span class="nv">BUFFER</span><span class="o">=</span><span class="s2">&quot; svn status&quot;</span>
+</span><span class='line'>            <span class="k">elif</span> git rev-parse --is-inside-work-tree &gt;/dev/null 2&gt;<span class="p">&amp;</span>1<span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>                <span class="nv">BUFFER</span><span class="o">=</span><span class="s2">&quot; git status -sb&quot;</span>
+</span><span class='line'>            <span class="k">fi</span>
+</span><span class='line'>            <span class="p">;;</span>
+</span><span class='line'>        *<span class="o">)</span>
+</span><span class='line'>            <span class="nb">unset </span>MY_ENTER_COUNT
+</span><span class='line'>            <span class="p">;;</span>
+</span><span class='line'>    <span class="k">esac</span>
+</span><span class='line'>    <span class="nb">builtin </span>zle .accept-line
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>zle -N my_enter
+</span><span class='line'>bindkey <span class="s1">&#39;^m&#39;</span> my_enter
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-</article>
+<h2>関数解説</h2>
 
+<p>最初の <code>if</code> 文で <code>$BUFFER</code> をチェックして入力があるときは <code>zle .accept-line</code> で普通に実行するようにしています。</p>
+
+<p>次の <code>if</code> 文で <code>$LASTWIDGET</code> と <code>$WIDGET</code> が違うときに <code>MY_ENTER_COUNT</code> というシェル変数を初期化しています。
+この変数で何回目の空 Enter かを覚えておくようにしています。</p>
+
+<p>そして <code>MY_ENTER_COUNT</code> で何回目かに応じて実行するコマンドを変えています。
+頭にスペースを入れているのは <code>setopt histignorespace</code> と組み合わせることを想定しています。</p>
+
+<p>最後に <code>zle .accept-line</code> で実行しています。</p>
+
+<h2>まとめ</h2>
+
+<p>空 Enter 連打でいろいろなコマンドを順番に実行できるようにしてみました。
+参考にして好きなコマンドを実行できるようにすると良いのではないでしょうか。</p>
+
+<p><a href="http://qiita.com/yuyuchu3333/items/e9af05670c95e2cc5b4d">参考元の Qiita の記事</a>
+にちょっと書いているように Enter がやり過ぎと思ったら
+<code>bindkey '^J' my_enter</code>
+のように別のキーに割り当てると良いでしょう。</p>
 </div>
 
+<!-- zenback_body_end -->
+
+
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2014-12-06T18:01:45+09:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>6</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>6:01 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/zsh/'>zsh</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014-12-01-capistrano-stats.html" title="Previous Post: capistrano 3.3.3 が依存している capistrano-stats について">&laquo; capistrano 3.3.3 が依存している capistrano-stats について</a>
+      
+      
+    </p>
+  </footer>
 </article>
 
+<section>
+  <!-- X:S ZenBackWidget --><div id="zenback-widget-loader"></div><script type="text/javascript">!function(d,i){if(!d.getElementById(i)){var r=Math.ceil((new Date()*1)*Math.random());var j=d.createElement("script");j.id=i;j.async=true;j.src="//w.zenback.jp/v1/?base_uri=http%3A//blog.n-z.jp/&nsid=122901358100652638%3A%3A122901381991399941&rand="+r;d.body.appendChild(j);}}(document,"zenback-widget-js");</script><!-- X:E ZenBackWidget -->
+
+</section>
+
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -238,7 +391,10 @@ Hatena.BookmarkWidget.load();
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-12-06-zsh-enter.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2014-12-06-zsh-enter.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

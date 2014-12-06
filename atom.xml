@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-12-01T21:43:56+09:00</updated>
+  <updated>2014-12-06T18:34:45+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,110 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[zshでEnterを連打したときにいろいろ実行する]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-12-06-zsh-enter.html"/>
+    <updated>2014-12-06T18:01:45+09:00</updated>
+    <id>http://blog.n-z.jp/blog/zsh-enter</id>
+    <content type="html"><![CDATA[<p>これは
+<a href="http://qiita.com/advent-calendar/2014/zsh">zsh Advent Calendar 2014</a>
+の 6 日目の記事です。</p>
+
+<p>zsh で Enter を連打したときに順番にコマンドを実行するというのをやってみました。</p>
+
+<p>参考にしたのは <a href="http://qiita.com/yuyuchu3333/items/e9af05670c95e2cc5b4d" title="Zsh - Enter で ls と git status を表示すると便利 - Qiita">Zsh - Enter で ls と git status を表示すると便利 - Qiita</a> です。</p>
+
+<!--more-->
+
+
+<h2>概要と実装</h2>
+
+<p><code>.zshrc</code> に以下のような感じで追加して空 Enter を押すと
+最初は <code>ls</code> で次に
+<code>svn status</code> または <code>git status -sb</code> を実行するようになります。
+連打したときに終わりがわかりやすいように 3 回目は何も実行しないようにしています。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="k">function</span> my_enter <span class="o">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">[[</span> -n <span class="s2">&quot;$BUFFER&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>        <span class="nb">builtin </span>zle .accept-line
+</span><span class='line'>        <span class="k">return</span> 0
+</span><span class='line'>    <span class="k">fi</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">[</span> <span class="s2">&quot;$WIDGET&quot;</span> !<span class="o">=</span> <span class="s2">&quot;$LASTWIDGET&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>        <span class="nv">MY_ENTER_COUNT</span><span class="o">=</span>0
+</span><span class='line'>    <span class="k">fi</span>
+</span><span class='line'>    <span class="k">case</span> <span class="nv">$[</span>MY_ENTER_COUNT++<span class="o">]</span> in
+</span><span class='line'>        0<span class="o">)</span>
+</span><span class='line'>            <span class="nv">BUFFER</span><span class="o">=</span><span class="s2">&quot; ls&quot;</span>
+</span><span class='line'>            <span class="p">;;</span>
+</span><span class='line'>        1<span class="o">)</span>
+</span><span class='line'>            <span class="k">if</span> <span class="o">[[</span> -d .svn <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>                <span class="nv">BUFFER</span><span class="o">=</span><span class="s2">&quot; svn status&quot;</span>
+</span><span class='line'>            <span class="k">elif</span> git rev-parse --is-inside-work-tree &gt;/dev/null 2&gt;<span class="p">&amp;</span>1<span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>                <span class="nv">BUFFER</span><span class="o">=</span><span class="s2">&quot; git status -sb&quot;</span>
+</span><span class='line'>            <span class="k">fi</span>
+</span><span class='line'>            <span class="p">;;</span>
+</span><span class='line'>        *<span class="o">)</span>
+</span><span class='line'>            <span class="nb">unset </span>MY_ENTER_COUNT
+</span><span class='line'>            <span class="p">;;</span>
+</span><span class='line'>    <span class="k">esac</span>
+</span><span class='line'>    <span class="nb">builtin </span>zle .accept-line
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>zle -N my_enter
+</span><span class='line'>bindkey <span class="s1">&#39;^m&#39;</span> my_enter
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>関数解説</h2>
+
+<p>最初の <code>if</code> 文で <code>$BUFFER</code> をチェックして入力があるときは <code>zle .accept-line</code> で普通に実行するようにしています。</p>
+
+<p>次の <code>if</code> 文で <code>$LASTWIDGET</code> と <code>$WIDGET</code> が違うときに <code>MY_ENTER_COUNT</code> というシェル変数を初期化しています。
+この変数で何回目の空 Enter かを覚えておくようにしています。</p>
+
+<p>そして <code>MY_ENTER_COUNT</code> で何回目かに応じて実行するコマンドを変えています。
+頭にスペースを入れているのは <code>setopt histignorespace</code> と組み合わせることを想定しています。</p>
+
+<p>最後に <code>zle .accept-line</code> で実行しています。</p>
+
+<h2>まとめ</h2>
+
+<p>空 Enter 連打でいろいろなコマンドを順番に実行できるようにしてみました。
+参考にして好きなコマンドを実行できるようにすると良いのではないでしょうか。</p>
+
+<p><a href="http://qiita.com/yuyuchu3333/items/e9af05670c95e2cc5b4d">参考元の Qiita の記事</a>
+にちょっと書いているように Enter がやり過ぎと思ったら
+<code>bindkey '^J' my_enter</code>
+のように別のキーに割り当てると良いでしょう。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[capistrano 3.3.3 が依存している capistrano-stats について]]></title>
@@ -1078,223 +1182,6 @@ conflict したらがんばって修正してから <code>git commit</code> し�
 <li><a href="http://www.amazon.co.jp/gp/product/4274069117/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4274069117&amp;linkCode=as2&amp;tag=znz-22">型システム入門 −プログラミング言語と型の理論−</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4274069117" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />は積ん読のままということで候補から外れました。</li>
 <li><a href="http://www.amazon.co.jp/gp/product/4873116856/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116856&amp;linkCode=as2&amp;tag=znz-22">戦略的データサイエンス入門 ―ビジネスに活かすコンセプトとテクニック</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116856" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />も流れで出てきただけだったので、最終候補には残りませんでした。</li>
 </ul>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[boot2dockerでdockerのvolumeの保存状況を調べてみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-08-14-boot2docker-volume.html"/>
-    <updated>2014-08-14T20:36:13+09:00</updated>
-    <id>http://blog.n-z.jp/blog/boot2docker-volume</id>
-    <content type="html"><![CDATA[<p><a href="https://docs.docker.com/userguide/dockervolumes/" title="Managing data in containers - Docker Documentation">Managing data in containers - Docker Documentation</a>
-に
-「Volumes persist until no containers use them」
-(ボリュームは使っているコンテナがなくなるまで存続する)
-と書いてあり、実際のところどうなのかを boot2docker で確認してみました。</p>
-
-<p>確認した範囲ではコンテナを消した後でも残っていました。
-確認の仕方が悪いなど気づいた点があればコメントなり twitter で指摘などをよろしくお願いします。</p>
-
-<!--more-->
-
-
-<h2>確認バージョン</h2>
-
-<ul>
-<li>Mac OS X 10.9.4</li>
-<li>VirtualBox 4.3.14</li>
-<li>docker 1.1.2</li>
-<li>boot2docker v1.1.2</li>
-</ul>
-
-
-<h2>クリーンな環境で起動する</h2>
-
-<p>まず一度 boot2docker の環境を消してから、作成し直しました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span>  boot2docker delete
-</span><span class='line'><span class="gp">%</span>  boot2docker init
-</span><span class='line'><span class="go">2014/08/14 20:35:43 Creating VM boot2docker-vm...</span>
-</span><span class='line'><span class="go">2014/08/14 20:35:43 Apply interim patch to VM boot2docker-vm (https://www.virtualbox.org/ticket/12748)</span>
-</span><span class='line'><span class="go">2014/08/14 20:35:43 Setting NIC #1 to use NAT network...</span>
-</span><span class='line'><span class="go">2014/08/14 20:35:43 Port forwarding [ssh] tcp://127.0.0.1:2022 --&gt; :22</span>
-</span><span class='line'><span class="go">2014/08/14 20:35:43 Port forwarding [docker] tcp://127.0.0.1:2375 --&gt; :2375</span>
-</span><span class='line'><span class="go">2014/08/14 20:35:43 Setting NIC #2 to use host-only network &quot;vboxnet0&quot;...</span>
-</span><span class='line'><span class="go">2014/08/14 20:35:43 Setting VM storage...</span>
-</span><span class='line'><span class="go">2014/08/14 20:35:50 Done. Type `boot2docker up` to start the VM.</span>
-</span><span class='line'><span class="gp">%</span> <span class="nb">export </span><span class="nv">DOCKER_HOST</span><span class="o">=</span>tcp://192.168.59.103:2375
-</span><span class='line'><span class="gp">%</span> boot2docker up
-</span><span class='line'><span class="go">2014/08/14 20:38:02 Waiting for VM to be started...</span>
-</span><span class='line'><span class="go">...........</span>
-</span><span class='line'><span class="go">2014/08/14 20:38:35 Started.</span>
-</span><span class='line'><span class="go">2014/08/14 20:38:35 Your DOCKER_HOST env variable is already set correctly.</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>volume 作成</h2>
-
-<p><a href="https://github.com/boot2docker/boot2docker#folder-sharing" title="Folder sharing">Folder sharing</a>
-の方法で volume を使ったコンテナを作成しました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> docker run -v /data --name my-data busybox <span class="nb">true</span>
-</span><span class='line'><span class="go">Unable to find image &#39;busybox&#39; locally</span>
-</span><span class='line'><span class="go">Pulling repository busybox</span>
-</span><span class='line'><span class="go">a9eb17255234: Download complete</span>
-</span><span class='line'><span class="go">511136ea3c5a: Download complete</span>
-</span><span class='line'><span class="go">42eed7f1bf2a: Download complete</span>
-</span><span class='line'><span class="go">120e218dd395: Download complete</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>実体確認</h2>
-
-<p><code>/</code> が入ると <code>docker inspect -f '{{ index .Volumes./data }}' my-data</code> のようには確認できないので、
-<a href="https://github.com/docker/docker/issues/6966">https://github.com/docker/docker/issues/6966</a> を参考にしてボリュームの実体ディレクトリを確認しました。</p>
-
-<p>一覧で見るだけなら <code>docker inspect -f '{{ .Volumes }}' my-data</code> で確認できます。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> docker inspect -f <span class="s1">&#39; index .Volumes &quot;/data&quot; }}&#39;</span> my-data
-</span><span class='line'><span class="go">/mnt/sda1/var/lib/docker/vfs/dir/7625e8091bafdaa0cf1342bc33f29b2708e59b1388505fdd860960b09adf1846</span>
-</span><span class='line'><span class="gp">%</span> docker inspect -f <span class="s1">&#39; .Volumes }}&#39;</span> my-data
-</span><span class='line'><span class="go">map[/data:/mnt/sda1/var/lib/docker/vfs/dir/7625e8091bafdaa0cf1342bc33f29b2708e59b1388505fdd860960b09adf1846]</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>適当なファイル作成</h2>
-
-<p>目的のボリュームを確認しやすくするために適当なファイルを作成しました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> docker run -it --rm --volumes-from my-data ubuntu
-</span><span class='line'><span class="go">Unable to find image &#39;ubuntu&#39; locally</span>
-</span><span class='line'><span class="go">Pulling repository ubuntu</span>
-</span><span class='line'><span class="go">c4ff7513909d: Download complete</span>
-</span><span class='line'><span class="go">511136ea3c5a: Download complete</span>
-</span><span class='line'><span class="go">1c9383292a8f: Download complete</span>
-</span><span class='line'><span class="go">9942dd43ff21: Download complete</span>
-</span><span class='line'><span class="go">d92c3c92fa73: Download complete</span>
-</span><span class='line'><span class="go">0ea0d582fd90: Download complete</span>
-</span><span class='line'><span class="go">cc58e55aa5a5: Download complete</span>
-</span><span class='line'><span class="gp">root@bf9a312400fa:/#</span> <span class="nb">echo </span>foo &gt; /data/foo.txt
-</span><span class='line'><span class="gp">root@bf9a312400fa:/#</span> <span class="nb">exit</span>
-</span><span class='line'><span class="go">exit</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>コンテナ削除</h2>
-
-<p>連携しているコンテナを削除します。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> docker ps -a
-</span><span class='line'><span class="go">CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                     PORTS               NAMES</span>
-</span><span class='line'><span class="go">ddd48c305f62        busybox:latest      true                6 minutes ago       Exited (0) 6 minutes ago                       my-data</span>
-</span><span class='line'><span class="gp">%</span>  docker ps -a -q <span class="p">|</span> xargs docker rm
-</span><span class='line'><span class="go">ddd48c305f62</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>実体確認</h2>
-
-<p><code>boot2docker ssh</code> で入って確認したところ、残っていました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> boot2docker ssh
-</span><span class='line'><span class="go">                        ##        .</span>
-</span><span class='line'><span class="go">                  ## ## ##       ==</span>
-</span><span class='line'><span class="go">               ## ## ## ##      ===</span>
-</span><span class='line'><span class="go">           /&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;&quot;\___/ ===</span>
-</span><span class='line'><span class="go">      ~~~ {~~ ~~~~ ~~~ ~~~~ ~~ ~ /  ===- ~~~</span>
-</span><span class='line'><span class="go">           \______ o          __/</span>
-</span><span class='line'><span class="go">             \    \        __/</span>
-</span><span class='line'><span class="go">              \____\______/</span>
-</span><span class='line'><span class="go"> _                 _   ____     _            _</span>
-</span><span class='line'><span class="go">| |__   ___   ___ | |_|___ \ __| | ___   ___| | _____ _ __</span>
-</span><span class='line'><span class="go">| &#39;_ \ / _ \ / _ \| __| __) / _` |/ _ \ / __| |/ / _ \ &#39;__|</span>
-</span><span class='line'><span class="go">| |_) | (_) | (_) | |_ / __/ (_| | (_) | (__|   &lt;  __/ |</span>
-</span><span class='line'><span class="go">|_.__/ \___/ \___/ \__|_____\__,_|\___/ \___|_|\_\___|_|</span>
-</span><span class='line'><span class="go">boot2docker: 1.1.2</span>
-</span><span class='line'><span class="go">             master : 740106c - Thu Jul 24 03:24:10 UTC 2014</span>
-</span><span class='line'><span class="gp">docker@boot2docker:~$</span> ls -al /mnt/sda1/var/lib/docker/vfs/dir/7625e8091bafdaa0cf1342bc33f29b2708e59b
-</span><span class='line'><span class="go">1388505fdd860960b09adf1846</span>
-</span><span class='line'><span class="go">ls: /mnt/sda1/var/lib/docker/vfs/dir/7625e8091bafdaa0cf1342bc33f29b2708e59b1388505fdd860960b09adf1846: Permission denied</span>
-</span><span class='line'><span class="gp">docker@boot2docker:~$</span> sudo ls -al /mnt/sda1/var/lib/docker/vfs/dir/7625e8091bafdaa0cf1342bc33f29b270
-</span><span class='line'><span class="go">8e59b1388505fdd860960b09adf1846</span>
-</span><span class='line'><span class="go">total 12</span>
-</span><span class='line'><span class="go">drwxr-xr-x    2 root     root          4096 Aug 14 11:52 .</span>
-</span><span class='line'><span class="go">drwx------    4 root     root          4096 Aug 14 11:49 ..</span>
-</span><span class='line'><span class="go">-rw-r--r--    1 root     root             4 Aug 14 11:52 foo.txt</span>
-</span><span class='line'><span class="gp">docker@boot2docker:~$</span>
-</span></code></pre></td></tr></table></div></figure>
 
 ]]></content>
   </entry>
