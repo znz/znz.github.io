@@ -66,3 +66,9 @@ Rake::Task['metrics:collect'].clear_actions
 [Allow users to opt-out of sending the UDP ping and improve error handling when the sendto syscall fails](https://github.com/capistrano/stats/pull/2 "Allow users to opt-out of sending the UDP ping and improve error handling when the sendto syscall fails")
 という pull request が続きで出ているので、
 将来のバージョンでは全く送信しない選択肢が用意されるかもしれません。
+
+## 2014-12-13 追記
+
+その後、
+capistrano 3.3.4 と capistrano-stats 1.1.0 にあがって、
+デフォルトの N を 2 回は全く送信しないようになりました。
