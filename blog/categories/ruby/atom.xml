@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2014-12-17T23:26:26+09:00</updated>
+  <updated>2015-01-03T17:28:55+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,147 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Rubyによるクローラー開発技法を読んだ]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-12-30-ruby-crawler.html"/>
+    <updated>2014-12-30T18:21:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ruby-crawler</id>
+    <content type="html"><![CDATA[<p>次回の
+<a href="http://kokucheese.com/event/index/247692/" title="1月10日 Rubyによるクローラー開発技法　読書会　第3回(兵庫県)">1月10日 Rubyによるクローラー開発技法　読書会　第3回(兵庫県)</a>
+は
+<a href="http://lilo.doorkeeper.jp/events/18987" title="LILO ＆ 東海道らぐ・オフラインミーティング（2015/01/10） - LILO | Doorkeeper">LILO ＆ 東海道らぐ・オフラインミーティング（2015/01/10） - LILO | Doorkeeper</a>
+と重なっていて参加できないということで、Rubyによるクローラー開発技法を読んでしまったので、そのメモです。</p>
+
+<!--more-->
+
+
+<h2>メモ</h2>
+
+<div style="float:right">
+<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4797380357" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
+</div>
+
+
+<ul>
+<li>p.62 <code>robotex.rb</code> の 4 行目は 3 行目の引数にならずに意味がないのでは。</li>
+<li>p.67 <code>anemone-skip_links_like.rb</code> で「adminを含むURLは除外」と書いてあるのに <code>/\/r\//</code> になっている。</li>
+<li>p.69 <code>http://example.com</code> と <code>http://example.com/</code> は同じ意味で 301 リダイレクトは発生しないのでは。</li>
+<li>p.143 「スクリーンショットはページごとに上書きされていって、」とあるが、ここは上書きされないのでは。</li>
+<li>p.173 <code>Nokogiri#parse</code> などは <code>Nokogiri.parse</code> (インスタンスメソッドではなくクラスメソッド) なのでは。</li>
+<li>p.215 <code>initialize</code> の <code>#{}</code> は不要なのでは。</li>
+<li>p.239 <code>page.code = 500</code> は <code>page.code == 500</code> の間違い?</li>
+<li>p.258 <code>base_url</code> への代入が連続しているのが不要</li>
+<li>p.359 プスクリプト → スクリプト</li>
+<li>p.420 varidation → validation</li>
+<li>p.420 gsub の結果は Integer にならないのでは?</li>
+</ul>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[doorkeeper gem を 1.4 系から 2.0 系にアップデートした]]></title>
+    <link href="http://blog.n-z.jp/blog/2014-12-18-doorkeeper-gem-1-to-2.html"/>
+    <updated>2014-12-18T16:18:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/doorkeeper-gem-1-to-2</id>
+    <content type="html"><![CDATA[<p>doorkeeper gem がメジャーバージョンアップして非互換があったので、
+対応したときのメモです。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>rails 4.1.8</li>
+<li>doorkeeper 1.4.0 から 2.0.1</li>
+</ul>
+
+
+<h2>変更点確認</h2>
+
+<p><a href="https://github.com/doorkeeper-gem/doorkeeper/blob/master/CHANGELOG.md">CHANGELOG.md</a>
+にまとまっていたので、参考にしました。</p>
+
+<p>セキュリティアップデートも含まれるようなので、
+2.0 系にあげられないときは 1.4.1 にあげておくのが良さそうです。</p>
+
+<h2><code>doorkeeper_for</code> の書き換え</h2>
+
+<p><code>doorkeeper_for :all</code> は <code>before_action :doorkeeper_authorize!</code> に書き換えました。</p>
+
+<pre><code class="diff">-    doorkeeper_for :all
+-    respond_to     :json
++    before_action :doorkeeper_authorize!
++    respond_to    :json
+</code></pre>
+
+<pre><code class="diff">-    doorkeeper_for :index,  :show,   scopes: %w"public"
+-    doorkeeper_for :create, :update, scopes: %w"admin write"
++    before_action -&gt; { doorkeeper_authorize! :public }, only: [:index, :show]
++    before_action only: [:create, :update] do
++      doorkeeper_authorize! :admin, :write
++    end
+</code></pre>
+
+<h2><code>config/initializers/doorkeeper.rb</code> の更新</h2>
+
+<p><code>rails g doorkeeper:install</code> で生成し直して変更していた部分を再適用しました。</p>
+
+<ul>
+<li><code>resource_owner_authenticator</code> で <code>devise</code> との連携</li>
+<li>scope 関連</li>
+<li>認可の画面のスキップ</li>
+<li>動的な query parameter の許可</li>
+</ul>
+
+
+<pre><code class="ruby">  resource_owner_authenticator do
+    current_user || warden.authenticate!(scope: :user)
+  end
+
+  default_scopes  :public
+  optional_scopes :admin, :write
+
+  skip_authorization do |resource_owner, client|
+    true
+  end
+
+  wildcard_redirect_uri true
+</code></pre>
+
+<h2><code>config/locales/doorkeeper.en.yml</code> の更新</h2>
+
+<p><code>rails g doorkeeper:install</code> で <code>config/initializers/doorkeeper.rb</code> と一緒に更新されていました。</p>
+
+<p>認可の画面をスキップしている関係で、翻訳はせずに en を ja に置き換えただけで
+そのまま使っていたので、同様に置き換えてそのまま使いました。</p>
+
+<h2><code>redirect urimust be an HTTPS/SSL URI.</code> 対策</h2>
+
+<p>テストの中で
+<code>let!(:application) { Doorkeeper::Application.create!(name: 'MyApp', redirect_uri: 'http://api.test') }</code>
+のようにしていると
+<code>redirect urimust be an HTTPS/SSL URI.</code>
+で失敗していたので、
+<code>https</code> の URL に変更するか、
+<code>config/initializers/doorkeeper.rb</code> で
+<code>force_ssl_in_redirect_uri false</code>
+にする必要がありました。</p>
+
+<h2>Missing column: <code>applications.scopes</code></h2>
+
+<p>テストを実行したときに</p>
+
+<pre><code>[doorkeeper] Missing column: `applications.scopes`. If you are using ActiveRecord run `rails generate doorkeeper:application_scopes &amp;&amp; rake db:migrate` to add it.
+</code></pre>
+
+<p>というメッセージが出るので、メッセージ通り
+<code>rails generate doorkeeper:application_scopes &amp;&amp; rake db:migrate</code>
+で追加しました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第64回 Ruby関西 勉強会に参加した]]></title>
@@ -208,101 +349,6 @@ Dropbox は認識して写真を取り込んでくれるので、ケーブルな
 <li><a href="http://qiita.com/susieyy/items/749c4ac5d82d765c12c6">SwiftのRSS Readerを100行で作ったよ</a></li>
 <li><a href="https://github.com/lingoer/SwiftyJSON">https://github.com/lingoer/SwiftyJSON</a></li>
 <li>WatchKit</li>
-</ul>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Rails 4.1.7 にあげたら一部の画像が表示されなくなった]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-11-05-sprockets.html"/>
-    <updated>2014-11-05T21:11:09+09:00</updated>
-    <id>http://blog.n-z.jp/blog/sprockets</id>
-    <content type="html"><![CDATA[<p>Rails 4.1.7 にあげたら一部の画像が表示されなくなるという現象が起きて、しばらく悩んでいたのですが解決しました。</p>
-
-<!--more-->
-
-
-<h2>原因</h2>
-
-<ul>
-<li>Rails か sprockets のバージョンアップでファイル名につけられる digest が変わった。</li>
-<li><code>image_tag</code> で画像を参照している HTML が <code>cache</code> の中にあった。</li>
-</ul>
-
-
-<h2>現象</h2>
-
-<p><code>rails console</code> で <code>Rails.application.assets.find_asset(asset_name).digest</code> を試しても新しい digest がちゃんと返ってくるのに、
-ブラウザー上では古い digest の URL が参照されていてファイルが見つからないという現象になっていました。</p>
-
-<p>アセットはキャッシュ期間の長いファイルとして設定しているので、複数ブラウザーで確認すると最初は現象が起きたり起きなかったりしていて、サーバー側の問題だと気づくのが遅れました。</p>
-
-<h2>対処</h2>
-
-<p><code>dalli</code> gem 経由で <code>memcached</code> をキャッシュ使っていたので <code>sudo service memcached restart</code> してキャッシュを破棄しました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Rubyによるクローラー開発技法 読書会 第2回(兵庫県)に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-11-01-amagasakirb.html"/>
-    <updated>2014-11-01T13:05:51+09:00</updated>
-    <id>http://blog.n-z.jp/blog/amagasakirb</id>
-    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/event/index/220392/" title="11月1日 Rubyによるクローラー開発技法　読書会　第2回(兵庫県)">11月1日 Rubyによるクローラー開発技法　読書会　第2回(兵庫県)</a>
-に参加しました。
-今回は3,4章でした。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4797380357" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-<p>前回参加していなかった人向けに、最初に 1,2 章の概要説明があって、
-今回は 3 章からでした。
-今回から、誤字・脱字などのフィードバックのため、
-Wiki
-(<a href="https://github.com/cuzic/amagasakirb/wiki/2014.11.01-Ruby-%E3%81%AB%E3%82%88%E3%82%8B%E3%82%AF%E3%83%AD%E3%83%BC%E3%83%A9%E3%83%BC%E9%96%8B%E7%99%BA%E6%8A%80%E6%B3%95%E8%AA%AD%E6%9B%B8%E4%BC%9A-%E7%AC%AC2%E5%9B%9E" title="2014.11.01 『Ruby によるクローラー開発技法』読書会 第2回">2014.11.01 『Ruby によるクローラー開発技法』読書会 第2回</a>)
-に記録するようになりました。</p>
-
-<p>以下、今回のメモです。</p>
-
-<ul>
-<li>p.112 Crawl-delay の単位は決まっていない</li>
-<li>p.148 構文解析で正規表現が使われていることは多い?</li>
-<li>p.149 3-1-2 ECU_JP → EUC-JP</li>
-<li>p.151 行頭に <code>=~</code> は syntax error で、行頭に <code>.</code> は最近の ruby では OK になっている</li>
-<li>Fluent API の話</li>
-<li>p.150 RegExp → Regexp</li>
-<li>posix 文字クラスと Unicode プロパティの話</li>
-<li>Oniguruma と Onigmo の話</li>
-<li>pp.152-153 名前付きキャプチャの説明がローカル変数への割当だけの説明になっているようにみえる</li>
-<li>p.153 <code>\b</code> は文字クラスの中か外かで解釈が変わる</li>
-<li>p.154 <code>\x{7HHHHHHH}</code> は使えない <a href="https://github.com/rurema/doctree/issues/80">https://github.com/rurema/doctree/issues/80</a> 参照</li>
-<li>p.154 <code>\s</code> には <code>\v</code> が含まれる</li>
-<li>p.155 「m」オプションを使うことで改行を無視する → <code>.</code> で改行も含むようになる</li>
-<li>p.156 EUC_JP → EUC-JP</li>
-<li><a href="https://github.com/cuzic/amagasakirb/wiki">https://github.com/cuzic/amagasakirb/wiki</a></li>
-<li>p.159 コードの中のコメント部分: UFT8 → UTF-8</li>
-<li>p.162 モンキーパッチではなく直接変更している話</li>
-<li>p.164 <code>xmlns:"デフォルトの名前空間識別子"</code> → <code>xmlns="デフォルトの名前空間識別子"</code></li>
-<li>p.167 Webサイトの更新には、Atom配信フォーマットが利用できます。 → Atom出版プロトコルの間違い?</li>
-<li>p.171 Atom 1.0の構造は、RSS 2.0と同様に名前空間の指定が必要になります。 → RSS 1.0?</li>
-<li>close されていないので <code>open(url).read</code> よりも <code>open(url, &amp;:read)</code> の方が良いのではという話</li>
-<li>標準添付の RSS ライブラリが便利という話</li>
-<li>Google Feed API</li>
-<li>p.180 の <code>doc.at('//a').[]('href')</code> から <code>doc.xpath("//a/@href").text</code> などの話</li>
-<li>p.177 Aタグの例の <code>node.inner_text</code> の出力例が間違っている</li>
-<li>p.182 <code>\/</code> の <code>\</code> が不要?</li>
-<li>p.184 スクリーンショットの値段がずれている</li>
-<li>p.192 ここでは nokogiri ではなく REXML を使っている</li>
-<li>p.199, p.205 Marshal.dmp は Marshal.dump なのではないかという話</li>
-<li>mitmproxy の話</li>
 </ul>
 
 ]]></content>
