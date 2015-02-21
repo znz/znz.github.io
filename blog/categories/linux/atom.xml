@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2015-01-22T00:06:37+09:00</updated>
+  <updated>2015-02-21T21:42:00+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,283 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[owncloud-client が conflict した話]]></title>
+    <link href="http://blog.n-z.jp/blog/2015-01-29-owncloud-client.html"/>
+    <updated>2015-01-29T09:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/owncloud-client</id>
+    <content type="html"><![CDATA[<p>Debian 7 に <a href="https://owncloud.org/install/#desktop">ownCloud 公式の Desktop Client</a> を入れていたら、
+なぜか <code>owncloud-client</code> の 1.7.1 から 1.7.1 への更新が発生して <code>libqtkeychain0</code> と conflict していたので、
+<code>libqtkeychain0</code> をダウングレードして解決しました。</p>
+
+<!--more-->
+
+
+<h2>現象</h2>
+
+<p>このように競合が検出されました。</p>
+
+<pre><code>$ sudo aptitude full-upgrade -DV
+以下のパッケージが更新されます:
+  owncloud-client{b} [1.7.1 -&gt; 1.7.1] (競: libqtkeychain0)
+更新: 1 個、新規インストール: 0 個、削除: 0 個、保留: 0 個。
+700 k バイトのアーカイブを取得する必要があります。展開後に 0  バイトのディスク領域が新たに消費されます。
+以下のパッケージには満たされていない依存関係があります:
+ owncloud-client : 競合: libqtkeychain0 (= 0.20140128) [0.20140128 が既にインストール済みです]
+以下のアクションでこれらの依存関係の問題は解決されます:
+
+     以下のパッケージを削除する:
+1)     libowncloudsync0
+2)     libqtkeychain0
+3)     owncloud-client
+4)     owncloud-client-l10n
+
+
+
+この解決方法を受け入れますか? [Y/n/q/?]q
+</code></pre>
+
+<h2>状況</h2>
+
+<p><code>apt-cache show</code> でみてみると <code>Conflicts: libqtkeychain0 (= 0.20140128)</code> と明示されていました。</p>
+
+<pre><code>$ apt-cache show owncloud-client
+Package: owncloud-client
+Version: 1.7.1
+Architecture: amd64
+Maintainer: Markus Rex &lt;msrex@owncloud.com&gt;
+Installed-Size: 1521
+Depends: libc6 (&gt;= 2.4), libgcc1 (&gt;= 1:4.1.1), libneon27, libowncloudsync0 (= 1.7.1), libqt4-dbus (&gt;= 4:4.5.3), libqt4-network (&gt;= 4:4.5.3), libqt4-sql (&gt;= 4:4.5.3), libqt4-xml (&gt;= 4:4.5.3), libqt4-xmlpatterns (&gt;= 4:4.5.3), libqtcore4 (&gt;= 4:4.8.0), libqtgui4 (&gt;= 4:4.7.0~beta1), libqtkeychain0, libqtwebkit4 (&gt;= 2.2.0), libsqlite3-0 (&gt;= 3.5.9), libstdc++6 (&gt;= 4.4.0), owncloud-client-l10n, libqt4-sql-sqlite
+Conflicts: libqtkeychain0 (= 0.20140128)
+Filename: ./amd64/owncloud-client_1.7.1_amd64.deb
+Size: 699596
+MD5sum: 23e2bfa2467b45fd9b70f3b946203b4b
+SHA1: 422242ad170ad1aa8d75587fe18a0469cc23ad72
+SHA256: 319e7253309835d028ec527ee9b3abea014c2db8b7edc5d3d57270ede9dbb5af
+Section: devel
+Priority: optional
+Multi-Arch: same
+Description: The ownCloud client is based on Mirall - github.com/owncloud/mirall
+ .
+ ownCloud client enables you to connect to your private
+ ownCloud Server. With it you can create folders in your home
+ directory, and keep the contents of those folders synced with your
+ ownCloud server. Simply copy a file into the directory and the
+ ownCloud client does the rest.
+ .
+ ownCloud gives your employees anytime, anywhere access to the files
+ they need to get the job done, whether through this desktop application,
+ our mobile apps, the web interface, or other WebDAV clients. With it,
+ your employees can easily view and share documents and information
+ critical to the business, in a secure, flexible and controlled
+ architecture. You can easily extend ownCloud with plug-ins from the
+ community, or that you build yourself to meet the requirements of
+ your infrastructure and business.
+ .
+ ownCloud - Your Cloud, Your Data, Your Way!  www.owncloud.com
+ .
+ Authors
+ =======
+ Duncan Mac-Vicar P. &lt;duncan@kde.org&gt;
+ Klaas Freitag &lt;freitag@owncloud.com&gt;
+ Daniel Molkentin &lt;danimo@owncloud.com&gt;
+
+Package: owncloud-client
+Status: install ok installed
+Priority: optional
+Section: devel
+Installed-Size: 1521
+Maintainer: Markus Rex &lt;msrex@owncloud.com&gt;
+Architecture: amd64
+Multi-Arch: same
+Version: 1.7.1
+Depends: libc6 (&gt;= 2.4), libgcc1 (&gt;= 1:4.1.1), libneon27, libowncloudsync0 (= 1.7.1), libqt4-dbus (&gt;= 4:4.5.3), libqt4-network (&gt;= 4:4.5.3), libqt4-sql (&gt;= 4:4.5.3), libqt4-xml (&gt;= 4:4.5.3), libqt4-xmlpatterns (&gt;= 4:4.5.3), libqtcore4 (&gt;= 4:4.8.0), libqtgui4 (&gt;= 4:4.7.0~beta1), libqtkeychain0, libqtwebkit4 (&gt;= 2.2.0), libsqlite3-0 (&gt;= 3.5.9), libstdc++6 (&gt;= 4.4.0), owncloud-client-l10n, libqt4-sql-sqlite
+Description: The ownCloud client is based on Mirall - github.com/owncloud/mirall
+ .
+ ownCloud client enables you to connect to your private
+ ownCloud Server. With it you can create folders in your home
+ directory, and keep the contents of those folders synced with your
+ ownCloud server. Simply copy a file into the directory and the
+ ownCloud client does the rest.
+ .
+ ownCloud gives your employees anytime, anywhere access to the files
+ they need to get the job done, whether through this desktop application,
+ our mobile apps, the web interface, or other WebDAV clients. With it,
+ your employees can easily view and share documents and information
+ critical to the business, in a secure, flexible and controlled
+ architecture. You can easily extend ownCloud with plug-ins from the
+ community, or that you build yourself to meet the requirements of
+ your infrastructure and business.
+ .
+ ownCloud - Your Cloud, Your Data, Your Way!  www.owncloud.com
+ .
+ Authors
+ =======
+ Duncan Mac-Vicar P. &lt;duncan@kde.org&gt;
+ Klaas Freitag &lt;freitag@owncloud.com&gt;
+ Daniel Molkentin &lt;danimo@owncloud.com&gt;
+
+Package: owncloud-client
+Version: 1.5.0+dfsg-4~bpo70+1
+Installed-Size: 1076
+Maintainer: ownCloud for Debian maintainers &lt;pkg-owncloud-maintainers@lists.alioth.debian.org&gt;
+Architecture: amd64
+Depends: libowncloudsync0 (= 1.5.0+dfsg-4~bpo70+1), libqt4-sql-sqlite, owncloud-client-l10n, libc6 (&gt;= 2.2.5), libgcc1 (&gt;= 1:4.1.1), libneon27-gnutls, libocsync0 (&gt;= 0.60.3), libqt4-dbus (&gt;= 4:4.5.3), libqt4-network (&gt;= 4:4.6.1), libqt4-sql (&gt;= 4:4.5.3), libqt4-xml (&gt;= 4:4.5.3), libqt4-xmlpatterns (&gt;= 4:4.5.3), libqtcore4 (&gt;= 4:4.8.0), libqtgui4 (&gt;= 4:4.7.0~beta1), libqtkeychain0 (&gt;= 0.1.0), libqtwebkit4 (&gt;= 2.1.0~2011week13), libstdc++6 (&gt;= 4.1.1)
+Description-en: folder synchronization with an ownCloud server - GUI
+ The ownCloudSync system lets you always have your latest files wherever
+ you are. Just specify one or more folders on the local machine to and a server
+ to synchronize to. You can configure more computers to synchronize to the same
+ server and any change to the files on one computer will silently and reliably
+ flow across to every other.
+ .
+ owncloud-client provides the graphical client specialising in
+ synchronizing with cloud storage provided by ownCloud.
+Homepage: http://owncloud.org/sync-clients/
+Description-md5: a754a2b9b06d1c7c880afd05aa24e101
+Section: net
+Priority: optional
+Filename: pool/main/o/owncloud-client/owncloud-client_1.5.0+dfsg-4~bpo70+1_amd64.deb
+Size: 417650
+MD5sum: 42a3f6355f9d5f5af0fb42141bee9ecf
+SHA1: 52102eacc1d81438cb88e639c09269484279dde1
+SHA256: d38e11879d6439dad97ff9f59449077193dbc89331bae8d2866b335ce8b41856
+</code></pre>
+
+<p>さらに <code>apt-cache policy</code> でどこからきたパッケージなのかみてみるとどちらも ownCloud 公式のパッケージだったように見えました。
+bpo (backports) のパッケージならバージョンが下がることはないはずなので、そう判断しました。</p>
+
+<pre><code>$ apt-cache policy owncloud-client
+owncloud-client:
+  インストールされているバージョン: 1.7.1
+  候補:               1.7.1
+  バージョンテーブル:
+     1.7.1 0
+        500 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  Packages
+ *** 1.7.1 0
+        100 /var/lib/dpkg/status
+     1.5.0+dfsg-4~bpo70+1 0
+        100 http://ftp.jp.debian.org/debian/ wheezy-backports/main amd64 Packages
+$ apt-cache policy libqtkeychain0
+libqtkeychain0:
+  インストールされているバージョン: 0.20140128
+  候補:               0.20140128
+  バージョンテーブル:
+ *** 0.20140128 0
+        100 /var/lib/dpkg/status
+     0.4 0
+        500 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  Packages
+     0.1.0-2~bpo70+1 0
+        100 http://ftp.jp.debian.org/debian/ wheezy-backports/main amd64 Packages
+</code></pre>
+
+<h2>対処</h2>
+
+<p><code>libqtkeychain0</code> を ownCloud 公式の 0.4.0 にダウングレードすることで解決しました。</p>
+
+<pre><code>$ sudo aptitude full-upgrade -DV
+以下のパッケージが更新されます:
+  owncloud-client{b} [1.7.1 -&gt; 1.7.1] (競: libqtkeychain0)
+更新: 1 個、新規インストール: 0 個、削除: 0 個、保留: 0 個。
+700 k バイトのアーカイブを取得する必要があります。展開後に 0  バイトのディスク領域が新たに消費されます。
+以下のパッケージには満たされていない依存関係があります:
+ owncloud-client : 競合: libqtkeychain0 (= 0.20140128) [0.20140128 が既にインストール済みです]
+以下のアクションでこれらの依存関係の問題は解決されます:
+
+     以下のパッケージを削除する:
+1)     libowncloudsync0
+2)     libqtkeychain0
+3)     owncloud-client
+4)     owncloud-client-l10n
+
+
+
+この解決方法を受け入れますか? [Y/n/q/?]n
+以下のアクションでこれらの依存関係の問題は解決されます:
+
+     以下のパッケージを削除する:
+1)     owncloud-client
+2)     owncloud-client-l10n
+
+
+
+この解決方法を受け入れますか? [Y/n/q/?]n
+以下のアクションでこれらの依存関係の問題は解決されます:
+
+     以下のパッケージを現在のバージョンに一時固定する:
+1)     owncloud-client [1.7.1 (now)]
+
+
+
+この解決方法を受け入れますか? [Y/n/q/?]n
+以下のアクションでこれらの依存関係の問題は解決されます:
+
+     以下のパッケージをダウングレードする:
+1)     libqtkeychain0 [0.20140128 (now) -&gt; 0.4 (&lt;NULL&gt;)]
+
+
+
+この解決方法を受け入れますか? [Y/n/q/?]y
+以下のパッケージがダウングレードされます:
+  libqtkeychain0 [0.20140128 -&gt; 0.4]
+以下のパッケージが更新されます:
+  owncloud-client [1.7.1 -&gt; 1.7.1]
+更新: 1 個、新規インストール: 0 個、ダウングレード: 1 個、削除: 0 個、保留: 0 個。
+753 k バイトのアーカイブを取得する必要があります。展開後に 0  バイトのディスク領域が新たに消費されます。
+先に進みますか? [Y/n/?]
+取得: 1 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  libqtkeychain0 0.4 [53.4 kB]
+取得: 2 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  owncloud-client 1.7.1 [700 kB]
+Fetched 753 kB in 4秒 (156 kB/s)
+changelog を読んでいます... 完了
+dpkg: 警告: libqtkeychain0 を 0.20140128 から 0.4 にダウングレードしています
+(データベースを読み込んでいます ... 現在 124701 個のファイルとディレクトリがインストールされています。)
+libqtkeychain0 0.20140128 を (.../libqtkeychain0_0.4_amd64.deb で) 置換するための準備をしています ...
+libqtkeychain0 を展開し、置換しています...
+owncloud-client:amd64 1.7.1 を (.../owncloud-client_1.7.1_amd64.deb で) 置換するための準備をしています ...
+owncloud-client:amd64 を展開し、置換しています...
+man-db のトリガを処理しています ...
+libqtkeychain0 (0.4) を設定しています ...
+owncloud-client:amd64 (1.7.1) を設定しています ...
+
+現在の状態: 更新が 0 個 [-1]。
+</code></pre>
+
+<h2>対処後の状況</h2>
+
+<p><code>owncloud-client</code> パッケージも <code>libqtkeychain0</code> パッケージもどちらも ownCloud 公式のバージョンになって解決しました。</p>
+
+<pre><code>$ apt-cache policy owncloud-client
+owncloud-client:
+  インストールされているバージョン: 1.7.1
+  候補:               1.7.1
+  バージョンテーブル:
+ *** 1.7.1 0
+        500 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  Packages
+        100 /var/lib/dpkg/status
+     1.5.0+dfsg-4~bpo70+1 0
+        100 http://ftp.jp.debian.org/debian/ wheezy-backports/main amd64 Packages
+$ apt-cache policy libqtkeychain0
+libqtkeychain0:
+  インストールされているバージョン: 0.4
+  候補:               0.4
+  バージョンテーブル:
+ *** 0.4 0
+        500 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  Packages
+        100 /var/lib/dpkg/status
+     0.1.0-2~bpo70+1 0
+        100 http://ftp.jp.debian.org/debian/ wheezy-backports/main amd64 Packages
+</code></pre>
+
+<h2>考察</h2>
+
+<p>Debian 公式パッケージならこういうときは
+<a href="https://www.debian.org/doc/debian-policy/ch-controlfields.html#s-f-Version">Version</a> に
+epoch をつけて解決しますが、
+ownCloud 公式は Debian からみると非公式パッケージになるので、
+将来の Debian のアップグレードの邪魔にならないように epoch を使わなかったため、
+こういう問題が起きたのでないかと推測しました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[LILO ＆ 東海道らぐのイベントに参加しました]]></title>
@@ -340,144 +617,6 @@ Tab キーで展開してからコマンドラインを編集して実行する�
 <p>一般的な bash 環境ならどこでも使えて、
 複雑な glob の展開結果の確認にも便利なので、
 <code>C-x g</code> は非常にオススメです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Vagrant の Multi VM 間で IPsec を試した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-06-04-vagrant-multivm-ipsec-demo.html"/>
-    <updated>2014-06-04T22:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/vagrant-multivm-ipsec-demo</id>
-    <content type="html"><![CDATA[<p>正常に IPsec の暗号化通信ができているときの racoon のログなどを確認したかったので、
-Vagrant と ansible で
-IPsec で通信できる Multi VM 環境を作ってみました。</p>
-
-<p>playbook は
-<a href="https://github.com/znz/ansible-playbook-ipsec-demo">https://github.com/znz/ansible-playbook-ipsec-demo</a>
-で公開しています。</p>
-
-<!--more-->
-
-
-<h2>動作確認バージョン</h2>
-
-<ul>
-<li>ホスト OS : Mac OS X 10.9.3</li>
-<li>VirtualBox 4.3.12</li>
-<li>Vagrant 1.6.3</li>
-<li>ansible 1.6.2</li>
-<li>ゲスト OS : Ubuntu 14.04 &times; 2</li>
-</ul>
-
-
-<p>Ubuntu は <a href="https://cloud-images.ubuntu.com/vagrant/trusty/current/">https://cloud-images.ubuntu.com/vagrant/trusty/current/</a> のイメージを使ったので、
-daily build の状態によっては動作が変わっているかもしれません。</p>
-
-<h2>ホストオンリーネットワーク</h2>
-
-<p>使った後は</p>
-
-<ul>
-<li>vboxnet1 (192.168.50.1/24)</li>
-<li>vboxnet2 (192.168.11.1/24)</li>
-<li>vboxnet3 (192.168.12.1/24)</li>
-</ul>
-
-
-<p>が勝手に増えているので、不要なら設定で消しておくと良いと思います。</p>
-
-<p>ネットワークとしては以下のように 192.168.50.0/24 の部分で IPsec 接続をして、
-192.168.11.11 と 192.168.12.12 をつなぐ、という感じにしています。
-デフォルトの eth0 は外部への接続用としてそのままにしています。</p>
-
-<pre><code>192.168.11.11 (vm1:eth2)
-       |
-192.168.50.11 (vm1:eth1)
-       |
-192.168.50.12 (vm2:eth1)
-       |
-192.168.12.12 (vm2:eth2)
-</code></pre>
-
-<h2>準備</h2>
-
-<p>Usage に書いてあるように準備をしておきます。
-先日作った <code>ja_jp</code> role は git submodule にしているので、</p>
-
-<pre><code>% git submodule init
-% git submodule update
-</code></pre>
-
-<p>で取得する必要があります。</p>
-
-<h2>試し方</h2>
-
-<p><code>vagrant up</code>
-すると
-<code>/etc/ipsec-tools.conf</code>
-と
-<code>/etc/racoon/racoon.conf</code>
-に設定が入っている状態になっているので、
-始点アドレスを指定して
-<code>ipsec-tools.conf</code>
-に設定した経路を通るようにパケットを送ると
-IPsec VPN がつながります。</p>
-
-<p><code>ping</code> コマンドのように直接始点アドレスを指定するオプションがない場合は
-<code>ping -I eth2 192.168.12.12</code> のように network interface で指定すれば
-良いようです。</p>
-
-<h2>動作確認</h2>
-
-<p>以下のコマンドの出力が接続前後で変わることが確認できます。</p>
-
-<ul>
-<li><code>racoonctl -l show-sa isakmp</code></li>
-<li><code>racoonctl -l show-sa ipsec</code></li>
-<li><code>setkey -D</code></li>
-</ul>
-
-
-<p>racoon のログが <code>/var/log/syslog</code> に大量に出ているのを確認できます。
-(<code>racoon.conf</code> で <code>log debug</code> にしているため)</p>
-
-<h2>tshark でパケットの確認</h2>
-
-<p><code>tshark</code> パッケージをインストールした後、
-<code>sudo dpkg-reconfigure wireshark-common</code>
-で一般ユーザーでも実行を許可するようにして、
-実行を許可するユーザーを <code>wireshark</code> に追加します。</p>
-
-<p>グループの追加を反映するためにログインし直すと、
-<code>tshark -i eth1 -V 'port 500'</code>
-などでパケットの確認ができるようになります。</p>
-
-<p>暗号化されていて詳細はわかりませんが、
-UDP の 500 番ポートで Informational のパケットが流れていることが確認できました。</p>
-
-<p>GUI の wireshark の方では
-<a href="http://ask.wireshark.org/questions/12019/how-can-i-decrypt-ikev1-andor-esp-packets">http://ask.wireshark.org/questions/12019/how-can-i-decrypt-ikev1-andor-esp-packets</a>
-の方法で暗号化の解除もできるようです。</p>
-
-<p>syslog の方で racoon のログをみると、
-DPD のパケットらしいということが確認できました。
-syslog の方で <code>#012</code> となっている部分がありますが、
-これは rsyslog で改行が変換されたたもので空白として無視すれば良くて、
-例えば</p>
-
-<pre><code>Jun  4 17:54:43 vm1 racoon: DEBUG: new cookie:#012831d33d46e20f8e6
-Jun  4 17:54:43 vm1 racoon: DEBUG: final encryption key computed:
-Jun  4 17:54:43 vm1 racoon: DEBUG: #012932d361f fc62ddc2 6164d513 d40d211f b7364166 232cf490
-</code></pre>
-
-<p>というログなら cookie は <code>831d33d46e20f8e6</code> になります。</p>
-
-<p>鍵は <code>932d361ffc62ddc26164d513d40d211fb7364166232cf490</code> になると思ったのですが、
-これを
-Edit -> Preferences -> Protocols -> ISAKMP -> IKEv1 Decryption Table:
-に設定すれば良いはずなのですが、試したところ decrypt されなかったので、
-あっているのかどうかはわかりませんでした。
-cookie の方は他のログなどで確認できたので、あっているはずです。</p>
 ]]></content>
   </entry>
   

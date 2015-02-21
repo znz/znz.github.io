@@ -4,7 +4,7 @@
   <title><![CDATA[Category: debian | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/debian/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2015-01-22T00:06:37+09:00</updated>
+  <updated>2015-02-21T21:42:00+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,283 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[owncloud-client が conflict した話]]></title>
+    <link href="http://blog.n-z.jp/blog/2015-01-29-owncloud-client.html"/>
+    <updated>2015-01-29T09:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/owncloud-client</id>
+    <content type="html"><![CDATA[<p>Debian 7 に <a href="https://owncloud.org/install/#desktop">ownCloud 公式の Desktop Client</a> を入れていたら、
+なぜか <code>owncloud-client</code> の 1.7.1 から 1.7.1 への更新が発生して <code>libqtkeychain0</code> と conflict していたので、
+<code>libqtkeychain0</code> をダウングレードして解決しました。</p>
+
+<!--more-->
+
+
+<h2>現象</h2>
+
+<p>このように競合が検出されました。</p>
+
+<pre><code>$ sudo aptitude full-upgrade -DV
+以下のパッケージが更新されます:
+  owncloud-client{b} [1.7.1 -&gt; 1.7.1] (競: libqtkeychain0)
+更新: 1 個、新規インストール: 0 個、削除: 0 個、保留: 0 個。
+700 k バイトのアーカイブを取得する必要があります。展開後に 0  バイトのディスク領域が新たに消費されます。
+以下のパッケージには満たされていない依存関係があります:
+ owncloud-client : 競合: libqtkeychain0 (= 0.20140128) [0.20140128 が既にインストール済みです]
+以下のアクションでこれらの依存関係の問題は解決されます:
+
+     以下のパッケージを削除する:
+1)     libowncloudsync0
+2)     libqtkeychain0
+3)     owncloud-client
+4)     owncloud-client-l10n
+
+
+
+この解決方法を受け入れますか? [Y/n/q/?]q
+</code></pre>
+
+<h2>状況</h2>
+
+<p><code>apt-cache show</code> でみてみると <code>Conflicts: libqtkeychain0 (= 0.20140128)</code> と明示されていました。</p>
+
+<pre><code>$ apt-cache show owncloud-client
+Package: owncloud-client
+Version: 1.7.1
+Architecture: amd64
+Maintainer: Markus Rex &lt;msrex@owncloud.com&gt;
+Installed-Size: 1521
+Depends: libc6 (&gt;= 2.4), libgcc1 (&gt;= 1:4.1.1), libneon27, libowncloudsync0 (= 1.7.1), libqt4-dbus (&gt;= 4:4.5.3), libqt4-network (&gt;= 4:4.5.3), libqt4-sql (&gt;= 4:4.5.3), libqt4-xml (&gt;= 4:4.5.3), libqt4-xmlpatterns (&gt;= 4:4.5.3), libqtcore4 (&gt;= 4:4.8.0), libqtgui4 (&gt;= 4:4.7.0~beta1), libqtkeychain0, libqtwebkit4 (&gt;= 2.2.0), libsqlite3-0 (&gt;= 3.5.9), libstdc++6 (&gt;= 4.4.0), owncloud-client-l10n, libqt4-sql-sqlite
+Conflicts: libqtkeychain0 (= 0.20140128)
+Filename: ./amd64/owncloud-client_1.7.1_amd64.deb
+Size: 699596
+MD5sum: 23e2bfa2467b45fd9b70f3b946203b4b
+SHA1: 422242ad170ad1aa8d75587fe18a0469cc23ad72
+SHA256: 319e7253309835d028ec527ee9b3abea014c2db8b7edc5d3d57270ede9dbb5af
+Section: devel
+Priority: optional
+Multi-Arch: same
+Description: The ownCloud client is based on Mirall - github.com/owncloud/mirall
+ .
+ ownCloud client enables you to connect to your private
+ ownCloud Server. With it you can create folders in your home
+ directory, and keep the contents of those folders synced with your
+ ownCloud server. Simply copy a file into the directory and the
+ ownCloud client does the rest.
+ .
+ ownCloud gives your employees anytime, anywhere access to the files
+ they need to get the job done, whether through this desktop application,
+ our mobile apps, the web interface, or other WebDAV clients. With it,
+ your employees can easily view and share documents and information
+ critical to the business, in a secure, flexible and controlled
+ architecture. You can easily extend ownCloud with plug-ins from the
+ community, or that you build yourself to meet the requirements of
+ your infrastructure and business.
+ .
+ ownCloud - Your Cloud, Your Data, Your Way!  www.owncloud.com
+ .
+ Authors
+ =======
+ Duncan Mac-Vicar P. &lt;duncan@kde.org&gt;
+ Klaas Freitag &lt;freitag@owncloud.com&gt;
+ Daniel Molkentin &lt;danimo@owncloud.com&gt;
+
+Package: owncloud-client
+Status: install ok installed
+Priority: optional
+Section: devel
+Installed-Size: 1521
+Maintainer: Markus Rex &lt;msrex@owncloud.com&gt;
+Architecture: amd64
+Multi-Arch: same
+Version: 1.7.1
+Depends: libc6 (&gt;= 2.4), libgcc1 (&gt;= 1:4.1.1), libneon27, libowncloudsync0 (= 1.7.1), libqt4-dbus (&gt;= 4:4.5.3), libqt4-network (&gt;= 4:4.5.3), libqt4-sql (&gt;= 4:4.5.3), libqt4-xml (&gt;= 4:4.5.3), libqt4-xmlpatterns (&gt;= 4:4.5.3), libqtcore4 (&gt;= 4:4.8.0), libqtgui4 (&gt;= 4:4.7.0~beta1), libqtkeychain0, libqtwebkit4 (&gt;= 2.2.0), libsqlite3-0 (&gt;= 3.5.9), libstdc++6 (&gt;= 4.4.0), owncloud-client-l10n, libqt4-sql-sqlite
+Description: The ownCloud client is based on Mirall - github.com/owncloud/mirall
+ .
+ ownCloud client enables you to connect to your private
+ ownCloud Server. With it you can create folders in your home
+ directory, and keep the contents of those folders synced with your
+ ownCloud server. Simply copy a file into the directory and the
+ ownCloud client does the rest.
+ .
+ ownCloud gives your employees anytime, anywhere access to the files
+ they need to get the job done, whether through this desktop application,
+ our mobile apps, the web interface, or other WebDAV clients. With it,
+ your employees can easily view and share documents and information
+ critical to the business, in a secure, flexible and controlled
+ architecture. You can easily extend ownCloud with plug-ins from the
+ community, or that you build yourself to meet the requirements of
+ your infrastructure and business.
+ .
+ ownCloud - Your Cloud, Your Data, Your Way!  www.owncloud.com
+ .
+ Authors
+ =======
+ Duncan Mac-Vicar P. &lt;duncan@kde.org&gt;
+ Klaas Freitag &lt;freitag@owncloud.com&gt;
+ Daniel Molkentin &lt;danimo@owncloud.com&gt;
+
+Package: owncloud-client
+Version: 1.5.0+dfsg-4~bpo70+1
+Installed-Size: 1076
+Maintainer: ownCloud for Debian maintainers &lt;pkg-owncloud-maintainers@lists.alioth.debian.org&gt;
+Architecture: amd64
+Depends: libowncloudsync0 (= 1.5.0+dfsg-4~bpo70+1), libqt4-sql-sqlite, owncloud-client-l10n, libc6 (&gt;= 2.2.5), libgcc1 (&gt;= 1:4.1.1), libneon27-gnutls, libocsync0 (&gt;= 0.60.3), libqt4-dbus (&gt;= 4:4.5.3), libqt4-network (&gt;= 4:4.6.1), libqt4-sql (&gt;= 4:4.5.3), libqt4-xml (&gt;= 4:4.5.3), libqt4-xmlpatterns (&gt;= 4:4.5.3), libqtcore4 (&gt;= 4:4.8.0), libqtgui4 (&gt;= 4:4.7.0~beta1), libqtkeychain0 (&gt;= 0.1.0), libqtwebkit4 (&gt;= 2.1.0~2011week13), libstdc++6 (&gt;= 4.1.1)
+Description-en: folder synchronization with an ownCloud server - GUI
+ The ownCloudSync system lets you always have your latest files wherever
+ you are. Just specify one or more folders on the local machine to and a server
+ to synchronize to. You can configure more computers to synchronize to the same
+ server and any change to the files on one computer will silently and reliably
+ flow across to every other.
+ .
+ owncloud-client provides the graphical client specialising in
+ synchronizing with cloud storage provided by ownCloud.
+Homepage: http://owncloud.org/sync-clients/
+Description-md5: a754a2b9b06d1c7c880afd05aa24e101
+Section: net
+Priority: optional
+Filename: pool/main/o/owncloud-client/owncloud-client_1.5.0+dfsg-4~bpo70+1_amd64.deb
+Size: 417650
+MD5sum: 42a3f6355f9d5f5af0fb42141bee9ecf
+SHA1: 52102eacc1d81438cb88e639c09269484279dde1
+SHA256: d38e11879d6439dad97ff9f59449077193dbc89331bae8d2866b335ce8b41856
+</code></pre>
+
+<p>さらに <code>apt-cache policy</code> でどこからきたパッケージなのかみてみるとどちらも ownCloud 公式のパッケージだったように見えました。
+bpo (backports) のパッケージならバージョンが下がることはないはずなので、そう判断しました。</p>
+
+<pre><code>$ apt-cache policy owncloud-client
+owncloud-client:
+  インストールされているバージョン: 1.7.1
+  候補:               1.7.1
+  バージョンテーブル:
+     1.7.1 0
+        500 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  Packages
+ *** 1.7.1 0
+        100 /var/lib/dpkg/status
+     1.5.0+dfsg-4~bpo70+1 0
+        100 http://ftp.jp.debian.org/debian/ wheezy-backports/main amd64 Packages
+$ apt-cache policy libqtkeychain0
+libqtkeychain0:
+  インストールされているバージョン: 0.20140128
+  候補:               0.20140128
+  バージョンテーブル:
+ *** 0.20140128 0
+        100 /var/lib/dpkg/status
+     0.4 0
+        500 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  Packages
+     0.1.0-2~bpo70+1 0
+        100 http://ftp.jp.debian.org/debian/ wheezy-backports/main amd64 Packages
+</code></pre>
+
+<h2>対処</h2>
+
+<p><code>libqtkeychain0</code> を ownCloud 公式の 0.4.0 にダウングレードすることで解決しました。</p>
+
+<pre><code>$ sudo aptitude full-upgrade -DV
+以下のパッケージが更新されます:
+  owncloud-client{b} [1.7.1 -&gt; 1.7.1] (競: libqtkeychain0)
+更新: 1 個、新規インストール: 0 個、削除: 0 個、保留: 0 個。
+700 k バイトのアーカイブを取得する必要があります。展開後に 0  バイトのディスク領域が新たに消費されます。
+以下のパッケージには満たされていない依存関係があります:
+ owncloud-client : 競合: libqtkeychain0 (= 0.20140128) [0.20140128 が既にインストール済みです]
+以下のアクションでこれらの依存関係の問題は解決されます:
+
+     以下のパッケージを削除する:
+1)     libowncloudsync0
+2)     libqtkeychain0
+3)     owncloud-client
+4)     owncloud-client-l10n
+
+
+
+この解決方法を受け入れますか? [Y/n/q/?]n
+以下のアクションでこれらの依存関係の問題は解決されます:
+
+     以下のパッケージを削除する:
+1)     owncloud-client
+2)     owncloud-client-l10n
+
+
+
+この解決方法を受け入れますか? [Y/n/q/?]n
+以下のアクションでこれらの依存関係の問題は解決されます:
+
+     以下のパッケージを現在のバージョンに一時固定する:
+1)     owncloud-client [1.7.1 (now)]
+
+
+
+この解決方法を受け入れますか? [Y/n/q/?]n
+以下のアクションでこれらの依存関係の問題は解決されます:
+
+     以下のパッケージをダウングレードする:
+1)     libqtkeychain0 [0.20140128 (now) -&gt; 0.4 (&lt;NULL&gt;)]
+
+
+
+この解決方法を受け入れますか? [Y/n/q/?]y
+以下のパッケージがダウングレードされます:
+  libqtkeychain0 [0.20140128 -&gt; 0.4]
+以下のパッケージが更新されます:
+  owncloud-client [1.7.1 -&gt; 1.7.1]
+更新: 1 個、新規インストール: 0 個、ダウングレード: 1 個、削除: 0 個、保留: 0 個。
+753 k バイトのアーカイブを取得する必要があります。展開後に 0  バイトのディスク領域が新たに消費されます。
+先に進みますか? [Y/n/?]
+取得: 1 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  libqtkeychain0 0.4 [53.4 kB]
+取得: 2 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  owncloud-client 1.7.1 [700 kB]
+Fetched 753 kB in 4秒 (156 kB/s)
+changelog を読んでいます... 完了
+dpkg: 警告: libqtkeychain0 を 0.20140128 から 0.4 にダウングレードしています
+(データベースを読み込んでいます ... 現在 124701 個のファイルとディレクトリがインストールされています。)
+libqtkeychain0 0.20140128 を (.../libqtkeychain0_0.4_amd64.deb で) 置換するための準備をしています ...
+libqtkeychain0 を展開し、置換しています...
+owncloud-client:amd64 1.7.1 を (.../owncloud-client_1.7.1_amd64.deb で) 置換するための準備をしています ...
+owncloud-client:amd64 を展開し、置換しています...
+man-db のトリガを処理しています ...
+libqtkeychain0 (0.4) を設定しています ...
+owncloud-client:amd64 (1.7.1) を設定しています ...
+
+現在の状態: 更新が 0 個 [-1]。
+</code></pre>
+
+<h2>対処後の状況</h2>
+
+<p><code>owncloud-client</code> パッケージも <code>libqtkeychain0</code> パッケージもどちらも ownCloud 公式のバージョンになって解決しました。</p>
+
+<pre><code>$ apt-cache policy owncloud-client
+owncloud-client:
+  インストールされているバージョン: 1.7.1
+  候補:               1.7.1
+  バージョンテーブル:
+ *** 1.7.1 0
+        500 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  Packages
+        100 /var/lib/dpkg/status
+     1.5.0+dfsg-4~bpo70+1 0
+        100 http://ftp.jp.debian.org/debian/ wheezy-backports/main amd64 Packages
+$ apt-cache policy libqtkeychain0
+libqtkeychain0:
+  インストールされているバージョン: 0.4
+  候補:               0.4
+  バージョンテーブル:
+ *** 0.4 0
+        500 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  Packages
+        100 /var/lib/dpkg/status
+     0.1.0-2~bpo70+1 0
+        100 http://ftp.jp.debian.org/debian/ wheezy-backports/main amd64 Packages
+</code></pre>
+
+<h2>考察</h2>
+
+<p>Debian 公式パッケージならこういうときは
+<a href="https://www.debian.org/doc/debian-policy/ch-controlfields.html#s-f-Version">Version</a> に
+epoch をつけて解決しますが、
+ownCloud 公式は Debian からみると非公式パッケージになるので、
+将来の Debian のアップグレードの邪魔にならないように epoch を使わなかったため、
+こういう問題が起きたのでないかと推測しました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Vagrant Cloudでboxを公開してみた]]></title>
@@ -348,129 +625,6 @@ Command failed with status (1): [sudo lb build...]
 <p><code>docker build https://raw.githubusercontent.com/znz/rubylive-builder/master/Dockerfile</code>
 のように直接 URL を指定する方法は
 <code>sources.list</code> を国内ミラーに差し替える部分が失敗して使えませんでした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Debian 7 (wheezy) の RubyLive をカスタマイズ中]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-07-12-debian-ruby-live.html"/>
-    <updated>2014-07-12T10:08:26+09:00</updated>
-    <id>http://blog.n-z.jp/blog/debian-ruby-live</id>
-    <content type="html"><![CDATA[<p>今年の
-<a href="https://k-of.jp/2014/" title="KOF 2014：関西オープンフォーラム2014">KOF 2014：関西オープンフォーラム2014</a>
-に向けて
-<a href="https://github.com/znz/rubylive" title="RubyLive">RubyLive</a>
-を作成しています。
-fork 元の <a href="https://github.com/no6v/rubylive">no6v 版</a> との違いをまとめていきます。</p>
-
-<!--more-->
-
-
-<h2>カスタマイズの基本</h2>
-
-<p>README から今回に関係する部分を引用しておくと以下のようになっています。</p>
-
-<ul>
-<li>config/hooks/
-
-<ul>
-<li>インストールの最後の方で実行するフックスクリプトを置くディレクトリ。</li>
-<li>拡張子を .chroot にして実行権限を付けておく。</li>
-</ul>
-</li>
-<li>config/includes.chroot/
-
-<ul>
-<li>このディレクトリを root に見立てて LiveCD 環境にコピーしたいファイルを置くディレクトリ。</li>
-</ul>
-</li>
-<li>config/package-lists/
-
-<ul>
-<li>特別にインストールしたいパッケージのリストを置くディレクトリ。</li>
-<li>拡張子を .list.chroot にしてパッケージ名を列挙する。</li>
-</ul>
-</li>
-</ul>
-
-
-<h2>壁紙などの変更</h2>
-
-<p><code>resources.yml</code> で設定されたファイルは <code>url</code> から自動ダウンロードして <code>path</code> に置くようになっています。</p>
-
-<p><code>size</code> と <code>sha256sum</code> をチェックするだけで違っていても削除はしないようなので、
-ダウンロードに失敗した時は<code>path</code> のファイルは手動で削除する必要がありました。</p>
-
-<p><code>path</code> を変更した時も古いファイルが残ってしまうので、削除する必要がありました。</p>
-
-<h2>dconf の設定</h2>
-
-<p><code>config/includes.chroot/etc/skel/.config/dconf/user</code>
-に設定変更後のバイナリが置かれていて、
-これはひどいと思ったので、
-<code>config/includes.chroot/etc/skel/.gnomerc</code>
-で <code>gsettings set</code> を使って設定するようにしました。</p>
-
-<h3>壁紙の変更</h3>
-
-<p>起動後の <code>dconf-editor</code> で選択肢を確認しつつ、
-<code>gsettings set org.gnome.desktop.background picture-options centered</code>
-にしたり、
-<code>gsettings set org.gnome.desktop.background picture-uri 'file:///usr/share/images/desktop-base/RubyKaigi2014-commonLogo.svg</code>
-にしたりしました。</p>
-
-<p>2014-07-13 追記:
-生成後のイメージに CC-BY 3.0 の説明がないのは良くないと思って、
-<code>config/includes.chroot/etc/skel/README.txt</code>
-に説明を追加することにしました。</p>
-
-<h3>デスクトップのアイコン</h3>
-
-<p>以前は <code>gnome-panel</code> (上のバーのところ) に起動用のアイコンを追加していたようですが、
-<code>gsettings set</code> で設定しようとすると
-<code>org.gnome.gnome-panel.layout object-id-list</code> の他に
-<code>org.gnome.gnome-panel.layout.objects.object-0</code> や
-<code>org.gnome.gnome-panel.layout.objects.object-0.instance-config</code> などの
-複数設定が必要で管理の手間もかかりそうだったので、
-<code>gsettings set org.gnome.desktop.background show-desktop-icons true</code>
-でデスクトップのアイコンが見えるように変更しました。</p>
-
-<h3>スクリーンセーバーの停止</h3>
-
-<p><code>gsettings set org.gnome.desktop.screensaver idle-activation-enabled false</code>
-で止めました。</p>
-
-<h2>chm の変更</h2>
-
-<p><a href="http://ruby.morphball.net/refm-remix.html" title="Rubyリファレンスマニュアル chm版リミックス">Rubyリファレンスマニュアル chm版リミックス</a>
-の標準テーマのRuby 2.1.0向け chm に差し替えました。
-zip ファイルなので、先ほどの <code>.gnomerc</code> でデスクトップに展開するようにしました。</p>
-
-<p>xCHM v. 1.20 で背景画像や色とかがつかないようなので、サイズが小さい標準を選びました。</p>
-
-<h2>パッケージ変更</h2>
-
-<p><code>jfbterm</code> の代わりに <code>fbterm</code> にしたり、
-<code>ruby-build</code> でビルドに必要なパッケージを追加したり、
-<code>config/includes.chroot/etc/iceweasel/profile/prefs.js</code> の代わりに <code>iceweasel-l10n-ja</code> を追加したり、
-<code>bash-completion</code> などを追加したりしました。</p>
-
-<h2>ruby-build で ruby 2.1.2 のインストール</h2>
-
-<p><a href="http://qiita.com/takahashim/items/406421d515ef1d4f1189" title="[ReVIEW Tips] DockerでRe:VIEW - Qiita">[ReVIEW Tips] DockerでRe:VIEW - Qiita</a>
-を参考にして rbenv は使わずに ruby-build だけ使って <code>/usr/local</code> に ruby 2.1.2 をインストールしました。</p>
-
-<h2>localepurge</h2>
-
-<p>locale の設定は live-config で起動時にやっていて hook の中で
-<code>DEBIAN_FRONTEND=noninteractive dpkg-reconfigure localepurge</code>
-としても起動後と違って ja locale の設定がなかったので、
-起動後や設定した後に <code>debconf-show localepurge</code> で確認した値を使って、
-<code>localepurge/nopurge</code> が <code>NEEDSCONFIGFIRST</code> のままなら
-<code>echo localepurge localepurge/nopurge string "ja, ja_JP.UTF-8" | debconf-set-selections</code>
-で設定することにしました。</p>
-
-<p>これで約 200MB ぐらい小さくなりました。</p>
 ]]></content>
   </entry>
   
