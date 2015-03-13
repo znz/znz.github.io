@@ -4,7 +4,7 @@
   <title><![CDATA[Category: postgresql | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/postgresql/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2015-02-28T22:18:44+09:00</updated>
+  <updated>2015-03-14T01:01:23+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,139 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Ubuntu 14.04 LTS に Zabbix 2.4 を PostgreSQL を使う設定で入れた]]></title>
+    <link href="http://blog.n-z.jp/blog/2015-03-13-zabbix-24-pgsql.html"/>
+    <updated>2015-03-13T21:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/zabbix-24-pgsql</id>
+    <content type="html"><![CDATA[<p><a href="https://www.zabbix.com/documentation/2.4/manual/installation/install_from_packages" title="3 Installation from packages [Zabbix Documentation 2.4]">3 Installation from packages [Zabbix Documentation 2.4]</a>
+だと MySQL の例しかなく、
+PostgreSQL で入れるとちょっとひっかかったところがあったので、
+そのメモです。</p>
+
+<p>Debian や Ubuntu の公式パッケージの zabbix との違いも気づいた範囲で書いておきました。</p>
+
+<!--more-->
+
+
+<h2>zabbix-release のインストール</h2>
+
+<p><code>zabbix-release</code> をインストールして apt-line を設定して
+<code>apt-get update</code> するところまでは公式マニュアルと同じです。</p>
+
+<pre><code>wget http://repo.zabbix.com/zabbix/2.4/ubuntu/pool/main/z/zabbix-release/zabbix-release_2.4-1+trusty_all.deb
+sudo dpkg -i zabbix-release_2.4-1+trusty_all.deb
+sudo apt-get update
+</code></pre>
+
+<h2>zabbix-server のインストール</h2>
+
+<p><code>zabbix-server-mysql</code> の代わりに <code>zabbix-server-pgsql</code> をインストールします。
+途中で入力するパスワードは後で必要になるのでメモするか覚えておきます。
+(Debian や Ubuntu の公式パッケージの zabbix と違って <code>dbconfig-common</code> を使うようになっています。)</p>
+
+<pre><code>sudo apt-get install zabbix-server-pgsql
+</code></pre>
+
+<p>ただし、先に postgresql を入れておかないとデータベースの作成のところでエラーになるようです。</p>
+
+<h2>zabbix-frontend-php のインストール</h2>
+
+<p><code>/usr/share/doc/zabbix-frontend-php/README.Debian</code> に書いてあるのですが、
+<code>php5-pgsql</code> を入れておくと初期設定の時のデータベースの選択肢に PostgreSQL が出てきます。</p>
+
+<pre><code>sudo apt-get install zabbix-frontend-php php5-pgsql
+</code></pre>
+
+<h2>PHP のタイムゾーンの設定</h2>
+
+<pre><code>sudoedit /etc/zabbix/apache.conf
+</code></pre>
+
+<p>で</p>
+
+<pre><code># php_value date.timezone Europe/Riga
+</code></pre>
+
+<p>を</p>
+
+<pre><code>php_value date.timezone Asia/Tokyo
+</code></pre>
+
+<p>に変更して</p>
+
+<pre><code>sudo service apache2 reload
+</code></pre>
+
+<p>で反映します。
+(Debian や Ubuntu の公式パッケージの zabbix と違って <code>apache2</code> のみ対応です。
+<code>php5-fpm</code>+<code>nginx</code> には対応していないので <code>nginx</code> で使うなら完全に独自設定が必要です。)</p>
+
+<h2>初期設定</h2>
+
+<p><code>http://localhost/zabbix/</code> を開いて初期設定を開始します。
+<code>Next</code> ボタンで進んでいってデータベースの設定のところは</p>
+
+<ul>
+<li>Database Type : PostgreSQL</li>
+<li>Database host : localhost のまま</li>
+<li>Database port : 0 のまま</li>
+<li>Database name : zabbix のまま</li>
+<li>User : root から zabbix に変更</li>
+<li>Password : <code>zabbix-server-pgsql</code> をインストールしたときに設定したパスワード</li>
+</ul>
+
+
+<p>と設定します。</p>
+
+<p>そして <code>Next</code> で進んでいって <code>Finish</code> まで行くと初期設定終了です。
+(Debian や Ubuntu の公式パッケージの zabbix と違って
+<code>/etc/zabbix/web/</code> が <code>www-data</code> から書き込み可能になっていて
+ダウンロードして自分で設置しなくても設定完了するようになっています。)</p>
+
+<h2>ログイン</h2>
+
+<ul>
+<li>Username : Admin</li>
+<li>Password : zabbix</li>
+</ul>
+
+
+<p>でログインします。</p>
+
+<p>右上の Profile から Language を Japanese (ja_JP) に変更して Update すると
+日本語で使えるようになります。
+パスワードもここで変更できます。</p>
+
+<p>ログイン前の画面は guest ユーザーの言語が反映されているので、
+「管理」-「ユーザー」からメンバーの「guest」を開いて言語を変更して更新します。</p>
+
+<h2>zabbix-agent のインストール</h2>
+
+<pre><code>sudo apt-get install zabbix-agent
+</code></pre>
+
+<p>でインストールできます。</p>
+
+<h2>Zabbix server の監視</h2>
+
+<p><code>zabbix-agent</code> をインストールした後、
+「設定」-「ホスト」でステータスを「無効」から「有効」に切り替えます。</p>
+
+<p>しばらくするとエージェントの状態の「Z」が緑色になって監視できていることがわかります。</p>
+
+<h2>グラフの日本語の文字化け対策</h2>
+
+<p>グラフなどの図の中の日本語が文字化けするときは
+適当な日本語フォントを入れて
+<code>zabbix-frontend-php</code> の設定をし直せば直ります。</p>
+
+<pre><code>sudo apt-get install fonts-vlgothic
+sudo dpkg-reconfigure zabbix-frontend-php
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[yaml_dbでMySQLからPostgreSQLに移行した]]></title>

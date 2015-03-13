@@ -4,7 +4,7 @@
   <title><![CDATA[Category: debian | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/debian/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2015-02-28T22:18:44+09:00</updated>
+  <updated>2015-03-14T01:01:23+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,139 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Ubuntu 14.04 LTS に Zabbix 2.4 を PostgreSQL を使う設定で入れた]]></title>
+    <link href="http://blog.n-z.jp/blog/2015-03-13-zabbix-24-pgsql.html"/>
+    <updated>2015-03-13T21:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/zabbix-24-pgsql</id>
+    <content type="html"><![CDATA[<p><a href="https://www.zabbix.com/documentation/2.4/manual/installation/install_from_packages" title="3 Installation from packages [Zabbix Documentation 2.4]">3 Installation from packages [Zabbix Documentation 2.4]</a>
+だと MySQL の例しかなく、
+PostgreSQL で入れるとちょっとひっかかったところがあったので、
+そのメモです。</p>
+
+<p>Debian や Ubuntu の公式パッケージの zabbix との違いも気づいた範囲で書いておきました。</p>
+
+<!--more-->
+
+
+<h2>zabbix-release のインストール</h2>
+
+<p><code>zabbix-release</code> をインストールして apt-line を設定して
+<code>apt-get update</code> するところまでは公式マニュアルと同じです。</p>
+
+<pre><code>wget http://repo.zabbix.com/zabbix/2.4/ubuntu/pool/main/z/zabbix-release/zabbix-release_2.4-1+trusty_all.deb
+sudo dpkg -i zabbix-release_2.4-1+trusty_all.deb
+sudo apt-get update
+</code></pre>
+
+<h2>zabbix-server のインストール</h2>
+
+<p><code>zabbix-server-mysql</code> の代わりに <code>zabbix-server-pgsql</code> をインストールします。
+途中で入力するパスワードは後で必要になるのでメモするか覚えておきます。
+(Debian や Ubuntu の公式パッケージの zabbix と違って <code>dbconfig-common</code> を使うようになっています。)</p>
+
+<pre><code>sudo apt-get install zabbix-server-pgsql
+</code></pre>
+
+<p>ただし、先に postgresql を入れておかないとデータベースの作成のところでエラーになるようです。</p>
+
+<h2>zabbix-frontend-php のインストール</h2>
+
+<p><code>/usr/share/doc/zabbix-frontend-php/README.Debian</code> に書いてあるのですが、
+<code>php5-pgsql</code> を入れておくと初期設定の時のデータベースの選択肢に PostgreSQL が出てきます。</p>
+
+<pre><code>sudo apt-get install zabbix-frontend-php php5-pgsql
+</code></pre>
+
+<h2>PHP のタイムゾーンの設定</h2>
+
+<pre><code>sudoedit /etc/zabbix/apache.conf
+</code></pre>
+
+<p>で</p>
+
+<pre><code># php_value date.timezone Europe/Riga
+</code></pre>
+
+<p>を</p>
+
+<pre><code>php_value date.timezone Asia/Tokyo
+</code></pre>
+
+<p>に変更して</p>
+
+<pre><code>sudo service apache2 reload
+</code></pre>
+
+<p>で反映します。
+(Debian や Ubuntu の公式パッケージの zabbix と違って <code>apache2</code> のみ対応です。
+<code>php5-fpm</code>+<code>nginx</code> には対応していないので <code>nginx</code> で使うなら完全に独自設定が必要です。)</p>
+
+<h2>初期設定</h2>
+
+<p><code>http://localhost/zabbix/</code> を開いて初期設定を開始します。
+<code>Next</code> ボタンで進んでいってデータベースの設定のところは</p>
+
+<ul>
+<li>Database Type : PostgreSQL</li>
+<li>Database host : localhost のまま</li>
+<li>Database port : 0 のまま</li>
+<li>Database name : zabbix のまま</li>
+<li>User : root から zabbix に変更</li>
+<li>Password : <code>zabbix-server-pgsql</code> をインストールしたときに設定したパスワード</li>
+</ul>
+
+
+<p>と設定します。</p>
+
+<p>そして <code>Next</code> で進んでいって <code>Finish</code> まで行くと初期設定終了です。
+(Debian や Ubuntu の公式パッケージの zabbix と違って
+<code>/etc/zabbix/web/</code> が <code>www-data</code> から書き込み可能になっていて
+ダウンロードして自分で設置しなくても設定完了するようになっています。)</p>
+
+<h2>ログイン</h2>
+
+<ul>
+<li>Username : Admin</li>
+<li>Password : zabbix</li>
+</ul>
+
+
+<p>でログインします。</p>
+
+<p>右上の Profile から Language を Japanese (ja_JP) に変更して Update すると
+日本語で使えるようになります。
+パスワードもここで変更できます。</p>
+
+<p>ログイン前の画面は guest ユーザーの言語が反映されているので、
+「管理」-「ユーザー」からメンバーの「guest」を開いて言語を変更して更新します。</p>
+
+<h2>zabbix-agent のインストール</h2>
+
+<pre><code>sudo apt-get install zabbix-agent
+</code></pre>
+
+<p>でインストールできます。</p>
+
+<h2>Zabbix server の監視</h2>
+
+<p><code>zabbix-agent</code> をインストールした後、
+「設定」-「ホスト」でステータスを「無効」から「有効」に切り替えます。</p>
+
+<p>しばらくするとエージェントの状態の「Z」が緑色になって監視できていることがわかります。</p>
+
+<h2>グラフの日本語の文字化け対策</h2>
+
+<p>グラフなどの図の中の日本語が文字化けするときは
+適当な日本語フォントを入れて
+<code>zabbix-frontend-php</code> の設定をし直せば直ります。</p>
+
+<pre><code>sudo apt-get install fonts-vlgothic
+sudo dpkg-reconfigure zabbix-frontend-php
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[owncloud-client が conflict した話]]></title>
@@ -494,137 +627,6 @@ Live イメージ作成の時に proxy を使ってくれるようになりま�
 <p>live-build は cache ディレクトリにも、かなりキャッシュしてくれるのですが、
 <code>apt-get update</code> などの proxy じゃないとキャッシュしにくいものもあるので、
 どんな場合でもダウンロード量削減に役に立ちそうだと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[RubyLiveを仮想環境で作成]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-07-13-build-rubylive-on-vm.html"/>
-    <updated>2014-07-13T09:35:02+09:00</updated>
-    <id>http://blog.n-z.jp/blog/build-rubylive-on-vm</id>
-    <content type="html"><![CDATA[<p>最近流行りの仮想環境を使ってクリーンな wheezy 環境で RubyLive を作成できるようにしました。</p>
-
-<p>VirtualBox + Vagrant は特殊な制限のない仮想環境なので Live イメージが作成できたのですが、
-docker は後述の制限のために作成できませんでした。</p>
-
-<!--more-->
-
-
-<h2>RubyLive を Vagrant で作成</h2>
-
-<p>Vagrant を使ってクリーンな wheezy 環境で RubyLive の ISO を作成できるようにしました。
-こちらは問題なく作成できました。</p>
-
-<h3>動作確認バージョン</h3>
-
-<ul>
-<li>VirtualBox 4.3.12</li>
-<li>Vagrant 1.6.3</li>
-</ul>
-
-
-<h3>使い方</h3>
-
-<ul>
-<li>VirtualBox と Vagrant をインストールしておきます。</li>
-<li><code>git clone https://github.com/znz/rubylive-builder</code> で取得します。</li>
-<li><code>cd rubylive-builder</code> で中に入ります。</li>
-<li><code>VM_MEMORY=512 vagrant up</code> のように適当なメモリ容量を指定して起動します。 (指定なしなら 1024)
-
-<ul>
-<li>他の項目も環境変数である程度変更できるようにしています。</li>
-<li>初回起動時は box をダウンロードするので非常に時間がかかります。</li>
-<li>provision で live-build などの必要なパッケージをインストールしています。</li>
-</ul>
-</li>
-<li><code>vagrant ssh</code> でゲストにログインします。</li>
-<li><code>/vagrant/rubylive.sh</code> を実行すると <code>/home/vagrant/rubylive</code> で RubyLive のイメージを作成します。
-
-<ul>
-<li>実行するたびにタイムスタンプの入ったファイル名の ISO ファイルが作成されます。</li>
-<li>ネットワークの速度やマシンスペックに影響を受けると思いますが、試した環境では約1時間かかりました。</li>
-</ul>
-</li>
-<li>作成できた <code>/home/vagrant/rubylive/*.iso</code> を <code>/vagrant</code> にコピーまたは移動して、ホスト OS 側に取り出します。</li>
-<li>取り出した ISO ファイルを使用します。</li>
-</ul>
-
-
-<p>なぜか
-    chroot: failed to run command <code>/usr/bin/env': No such file or directory
-で失敗することがありましたが、再度</code>/vagrant/rubylive.sh` を実行すれば問題なく作成できました。</p>
-
-<h3>片付け方</h3>
-
-<ul>
-<li><code>vagrant destroy</code> で VM を破棄します。</li>
-<li><code>git clone</code> した作業ディレクトリを削除します。</li>
-<li>wheezy の box が不要なら <code>vagrant box remove opscode_debian-7.4_chef-provisionerless</code> で削除します。</li>
-<li>Vagrant や VirtualBox も不要ならアンインストールします。</li>
-</ul>
-
-
-<h2>RubyLive を Docker で作成 (失敗)</h2>
-
-<p>docker 環境の中では <code>chroot /rubylive/chroot mount -t proc proc /proc</code> が <code>EPERM</code> で失敗するため、作成できませんでした。</p>
-
-<h3>動作確認バージョン</h3>
-
-<ul>
-<li>docker 1.1.1</li>
-</ul>
-
-
-<h3>試し方</h3>
-
-<ul>
-<li>docker をインストールしておきます。</li>
-<li><code>git clone https://github.com/znz/rubylive-builder</code> で取得します。</li>
-<li><code>docker build rubylive-builder</code> で作成に挑戦します。
-
-<ul>
-<li>または <code>cd rubylive-builder</code> で中に入って <code>docker build .</code> です。</li>
-</ul>
-</li>
-<li><code>docker ps -a</code> で最近の CREATED の IMAGE を確認します。
-
-<ul>
-<li>もしくは <code>docker images</code> で確認します。</li>
-<li>最後の失敗した後の状態は残っていないようでした。</li>
-</ul>
-</li>
-<li><code>docker run -i -t --rm 4b8bc4523794 /bin/bash</code> のように中に入ります。
-
-<ul>
-<li>4b8bc4523794 のところは確認した IMAGE の ID にしてください。</li>
-</ul>
-</li>
-<li><code>cd rubylive</code> で rubylive ディレクトリに入って <code>rake</code> で作成に再挑戦します。</li>
-<li><code>less /rubylive/chroot/debootstrap/debootstrap.log</code> でログを確認したり、
-<code>chroot /rubylive/chroot mount -t proc proc /proc</code> や
-<code>mount -t proc proc /rubylive/chroot/proc</code> を直接実行してみたりして
-原因を確認します。</li>
-</ul>
-
-
-<h3>失敗部分のメッセージ</h3>
-
-<pre><code>W: Failure trying to run: chroot /rubylive/chroot mount -t proc proc /proc
-W: See /rubylive/chroot/debootstrap/debootstrap.log for details
-P: Begin unmounting filesystems...
-P: Saving caches...
-/usr/bin/env: apt-get: No such file or directory
-rake aborted!
-Command failed with status (1): [sudo lb build...]
-</code></pre>
-
-<p><code>/rubylive/chroot/debootstrap/debootstrap.log</code> をみると <code>mount: permission denied</code> と出ていました。</p>
-
-<h3>Dockerfile 直接指定 (失敗)</h3>
-
-<p><code>docker build https://raw.githubusercontent.com/znz/rubylive-builder/master/Dockerfile</code>
-のように直接 URL を指定する方法は
-<code>sources.list</code> を国内ミラーに差し替える部分が失敗して使えませんでした。</p>
 ]]></content>
   </entry>
   

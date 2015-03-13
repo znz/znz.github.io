@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2015-02-28T22:18:44+09:00</updated>
+  <updated>2015-03-14T01:01:23+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,139 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Ubuntu 14.04 LTS に Zabbix 2.4 を PostgreSQL を使う設定で入れた]]></title>
+    <link href="http://blog.n-z.jp/blog/2015-03-13-zabbix-24-pgsql.html"/>
+    <updated>2015-03-13T21:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/zabbix-24-pgsql</id>
+    <content type="html"><![CDATA[<p><a href="https://www.zabbix.com/documentation/2.4/manual/installation/install_from_packages" title="3 Installation from packages [Zabbix Documentation 2.4]">3 Installation from packages [Zabbix Documentation 2.4]</a>
+だと MySQL の例しかなく、
+PostgreSQL で入れるとちょっとひっかかったところがあったので、
+そのメモです。</p>
+
+<p>Debian や Ubuntu の公式パッケージの zabbix との違いも気づいた範囲で書いておきました。</p>
+
+<!--more-->
+
+
+<h2>zabbix-release のインストール</h2>
+
+<p><code>zabbix-release</code> をインストールして apt-line を設定して
+<code>apt-get update</code> するところまでは公式マニュアルと同じです。</p>
+
+<pre><code>wget http://repo.zabbix.com/zabbix/2.4/ubuntu/pool/main/z/zabbix-release/zabbix-release_2.4-1+trusty_all.deb
+sudo dpkg -i zabbix-release_2.4-1+trusty_all.deb
+sudo apt-get update
+</code></pre>
+
+<h2>zabbix-server のインストール</h2>
+
+<p><code>zabbix-server-mysql</code> の代わりに <code>zabbix-server-pgsql</code> をインストールします。
+途中で入力するパスワードは後で必要になるのでメモするか覚えておきます。
+(Debian や Ubuntu の公式パッケージの zabbix と違って <code>dbconfig-common</code> を使うようになっています。)</p>
+
+<pre><code>sudo apt-get install zabbix-server-pgsql
+</code></pre>
+
+<p>ただし、先に postgresql を入れておかないとデータベースの作成のところでエラーになるようです。</p>
+
+<h2>zabbix-frontend-php のインストール</h2>
+
+<p><code>/usr/share/doc/zabbix-frontend-php/README.Debian</code> に書いてあるのですが、
+<code>php5-pgsql</code> を入れておくと初期設定の時のデータベースの選択肢に PostgreSQL が出てきます。</p>
+
+<pre><code>sudo apt-get install zabbix-frontend-php php5-pgsql
+</code></pre>
+
+<h2>PHP のタイムゾーンの設定</h2>
+
+<pre><code>sudoedit /etc/zabbix/apache.conf
+</code></pre>
+
+<p>で</p>
+
+<pre><code># php_value date.timezone Europe/Riga
+</code></pre>
+
+<p>を</p>
+
+<pre><code>php_value date.timezone Asia/Tokyo
+</code></pre>
+
+<p>に変更して</p>
+
+<pre><code>sudo service apache2 reload
+</code></pre>
+
+<p>で反映します。
+(Debian や Ubuntu の公式パッケージの zabbix と違って <code>apache2</code> のみ対応です。
+<code>php5-fpm</code>+<code>nginx</code> には対応していないので <code>nginx</code> で使うなら完全に独自設定が必要です。)</p>
+
+<h2>初期設定</h2>
+
+<p><code>http://localhost/zabbix/</code> を開いて初期設定を開始します。
+<code>Next</code> ボタンで進んでいってデータベースの設定のところは</p>
+
+<ul>
+<li>Database Type : PostgreSQL</li>
+<li>Database host : localhost のまま</li>
+<li>Database port : 0 のまま</li>
+<li>Database name : zabbix のまま</li>
+<li>User : root から zabbix に変更</li>
+<li>Password : <code>zabbix-server-pgsql</code> をインストールしたときに設定したパスワード</li>
+</ul>
+
+
+<p>と設定します。</p>
+
+<p>そして <code>Next</code> で進んでいって <code>Finish</code> まで行くと初期設定終了です。
+(Debian や Ubuntu の公式パッケージの zabbix と違って
+<code>/etc/zabbix/web/</code> が <code>www-data</code> から書き込み可能になっていて
+ダウンロードして自分で設置しなくても設定完了するようになっています。)</p>
+
+<h2>ログイン</h2>
+
+<ul>
+<li>Username : Admin</li>
+<li>Password : zabbix</li>
+</ul>
+
+
+<p>でログインします。</p>
+
+<p>右上の Profile から Language を Japanese (ja_JP) に変更して Update すると
+日本語で使えるようになります。
+パスワードもここで変更できます。</p>
+
+<p>ログイン前の画面は guest ユーザーの言語が反映されているので、
+「管理」-「ユーザー」からメンバーの「guest」を開いて言語を変更して更新します。</p>
+
+<h2>zabbix-agent のインストール</h2>
+
+<pre><code>sudo apt-get install zabbix-agent
+</code></pre>
+
+<p>でインストールできます。</p>
+
+<h2>Zabbix server の監視</h2>
+
+<p><code>zabbix-agent</code> をインストールした後、
+「設定」-「ホスト」でステータスを「無効」から「有効」に切り替えます。</p>
+
+<p>しばらくするとエージェントの状態の「Z」が緑色になって監視できていることがわかります。</p>
+
+<h2>グラフの日本語の文字化け対策</h2>
+
+<p>グラフなどの図の中の日本語が文字化けするときは
+適当な日本語フォントを入れて
+<code>zabbix-frontend-php</code> の設定をし直せば直ります。</p>
+
+<pre><code>sudo apt-get install fonts-vlgothic
+sudo dpkg-reconfigure zabbix-frontend-php
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[apt-cacher-ngでliveイメージ作成を繰り返す時の無駄なダウンロードを減らす]]></title>
@@ -360,172 +493,6 @@ ansible を使えばサーバー自体に余計なパッケージを入れなく
 ubuntu 12.04 の時だけ実行するために
 <code>when: ansible_distribution_release == "precise"</code>
 で実行する環境を制限しています。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Ubuntu 14.04 で dokku を使う]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-04-18-ubuntu-1404-dokku.html"/>
-    <updated>2014-04-18T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ubuntu-1404-dokku</id>
-    <content type="html"><![CDATA[<p>Ubuntu 14.04 がリリースされたので、
-<a href="https://github.com/progrium/dokku">dokku</a>
-を Ubuntu 14.04 で試してみました。</p>
-
-<!--more-->
-
-
-<h2>dokku の Vagrantfile を確認する</h2>
-
-<p>まず dokku を clone して中の Vagrantfile をみて、
-環境変数で設定できる項目があるのを確認しておきます。</p>
-
-<pre><code class="console">% git clone https://github.com/progrium/dokku
-% cd dokku
-% vi Vagrantfile
-</code></pre>
-
-<h2>Vagantfile を変更する</h2>
-
-<p>デフォルトの apt-line のままだとダウンロードが遅いので、
-<a href="http://mirrors.ubuntu.com/mirrors.txt">http://mirrors.ubuntu.com/mirrors.txt</a>
-からミラーサーバーを選んで (今回は jaist を選択)、
-shell provision のところで書き換えておきます。
-(関係ないところにマッチして問題が起きる可能性はほぼないので、置換元の URL の <code>.</code> はエスケープしていません。)</p>
-
-<pre><code class="diff">diff --git a/Vagrantfile b/Vagrantfile
-index a310f6b..7c1a133 100644
---- a/Vagrantfile
-+++ b/Vagrantfile
-@@ -29,5 +29,10 @@ Vagrant::configure("2") do |config|
-     vb.customize ["modifyvm", :id, "--memory", BOX_MEMORY]
-   end
-
--  config.vm.provision :shell, :inline =&gt; "apt-get -y install git &amp;&amp; cd /root/dokku &amp;&amp; #{make_cmd}"
-+  config.vm.provision :shell, :inline =&gt; &lt;&lt;-SHELL
-+    sed -i~ -e 's;http://archive.ubuntu.com/ubuntu;http://ftp.jaist.ac.jp/pub/Linux/ubuntu;' /etc/apt/sources.list &amp;&amp;
-+    apt-get update &amp;&amp;
-+    apt-get -y install git &amp;&amp;
-+    cd /root/dokku &amp;&amp; #{make_cmd}
-+  SHELL
- end
-</code></pre>
-
-<h2>初回起動</h2>
-
-<p><code>BOX_NAME</code>, <code>BOX_URI</code> に trusty を指定して、
-<code>BOX_MEMORY</code> も 512 から 2048 に増やした値を指定して起動します。</p>
-
-<p><code>node-js-sample</code> だと 512 メガでも問題ないのですが、
-Rails アプリを動かそうとするとメモリ不足で <code>bundle install</code> の途中で失敗して
-deploy できなかったので増やしています。</p>
-
-<pre><code class="console">% BOX_NAME=trusty-amd64-20140418 BOX_URI=https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box BOX_MEMORY=2048 vagrant up
-</code></pre>
-
-<p>box のダウンロードとインストール、
-VM の作成などには時間がかかるので、
-他のことをしながらゆっくり待ちます。</p>
-
-<h2>二度目以降の起動</h2>
-
-<p>VM の作成ができている状態なら、
-box の設定は参照されないので省略できます。
-<code>vagrant destroy</code> した後に <code>vagrant up</code> し直したときは参照されるので、
-毎回設定していてもかまいません。</p>
-
-<p><code>BOX_MEMORY</code> は毎回設定されるので、指定を忘れると 512 に戻ってしまいます。</p>
-
-<pre><code class="console">% BOX_MEMORY=2048 vagrant up
-</code></pre>
-
-<h2>dokku の初期設定</h2>
-
-<p>ssh の鍵を追加します。</p>
-
-<pre><code class="console">% vagrant ssh
-vagrant@dokku:~$ egrep '^ssh' ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
-dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6
-vagrant@dokku:~$ cat ~/.ssh/authorized_keys
-# CLOUD_IMG: This file was created/modified by the Cloud Image build process
-ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
-vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
-command="FINGERPRINT=dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6 NAME=vagrant `cat /home/dokku/.sshcommand` $SSH_ORIGINAL_COMMAND",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
-</code></pre>
-
-<h2>dokku の鍵追加失敗例</h2>
-
-<p><code>cat ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant</code>
-で追加してしまうと以下のように変になってしまいます。</p>
-
-<pre><code class="text">vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
-command="FINGERPRINT=is NAME=vagrant `cat /home/dokku/.sshcommand` $SSH_ORIGINAL_COMMAND",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding # CLOUD_IMG: This file was created/modified by the Cloud Image build process
-ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
-</code></pre>
-
-<pre><code class="bash">    KEY=$(cat)
-    FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
-    KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
-    echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
-    echo $FINGERPRINT
-</code></pre>
-
-<p>の部分を以下のように <code>while read</code> ループに変えた方が良いのかもしれません。</p>
-
-<pre><code class="bash">    while read KEY; do
-      FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
-      KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
-      echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
-      echo $FINGERPRINT
-    done
-</code></pre>
-
-<h2>node-js-sample の deploy</h2>
-
-<p><code>node-js-sample</code> を <code>deploy</code> して動作確認します。
-以下の例では <code>ssh dokku</code> で VM に接続できるように <code>~/.ssh/config</code> に設定済みです。</p>
-
-<pre><code class="console">% git clone https://github.com/heroku/node-js-sample
-Cloning into 'node-js-sample'...
-remote: Reusing existing pack: 319, done.
-remote: Total 319 (delta 0), reused 0 (delta 0)
-Receiving objects: 100% (319/319), 201.92 KiB | 210.00 KiB/s, done.
-Resolving deltas: 100% (17/17), done.
-Checking connectivity... done.
-% cd node-js-sample
-% git remote add dokku dokku:node-js-app
-%  git push --set-upstream dokku master
-Counting objects: 319, done.
-Delta compression using up to 4 threads.
-Compressing objects: 100% (274/274), done.
-Writing objects: 100% (319/319), 201.92 KiB | 0 bytes/s, done.
-Total 319 (delta 17), reused 319 (delta 17)
------&gt; Cleaning up ...
-remote: Cloning into '/tmp/tmp.ChNvZEb5S9'...
------&gt; Building node-js-app ...
-remote: warning: You appear to have cloned an empty repository.
-remote: done.
-remote: HEAD is now at 2e52ce7... Update documentation links
-       Node.js app detected
------&gt; Requested node range:  0.10.x
------&gt; Resolved node version: 0.10.26
------&gt; Downloading and installing node
-(省略)
------&gt; Discovering process types
-       Procfile declares types -&gt; web
------&gt; Releasing node-js-app ...
------&gt; Deploying node-js-app ...
-=====&gt; Application deployed:
-       http://node-js-app.dokku.me
-
-To dokku:node-js-app
- * [new branch]      master -&gt; master
-Branch master set up to track remote branch master from dokku.
-</code></pre>
-
-<p>Vagrantfile で guest の 80 番ポートを host の 8080 番ポートで見えるように設定されているので
-<code>http://node-js-app.dokku.me:8080/</code>
-で開くと <code>Hello World!</code> と表示されます。</p>
 ]]></content>
   </entry>
   
