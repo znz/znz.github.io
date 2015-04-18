@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2015-04-04T17:03:28+09:00</updated>
+  <updated>2015-04-18T21:07:22+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,206 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[dokku 0.3.17 に Ruby on Rails アプリをデプロイしてみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2015-04-18-dokku.html"/>
+    <updated>2015-04-18T21:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/dokku</id>
+    <content type="html"><![CDATA[<p>dokku がいつの間にか deis がスポンサーになって開発が活発になって 0.3 系がリリースされていたので、
+0.3.17 に Ruby on Rails アプリをデプロイしてみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>dokku 0.3.17</li>
+<li>docker 1.5.0, 1.6.0</li>
+</ul>
+
+
+<h2>前準備</h2>
+
+<p>何度か繰り返す予定ならあらかじめ、
+次の初回起動の手順の <code>vagrant up</code> の前に、
+Makefile の <code>PREBUILT_STACK_URL</code> を
+Vagrantfile の <code>PREBUILT_STACK_URL</code> で
+チェックしている場所にダウンロードしておくと
+ダウンロード時間を短縮できます。</p>
+
+<pre><code>curl -L -o stack.tgz https://github.com/progrium/buildstep/releases/download/2014-12-16/2014-12-16_42bd9f4aab.tar.gz
+</code></pre>
+
+<h2>初回起動</h2>
+
+<p>Vagrant 環境で試しました。</p>
+
+<pre><code>git clone https://github.com/progrium/dokku
+cd dokku
+vagrant up
+</code></pre>
+
+<p>vagrant の中では <code>/vagrant</code> の他に <code>/root/dokku</code> に <code>dokku</code> ディレクトリがマウントされています。</p>
+
+<h2>初期設定</h2>
+
+<p>Vagrant でポートフォワーディングされている <code>http://localhost:8080/</code> か
+ホストオンリーアダプタで接続されている <code>http://10.0.0.2/</code> を開きます。
+Dokku Setup が表示されるので、そこで初期設定をします。</p>
+
+<p><code>Public Key</code> に自分の <code>~/.ssh/id_rsa.pub</code> が入っているのを確認します。
+必要なら他の公開鍵に変更します。</p>
+
+<p>Hostname Configuration の方は Hostname に自分がインターネットに接続しているグローバル IP アドレスが表示されているので、
+<code>dokku.me</code> に変更して、
+<code>Use virtualhost naming for apps</code> にチェックを入れます。
+<code>dokku.me</code> は dokku の作者が運用していると思われる、すべてのサブドメインで 127.0.0.1 を返してくれるサービスです。</p>
+
+<p><code>Finish Setup</code> を押すと初期設定は終了して
+<code>http://progrium.viewdocs.io/dokku/application-deployment</code>
+に飛ばされます。</p>
+
+<p>ちなみに、初期設定用のサーバーの実体は
+<code>contrib/dokku-installer.rb</code>
+にあるようです。</p>
+
+<h2>ssh の設定</h2>
+
+<p><code>ssh dokku</code> や <code>ssh dokku.me</code> で接続できるように
+<code>~/.ssh/config</code> に以下のような設定を追加しました。
+<code>User</code>, <code>Hostname</code>, <code>Port</code>, <code>RequestTTY</code> 以外の設定はお好みで良いと思います。</p>
+
+<pre><code>Host dokku dokku.me
+    User dokku
+    HostName 10.0.0.2
+    Port 22
+    UserKnownHostsFile /dev/null
+    StrictHostKeyChecking no
+    PasswordAuthentication no
+    IdentityFile ~/.ssh/id_rsa
+    IdentitiesOnly yes
+    LogLevel FATAL
+    RequestTTY yes
+    Ciphers arcfour128,arcfour256
+</code></pre>
+
+<h2>サンプルアプリをデプロイ</h2>
+
+<p><a href="http://progrium.viewdocs.io/dokku/application-deployment">http://progrium.viewdocs.io/dokku/application-deployment</a> に書いてある node.js のサンプルアプリをデプロイします。</p>
+
+<pre><code>git clone https://github.com/heroku/node-js-sample
+cd node-js-sample
+git remote add dokku dokku@dokku.me:node-js-app
+git push dokku master
+</code></pre>
+
+<p><code>http://node-js-app.dokku.me:8080/</code> を開いて「Hello World!」が見えれば成功です。</p>
+
+<h2>PostgreSQL プラグインをインストール</h2>
+
+<p>今回は
+<a href="http://progrium.viewdocs.io/dokku/plugins" title="Plugins">Plugins</a>
+で「Compatible with 0.3.16」と書いてある
+<a href="https://github.com/Flink/dokku-psql-single-container" title="PostgreSQL (single container)">PostgreSQL (single container)</a>
+を使いました。</p>
+
+<p><code>vagrant ssh</code> で入って以下を実行しました。</p>
+
+<pre><code>sudo git clone https://github.com/Flink/dokku-psql-single-container /var/lib/dokku/plugins/psql-sc
+sudo dokku plugins-install
+</code></pre>
+
+<p><code>postgres:9.3</code> のイメージをダウンロードするので、しばらく時間がかかりました。</p>
+
+<h2>Rails のサンプルをデプロイ</h2>
+
+<p>試行錯誤の結果、シンプルな手順は以下のようになりました。</p>
+
+<pre><code>ssh dokku apps:create ruby-rails-app
+ssh dokku psql:create ruby-rails-app
+git clone https://github.com/heroku/ruby-rails-sample
+cd ruby-rails-sample
+git remote add dokku dokku@dokku.me:ruby-rails-app
+git push dokku master
+</code></pre>
+
+<p><code>http://ruby-rails-app.dokku.me:8080/</code> を開いて <code>Hello World</code> と現在時刻が表示されれば成功です。</p>
+
+<p>今回利用したプラグインでは <code>psql:create</code> だけで、別途 <code>link</code> という手順は不要でした。</p>
+
+<h2>データベースの migration の実行</h2>
+
+<p>このサンプルアプリではデータベースに接続するだけで使っていないので、
+必須ではないのですが <code>rake db:migrate</code> も実行しました。</p>
+
+<pre><code>ssh dokku run ruby-rails-app rake db:migrate
+</code></pre>
+
+<h2>タイムゾーン設定</h2>
+
+<p>現在時刻が UTC で表示されていたので、
+JST に変更しました。</p>
+
+<pre><code>ssh dokku config:set ruby-rails-app TZ=Asia/Tokyo
+</code></pre>
+
+<p>設定変更後に自動で再起動されるので、
+<code>http://ruby-rails-app.dokku.me:8080/</code> を開いて、
+現在時刻が日本時間で表示されれば成功です。</p>
+
+<h2>CHECKS 作成</h2>
+
+<p>デフォルトだと
+<a href="http://progrium.viewdocs.io/dokku/application-deployment#user-content-zero-downtime-deploy" title="Zero downtime deploy">Zero downtime deploy</a>
+の簡易チェックで 35 秒待つようになっているので、
+<code>CHECKS</code> ファイルを作成して待ち時間を短くして、
+正常なときだけデプロイできるようにしてみました。</p>
+
+<pre><code>vi CHECKS
+git add CHECKS
+git commit
+git push dokku master
+</code></pre>
+
+<p>CHECKS ファイルの内容は以下の通りです。</p>
+
+<pre><code>/   RubyRailsSample
+</code></pre>
+
+<p>左側がチェックする URL で右側がその URL を表示したときに含まれる文字列です。
+ここではタイトルの文字列を指定してみました。</p>
+
+<h2>アプリケーションの削除</h2>
+
+<p><code>apps:destroy</code> で削除できます。
+確認のため、もう一度アプリ名を入力する必要があります。</p>
+
+<pre><code>% ssh dokku apps:destroy node-js-app
+ !    WARNING: Potentially Destructive Action
+ !    This command will destroy node-js-app (including all add-ons).
+ !    To proceed, type "node-js-app"
+
+&gt; node-js-app
+Destroying node-js-app (including all add-ons)
+No database configured for node-js-app
+Connection to 10.0.0.2 closed.
+</code></pre>
+
+<p><code>ruby-rails-app</code> の削除も試してみたところ、
+データベースも一緒に削除されるので、
+別途 <code>psql:delete</code> を実行する必要はありませんでした。</p>
+
+<h2>デプロイ時に ruby のダウンロードでタイムアウトする場合</h2>
+
+<p><a href="http://www.slideshare.net/snumano/20150101-dokku-alt" title="20150101勉強会 dokku alt">20150101勉強会 dokku alt</a>
+の16ページの手順5を参考にしてタイムアウトをのばすと良いようです。</p>
+
+<pre><code>ssh dokku config:set ruby-rails-app CURL_TIMEOUT=120
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[4月4日 アンダースタンディング コンピュテーション読書会 第2回 (大阪府)に参加しました]]></title>
@@ -1833,70 +2033,6 @@ Enterprise というタイトルだとターゲット層に伝わらなかった
 <h2>対処</h2>
 
 <p><code>dalli</code> gem 経由で <code>memcached</code> をキャッシュ使っていたので <code>sudo service memcached restart</code> してキャッシュを破棄しました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Rubyによるクローラー開発技法 読書会 第2回(兵庫県)に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-11-01-amagasakirb.html"/>
-    <updated>2014-11-01T13:05:51+09:00</updated>
-    <id>http://blog.n-z.jp/blog/amagasakirb</id>
-    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/event/index/220392/" title="11月1日 Rubyによるクローラー開発技法　読書会　第2回(兵庫県)">11月1日 Rubyによるクローラー開発技法　読書会　第2回(兵庫県)</a>
-に参加しました。
-今回は3,4章でした。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4797380357" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-<p>前回参加していなかった人向けに、最初に 1,2 章の概要説明があって、
-今回は 3 章からでした。
-今回から、誤字・脱字などのフィードバックのため、
-Wiki
-(<a href="https://github.com/cuzic/amagasakirb/wiki/2014.11.01-Ruby-%E3%81%AB%E3%82%88%E3%82%8B%E3%82%AF%E3%83%AD%E3%83%BC%E3%83%A9%E3%83%BC%E9%96%8B%E7%99%BA%E6%8A%80%E6%B3%95%E8%AA%AD%E6%9B%B8%E4%BC%9A-%E7%AC%AC2%E5%9B%9E" title="2014.11.01 『Ruby によるクローラー開発技法』読書会 第2回">2014.11.01 『Ruby によるクローラー開発技法』読書会 第2回</a>)
-に記録するようになりました。</p>
-
-<p>以下、今回のメモです。</p>
-
-<ul>
-<li>p.112 Crawl-delay の単位は決まっていない</li>
-<li>p.148 構文解析で正規表現が使われていることは多い?</li>
-<li>p.149 3-1-2 ECU_JP → EUC-JP</li>
-<li>p.151 行頭に <code>=~</code> は syntax error で、行頭に <code>.</code> は最近の ruby では OK になっている</li>
-<li>Fluent API の話</li>
-<li>p.150 RegExp → Regexp</li>
-<li>posix 文字クラスと Unicode プロパティの話</li>
-<li>Oniguruma と Onigmo の話</li>
-<li>pp.152-153 名前付きキャプチャの説明がローカル変数への割当だけの説明になっているようにみえる</li>
-<li>p.153 <code>\b</code> は文字クラスの中か外かで解釈が変わる</li>
-<li>p.154 <code>\x{7HHHHHHH}</code> は使えない <a href="https://github.com/rurema/doctree/issues/80">https://github.com/rurema/doctree/issues/80</a> 参照</li>
-<li>p.154 <code>\s</code> には <code>\v</code> が含まれる</li>
-<li>p.155 「m」オプションを使うことで改行を無視する → <code>.</code> で改行も含むようになる</li>
-<li>p.156 EUC_JP → EUC-JP</li>
-<li><a href="https://github.com/cuzic/amagasakirb/wiki">https://github.com/cuzic/amagasakirb/wiki</a></li>
-<li>p.159 コードの中のコメント部分: UFT8 → UTF-8</li>
-<li>p.162 モンキーパッチではなく直接変更している話</li>
-<li>p.164 <code>xmlns:"デフォルトの名前空間識別子"</code> → <code>xmlns="デフォルトの名前空間識別子"</code></li>
-<li>p.167 Webサイトの更新には、Atom配信フォーマットが利用できます。 → Atom出版プロトコルの間違い?</li>
-<li>p.171 Atom 1.0の構造は、RSS 2.0と同様に名前空間の指定が必要になります。 → RSS 1.0?</li>
-<li>close されていないので <code>open(url).read</code> よりも <code>open(url, &amp;:read)</code> の方が良いのではという話</li>
-<li>標準添付の RSS ライブラリが便利という話</li>
-<li>Google Feed API</li>
-<li>p.180 の <code>doc.at('//a').[]('href')</code> から <code>doc.xpath("//a/@href").text</code> などの話</li>
-<li>p.177 Aタグの例の <code>node.inner_text</code> の出力例が間違っている</li>
-<li>p.182 <code>\/</code> の <code>\</code> が不要?</li>
-<li>p.184 スクリーンショットの値段がずれている</li>
-<li>p.192 ここでは nokogiri ではなく REXML を使っている</li>
-<li>p.199, p.205 Marshal.dmp は Marshal.dump なのではないかという話</li>
-<li>mitmproxy の話</li>
-</ul>
-
 ]]></content>
   </entry>
   
