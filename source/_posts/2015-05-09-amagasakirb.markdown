@@ -7,7 +7,7 @@ categories: event amagasakirb ruby
 ---
 [5月9日 アンダースタンディング コンピュテーション読書会　第３回(兵庫県)](http://kokucheese.com/event/index/287707/ "5月9日 アンダースタンディング コンピュテーション読書会　第３回(兵庫県)")
 に参加しました。
-今回はいつもの会場に戻って5章からでした。
+今回はいつもの会場に戻って5章から7章でした。
 
 <!--more-->
 
@@ -18,7 +18,6 @@ categories: event amagasakirb ruby
 </div>
 
 以下、今回のメモです。
-個人的なメモと話に出ていたことのメモが混ざっています。
 
 - https://github.com/tomstuart/computationbook
 - https://github.com/ko1/uc_ja
