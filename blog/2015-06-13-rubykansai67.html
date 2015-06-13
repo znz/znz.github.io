@@ -5,13 +5,13 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>upstart-socket-bridgeとrubyを組み合わせる - @znz blog</title>
+  <title>第67回 Ruby関西 勉強会に参加しました - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="upstart-socket-bridgeとrubyを組み合わせる Dec 14th, 2013 12:45 am | Comments Ubuntu Weekly Topics 2013年12月6日号
-の「その他のニュース」で紹介されていた
-「upstart-socket- &hellip;">
+  <meta name="description" content="第67回 Ruby関西 勉強会に参加しました Jun 13th, 2015 1:23 pm | Comments 第67回 Ruby関西 勉強会
+に参加しました。
+(KansaiWorkshop067) 今回は京都女子大学での開催でした。 ドメイン駆動設計とRuby DDD Infinite &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -20,7 +20,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-12-14-upstart-socket-bridge-with-ruby.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2015-06-13-rubykansai67.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -85,7 +85,7 @@
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">upstart-socket-bridgeとrubyを組み合わせる</h1>
+      <h1 class="entry-title">第67回 Ruby関西 勉強会に参加しました</h1>
       
       <!-- zenback_title_end -->
       
@@ -97,7 +97,7 @@
 
 
 
-<time class='entry-date' datetime='2013-12-14T00:45:00+09:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>14</span><span class='date-suffix'>th</span>, <span class='date-year'>2013</span></span> <span class='time'>12:45 am</span></time>
+<time class='entry-date' datetime='2015-06-13T13:23:57+09:00'><span class='date'><span class='date-month'>Jun</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>1:23 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -110,129 +110,104 @@
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><a href="http://gihyo.jp/admin/clip/01/ubuntu-topics/201312/06">Ubuntu Weekly Topics 2013年12月6日号</a>
-の「その他のニュース」で紹介されていた
-「upstart-socket-bridgeをxinetdライクなソケット待ち受け管理機構として扱う
-<a href="http://cheesehead-techblog.blogspot.jp/2013/12/upstart-socket-bridge.html">アプリケーションの作り方</a>
-。」
-が python3 で書かれていて、
-同じことが ruby で実装できるのか気になったので、
-IRC でちょっと助言を受けつつ移植してみました。</p>
+<div class="entry-content"><p><a href="https://rubykansai.doorkeeper.jp/events/23266" title="第67回 Ruby関西 勉強会">第67回 Ruby関西 勉強会</a>
+に参加しました。
+(<a href="https://github.com/rubykansai/workshops/wiki/Kansaiworkshop067">KansaiWorkshop067</a>)</p>
+
+<p>今回は京都女子大学での開催でした。</p>
 
 <!--more-->
 
 
-<h2>試した環境</h2>
+<h2>ドメイン駆動設計とRuby</h2>
 
 <ul>
-<li>amd64 の Ubuntu 13.10 (saucy)</li>
-<li><code>/usr/bin/ruby</code> は <code>ruby 1.9.3p194 (2012-04-20 revision 35410) [x86_64-linux]</code></li>
+<li><a href="https://speakerdeck.com/ogom/ddd-infinite">DDD Infinite</a></li>
+<li><a href="http://ogom.github.io/python-mcider/">Markdown で書ける自作プレゼンツール</a>を使っている</li>
+<li>Sublime Text との関係の都合で Python 製</li>
 </ul>
 
 
-<h2>ruby で試す</h2>
+<h2>ある教育系のサービスを開発してきた裏側</h2>
 
-<p>必須なのはソケット周りだけですが、
-デバッグ用のメッセージをファイルに残すようにして
-動作確認していたので、
-その部分も残しています。</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>/tmp/test-service.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'> <span class="c1">#!/usr/bin/ruby</span>
-</span><span class='line'> <span class="nb">require</span> <span class="s1">&#39;socket&#39;</span>
-</span><span class='line'> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;/tmp/test.log&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">f</span><span class="o">|</span>
-</span><span class='line'>   <span class="no">ENV</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="o">|</span>
-</span><span class='line'>     <span class="n">f</span><span class="o">.</span><span class="n">puts</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">key</span><span class="si">}</span><span class="s2">=</span><span class="si">#{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span class='line'>   <span class="k">end</span>
-</span><span class='line'>   <span class="k">begin</span>
-</span><span class='line'>     <span class="n">serv_socket</span> <span class="o">=</span> <span class="no">Socket</span><span class="o">.</span><span class="n">for_fd</span><span class="p">(</span><span class="no">ENV</span><span class="o">[</span><span class="s2">&quot;UPSTART_FDS&quot;</span><span class="o">].</span><span class="n">to_i</span><span class="p">)</span>
-</span><span class='line'>     <span class="n">client_socket</span><span class="p">,</span> <span class="n">client_addrinfo</span> <span class="o">=</span> <span class="n">serv_socket</span><span class="o">.</span><span class="n">accept</span>
-</span><span class='line'>     <span class="n">message</span> <span class="o">=</span> <span class="n">client_socket</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
-</span><span class='line'>     <span class="n">f</span><span class="o">.</span><span class="n">puts</span> <span class="n">message</span>
-</span><span class='line'>     <span class="n">client_socket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">&quot;I got your message: </span><span class="si">#{</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-</span><span class='line'>     <span class="n">client_socket</span><span class="o">.</span><span class="n">close</span>
-</span><span class='line'>   <span class="k">rescue</span> <span class="no">Exception</span> <span class="o">=&gt;</span> <span class="n">e</span>
-</span><span class='line'>     <span class="n">f</span><span class="o">.</span><span class="n">puts</span> <span class="n">e</span><span class="o">.</span><span class="n">inspect</span>
-</span><span class='line'>     <span class="n">f</span><span class="o">.</span><span class="n">puts</span> <span class="n">e</span><span class="o">.</span><span class="n">backtrace</span>
-</span><span class='line'>   <span class="k">end</span>
-</span><span class='line'>   <span class="n">f</span><span class="o">.</span><span class="n">puts</span> <span class="s2">&quot;finished&quot;</span>
-</span><span class='line'> <span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+<div style="float:right">
+<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4863541686" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
+</div>
 
 
-<p>バグとしては
-<code>for_fd</code> の引数の <code>to_i</code> を忘れていたり、
-<code>send</code> の引数が足りなかったりしました。</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>/etc/init/socket-test.conf</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'> description &quot;upstart-socket-bridge test&quot;
-</span><span class='line'> start on socket PROTO=inet PORT=34567 ADDR=127.0.0.1  # 34567 番ポートで待ち受け
-</span><span class='line'> setuid exampleuser                                    # root ではなく exampleuser で動作
-</span><span class='line'> exec /usr/bin/ruby /tmp/test-service.rb               # サービス起動
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+<ul>
+<li>会場アンケート からあげ好き ほぼ100%</li>
+<li>本を書いたらしい: <a href="http://www.amazon.co.jp/gp/product/4863541686/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4863541686&amp;linkCode=as2&amp;tag=znz-22">Webエンジニアの教科書</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4863541686" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" /></li>
+<li>Classi</li>
+<li>Slack のカスタム絵文字を絵文字職人がいつの間にか作っている</li>
+<li>Qiita:Team (esa という似たサービスが最近出てきたらしい)</li>
+<li>朝会</li>
+<li>GitHub でのレビュー</li>
+<li><a href="http://www.amazon.co.jp/gp/product/4873116309/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116309&amp;linkCode=as2&amp;tag=znz-22">Team Geek ―Googleのギークたちはいかにしてチームを作るのか</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116309" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />の「自分の疑問として謙虚に聞く」</li>
+<li>チームランチ</li>
+</ul>
 
 
-<p><code>nc</code> コマンドで接続して動作確認します。</p>
+<h2>Ruby で操る AWS</h2>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go"> $ nc localhost 34567</span>
-</span><span class='line'><span class="go"> Hello Ruby</span>
-</span><span class='line'><span class="go"> I got your message: Hello Ruby</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+<div style="float:right">
+<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4797380357" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
+<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=B00UWCYRZK" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
+</div>
 
 
-<p>最後にテストで作成したファイルを削除しておきます。</p>
+<ul>
+<li><a href="http://www.slideshare.net/takurosasaki/rubyaws-67ruby" title="Rubyで操るAWS 第67回Ruby関西 勉強会">Rubyで操るAWS 第67回Ruby関西 勉強会</a></li>
+<li>本をいくつか書いている</li>
+<li>会場アンケート どの項目も意外と多い</li>
+<li>クラウドファースト</li>
+<li>クラウドネイティブ</li>
+<li>3-Tier アーキテクチャ</li>
+<li>2-Tier アーキテクチャ</li>
+<li><a href="http://www.nri-net.com/mobileconf/spec.html">モバイル会議Ⅱ</a></li>
+<li>Ruby で AWS</li>
+<li>SDK V1 (レガシーバージョン) V2 (現行バージョン)</li>
+<li>名前空間が V1 は AWS で V2 は Aws なので AWS になっている情報は古い</li>
+<li>認可は IAM</li>
+<li>認証は 3 種類</li>
+<li>AccessKey と SecretAccessKey による認証</li>
+<li>IAM ロール</li>
+<li>Cognito</li>
+<li>Lambda</li>
+</ul>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go"> $ sudo rm /etc/init/socket-test.conf  # ブリッジとの接続解除</span>
-</span><span class='line'><span class="go"> $ rm /tmp/test-service.rb             # テストサービス削除</span>
-</span><span class='line'><span class="go"> $ rm /tmp/test.log                    # ログファイル削除</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2>正規表現の \z の話</h2>
+
+<p>自分の発表 (LT) でした。</p>
+
+<ul>
+<li><a href="http://slide.rabbit-shocker.org/authors/znz/rubykansai67-regexp/">http://slide.rabbit-shocker.org/authors/znz/rubykansai67-regexp/</a></li>
+<li>1文字の場合は選択 <code>(ん|ン)</code> ではなく文字クラス <code>[んン]</code> を使おう</li>
+<li>文字列末尾は <code>$</code> ではなく <code>\z</code></li>
+</ul>
 
 
-<h2>まとめ</h2>
+<h2>Ruby初級者向けレッスン 53回───ArrayとHash</h2>
 
-<p>python3 の <code>socket.fromfd</code> に相当するのは
-ruby だと <code>BasicSocket.for_fd</code> で、
-<code>BasicSocket</code> クラスには <code>accept</code> がないので、
-<code>BasicSocket</code> クラスを継承している <code>Socket</code> クラスの
-<code>Socket#for_fd</code> を使いました。</p>
+<ul>
+<li><code>Array.new(3){|i| i.to_s}</code> のようなブロック付き <code>Array.new</code> って使ったことがなかったけど、テストデータを作るのに便利そう。</li>
+<li><code>Array#to_h</code> っていつからあるんだっけ、と思って確認したら 2.1.0 からだった。</li>
+<li><a href="https://github.com/higaki/learn_ruby_kansai_67">https://github.com/higaki/learn_ruby_kansai_67</a></li>
+</ul>
 
-<p><code>inetd</code> や <code>xinetd</code> だと標準入出力にソケットをつないでくれて、
-サービスは簡単にかけるのに、
-<code>upstart</code> だと <code>accept</code> して <code>accept</code> から返ってきたソケットを
-<code>close</code> するまでがサービス側でやらないといけないようになっていて、
-ちょっと面倒に感じました。</p>
 
-<p>たまたま目についたプログラムを移植してみただけで、
-深追いはしていないのですが、
-どういう利点があるものなのか、
-調べてみるのも良いのかもしれません。</p>
+<h2>クロージング</h2>
+
+<ul>
+<li>8/7(金)-8(土) <a href="http://www.ospn.jp/osc2015-kyoto/" title="オープンソースカンファレンス2015 Kansai@Kyoto">オープンソースカンファレンス2015 Kansai@Kyoto</a></li>
+<li>関西のたくさんある Ruby 勉強会の紹介</li>
+<li>7/9(木) Ruby ビジネスフォーラム</li>
+<li>7/10(金) 関西Ruby会議06 前夜祭</li>
+<li>7/11(土) <a href="http://regional.rubykaigi.org/kansai06/">関西Ruby会議06</a></li>
+<li>8/8(土) <a href="https://rubykansai.doorkeeper.jp/events/25693">第68回 Ruby関西 勉強会</a></li>
+</ul>
+
 </div>
 
 <!-- zenback_body_end -->
@@ -251,12 +226,12 @@ ruby だと <code>BasicSocket.for_fd</code> で、
 
 
 
-<time class='entry-date' datetime='2013-12-14T00:45:00+09:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>14</span><span class='date-suffix'>th</span>, <span class='date-year'>2013</span></span> <span class='time'>12:45 am</span></time>
+<time class='entry-date' datetime='2015-06-13T13:23:57+09:00'><span class='date'><span class='date-month'>Jun</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>1:23 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/ruby/'>ruby</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>, <a class='category' href='/blog/categories/upstart/'>upstart</a>
+    <a class='category' href='/blog/categories/event/'>event</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>, <a class='category' href='/blog/categories/rubykansai/'>rubykansai</a>
   
 </span>
 
@@ -283,10 +258,8 @@ ruby だと <code>BasicSocket.for_fd</code> で、
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-12-13-docker-custom-base-image.html" title="Previous Post: dockerのカスタムベースイメージを作成する">&laquo; dockerのカスタムベースイメージを作成する</a>
+        <a class="basic-alignment left" href="/blog/2015-05-09-amagasakirb.html" title="Previous Post: 5月9日 アンダースタンディング コンピュテーション読書会　第３回(兵庫県)に参加しました">&laquo; 5月9日 アンダースタンディング コンピュテーション読書会　第３回(兵庫県)に参加しました</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-12-15-compare-docker-web-ui.html" title="Next Post: dockerのWeb UI 3種類を比較してみた">dockerのWeb UI 3種類を比較してみた &raquo;</a>
       
     </p>
   </footer>
@@ -421,8 +394,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-12-14-upstart-socket-bridge-with-ruby.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-12-14-upstart-socket-bridge-with-ruby.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2015-06-13-rubykansai67.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2015-06-13-rubykansai67.html';
         var disqus_script = 'embed.js';
       
     (function () {
