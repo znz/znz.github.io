@@ -5,11 +5,13 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>upstartに不足している機能 - @znz blog</title>
+  <title>第7回 コンテナ型仮想化の情報交換会＠大阪に参加しました - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="upstartに不足している機能 Feb 23rd, 2014 11:15 am | Comments Ubuntu の標準の init の upstart で機能不足を感じた話です。 workaround-upstart-snafu 2012年6月の頃の Ubuntu で起きた話です。 &hellip;">
+  <meta name="description" content="第7回 コンテナ型仮想化の情報交換会＠大阪に参加しました Jun 20th, 2015 2:30 pm | Comments 第7回 コンテナ型仮想化の情報交換会＠大阪
+に参加しました。 入り口に pepper くんがいました。
+懇親会でも人気でした。 以下メモです。 いまさら聞けない &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +20,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-02-23-upstart-has-missing-features.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2015-06-20-ct-study-7-osaka.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -83,7 +85,7 @@
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">upstartに不足している機能</h1>
+      <h1 class="entry-title">第7回 コンテナ型仮想化の情報交換会＠大阪に参加しました</h1>
       
       <!-- zenback_title_end -->
       
@@ -95,7 +97,7 @@
 
 
 
-<time class='entry-date' datetime='2014-02-23T11:15:27+09:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>23</span><span class='date-suffix'>rd</span>, <span class='date-year'>2014</span></span> <span class='time'>11:15 am</span></time>
+<time class='entry-date' datetime='2015-06-20T14:30:00+09:00'><span class='date'><span class='date-month'>Jun</span> <span class='date-day'>20</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>2:30 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -108,133 +110,66 @@
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p>Ubuntu の標準の init の upstart で機能不足を感じた話です。</p>
+<div class="entry-content"><p><a href="http://ct-study.connpass.com/event/15121/" title="第7回 コンテナ型仮想化の情報交換会＠大阪">第7回 コンテナ型仮想化の情報交換会＠大阪</a>
+に参加しました。</p>
 
 <!--more-->
 
 
-<h2>workaround-upstart-snafu</h2>
+<p>入り口に pepper くんがいました。
+懇親会でも人気でした。</p>
 
-<p>2012年6月の頃の Ubuntu で起きた話です。
-昔の話でバージョンなどもちゃんとメモしていなかったのですが、
-当時サポート対象だったバージョンのどれかです。</p>
+<p>以下メモです。</p>
 
-<p>現象としては自作の <code>/etc/init/hoge.conf</code> を作成するために
-<code>expect</code> stanza を試行錯誤していたら、
-設定が間違っていたらしく、
-プロセスの終了をちゃんと認識できなくて、
-もう存在しないプロセス ID を終了したジョブのプロセス ID として認識したまま
-<code>start</code> も <code>stop</code> もきかなくなってしまった、
-ということがありました。</p>
+<h2>いまさら聞けない Linux コンテナの基礎</h2>
 
-<p>ここまでは自分が書いた設定が間違いということで、
-別に良いのですが、
-その状態を解消する方法が upstart 自体には存在していなくて、
-<a href="http://irclogs.ubuntu.com/2011/01/31/%23upstart.html">http://irclogs.ubuntu.com/2011/01/31/%23upstart.html</a>
-で紹介されていた
-<a href="https://github.com/ion1/workaround-upstart-snafu">workaround-upstart-snafu</a>
-を使うしかありませんでした。</p>
-
-<p>このスクリプトは指定したプロセス ID になるまで fork してすぐに終了するのを繰り返して
-upstart に該当するプロセス ID のプロセス終了を認識させる、という仕組みのようです。</p>
-
-<p>このような無理矢理な方法ではなく upstart 自体にプロセスがまだ存在しているかどうかチェックし直す機能が存在するべきだと思いました。</p>
-
-<h2>Should-Start</h2>
-
-<p><code>/etc/init.d/</code> に置かれる
-<a href="https://wiki.debian.org/LSBInitScripts">LSB の Init スクリプト</a>
-には、起動時の順番 (依存関係) を指定するためのヘッダーを書くようになっています。</p>
-
-<p>この指定の中には <code>Should-Start</code> というインストールされていれば先に起動する必要があり、
-インストールされていなければ影響しない、ということが出来ます。</p>
-
-<p>たとえば、
-デーモンが依存しているデータベースが同じマシンに入っていれば
-先に起動している必要があるけれど、
-別のマシンのデータベースを使っているかもしれないので、
-インストールされていなくても良い、
-という用途が想定されているようです。</p>
-
-<p>具体的な例としては
-Ubuntu 13.10 の
-<code>zabbix-server-pgsql</code> 2.0.6+dfsg-1ubuntu2
-の
-<code>/etc/init.d/zabbix-server</code>
-では</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>### BEGIN INIT INFO
-</span><span class='line'># Provides:          zabbix-server
-</span><span class='line'># Required-Start:    $remote_fs $network
-</span><span class='line'># Required-Stop:     $remote_fs
-</span><span class='line'># Default-Start:     2 3 4 5
-</span><span class='line'># Default-Stop:      0 1 6
-</span><span class='line'># Should-Start:      postgresql
-</span><span class='line'># Should-Stop:       postgresql
-</span><span class='line'># Short-Description: Start zabbix-server daemon
-</span><span class='line'># Description: Start zabbix-server daemon (PostgreSQL)
-</span><span class='line'>### END INIT INFO</span></code></pre></td></tr></table></div></figure></notextile></div>
+<ul>
+<li><a href="https://speakerdeck.com/tenforward/jin-sarawen-kenai-linux-kontenafalseji-chu-2015-06-20">https://speakerdeck.com/tenforward/jin-sarawen-kenai-linux-kontenafalseji-chu-2015-06-20</a></li>
+<li>cgroup などの Linux コンテナの基礎についての話でした。</li>
+<li><a href="http://blog.kazuhooku.com/2015/05/jailing-chroot-jail.html" title="jailing - chroot jailを構築・運用するためのスクリプトを書いた">jailing - chroot jailを構築・運用するためのスクリプトを書いた</a></li>
+<li><a href="http://criu.org/">http://criu.org/</a></li>
+<li>overlayfs</li>
+</ul>
 
 
-<p>となっていて、
-<code>postgresql</code> より後に起動するようになっているのに、</p>
+<h2>いまさら聞けない Linux コンテナの基礎 (後半)</h2>
 
-<p><code>/etc/init/zabbix-server.conf</code>
-では</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>start on (filesystem and net-device-up IFACE=lo)
-</span><span class='line'>stop on runlevel [!2345]</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-
-<p>となっていて、起動順序の関係が不足しています。</p>
-
-<p>その結果、
-<code>zabbix-server</code> の方が <code>postgresql</code> より早く起動してしまって、
-データベースに接続できなくて起動に失敗する、
-ということが起きることがありました。
-(以前の Ubuntu で起きていた現象で Ubuntu 13.10 だと別の現象になっているかもしれないので、
-再度検証が必要そうです。)</p>
-
-<p>対策として
-<code>/etc/cron.d/local</code>
-に</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'># zabbix-server may fail to start before postgresql
-</span><span class='line'>@reboot root /usr/sbin/service zabbix-server start</span></code></pre></td></tr></table></div></figure></notextile></div>
+<ul>
+<li>いろいろと namespace のデモ</li>
+<li>kernel のバージョンの他にも unshare コマンドが入っている util-linux のバージョンも重要</li>
+<li>最近の systemd だと <code>mount --make-shared /</code> 相当になっている</li>
+<li>いろいろなコンテナ関係の紹介</li>
+<li><a href="https://github.com/mhiramat/mincs">https://github.com/mhiramat/mincs</a></li>
+<li>LXC のデモ (lxc-なんとか コマンド)</li>
+<li>LXD のデモ (lxc コマンド)</li>
+</ul>
 
 
-<p>という設定を置いていて、
-<code>cron</code> の <code>@reboot</code> が実行されるタイミングで起動し直すようにしています。</p>
+<h2>dokku を本番環境で使ってみた話</h2>
 
-<h2>まとめ</h2>
+<ul>
+<li>自分の発表でした。</li>
+<li><a href="http://slide.rabbit-shocker.org/authors/znz/dokku-201506/">http://slide.rabbit-shocker.org/authors/znz/dokku-201506/</a></li>
+<li>Heroku を使っていない理由は VPS の方が安い</li>
+<li>apache+passenger だと ruby や passenger のバージョンアップが辛かった</li>
+</ul>
 
-<p>起動時の処理ということで、
-実運用環境では検証しづらく、
-問題が起きてもマシンの再起動時に注意していれば良いだけなので、
-優先度が低くて、
-検証環境を用意してまで調査するという手間をかけるまでは出来ていないのですが、
-upstart はいろいろと sysvinit (insserv) に比べて劣化している部分があるようなので、
-困ります。</p>
 
-<p>主流が systemd に変わりつつあるという話もあるようなので、
-どうなっていくのかわかりませんが、
-init は OS の根幹に関わる部分なので、
-もっと安定して信頼性のあるものになってほしいと思いました。</p>
+<h2>VIMAGE を使ってみた話</h2>
+
+<ul>
+<li>whois owatan.jp</li>
+<li>ConoHa は 17 個の IPv6 アドレスが付いてくる</li>
+<li>epair</li>
+</ul>
+
+
+<h2>アンケート</h2>
+
+<ul>
+<li><a href="https://goo.gl/g75FNJ">https://goo.gl/g75FNJ</a></li>
+</ul>
+
 </div>
 
 <!-- zenback_body_end -->
@@ -253,12 +188,12 @@ init は OS の根幹に関わる部分なので、
 
 
 
-<time class='entry-date' datetime='2014-02-23T11:15:27+09:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>23</span><span class='date-suffix'>rd</span>, <span class='date-year'>2014</span></span> <span class='time'>11:15 am</span></time>
+<time class='entry-date' datetime='2015-06-20T14:30:00+09:00'><span class='date'><span class='date-month'>Jun</span> <span class='date-day'>20</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>2:30 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/upstart/'>upstart</a>
+    <a class='category' href='/blog/categories/event/'>event</a>, <a class='category' href='/blog/categories/lxcjp/'>lxcjp</a>
   
 </span>
 
@@ -285,10 +220,8 @@ init は OS の根幹に関わる部分なので、
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2014-02-23-boot2docker.html" title="Previous Post: boot2dockerでdockerを試す">&laquo; boot2dockerでdockerを試す</a>
+        <a class="basic-alignment left" href="/blog/2015-06-13-rubykansai67.html" title="Previous Post: 第67回 Ruby関西 勉強会に参加しました">&laquo; 第67回 Ruby関西 勉強会に参加しました</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2014-02-23-kansai-debian-meeting.html" title="Next Post: 第 81 回 関西 Debian 勉強会に参加した">第 81 回 関西 Debian 勉強会に参加した &raquo;</a>
       
     </p>
   </footer>
@@ -423,8 +356,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-02-23-upstart-has-missing-features.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2014-02-23-upstart-has-missing-features.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2015-06-20-ct-study-7-osaka.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2015-06-20-ct-study-7-osaka.html';
         var disqus_script = 'embed.js';
       
     (function () {
