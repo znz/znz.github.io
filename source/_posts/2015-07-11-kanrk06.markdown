@@ -1,0 +1,90 @@
+---
+layout: post
+title: "関西Ruby会議06に参加した"
+date: 2015-07-11 23:00:00 +0900
+comments: true
+categories: ruby event
+---
+[関西Ruby会議06](http://regional.rubykaigi.org/kansai06/ "関西Ruby会議06")
+と前夜祭に参加しました。
+
+<!--more-->
+
+メモはとらずに話を聞くことに集中していたので、この記事は感想がメインです。
+
+## 前夜祭
+
+matz への質問コーナーで `.emacs` の行数という質問の答えのときに行数だけではなく内容もざっと見せてもらえて、
+morq というのがちらっと目に付いたので、
+会場からの質問のタイミングでメールリーダーについてきいてみたところ、
+morq をまだ使っていて、最初は全文検索に Rast を使っていたという話から
+Hyper Estraier? (Estraier と言っていたかも?) に乗り換えて、
+さらに今は groonga を使っているということが聞けました。
+
+## 基調講演1
+
+matz の昔話が中心でした。
+
+PC-1211 は前夜祭のときの思い出のコンピューターは何かという質問の答えのときにも使われていた画像だったので、
+あの時に出した画像は、この講演の資料の画像だったのかと思いました。
+
+## スポンサーLT
+
+作っているサービスの宣伝は少なめで、技術的な話が多めでした。
+
+`wicked_pdf` の画像などのメソッドの切り替えは、みんな同じようなラッパーメソッドを作って使っていそうなので、もうちょっと `wicked_pdf` の方でなんとかできると良さそうなのに、と思いました。
+
+## 講演
+
+Rspec と Minitest の比較の話が一番印象に残りました。
+個人的には transpec で Rspec 2 から 3 に問題なく移行できたので、
+Rspec を使い続けていますが、
+Minitest も機会があれば使ってみようと思いました。
+
+## LT
+
+Ruby 関西のイベントとしては珍しくちゃんと5分で強制終了になるという形式でした。
+時間に収まらずに続きがきになる発表もあったので、後で発表資料を確認したいと思いました。
+
+## 基調講演2
+
+最後は笹田さんの Ruby 2.2 でのキーワード引数の速度改善の話でした。
+
+キーワード引数はまだほとんど使ったことがなかったので、
+話に出てきた Proc との組み合わせなどを
+`irb` で試してみると
+以下のような挙動でした。
+
+```
+% rbenv exec irb -r irb/completion --simple-prompt
+>> def foo(a, b, key1: 1, key2: 2);end
+=> :foo
+>> foo(1,2, key3: 3)
+ArgumentError: unknown keyword: key3
+	       from (irb):3
+	       from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `<main>'
+>> lambda{|a,b|p [a, b]}.call(1,2,3)
+ArgumentError: wrong number of arguments (3 for 2)
+	       from (irb):6:in `block in irb_binding'
+	       from (irb):6:in `call'
+	       from (irb):6
+	       from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `<main>'
+>> lambda{|a,b|p [a, b]}.call(1)
+ArgumentError: wrong number of arguments (1 for 2)
+	       from (irb):7:in `block in irb_binding'
+	       from (irb):7:in `call'
+	       from (irb):7
+	       from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `<main>'
+>> proc{|a,b|p [a, b]}.call(1)
+[1, nil]
+=> [1, nil]
+>> proc{|a,b|p [a, b]}.call(1,2,3)
+[1, 2]
+=> [1, 2]
+>> proc{|k1:1,k2:2|p [k1, k2]}.call(k3: 3)
+ArgumentError: unknown keyword: k3
+	       from (irb):10:in `call'
+	       from (irb):10
+	       from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `<main>'
+>>
+```
