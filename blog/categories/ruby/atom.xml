@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2015-06-20T22:06:24+09:00</updated>
+  <updated>2015-07-22T01:42:26+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,97 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[関西Ruby会議06に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2015-07-11-kanrk06.html"/>
+    <updated>2015-07-11T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/kanrk06</id>
+    <content type="html"><![CDATA[<p><a href="http://regional.rubykaigi.org/kansai06/" title="関西Ruby会議06">関西Ruby会議06</a>
+と前夜祭に参加しました。</p>
+
+<!--more-->
+
+
+<p>メモはとらずに話を聞くことに集中していたので、この記事は感想がメインです。</p>
+
+<h2>前夜祭</h2>
+
+<p>matz への質問コーナーで <code>.emacs</code> の行数という質問の答えのときに行数だけではなく内容もざっと見せてもらえて、
+morq というのがちらっと目に付いたので、
+会場からの質問のタイミングでメールリーダーについてきいてみたところ、
+morq をまだ使っていて、最初は全文検索に Rast を使っていたという話から
+Hyper Estraier? (Estraier と言っていたかも?) に乗り換えて、
+さらに今は groonga を使っているということが聞けました。</p>
+
+<h2>基調講演1</h2>
+
+<p>matz の昔話が中心でした。</p>
+
+<p>PC-1211 は前夜祭のときの思い出のコンピューターは何かという質問の答えのときにも使われていた画像だったので、
+あの時に出した画像は、この講演の資料の画像だったのかと思いました。</p>
+
+<h2>スポンサーLT</h2>
+
+<p>作っているサービスの宣伝は少なめで、技術的な話が多めでした。</p>
+
+<p><code>wicked_pdf</code> の画像などのメソッドの切り替えは、みんな同じようなラッパーメソッドを作って使っていそうなので、もうちょっと <code>wicked_pdf</code> の方でなんとかできると良さそうなのに、と思いました。</p>
+
+<h2>講演</h2>
+
+<p>Rspec と Minitest の比較の話が一番印象に残りました。
+個人的には transpec で Rspec 2 から 3 に問題なく移行できたので、
+Rspec を使い続けていますが、
+Minitest も機会があれば使ってみようと思いました。</p>
+
+<h2>LT</h2>
+
+<p>Ruby 関西のイベントとしては珍しくちゃんと5分で強制終了になるという形式でした。
+時間に収まらずに続きがきになる発表もあったので、後で発表資料を確認したいと思いました。</p>
+
+<h2>基調講演2</h2>
+
+<p>最後は笹田さんの Ruby 2.2 でのキーワード引数の速度改善の話でした。</p>
+
+<p>キーワード引数はまだほとんど使ったことがなかったので、
+話に出てきた Proc との組み合わせなどを
+<code>irb</code> で試してみると
+以下のような挙動でした。</p>
+
+<pre><code>% rbenv exec irb -r irb/completion --simple-prompt
+&gt;&gt; def foo(a, b, key1: 1, key2: 2);end
+=&gt; :foo
+&gt;&gt; foo(1,2, key3: 3)
+ArgumentError: unknown keyword: key3
+           from (irb):3
+           from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `&lt;main&gt;'
+&gt;&gt; lambda{|a,b|p [a, b]}.call(1,2,3)
+ArgumentError: wrong number of arguments (3 for 2)
+           from (irb):6:in `block in irb_binding'
+           from (irb):6:in `call'
+           from (irb):6
+           from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `&lt;main&gt;'
+&gt;&gt; lambda{|a,b|p [a, b]}.call(1)
+ArgumentError: wrong number of arguments (1 for 2)
+           from (irb):7:in `block in irb_binding'
+           from (irb):7:in `call'
+           from (irb):7
+           from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `&lt;main&gt;'
+&gt;&gt; proc{|a,b|p [a, b]}.call(1)
+[1, nil]
+=&gt; [1, nil]
+&gt;&gt; proc{|a,b|p [a, b]}.call(1,2,3)
+[1, 2]
+=&gt; [1, 2]
+&gt;&gt; proc{|k1:1,k2:2|p [k1, k2]}.call(k3: 3)
+ArgumentError: unknown keyword: k3
+           from (irb):10:in `call'
+           from (irb):10
+           from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `&lt;main&gt;'
+&gt;&gt;
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第67回 Ruby関西 勉強会に参加しました]]></title>
@@ -362,59 +453,6 @@
 <li>オクテットの話。</li>
 <li>等価性と非等価性の話。</li>
 <li>DFA=NFA (正規表現), DPDA (括弧の対応), NPDA (回文), チューリングマシン (<code>aaabbbccc</code> など)</li>
-</ul>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[アンダースタンディング コンピュテーション読書会　第1回(兵庫県)に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2015-02-28-amagasakirb.html"/>
-    <updated>2015-02-28T13:00:40+09:00</updated>
-    <id>http://blog.n-z.jp/blog/amagasakirb</id>
-    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/event/index/258232/" title="2月28日 アンダースタンディング コンピュテーション読書会　第1回(兵庫県)">2月28日 アンダースタンディング コンピュテーション読書会　第1回(兵庫県)</a>
-に参加しました。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=487311697X" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-<p>以下、今回のメモです。</p>
-
-<ul>
-<li><a href="https://github.com/cuzic/amagasakirb/wiki/2015.02.28-%E3%82%A2%E3%83%B3%E3%83%80%E3%83%BC%E3%82%B9%E3%82%BF%E3%83%B3%E3%83%87%E3%82%A3%E3%83%B3%E3%82%B0%E3%82%B3%E3%83%B3%E3%83%94%E3%83%A5%E3%83%86%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3-%E8%AA%AD%E6%9B%B8%E4%BC%9A-%E7%AC%AC1%E5%9B%9E" title="2015.02.28 アンダースタンディングコンピュテーション 読書会 第1回 · cuzic/amagasakirb Wiki">2015.02.28 アンダースタンディングコンピュテーション 読書会 第1回 · cuzic/amagasakirb Wiki</a></li>
-<li><code>-&gt;</code> が多い</li>
-<li><code>-&gt;</code> の後に括弧を書くかどうか (書く方が多数派だった)</li>
-<li><code>.call()</code> の <code>call</code> の省略を使うかどうか (省略しない方が多数派だった)</li>
-<li>多重代入の右辺の <code>[]</code> でくくって配列にしているのはあってもなくてもこの例だと同じ</li>
-<li><code>"#{obj}"</code> は <code>#to_s</code> が呼ばれる</li>
-<li><code>"abc" + obj</code> は <code>#to_str</code> が呼ばれる</li>
-<li><code>String(obj)</code> も <code>#to_str</code> が呼ばれる</li>
-<li>p.9 <code>*演算子</code> の演算子という表現が引っかかる</li>
-<li><code>Symbol#to_proc</code> と <code>Object#tap</code> は Rails (ActiveSupport 由来)</li>
-<li><code>class Point &lt; Struct.new(:x, :y)</code> の話</li>
-<li>名前が決まらなくて入らないメソッドがある話</li>
-<li>名前が決まって最近入った例としては <code>itself</code> (ruby 2.2 から)</li>
-<li>p.19 「Ruby 1.8.7 には文書としての仕様書が存在しており、ISO標準として受理されています (ISO/IEC 30170)」とあるが更新されることはないのかという話</li>
-<li>p.21 の図が難しい</li>
-<li>p.23 二重山括弧</li>
-<li>Option + Shift + K で入力できる Apple 記号の話</li>
-<li>p.51 の <code>DoNothing</code> がほぼ <code>itself</code></li>
-<li>簡約可能という言葉の意味が分かっていないとつらいのではないかという話 (簡約可能とはまだ処理することが残っていることで簡約不可能とはもう処理することが残っていない状態という話)</li>
-<li>Treetop, Parslet (オススメ), ANTLR</li>
-<li>Node.js, io.js, JXcore</li>
-<li>p.37 <code>DoNothing.new</code> の <code>.new</code> はあってもなくても良いのではないかという話</li>
-<li><a href="https://github.com/ko1/uc_ja" title="『アンダースタンディング コンピュテーション』のサポートリポジトリ">『アンダースタンディング コンピュテーション』のサポートリポジトリ</a></li>
-<li>yacc やコンパイラコンパイラの話</li>
-<li>ブログの引っ越し先の話</li>
-<li>markdown の方言の話</li>
-<li>次回は 4/4(土) に小田公民館の会議室が確保できなかったという理由で別の場所で。</li>
 </ul>
 
 ]]></content>

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: event | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/event/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2015-06-20T22:06:24+09:00</updated>
+  <updated>2015-07-22T01:42:26+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,97 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[関西Ruby会議06に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2015-07-11-kanrk06.html"/>
+    <updated>2015-07-11T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/kanrk06</id>
+    <content type="html"><![CDATA[<p><a href="http://regional.rubykaigi.org/kansai06/" title="関西Ruby会議06">関西Ruby会議06</a>
+と前夜祭に参加しました。</p>
+
+<!--more-->
+
+
+<p>メモはとらずに話を聞くことに集中していたので、この記事は感想がメインです。</p>
+
+<h2>前夜祭</h2>
+
+<p>matz への質問コーナーで <code>.emacs</code> の行数という質問の答えのときに行数だけではなく内容もざっと見せてもらえて、
+morq というのがちらっと目に付いたので、
+会場からの質問のタイミングでメールリーダーについてきいてみたところ、
+morq をまだ使っていて、最初は全文検索に Rast を使っていたという話から
+Hyper Estraier? (Estraier と言っていたかも?) に乗り換えて、
+さらに今は groonga を使っているということが聞けました。</p>
+
+<h2>基調講演1</h2>
+
+<p>matz の昔話が中心でした。</p>
+
+<p>PC-1211 は前夜祭のときの思い出のコンピューターは何かという質問の答えのときにも使われていた画像だったので、
+あの時に出した画像は、この講演の資料の画像だったのかと思いました。</p>
+
+<h2>スポンサーLT</h2>
+
+<p>作っているサービスの宣伝は少なめで、技術的な話が多めでした。</p>
+
+<p><code>wicked_pdf</code> の画像などのメソッドの切り替えは、みんな同じようなラッパーメソッドを作って使っていそうなので、もうちょっと <code>wicked_pdf</code> の方でなんとかできると良さそうなのに、と思いました。</p>
+
+<h2>講演</h2>
+
+<p>Rspec と Minitest の比較の話が一番印象に残りました。
+個人的には transpec で Rspec 2 から 3 に問題なく移行できたので、
+Rspec を使い続けていますが、
+Minitest も機会があれば使ってみようと思いました。</p>
+
+<h2>LT</h2>
+
+<p>Ruby 関西のイベントとしては珍しくちゃんと5分で強制終了になるという形式でした。
+時間に収まらずに続きがきになる発表もあったので、後で発表資料を確認したいと思いました。</p>
+
+<h2>基調講演2</h2>
+
+<p>最後は笹田さんの Ruby 2.2 でのキーワード引数の速度改善の話でした。</p>
+
+<p>キーワード引数はまだほとんど使ったことがなかったので、
+話に出てきた Proc との組み合わせなどを
+<code>irb</code> で試してみると
+以下のような挙動でした。</p>
+
+<pre><code>% rbenv exec irb -r irb/completion --simple-prompt
+&gt;&gt; def foo(a, b, key1: 1, key2: 2);end
+=&gt; :foo
+&gt;&gt; foo(1,2, key3: 3)
+ArgumentError: unknown keyword: key3
+           from (irb):3
+           from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `&lt;main&gt;'
+&gt;&gt; lambda{|a,b|p [a, b]}.call(1,2,3)
+ArgumentError: wrong number of arguments (3 for 2)
+           from (irb):6:in `block in irb_binding'
+           from (irb):6:in `call'
+           from (irb):6
+           from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `&lt;main&gt;'
+&gt;&gt; lambda{|a,b|p [a, b]}.call(1)
+ArgumentError: wrong number of arguments (1 for 2)
+           from (irb):7:in `block in irb_binding'
+           from (irb):7:in `call'
+           from (irb):7
+           from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `&lt;main&gt;'
+&gt;&gt; proc{|a,b|p [a, b]}.call(1)
+[1, nil]
+=&gt; [1, nil]
+&gt;&gt; proc{|a,b|p [a, b]}.call(1,2,3)
+[1, 2]
+=&gt; [1, 2]
+&gt;&gt; proc{|k1:1,k2:2|p [k1, k2]}.call(k3: 3)
+ArgumentError: unknown keyword: k3
+           from (irb):10:in `call'
+           from (irb):10
+           from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `&lt;main&gt;'
+&gt;&gt;
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第7回 コンテナ型仮想化の情報交換会＠大阪に参加しました]]></title>
@@ -313,132 +404,6 @@
 <li>GuruPlug Server のデモ</li>
 <li><a href="http://www.jspnet.co.jp/guruplug/tips.html#tips002" title="JTAGを利用しない接続方法">JTAGを利用しない接続方法</a></li>
 <li><a href="http://www.jspnet.co.jp/guruplug/tips.html#tips013" title="LEDを操作してみよう">LEDを操作してみよう</a></li>
-</ul>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第66回 Ruby関西 勉強会に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2015-04-25-rubykansai66.html"/>
-    <updated>2015-04-25T13:26:49+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubykansai66</id>
-    <content type="html"><![CDATA[<p><a href="https://rubykansai.doorkeeper.jp/events/21276" title="第66回 Ruby関西 勉強会">第66回 Ruby関西 勉強会</a>
-に参加したので、そのメモです。</p>
-
-<!--more-->
-
-
-<h2>勉強会自体の URL</h2>
-
-<ul>
-<li><a href="https://rubykansai.doorkeeper.jp/events/21276" title="doorkeeper">doorkeeper</a></li>
-<li><a href="https://github.com/rubykansai/workshops/wiki/Kansaiworkshop066" title="github">github</a></li>
-</ul>
-
-
-<h2>GitLab Flow</h2>
-
-<ul>
-<li><a href="https://speakerdeck.com/ogom/gres">https://speakerdeck.com/ogom/gres</a></li>
-<li>1 スクラムマスターに依頼</li>
-<li>2 イシュー登録</li>
-<li>3 エンジニアにアサイン</li>
-<li>4 見に行く</li>
-<li>5 コードに反映</li>
-<li>6 ブランチにコミット</li>
-<li>7 エビデンスを登録</li>
-<li>8 リモートブランチにあげる</li>
-<li>9 コードレビューのためのマージリクエスト (pull request)</li>
-<li>10 レビュアーをアサイン</li>
-<li>11 リクエストを見る</li>
-<li>12 コードを見る</li>
-<li>13 リファクタリング</li>
-<li>14 マージリクエストを評価</li>
-<li>15 スクラムマスターに知らせる</li>
-<li>16 スクラムマスターがイシューのエビデンスを確認する (コードはレビュアーが見ているので見ない)</li>
-<li>17 マージとリリース</li>
-<li>DDD.rb</li>
-<li><a href="http://kanban.leanlabs.io/">http://kanban.leanlabs.io/</a></li>
-<li><a href="https://gitlab.com/ogom/gres/blob/master/README.md">https://gitlab.com/ogom/gres/blob/master/README.md</a></li>
-</ul>
-
-
-<h2>ノンプログラマーが6ヶ月でWebサービスを作る課程で感じた事</h2>
-
-<ul>
-<li><a href="http://email.nyusureta.com/" title="ニュースレター配信システム Easy Follow E-mail System">ニュースレター配信システム Easy Follow E-mail System</a></li>
-<li><a href="http://www.slideshare.net/soheiyagi/ruby20150425" title="ノンプログラマーが6ヶ月でWebサービスを作る課程で感じた事／Ruby関西20150425">ノンプログラマーが6ヶ月でWebサービスを作る課程で感じた事／Ruby関西20150425</a></li>
-</ul>
-
-
-<h2>ハマるRuby</h2>
-
-<ul>
-<li>填まる／嵌まる (後者)</li>
-<li><code>and</code>/<code>or</code> と <code>&amp;&amp;</code>/<code>||</code> の優先順位が違う話</li>
-<li>代入演算子の返り値</li>
-<li><code>super</code> で参照される引数を書き換えたときの挙動の話</li>
-<li>定数のスコープの話</li>
-</ul>
-
-
-<h2>Ruby初級者向けレッスン</h2>
-
-<ul>
-<li>文字列</li>
-<li>Emacs で rcodetools</li>
-<li><a href="https://gist.github.com/higaki/8147246">https://gist.github.com/higaki/8147246</a></li>
-<li><a href="https://github.com/higaki/learn_ruby_kansai_66">https://github.com/higaki/learn_ruby_kansai_66</a></li>
-<li><a href="http://docs.ruby-lang.org/ja/">http://docs.ruby-lang.org/ja/</a></li>
-<li><a href="http://qa.atmarkit.co.jp/q/2026" title="Rubyのsize/length/countの違いは？">Rubyのsize/length/countの違いは？</a></li>
-</ul>
-
-
-<h3>解答例</h3>
-
-<p>演習問題の 1 と 3 をやってみた例です。</p>
-
-<pre><code class="ruby">    #!/usr/bin/env ruby
-    # coding: utf-8
-    s = &lt;&lt;EOF
-    文 字
-    文字
-    EOF
-    puts s.count("\n")
-    puts s.lines.size
-    puts s.scan(/(?u)\w+/).size
-    puts s.chars.size
-    puts s.bytes.size
-
-    # 試行錯誤例
-    p s.each_line.size # nil ??
-    p s.scan(/(?u:\w)+/).size
-    p s.scan(/[[:graph:]]+/).size
-    p s.each_char.size
-    p s.each_byte.size
-</code></pre>
-
-<p>ランダムに入れ替え。</p>
-
-<pre><code class="ruby">    cambridge.gsub!(/\b([^ ])([^ ]+?)([^ ])\b/) do
-      [$1, *$2.chars.shuffle, $3].join
-    end
-</code></pre>
-
-<p>動作確認用に reverse にしていた時。</p>
-
-<pre><code class="ruby">    cambridge.gsub!(/\b([^ ])([^ ]+?)([^ ])\b/) do
-      [$1, *$2.chars.reverse, $3].join
-    end
-</code></pre>
-
-<h2>告知</h2>
-
-<ul>
-<li><a href="https://rubykansai.doorkeeper.jp/events/23266" title="第67回 Ruby関西 勉強会">第67回 Ruby関西 勉強会</a> は 6 月 13 日 (土) に京都女子大学</li>
-<li><a href="http://rubykansai.github.io/kansai06/" title="関西Ruby会議06">関西Ruby会議06</a> は 7 月 11 日 (土) に新大阪 MOTEX 2 階ホール</li>
-<li>などなど</li>
 </ul>
 
 ]]></content>
