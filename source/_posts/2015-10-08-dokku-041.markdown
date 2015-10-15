@@ -1,0 +1,186 @@
+---
+layout: post
+title: "dokku 0.4.1 の新規インストールを試してみた"
+date: 2015-10-08 23:00:00 +0900
+comments: true
+categories: dokku docker ubuntu linux
+---
+仮想環境で dokku 0.4.1 の新規インストールを試しました。
+
+<!--more-->
+
+## 検証環境
+
+- Ubuntu 14.04.3 LTS (trusty) amd64
+- `docker` 1.8.2
+- `dokku` 0.4.1
+- [dokku-psql-single-container](https://github.com/Flink/dokku-psql-single-container "dokku-psql-single-container") プラグイン 0.4.0
+
+## dokku のインストール
+
+[Installing](https://github.com/progrium/dokku#installing "Installing") の手順通りにインストールしました。
+
+```
+wget https://raw.githubusercontent.com/progrium/dokku/v0.4.1/bootstrap.sh
+sudo DOKKU_TAG=v0.4.1 bash bootstrap.sh
+```
+
+`herokuish` の `postinst` で時間がかかります。
+
+## Web UI で初期設定
+
+debconf での設定は出てこなかったので Web ブラウザで `http://localhost` を開いて初期設定します。
+
+`Public Key` には `~/.ssh/id_rsa.pub` の内容をコピペしました。
+まだ鍵がなければ `ssh-keygen` で作成します。
+
+`Hostname` はインターネットに接続しているグローバル IP アドレスが入っていたので、 `dokku.me` に変更して、 `Use virtualhost naming for apps` にチェックを入れました。
+
+最後に `Finish Setup` を押して初期設定完了です。
+
+この設定で `http://アプリ名.dokku.me` のような URL で各アプリにアクセスできるようになります。(`dokku.me` は `dokku` のドキュメントに書いてあるドメインで、すべてのサブドメインでも `127.0.0.1` を返してくれるドメインのようです。)
+
+初期設定終了後はアプリをデプロイするまで `http://localhost` には繋がらなくなります。
+
+## node のサンプルアプリのデプロイ
+
+[Deploy an App](http://progrium.viewdocs.io/dokku/application-deployment/ "Deploy an App") に書いてあるように node のサンプルアプリをデプロイしてみます。
+
+ssh server が入っていなければ `sudo apt-get install openssh-server` でインストールしておきます。
+
+```
+git clone https://github.com/heroku/node-js-sample
+cd node-js-sample
+git remote add dokku dokku@dokku.me:node-js-app
+git push dokku master
+```
+
+push が成功したら `http://node-js-app.dokku.me` をブラウザで開きます。
+「`Hello World!`」と表示されれば成功です。
+
+`dokku` の内部の実体としては `/home/dokku/node-js-app` に入っています。
+
+デプロイ前の状態に戻すには
+
+```
+dokku apps:destroy node-js-app
+```
+
+で削除します。
+
+## dokku コマンドについて
+
+実行例はサーバー上でのものを示していますが、 `sudo dokku` で実行しているもの以外はサーバー上で `dokku サブコマンド` で実行しても、リモートから `ssh dokku@dokku.me サブコマンド` で実行しても、基本的には同じ意味になります。
+
+## グローバル設定の変更
+
+初期設定だと `curl` のタイムアウトが短すぎて、後の `ruby` のダウンロードのところでエラーになってしまうため、 `dokku config:set --global CURL_TIMEOUT=120` でタイムアウト時間を延ばします。
+
+    $ dokku config --global
+    ====> --global config vars
+    CURL_CONNECT_TIMEOUT: 5
+    CURL_TIMEOUT:         30
+    $ dokku config:set --global CURL_TIMEOUT=120
+    -----> Setting config vars
+           CURL_TIMEOUT: 120
+    $ dokku config --global
+    ====> --global config vars
+    CURL_CONNECT_TIMEOUT: 5
+    CURL_TIMEOUT:         120
+
+## dokku-psql-single-container プラグインのインストール
+
+```
+sudo dokku plugin:install https://github.com/Flink/dokku-psql-single-container
+```
+
+でプラグインをインストールします。
+postgres の docker イメージをダウンロードするため、ある程度時間がかかります。
+
+アンインストールは
+
+```
+sudo dokku plugin:uninstall psql-single-container
+```
+
+です。(`dokku-` はつかない。)
+
+### sshcommand の変更
+
+`sshcommand create` で `dokku-psql-single-container` プラグインが使っている `/home/dokku/.psql-sc/data` の [owner が変わってしまう問題がある](https://github.com/Flink/dokku-psql-single-container/issues/5)ため、
+
+```
+sudoedit /usr/local/bin/sshcommand
+```
+
+で
+
+```
+    chown -R $USER $USERHOME
+```
+
+を
+
+```
+    chown $USER $USERHOME
+    chown -R $USER $USERHOME/.ssh*
+```
+
+に変更しました。
+
+[公式の postgres plugin](https://github.com/dokku/dokku-postgres) だとこの変更は必要ありません。
+
+## Rails のサンプルアプリのデプロイの準備
+
+プラグインを使うため、 `git push` 前に準備しておきます。
+(今回試したアプリの場合は `git push` 後に `psql:create` しても大丈夫でした。)
+
+```
+dokku apps:create ruby-rails-app
+dokku psql:create ruby-rails-app
+```
+
+まず `apps:create` で `/home/dokku/ruby-rails-app` を作成してから、そのアプリと連携するデータベースを `psql:create` で作成します。
+
+## Rails のサンプルアプリのデプロイ
+
+Rails のサンプルアプリをデプロイします。
+
+```
+git clone https://github.com/heroku/ruby-rails-sample
+cd ruby-rails-sample
+git remote add dokku dokku@dokku.me:ruby-rails-app
+git push dokku master
+dokku run ruby-rails-app rake db:migrate
+```
+
+push が成功したら `http://ruby-rails-app.dokku.me` を開きます。
+`Hello World` と現在時刻が表示されていたら成功です。
+
+後から `psql:create` した場合は 500 エラーになるので、 `dokku ps:restart ruby-rails-app` で再起動すると環境変数の追加が反映されてなおります。
+
+## デプロイ前に戻す方法
+
+`dokku apps:destroy ruby-rails-app` で戻せるはずですが、データベースに接続中でデータベースの削除に失敗することがあります。
+
+失敗した場合は `dokku psql:admin_console` で接続して `\l` で削除できていないのを確認して、 ` DROP DATABASE db_ruby_rails_app;` で削除できました。
+
+## タイムゾーン変更
+
+タイムゾーンが UTC になっているので日本時間に変更しました。
+
+```
+dokku config:set ruby-rails-app TZ=Asia/Tokyo
+```
+
+## 初期設定した以外の Virtualhost を使う方法
+
+`node-js-sample` を再利用して、別ドメインでも見えるようにしてみました。
+
+```
+cd node-js-sample
+git remote add xip dokku@dokku.me:node-js-app.127.0.0.1.xip.io
+git push xip master
+```
+
+`http://node-js-app.127.0.0.1.xip.io` でも「`Hello World!`」が見えれば成功ですが、デフォルトホストとして見えているだけかもしれないので、 `index.js` の `'Hello World!'` 部分を変更して区別できるようにすると良いかもしれません。

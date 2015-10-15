@@ -1,0 +1,110 @@
+---
+layout: post
+title: "dokku 0.3 系から 0.4 系へのアップグレード"
+date: 2015-10-08 22:00:00 +0900
+comments: true
+categories: dokku docker ubuntu linux
+---
+dokku 0.3.26 から dokku 0.4.1 へのアップグレードをしました。
+
+<!--more-->
+
+## 検証環境
+
+- Ubuntu 14.04.3 LTS (trusty) amd64
+- `docker` 1.6.2 から 1.8.2
+- `dokku` 0.3.26 から 0.4.1
+- [dokku-psql-single-container](https://github.com/Flink/dokku-psql-single-container "dokku-psql-single-container") プラグイン 0.4.0
+
+## docker の apt レポジトリの変更
+
+[New Apt and Yum Repos](https://blog.docker.com/2015/07/new-apt-and-yum-repos/ "New Apt and Yum Repos") に書いてあるように `docker` 1.8 からは新しいレポジトリにしか存在しなくなったので、 `/etc/apt/sources.list.d/docker.list` を書き換える必要がありました。
+
+以下の手順で変更しました。
+
+```
+sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+sudoedit /etc/apt/sources.list.d/docker.list
+sudo apt-get update
+```
+
+`docker.list` は以下の内容に変更しました。
+
+```
+deb https://apt.dockerproject.org/repo ubuntu-trusty main
+```
+
+パッケージ名も `lxc-docker` で始まるものから `docker-engine` に変わっています。
+
+`dokku` 0.3.26 ではプラグインの互換性への配慮から `lxc-docker-1.6.2` にバージョンが固定されていましたが、制限が解除されています。
+
+具体的には `herokuish` 0.0.1 が `lxc-docker-1.6.2` に `Pre-Depends` していたのが、 `herokuish` 0.3.3 に上がって `docker-engine` への `Pre-Depends` に変わっています。
+
+## アップグレード
+
+### sshcommand の変更
+
+`sshcommand create` で `dokku-psql-single-container` プラグインが使っている `/home/dokku/.psql-sc/data` の [owner が変わってしまう問題がある](https://github.com/Flink/dokku-psql-single-container/issues/5)ため、
+
+```
+sudoedit /usr/local/bin/sshcommand
+```
+
+で
+
+```
+    chown -R $USER $USERHOME
+```
+
+を
+
+```
+    chown $USER $USERHOME
+    chown -R $USER $USERHOME/.ssh*
+```
+
+に変更しています。
+
+`sshcommand` パッケージが 0.0.1 から 0.1.0 に上がって変更が戻ってしまうので、 `sshcommand` だけ先にアップグレードして、再度変更しました。
+
+### パッケージのアップグレード
+
+```
+sudo apt-get dist-upgrade
+```
+
+でアップグレードしました。
+
+`dokku` や `herokuish` のアップグレードの他に、 `lxc-docker-1.6.2` が削除されて `docker-engine` と `plugn` が新しくインストールされます。
+
+初回インストールと同様に `herokuish` の postinst で時間がかかります。
+
+### 不要なパッケージの削除
+
+`lxc-docker-1.6.2` の完全削除と (`plugn` パッケージに置き換えられた) `pluginhook` パッケージの削除をしました。
+
+```
+sudo apt-get purge lxc-docker*
+sudo apt-get autoremove
+```
+
+### プラグインの再インストール
+
+`psql-sc` は移行措置で `/var/lib/dokku/plugins/available/psql-sc` に移動されているのですが、有効になっていない (`/var/lib/dokku/plugins/enabled` からのシンボリックリンクがない) ので、パスが違うこともあり、再度インストールして、古い方は消すことにしました。
+
+```
+sudo dokku plugin:install https://github.com/Flink/dokku-psql-single-container
+sudo dokku plugin:uninstall psql-sc
+```
+
+プラグインのインストールやアンインストールは root 権限が必要なため、サーバー上で `sudo dokku` で実行する必要がありました。
+
+PostgreSQL のプラグインとしては [dokku postgres (beta)](https://github.com/dokku/dokku-postgres "dokku postgres (beta)") もありますが、まだ beta なのとデータ移行の問題があるため、当面は同じプラグインを使い続けることにしました。
+
+## 再起動して反映
+
+```
+sudo reboot
+```
+
+で再起動して、問題なく動くことを確認しました。
