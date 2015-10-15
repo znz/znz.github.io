@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2015-09-07T00:06:56+09:00</updated>
+  <updated>2015-10-15T23:15:05+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,292 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[dokku 0.4.1 の新規インストールを試してみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2015-10-08-dokku-041.html"/>
+    <updated>2015-10-08T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/dokku-041</id>
+    <content type="html"><![CDATA[<p>仮想環境で dokku 0.4.1 の新規インストールを試しました。</p>
+
+<!--more-->
+
+
+<h2>検証環境</h2>
+
+<ul>
+<li>Ubuntu 14.04.3 LTS (trusty) amd64</li>
+<li><code>docker</code> 1.8.2</li>
+<li><code>dokku</code> 0.4.1</li>
+<li><a href="https://github.com/Flink/dokku-psql-single-container" title="dokku-psql-single-container">dokku-psql-single-container</a> プラグイン 0.4.0</li>
+</ul>
+
+
+<h2>dokku のインストール</h2>
+
+<p><a href="https://github.com/progrium/dokku#installing" title="Installing">Installing</a> の手順通りにインストールしました。</p>
+
+<pre><code>wget https://raw.githubusercontent.com/progrium/dokku/v0.4.1/bootstrap.sh
+sudo DOKKU_TAG=v0.4.1 bash bootstrap.sh
+</code></pre>
+
+<p><code>herokuish</code> の <code>postinst</code> で時間がかかります。</p>
+
+<h2>Web UI で初期設定</h2>
+
+<p>debconf での設定は出てこなかったので Web ブラウザで <code>http://localhost</code> を開いて初期設定します。</p>
+
+<p><code>Public Key</code> には <code>~/.ssh/id_rsa.pub</code> の内容をコピペしました。
+まだ鍵がなければ <code>ssh-keygen</code> で作成します。</p>
+
+<p><code>Hostname</code> はインターネットに接続しているグローバル IP アドレスが入っていたので、 <code>dokku.me</code> に変更して、 <code>Use virtualhost naming for apps</code> にチェックを入れました。</p>
+
+<p>最後に <code>Finish Setup</code> を押して初期設定完了です。</p>
+
+<p>この設定で <code>http://アプリ名.dokku.me</code> のような URL で各アプリにアクセスできるようになります。(<code>dokku.me</code> は <code>dokku</code> のドキュメントに書いてあるドメインで、すべてのサブドメインでも <code>127.0.0.1</code> を返してくれるドメインのようです。)</p>
+
+<p>初期設定終了後はアプリをデプロイするまで <code>http://localhost</code> には繋がらなくなります。</p>
+
+<h2>node のサンプルアプリのデプロイ</h2>
+
+<p><a href="http://progrium.viewdocs.io/dokku/application-deployment/" title="Deploy an App">Deploy an App</a> に書いてあるように node のサンプルアプリをデプロイしてみます。</p>
+
+<p>ssh server が入っていなければ <code>sudo apt-get install openssh-server</code> でインストールしておきます。</p>
+
+<pre><code>git clone https://github.com/heroku/node-js-sample
+cd node-js-sample
+git remote add dokku dokku@dokku.me:node-js-app
+git push dokku master
+</code></pre>
+
+<p>push が成功したら <code>http://node-js-app.dokku.me</code> をブラウザで開きます。
+「<code>Hello World!</code>」と表示されれば成功です。</p>
+
+<p><code>dokku</code> の内部の実体としては <code>/home/dokku/node-js-app</code> に入っています。</p>
+
+<p>デプロイ前の状態に戻すには</p>
+
+<pre><code>dokku apps:destroy node-js-app
+</code></pre>
+
+<p>で削除します。</p>
+
+<h2>dokku コマンドについて</h2>
+
+<p>実行例はサーバー上でのものを示していますが、 <code>sudo dokku</code> で実行しているもの以外はサーバー上で <code>dokku サブコマンド</code> で実行しても、リモートから <code>ssh dokku@dokku.me サブコマンド</code> で実行しても、基本的には同じ意味になります。</p>
+
+<h2>グローバル設定の変更</h2>
+
+<p>初期設定だと <code>curl</code> のタイムアウトが短すぎて、後の <code>ruby</code> のダウンロードのところでエラーになってしまうため、 <code>dokku config:set --global CURL_TIMEOUT=120</code> でタイムアウト時間を延ばします。</p>
+
+<pre><code>$ dokku config --global
+====&gt; --global config vars
+CURL_CONNECT_TIMEOUT: 5
+CURL_TIMEOUT:         30
+$ dokku config:set --global CURL_TIMEOUT=120
+-----&gt; Setting config vars
+       CURL_TIMEOUT: 120
+$ dokku config --global
+====&gt; --global config vars
+CURL_CONNECT_TIMEOUT: 5
+CURL_TIMEOUT:         120
+</code></pre>
+
+<h2>dokku-psql-single-container プラグインのインストール</h2>
+
+<pre><code>sudo dokku plugin:install https://github.com/Flink/dokku-psql-single-container
+</code></pre>
+
+<p>でプラグインをインストールします。
+postgres の docker イメージをダウンロードするため、ある程度時間がかかります。</p>
+
+<p>アンインストールは</p>
+
+<pre><code>sudo dokku plugin:uninstall psql-single-container
+</code></pre>
+
+<p>です。(<code>dokku-</code> はつかない。)</p>
+
+<h3>sshcommand の変更</h3>
+
+<p><code>sshcommand create</code> で <code>dokku-psql-single-container</code> プラグインが使っている <code>/home/dokku/.psql-sc/data</code> の <a href="https://github.com/Flink/dokku-psql-single-container/issues/5">owner が変わってしまう問題がある</a>ため、</p>
+
+<pre><code>sudoedit /usr/local/bin/sshcommand
+</code></pre>
+
+<p>で</p>
+
+<pre><code>    chown -R $USER $USERHOME
+</code></pre>
+
+<p>を</p>
+
+<pre><code>    chown $USER $USERHOME
+    chown -R $USER $USERHOME/.ssh*
+</code></pre>
+
+<p>に変更しました。</p>
+
+<p><a href="https://github.com/dokku/dokku-postgres">公式の postgres plugin</a> だとこの変更は必要ありません。</p>
+
+<h2>Rails のサンプルアプリのデプロイの準備</h2>
+
+<p>プラグインを使うため、 <code>git push</code> 前に準備しておきます。
+(今回試したアプリの場合は <code>git push</code> 後に <code>psql:create</code> しても大丈夫でした。)</p>
+
+<pre><code>dokku apps:create ruby-rails-app
+dokku psql:create ruby-rails-app
+</code></pre>
+
+<p>まず <code>apps:create</code> で <code>/home/dokku/ruby-rails-app</code> を作成してから、そのアプリと連携するデータベースを <code>psql:create</code> で作成します。</p>
+
+<h2>Rails のサンプルアプリのデプロイ</h2>
+
+<p>Rails のサンプルアプリをデプロイします。</p>
+
+<pre><code>git clone https://github.com/heroku/ruby-rails-sample
+cd ruby-rails-sample
+git remote add dokku dokku@dokku.me:ruby-rails-app
+git push dokku master
+dokku run ruby-rails-app rake db:migrate
+</code></pre>
+
+<p>push が成功したら <code>http://ruby-rails-app.dokku.me</code> を開きます。
+<code>Hello World</code> と現在時刻が表示されていたら成功です。</p>
+
+<p>後から <code>psql:create</code> した場合は 500 エラーになるので、 <code>dokku ps:restart ruby-rails-app</code> で再起動すると環境変数の追加が反映されてなおります。</p>
+
+<h2>デプロイ前に戻す方法</h2>
+
+<p><code>dokku apps:destroy ruby-rails-app</code> で戻せるはずですが、データベースに接続中でデータベースの削除に失敗することがあります。</p>
+
+<p>失敗した場合は <code>dokku psql:admin_console</code> で接続して <code>\l</code> で削除できていないのを確認して、 <code>DROP DATABASE db_ruby_rails_app;</code> で削除できました。</p>
+
+<h2>タイムゾーン変更</h2>
+
+<p>タイムゾーンが UTC になっているので日本時間に変更しました。</p>
+
+<pre><code>dokku config:set ruby-rails-app TZ=Asia/Tokyo
+</code></pre>
+
+<h2>初期設定した以外の Virtualhost を使う方法</h2>
+
+<p><code>node-js-sample</code> を再利用して、別ドメインでも見えるようにしてみました。</p>
+
+<pre><code>cd node-js-sample
+git remote add xip dokku@dokku.me:node-js-app.127.0.0.1.xip.io
+git push xip master
+</code></pre>
+
+<p><code>http://node-js-app.127.0.0.1.xip.io</code> でも「<code>Hello World!</code>」が見えれば成功ですが、デフォルトホストとして見えているだけかもしれないので、 <code>index.js</code> の <code>'Hello World!'</code> 部分を変更して区別できるようにすると良いかもしれません。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[dokku 0.3 系から 0.4 系へのアップグレード]]></title>
+    <link href="http://blog.n-z.jp/blog/2015-10-08-dokku-03-to-04.html"/>
+    <updated>2015-10-08T22:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/dokku-03-to-04</id>
+    <content type="html"><![CDATA[<p>dokku 0.3.26 から dokku 0.4.1 へのアップグレードをしました。</p>
+
+<!--more-->
+
+
+<h2>検証環境</h2>
+
+<ul>
+<li>Ubuntu 14.04.3 LTS (trusty) amd64</li>
+<li><code>docker</code> 1.6.2 から 1.8.2</li>
+<li><code>dokku</code> 0.3.26 から 0.4.1</li>
+<li><a href="https://github.com/Flink/dokku-psql-single-container" title="dokku-psql-single-container">dokku-psql-single-container</a> プラグイン 0.4.0</li>
+</ul>
+
+
+<h2>docker の apt レポジトリの変更</h2>
+
+<p><a href="https://blog.docker.com/2015/07/new-apt-and-yum-repos/" title="New Apt and Yum Repos">New Apt and Yum Repos</a> に書いてあるように <code>docker</code> 1.8 からは新しいレポジトリにしか存在しなくなったので、 <code>/etc/apt/sources.list.d/docker.list</code> を書き換える必要がありました。</p>
+
+<p>以下の手順で変更しました。</p>
+
+<pre><code>sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+sudoedit /etc/apt/sources.list.d/docker.list
+sudo apt-get update
+</code></pre>
+
+<p><code>docker.list</code> は以下の内容に変更しました。</p>
+
+<pre><code>deb https://apt.dockerproject.org/repo ubuntu-trusty main
+</code></pre>
+
+<p>パッケージ名も <code>lxc-docker</code> で始まるものから <code>docker-engine</code> に変わっています。</p>
+
+<p><code>dokku</code> 0.3.26 ではプラグインの互換性への配慮から <code>lxc-docker-1.6.2</code> にバージョンが固定されていましたが、制限が解除されています。</p>
+
+<p>具体的には <code>herokuish</code> 0.0.1 が <code>lxc-docker-1.6.2</code> に <code>Pre-Depends</code> していたのが、 <code>herokuish</code> 0.3.3 に上がって <code>docker-engine</code> への <code>Pre-Depends</code> に変わっています。</p>
+
+<h2>アップグレード</h2>
+
+<h3>sshcommand の変更</h3>
+
+<p><code>sshcommand create</code> で <code>dokku-psql-single-container</code> プラグインが使っている <code>/home/dokku/.psql-sc/data</code> の <a href="https://github.com/Flink/dokku-psql-single-container/issues/5">owner が変わってしまう問題がある</a>ため、</p>
+
+<pre><code>sudoedit /usr/local/bin/sshcommand
+</code></pre>
+
+<p>で</p>
+
+<pre><code>    chown -R $USER $USERHOME
+</code></pre>
+
+<p>を</p>
+
+<pre><code>    chown $USER $USERHOME
+    chown -R $USER $USERHOME/.ssh*
+</code></pre>
+
+<p>に変更しています。</p>
+
+<p><code>sshcommand</code> パッケージが 0.0.1 から 0.1.0 に上がって変更が戻ってしまうので、 <code>sshcommand</code> だけ先にアップグレードして、再度変更しました。</p>
+
+<h3>パッケージのアップグレード</h3>
+
+<pre><code>sudo apt-get dist-upgrade
+</code></pre>
+
+<p>でアップグレードしました。</p>
+
+<p><code>dokku</code> や <code>herokuish</code> のアップグレードの他に、 <code>lxc-docker-1.6.2</code> が削除されて <code>docker-engine</code> と <code>plugn</code> が新しくインストールされます。</p>
+
+<p>初回インストールと同様に <code>herokuish</code> の postinst で時間がかかります。</p>
+
+<h3>不要なパッケージの削除</h3>
+
+<p><code>lxc-docker-1.6.2</code> の完全削除と (<code>plugn</code> パッケージに置き換えられた) <code>pluginhook</code> パッケージの削除をしました。</p>
+
+<pre><code>sudo apt-get purge lxc-docker*
+sudo apt-get autoremove
+</code></pre>
+
+<h3>プラグインの再インストール</h3>
+
+<p><code>psql-sc</code> は移行措置で <code>/var/lib/dokku/plugins/available/psql-sc</code> に移動されているのですが、有効になっていない (<code>/var/lib/dokku/plugins/enabled</code> からのシンボリックリンクがない) ので、パスが違うこともあり、再度インストールして、古い方は消すことにしました。</p>
+
+<pre><code>sudo dokku plugin:install https://github.com/Flink/dokku-psql-single-container
+sudo dokku plugin:uninstall psql-sc
+</code></pre>
+
+<p>プラグインのインストールやアンインストールは root 権限が必要なため、サーバー上で <code>sudo dokku</code> で実行する必要がありました。</p>
+
+<p>PostgreSQL のプラグインとしては <a href="https://github.com/dokku/dokku-postgres" title="dokku postgres (beta)">dokku postgres (beta)</a> もありますが、まだ beta なのとデータ移行の問題があるため、当面は同じプラグインを使い続けることにしました。</p>
+
+<h2>再起動して反映</h2>
+
+<pre><code>sudo reboot
+</code></pre>
+
+<p>で再起動して、問題なく動くことを確認しました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[LILO ＆ 東海道らぐ・オフラインミーティング（2015/05/03）に参加しました]]></title>
@@ -510,356 +796,6 @@ Connection to 10.0.0.2 closed.
 
 <pre><code>ssh dokku config:set ruby-rails-app CURL_TIMEOUT=120
 </code></pre>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[owncloud-client が conflict した話]]></title>
-    <link href="http://blog.n-z.jp/blog/2015-01-29-owncloud-client.html"/>
-    <updated>2015-01-29T09:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/owncloud-client</id>
-    <content type="html"><![CDATA[<p>Debian 7 に <a href="https://owncloud.org/install/#desktop">ownCloud 公式の Desktop Client</a> を入れていたら、
-なぜか <code>owncloud-client</code> の 1.7.1 から 1.7.1 への更新が発生して <code>libqtkeychain0</code> と conflict していたので、
-<code>libqtkeychain0</code> をダウングレードして解決しました。</p>
-
-<!--more-->
-
-
-<h2>現象</h2>
-
-<p>このように競合が検出されました。</p>
-
-<pre><code>$ sudo aptitude full-upgrade -DV
-以下のパッケージが更新されます:
-  owncloud-client{b} [1.7.1 -&gt; 1.7.1] (競: libqtkeychain0)
-更新: 1 個、新規インストール: 0 個、削除: 0 個、保留: 0 個。
-700 k バイトのアーカイブを取得する必要があります。展開後に 0  バイトのディスク領域が新たに消費されます。
-以下のパッケージには満たされていない依存関係があります:
- owncloud-client : 競合: libqtkeychain0 (= 0.20140128) [0.20140128 が既にインストール済みです]
-以下のアクションでこれらの依存関係の問題は解決されます:
-
-     以下のパッケージを削除する:
-1)     libowncloudsync0
-2)     libqtkeychain0
-3)     owncloud-client
-4)     owncloud-client-l10n
-
-
-
-この解決方法を受け入れますか? [Y/n/q/?]q
-</code></pre>
-
-<h2>状況</h2>
-
-<p><code>apt-cache show</code> でみてみると <code>Conflicts: libqtkeychain0 (= 0.20140128)</code> と明示されていました。</p>
-
-<pre><code>$ apt-cache show owncloud-client
-Package: owncloud-client
-Version: 1.7.1
-Architecture: amd64
-Maintainer: Markus Rex &lt;msrex@owncloud.com&gt;
-Installed-Size: 1521
-Depends: libc6 (&gt;= 2.4), libgcc1 (&gt;= 1:4.1.1), libneon27, libowncloudsync0 (= 1.7.1), libqt4-dbus (&gt;= 4:4.5.3), libqt4-network (&gt;= 4:4.5.3), libqt4-sql (&gt;= 4:4.5.3), libqt4-xml (&gt;= 4:4.5.3), libqt4-xmlpatterns (&gt;= 4:4.5.3), libqtcore4 (&gt;= 4:4.8.0), libqtgui4 (&gt;= 4:4.7.0~beta1), libqtkeychain0, libqtwebkit4 (&gt;= 2.2.0), libsqlite3-0 (&gt;= 3.5.9), libstdc++6 (&gt;= 4.4.0), owncloud-client-l10n, libqt4-sql-sqlite
-Conflicts: libqtkeychain0 (= 0.20140128)
-Filename: ./amd64/owncloud-client_1.7.1_amd64.deb
-Size: 699596
-MD5sum: 23e2bfa2467b45fd9b70f3b946203b4b
-SHA1: 422242ad170ad1aa8d75587fe18a0469cc23ad72
-SHA256: 319e7253309835d028ec527ee9b3abea014c2db8b7edc5d3d57270ede9dbb5af
-Section: devel
-Priority: optional
-Multi-Arch: same
-Description: The ownCloud client is based on Mirall - github.com/owncloud/mirall
- .
- ownCloud client enables you to connect to your private
- ownCloud Server. With it you can create folders in your home
- directory, and keep the contents of those folders synced with your
- ownCloud server. Simply copy a file into the directory and the
- ownCloud client does the rest.
- .
- ownCloud gives your employees anytime, anywhere access to the files
- they need to get the job done, whether through this desktop application,
- our mobile apps, the web interface, or other WebDAV clients. With it,
- your employees can easily view and share documents and information
- critical to the business, in a secure, flexible and controlled
- architecture. You can easily extend ownCloud with plug-ins from the
- community, or that you build yourself to meet the requirements of
- your infrastructure and business.
- .
- ownCloud - Your Cloud, Your Data, Your Way!  www.owncloud.com
- .
- Authors
- =======
- Duncan Mac-Vicar P. &lt;duncan@kde.org&gt;
- Klaas Freitag &lt;freitag@owncloud.com&gt;
- Daniel Molkentin &lt;danimo@owncloud.com&gt;
-
-Package: owncloud-client
-Status: install ok installed
-Priority: optional
-Section: devel
-Installed-Size: 1521
-Maintainer: Markus Rex &lt;msrex@owncloud.com&gt;
-Architecture: amd64
-Multi-Arch: same
-Version: 1.7.1
-Depends: libc6 (&gt;= 2.4), libgcc1 (&gt;= 1:4.1.1), libneon27, libowncloudsync0 (= 1.7.1), libqt4-dbus (&gt;= 4:4.5.3), libqt4-network (&gt;= 4:4.5.3), libqt4-sql (&gt;= 4:4.5.3), libqt4-xml (&gt;= 4:4.5.3), libqt4-xmlpatterns (&gt;= 4:4.5.3), libqtcore4 (&gt;= 4:4.8.0), libqtgui4 (&gt;= 4:4.7.0~beta1), libqtkeychain0, libqtwebkit4 (&gt;= 2.2.0), libsqlite3-0 (&gt;= 3.5.9), libstdc++6 (&gt;= 4.4.0), owncloud-client-l10n, libqt4-sql-sqlite
-Description: The ownCloud client is based on Mirall - github.com/owncloud/mirall
- .
- ownCloud client enables you to connect to your private
- ownCloud Server. With it you can create folders in your home
- directory, and keep the contents of those folders synced with your
- ownCloud server. Simply copy a file into the directory and the
- ownCloud client does the rest.
- .
- ownCloud gives your employees anytime, anywhere access to the files
- they need to get the job done, whether through this desktop application,
- our mobile apps, the web interface, or other WebDAV clients. With it,
- your employees can easily view and share documents and information
- critical to the business, in a secure, flexible and controlled
- architecture. You can easily extend ownCloud with plug-ins from the
- community, or that you build yourself to meet the requirements of
- your infrastructure and business.
- .
- ownCloud - Your Cloud, Your Data, Your Way!  www.owncloud.com
- .
- Authors
- =======
- Duncan Mac-Vicar P. &lt;duncan@kde.org&gt;
- Klaas Freitag &lt;freitag@owncloud.com&gt;
- Daniel Molkentin &lt;danimo@owncloud.com&gt;
-
-Package: owncloud-client
-Version: 1.5.0+dfsg-4~bpo70+1
-Installed-Size: 1076
-Maintainer: ownCloud for Debian maintainers &lt;pkg-owncloud-maintainers@lists.alioth.debian.org&gt;
-Architecture: amd64
-Depends: libowncloudsync0 (= 1.5.0+dfsg-4~bpo70+1), libqt4-sql-sqlite, owncloud-client-l10n, libc6 (&gt;= 2.2.5), libgcc1 (&gt;= 1:4.1.1), libneon27-gnutls, libocsync0 (&gt;= 0.60.3), libqt4-dbus (&gt;= 4:4.5.3), libqt4-network (&gt;= 4:4.6.1), libqt4-sql (&gt;= 4:4.5.3), libqt4-xml (&gt;= 4:4.5.3), libqt4-xmlpatterns (&gt;= 4:4.5.3), libqtcore4 (&gt;= 4:4.8.0), libqtgui4 (&gt;= 4:4.7.0~beta1), libqtkeychain0 (&gt;= 0.1.0), libqtwebkit4 (&gt;= 2.1.0~2011week13), libstdc++6 (&gt;= 4.1.1)
-Description-en: folder synchronization with an ownCloud server - GUI
- The ownCloudSync system lets you always have your latest files wherever
- you are. Just specify one or more folders on the local machine to and a server
- to synchronize to. You can configure more computers to synchronize to the same
- server and any change to the files on one computer will silently and reliably
- flow across to every other.
- .
- owncloud-client provides the graphical client specialising in
- synchronizing with cloud storage provided by ownCloud.
-Homepage: http://owncloud.org/sync-clients/
-Description-md5: a754a2b9b06d1c7c880afd05aa24e101
-Section: net
-Priority: optional
-Filename: pool/main/o/owncloud-client/owncloud-client_1.5.0+dfsg-4~bpo70+1_amd64.deb
-Size: 417650
-MD5sum: 42a3f6355f9d5f5af0fb42141bee9ecf
-SHA1: 52102eacc1d81438cb88e639c09269484279dde1
-SHA256: d38e11879d6439dad97ff9f59449077193dbc89331bae8d2866b335ce8b41856
-</code></pre>
-
-<p>さらに <code>apt-cache policy</code> でどこからきたパッケージなのかみてみるとどちらも ownCloud 公式のパッケージだったように見えました。
-bpo (backports) のパッケージならバージョンが下がることはないはずなので、そう判断しました。</p>
-
-<pre><code>$ apt-cache policy owncloud-client
-owncloud-client:
-  インストールされているバージョン: 1.7.1
-  候補:               1.7.1
-  バージョンテーブル:
-     1.7.1 0
-        500 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  Packages
- *** 1.7.1 0
-        100 /var/lib/dpkg/status
-     1.5.0+dfsg-4~bpo70+1 0
-        100 http://ftp.jp.debian.org/debian/ wheezy-backports/main amd64 Packages
-$ apt-cache policy libqtkeychain0
-libqtkeychain0:
-  インストールされているバージョン: 0.20140128
-  候補:               0.20140128
-  バージョンテーブル:
- *** 0.20140128 0
-        100 /var/lib/dpkg/status
-     0.4 0
-        500 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  Packages
-     0.1.0-2~bpo70+1 0
-        100 http://ftp.jp.debian.org/debian/ wheezy-backports/main amd64 Packages
-</code></pre>
-
-<h2>対処</h2>
-
-<p><code>libqtkeychain0</code> を ownCloud 公式の 0.4.0 にダウングレードすることで解決しました。</p>
-
-<pre><code>$ sudo aptitude full-upgrade -DV
-以下のパッケージが更新されます:
-  owncloud-client{b} [1.7.1 -&gt; 1.7.1] (競: libqtkeychain0)
-更新: 1 個、新規インストール: 0 個、削除: 0 個、保留: 0 個。
-700 k バイトのアーカイブを取得する必要があります。展開後に 0  バイトのディスク領域が新たに消費されます。
-以下のパッケージには満たされていない依存関係があります:
- owncloud-client : 競合: libqtkeychain0 (= 0.20140128) [0.20140128 が既にインストール済みです]
-以下のアクションでこれらの依存関係の問題は解決されます:
-
-     以下のパッケージを削除する:
-1)     libowncloudsync0
-2)     libqtkeychain0
-3)     owncloud-client
-4)     owncloud-client-l10n
-
-
-
-この解決方法を受け入れますか? [Y/n/q/?]n
-以下のアクションでこれらの依存関係の問題は解決されます:
-
-     以下のパッケージを削除する:
-1)     owncloud-client
-2)     owncloud-client-l10n
-
-
-
-この解決方法を受け入れますか? [Y/n/q/?]n
-以下のアクションでこれらの依存関係の問題は解決されます:
-
-     以下のパッケージを現在のバージョンに一時固定する:
-1)     owncloud-client [1.7.1 (now)]
-
-
-
-この解決方法を受け入れますか? [Y/n/q/?]n
-以下のアクションでこれらの依存関係の問題は解決されます:
-
-     以下のパッケージをダウングレードする:
-1)     libqtkeychain0 [0.20140128 (now) -&gt; 0.4 (&lt;NULL&gt;)]
-
-
-
-この解決方法を受け入れますか? [Y/n/q/?]y
-以下のパッケージがダウングレードされます:
-  libqtkeychain0 [0.20140128 -&gt; 0.4]
-以下のパッケージが更新されます:
-  owncloud-client [1.7.1 -&gt; 1.7.1]
-更新: 1 個、新規インストール: 0 個、ダウングレード: 1 個、削除: 0 個、保留: 0 個。
-753 k バイトのアーカイブを取得する必要があります。展開後に 0  バイトのディスク領域が新たに消費されます。
-先に進みますか? [Y/n/?]
-取得: 1 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  libqtkeychain0 0.4 [53.4 kB]
-取得: 2 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  owncloud-client 1.7.1 [700 kB]
-Fetched 753 kB in 4秒 (156 kB/s)
-changelog を読んでいます... 完了
-dpkg: 警告: libqtkeychain0 を 0.20140128 から 0.4 にダウングレードしています
-(データベースを読み込んでいます ... 現在 124701 個のファイルとディレクトリがインストールされています。)
-libqtkeychain0 0.20140128 を (.../libqtkeychain0_0.4_amd64.deb で) 置換するための準備をしています ...
-libqtkeychain0 を展開し、置換しています...
-owncloud-client:amd64 1.7.1 を (.../owncloud-client_1.7.1_amd64.deb で) 置換するための準備をしています ...
-owncloud-client:amd64 を展開し、置換しています...
-man-db のトリガを処理しています ...
-libqtkeychain0 (0.4) を設定しています ...
-owncloud-client:amd64 (1.7.1) を設定しています ...
-
-現在の状態: 更新が 0 個 [-1]。
-</code></pre>
-
-<h2>対処後の状況</h2>
-
-<p><code>owncloud-client</code> パッケージも <code>libqtkeychain0</code> パッケージもどちらも ownCloud 公式のバージョンになって解決しました。</p>
-
-<pre><code>$ apt-cache policy owncloud-client
-owncloud-client:
-  インストールされているバージョン: 1.7.1
-  候補:               1.7.1
-  バージョンテーブル:
- *** 1.7.1 0
-        500 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  Packages
-        100 /var/lib/dpkg/status
-     1.5.0+dfsg-4~bpo70+1 0
-        100 http://ftp.jp.debian.org/debian/ wheezy-backports/main amd64 Packages
-$ apt-cache policy libqtkeychain0
-libqtkeychain0:
-  インストールされているバージョン: 0.4
-  候補:               0.4
-  バージョンテーブル:
- *** 0.4 0
-        500 http://download.opensuse.org/repositories/isv:/ownCloud:/desktop/Debian_7.0/  Packages
-        100 /var/lib/dpkg/status
-     0.1.0-2~bpo70+1 0
-        100 http://ftp.jp.debian.org/debian/ wheezy-backports/main amd64 Packages
-</code></pre>
-
-<h2>考察</h2>
-
-<p>Debian 公式パッケージならこういうときは
-<a href="https://www.debian.org/doc/debian-policy/ch-controlfields.html#s-f-Version">Version</a> に
-epoch をつけて解決しますが、
-ownCloud 公式は Debian からみると非公式パッケージになるので、
-将来の Debian のアップグレードの邪魔にならないように epoch を使わなかったため、
-こういう問題が起きたのでないかと推測しました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[LILO ＆ 東海道らぐのイベントに参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2015-01-10-lilo-tokaidolug.html"/>
-    <updated>2015-01-10T13:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/lilo-tokaidolug</id>
-    <content type="html"><![CDATA[<p><a href="http://lilo.doorkeeper.jp/events/18987" title="LILO ＆ 東海道らぐ・オフラインミーティング（2015/01/10） - LILO | Doorkeeper">LILO ＆ 東海道らぐ・オフラインミーティング（2015/01/10） - LILO | Doorkeeper</a>
-に参加しました。</p>
-
-<p>前回と同じくアンカンファレンス形式でした。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<p>今回のメモです。</p>
-
-<ul>
-<li>LILO と東海道らぐの紹介</li>
-<li>自己紹介から</li>
-<li>広島の Open Street Map の話</li>
-<li>F4map</li>
-<li>Raspberry Pi で Scratch</li>
-<li>ARM Chromebook で Linux
-
-<ul>
-<li>Chrouton</li>
-<li>ChrUbuntu</li>
-<li>続きは OSC 東京で。</li>
-</ul>
-</li>
-<li>opencocon</li>
-<li>UEFI
-
-<ul>
-<li>ESP パーティション (FAT32、大抵は512MB)</li>
-<li>32bit UEFI アプリを 64bit UEFI で使うことはできない</li>
-</ul>
-</li>
-<li>Linux 人口を増やしたい
-
-<ul>
-<li><a href="http://knowledge.sakura.ad.jp/" title="さくらのナレッジ">さくらのナレッジ</a></li>
-<li><a href="http://knowledge.sakura.ad.jp/beginner/2691/" title="「サーバーってなに？」～初心者でもよくわかる！VPSによるWebサーバー構築講座(1) - さくらのナレッジ">「サーバーってなに？」～初心者でもよくわかる！VPSによるWebサーバー構築講座(1) - さくらのナレッジ</a></li>
-<li><a href="http://vps.sakura.ad.jp/" title="さくらの VPS">さくらの VPS</a> が最近リニューアル</li>
-</ul>
-</li>
-<li>LibreOffice の話
-
-<ul>
-<li>CloudOn</li>
-<li><a href="http://ask.libreoffice.org/ja/questions/">http://ask.libreoffice.org/ja/questions/</a></li>
-</ul>
-</li>
-<li>日本語アナウンスをリリースする時に気をつけていること
-
-<ul>
-<li>Linux Mint Japan</li>
-</ul>
-</li>
-<li>etckeeper を openSUSE の公式リポジトリに入れたいぞ! Ver.2
-
-<ul>
-<li><a href="https://joeyh.name/code/etckeeper/">https://joeyh.name/code/etckeeper/</a> → <a href="http://etckeeper.branchable.com/">http://etckeeper.branchable.com/</a></li>
-<li><a href="https://ikiwiki.info/">https://ikiwiki.info/</a></li>
-<li><a href="https://build.opensuse.org/" title="openSUSE Build Service">openSUSE Build Service</a></li>
-</ul>
-</li>
-</ul>
-
 ]]></content>
   </entry>
   

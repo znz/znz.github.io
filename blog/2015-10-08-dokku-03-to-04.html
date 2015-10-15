@@ -5,13 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>zshのPATHの自動重複削除や余計なPATHの削除 - @znz blog</title>
+  <title>dokku 0.3 系から 0.4 系へのアップグレード - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="zshのPATHの自動重複削除や余計なPATHの削除 Dec 12th, 2013 12:00 am | Comments シェルの中から exec zsh をしたり、
-GNU screen や tmux を経由して間接的にシェルの中でシェルを開いたりするときに
-何も考えずに PATH &hellip;">
+  <meta name="description" content="dokku 0.3 系から 0.4 系へのアップグレード Oct 8th, 2015 10:00 pm | Comments dokku 0.3.26 から dokku 0.4.1 へのアップグレードをしました。 検証環境 Ubuntu 14.04.3 LTS (trusty) amd64 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -20,7 +18,7 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-12-12-zsh-cleanup-path.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2015-10-08-dokku-03-to-04.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -85,7 +83,7 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">zshのPATHの自動重複削除や余計なPATHの削除</h1>
+      <h1 class="entry-title">dokku 0.3 系から 0.4 系へのアップグレード</h1>
       
       <!-- zenback_title_end -->
       
@@ -97,7 +95,7 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
 
 
 
-<time class='entry-date' datetime='2013-12-12T00:00:00+09:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>12</span><span class='date-suffix'>th</span>, <span class='date-year'>2013</span></span> <span class='time'>12:00 am</span></time>
+<time class='entry-date' datetime='2015-10-08T22:00:00+09:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>8</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>10:00 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -110,89 +108,118 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p>シェルの中から <code>exec zsh</code> をしたり、
-GNU screen や tmux を経由して間接的にシェルの中でシェルを開いたりするときに
-何も考えずに <code>PATH</code> を追加していくと
-どんどん長くなっていってしまうと思います。</p>
-
-<p><code>bash</code> などでも使えるように汎用的にしようとすると自前で頑張らないといけないのですが、
-<code>zsh</code> では <code>zsh</code> 自体の機能で簡単に重複を防げます。</p>
-
-<p>また、パスに望ましくないものが入っていた時に削除する方法も紹介します。</p>
-
-<p>この投稿は
-<a href="http://qiita.com/advent-calendar/2013/zsh">zsh Advent Calendar 2013</a>
-の12日目の記事です。</p>
+<div class="entry-content"><p>dokku 0.3.26 から dokku 0.4.1 へのアップグレードをしました。</p>
 
 <!--more-->
 
 
-<h2>重複削除</h2>
+<h2>検証環境</h2>
 
-<p>重複を削除するには</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>typeset -U path PATH</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-
-<p>で <code>path</code> と <code>PATH</code> に unique という属性を付けて、
-重複した値の最初だけ残すようにします。</p>
-
-<p>ちゃんと設定できていれば、パラメーター展開の <code>t</code>
-で調べた時に <code>unique</code> が付いています。</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% echo ${(t)path}
-</span><span class='line'>array-unique-special
-</span><span class='line'>% echo ${(t)PATH}
-</span><span class='line'>scalar-export-unique-special</span></code></pre></td></tr></table></div></figure></notextile></div>
+<ul>
+<li>Ubuntu 14.04.3 LTS (trusty) amd64</li>
+<li><code>docker</code> 1.6.2 から 1.8.2</li>
+<li><code>dokku</code> 0.3.26 から 0.4.1</li>
+<li><a href="https://github.com/Flink/dokku-psql-single-container" title="dokku-psql-single-container">dokku-psql-single-container</a> プラグイン 0.4.0</li>
+</ul>
 
 
-<h2>望ましくないパスの削除</h2>
+<h2>docker の apt レポジトリの変更</h2>
 
-<p>ここでは 3 種類のパスを望ましくないものとして
-除外するようにしました。</p>
+<p><a href="https://blog.docker.com/2015/07/new-apt-and-yum-repos/" title="New Apt and Yum Repos">New Apt and Yum Repos</a> に書いてあるように <code>docker</code> 1.8 からは新しいレポジトリにしか存在しなくなったので、 <code>/etc/apt/sources.list.d/docker.list</code> を書き換える必要がありました。</p>
 
-<ol>
-<li><code>NULL_GLOB</code> の <code>N</code> を使って存在しないディレクトリを除外</li>
-<li><code>-/</code> を使ってシンボリックリンクの場合のリンク先もチェックした上でディレクトリのみ残す</li>
-<li><code>^W</code> で world-writable という実行ファイルのパスとしては危険なパーミッションになっているディレクトリを除外</li>
-<li><code>${^spec}</code> で <code>RC_EXPAND_PARAM</code> を有効にしてパスすべてに適用</li>
-</ol>
-
-
-<p>Glob Qualifiers なので <code>PATH</code> ではなく <code>path</code> を使ってフィルタリングしています。</p>
+<p>以下の手順で変更しました。</p>
 
 <div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>path=(
-</span><span class='line'>    # allow directories only (-/)
-</span><span class='line'>    # reject world-writable directories (^W)
-</span><span class='line'>    ${^path}(N-/^W)
-</span><span class='line'>)</span></code></pre></td></tr></table></div></figure></notextile></div>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+</span><span class='line'>sudoedit /etc/apt/sources.list.d/docker.list
+</span><span class='line'>sudo apt-get update</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<h2><code>RC_EXPAND_PARAM</code> (2014-07-16 追記)</h2>
+<p><code>docker.list</code> は以下の内容に変更しました。</p>
 
-<p><code>$path(N)</code> のような書き方だと配列の最後の要素だけ <code>(N)</code> が適用されていて、
-意図した挙動になっていませんでした。</p>
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>deb https://apt.dockerproject.org/repo ubuntu-trusty main</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<p><code>${^path}(N)</code> のように <code>RC_EXPAND_PARAM</code> を使うとすべての要素に Glob Qualifiers が付きます。</p>
 
-<p>これを応用して <code>${^fpath}/cdr(N)</code> で <code>fpath</code> から <code>cdr</code> コマンドを探したり、
-<code>${^path}/ruby(N)</code> で <code>path</code> 全部から <code>ruby</code> コマンドを <code>type -a ruby</code> のように全部探したりできます。</p>
+<p>パッケージ名も <code>lxc-docker</code> で始まるものから <code>docker-engine</code> に変わっています。</p>
 
-<h2>まとめ</h2>
+<p><code>dokku</code> 0.3.26 ではプラグインの互換性への配慮から <code>lxc-docker-1.6.2</code> にバージョンが固定されていましたが、制限が解除されています。</p>
 
-<p>ここでは <code>zsh</code> の機能を活用してコマンド探索パス <code>PATH</code> をきれいにする方法を紹介しました。</p>
+<p>具体的には <code>herokuish</code> 0.0.1 が <code>lxc-docker-1.6.2</code> に <code>Pre-Depends</code> していたのが、 <code>herokuish</code> 0.3.3 に上がって <code>docker-engine</code> への <code>Pre-Depends</code> に変わっています。</p>
 
-<p>これを応用して <code>fpath</code> などにも適用してみると良いかもしれません。</p>
+<h2>アップグレード</h2>
+
+<h3>sshcommand の変更</h3>
+
+<p><code>sshcommand create</code> で <code>dokku-psql-single-container</code> プラグインが使っている <code>/home/dokku/.psql-sc/data</code> の <a href="https://github.com/Flink/dokku-psql-single-container/issues/5">owner が変わってしまう問題がある</a>ため、</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudoedit /usr/local/bin/sshcommand</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>で</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>chown -R $USER $USERHOME</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>を</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>chown $USER $USERHOME
+</span><span class='line'>chown -R $USER $USERHOME/.ssh*</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>に変更しています。</p>
+
+<p><code>sshcommand</code> パッケージが 0.0.1 から 0.1.0 に上がって変更が戻ってしまうので、 <code>sshcommand</code> だけ先にアップグレードして、再度変更しました。</p>
+
+<h3>パッケージのアップグレード</h3>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo apt-get dist-upgrade</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>でアップグレードしました。</p>
+
+<p><code>dokku</code> や <code>herokuish</code> のアップグレードの他に、 <code>lxc-docker-1.6.2</code> が削除されて <code>docker-engine</code> と <code>plugn</code> が新しくインストールされます。</p>
+
+<p>初回インストールと同様に <code>herokuish</code> の postinst で時間がかかります。</p>
+
+<h3>不要なパッケージの削除</h3>
+
+<p><code>lxc-docker-1.6.2</code> の完全削除と (<code>plugn</code> パッケージに置き換えられた) <code>pluginhook</code> パッケージの削除をしました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo apt-get purge lxc-docker*
+</span><span class='line'>sudo apt-get autoremove</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h3>プラグインの再インストール</h3>
+
+<p><code>psql-sc</code> は移行措置で <code>/var/lib/dokku/plugins/available/psql-sc</code> に移動されているのですが、有効になっていない (<code>/var/lib/dokku/plugins/enabled</code> からのシンボリックリンクがない) ので、パスが違うこともあり、再度インストールして、古い方は消すことにしました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo dokku plugin:install https://github.com/Flink/dokku-psql-single-container
+</span><span class='line'>sudo dokku plugin:uninstall psql-sc</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>プラグインのインストールやアンインストールは root 権限が必要なため、サーバー上で <code>sudo dokku</code> で実行する必要がありました。</p>
+
+<p>PostgreSQL のプラグインとしては <a href="https://github.com/dokku/dokku-postgres" title="dokku postgres (beta)">dokku postgres (beta)</a> もありますが、まだ beta なのとデータ移行の問題があるため、当面は同じプラグインを使い続けることにしました。</p>
+
+<h2>再起動して反映</h2>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo reboot</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>で再起動して、問題なく動くことを確認しました。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -211,12 +238,12 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
 
 
 
-<time class='entry-date' datetime='2013-12-12T00:00:00+09:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>12</span><span class='date-suffix'>th</span>, <span class='date-year'>2013</span></span> <span class='time'>12:00 am</span></time>
+<time class='entry-date' datetime='2015-10-08T22:00:00+09:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>8</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>10:00 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/zsh/'>zsh</a>
+    <a class='category' href='/blog/categories/docker/'>docker</a>, <a class='category' href='/blog/categories/dokku/'>dokku</a>, <a class='category' href='/blog/categories/linux/'>linux</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>
   
 </span>
 
@@ -243,10 +270,10 @@ GNU screen や tmux を経由して間接的にシェルの中でシェルを開
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-12-11-mailman-strip-dkim-signature.html" title="Previous Post: mailmanでDKIM-Signatureヘッダを削除する">&laquo; mailmanでDKIM-Signatureヘッダを削除する</a>
+        <a class="basic-alignment left" href="/blog/2015-09-05-llrr.html" title="Previous Post: llrrに参加した">&laquo; llrrに参加した</a>
       
       
-        <a class="basic-alignment right" href="/blog/2013-12-13-docker-custom-base-image.html" title="Next Post: dockerのカスタムベースイメージを作成する">dockerのカスタムベースイメージを作成する &raquo;</a>
+        <a class="basic-alignment right" href="/blog/2015-10-08-dokku-041.html" title="Next Post: dokku 0.4.1 の新規インストールを試してみた">dokku 0.4.1 の新規インストールを試してみた &raquo;</a>
       
     </p>
   </footer>
@@ -381,8 +408,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-12-12-zsh-cleanup-path.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-12-12-zsh-cleanup-path.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2015-10-08-dokku-03-to-04.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2015-10-08-dokku-03-to-04.html';
         var disqus_script = 'embed.js';
       
     (function () {

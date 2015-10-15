@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2015-09-07T00:06:56+09:00</updated>
+  <updated>2015-10-15T23:15:05+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,292 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[dokku 0.4.1 の新規インストールを試してみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2015-10-08-dokku-041.html"/>
+    <updated>2015-10-08T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/dokku-041</id>
+    <content type="html"><![CDATA[<p>仮想環境で dokku 0.4.1 の新規インストールを試しました。</p>
+
+<!--more-->
+
+
+<h2>検証環境</h2>
+
+<ul>
+<li>Ubuntu 14.04.3 LTS (trusty) amd64</li>
+<li><code>docker</code> 1.8.2</li>
+<li><code>dokku</code> 0.4.1</li>
+<li><a href="https://github.com/Flink/dokku-psql-single-container" title="dokku-psql-single-container">dokku-psql-single-container</a> プラグイン 0.4.0</li>
+</ul>
+
+
+<h2>dokku のインストール</h2>
+
+<p><a href="https://github.com/progrium/dokku#installing" title="Installing">Installing</a> の手順通りにインストールしました。</p>
+
+<pre><code>wget https://raw.githubusercontent.com/progrium/dokku/v0.4.1/bootstrap.sh
+sudo DOKKU_TAG=v0.4.1 bash bootstrap.sh
+</code></pre>
+
+<p><code>herokuish</code> の <code>postinst</code> で時間がかかります。</p>
+
+<h2>Web UI で初期設定</h2>
+
+<p>debconf での設定は出てこなかったので Web ブラウザで <code>http://localhost</code> を開いて初期設定します。</p>
+
+<p><code>Public Key</code> には <code>~/.ssh/id_rsa.pub</code> の内容をコピペしました。
+まだ鍵がなければ <code>ssh-keygen</code> で作成します。</p>
+
+<p><code>Hostname</code> はインターネットに接続しているグローバル IP アドレスが入っていたので、 <code>dokku.me</code> に変更して、 <code>Use virtualhost naming for apps</code> にチェックを入れました。</p>
+
+<p>最後に <code>Finish Setup</code> を押して初期設定完了です。</p>
+
+<p>この設定で <code>http://アプリ名.dokku.me</code> のような URL で各アプリにアクセスできるようになります。(<code>dokku.me</code> は <code>dokku</code> のドキュメントに書いてあるドメインで、すべてのサブドメインでも <code>127.0.0.1</code> を返してくれるドメインのようです。)</p>
+
+<p>初期設定終了後はアプリをデプロイするまで <code>http://localhost</code> には繋がらなくなります。</p>
+
+<h2>node のサンプルアプリのデプロイ</h2>
+
+<p><a href="http://progrium.viewdocs.io/dokku/application-deployment/" title="Deploy an App">Deploy an App</a> に書いてあるように node のサンプルアプリをデプロイしてみます。</p>
+
+<p>ssh server が入っていなければ <code>sudo apt-get install openssh-server</code> でインストールしておきます。</p>
+
+<pre><code>git clone https://github.com/heroku/node-js-sample
+cd node-js-sample
+git remote add dokku dokku@dokku.me:node-js-app
+git push dokku master
+</code></pre>
+
+<p>push が成功したら <code>http://node-js-app.dokku.me</code> をブラウザで開きます。
+「<code>Hello World!</code>」と表示されれば成功です。</p>
+
+<p><code>dokku</code> の内部の実体としては <code>/home/dokku/node-js-app</code> に入っています。</p>
+
+<p>デプロイ前の状態に戻すには</p>
+
+<pre><code>dokku apps:destroy node-js-app
+</code></pre>
+
+<p>で削除します。</p>
+
+<h2>dokku コマンドについて</h2>
+
+<p>実行例はサーバー上でのものを示していますが、 <code>sudo dokku</code> で実行しているもの以外はサーバー上で <code>dokku サブコマンド</code> で実行しても、リモートから <code>ssh dokku@dokku.me サブコマンド</code> で実行しても、基本的には同じ意味になります。</p>
+
+<h2>グローバル設定の変更</h2>
+
+<p>初期設定だと <code>curl</code> のタイムアウトが短すぎて、後の <code>ruby</code> のダウンロードのところでエラーになってしまうため、 <code>dokku config:set --global CURL_TIMEOUT=120</code> でタイムアウト時間を延ばします。</p>
+
+<pre><code>$ dokku config --global
+====&gt; --global config vars
+CURL_CONNECT_TIMEOUT: 5
+CURL_TIMEOUT:         30
+$ dokku config:set --global CURL_TIMEOUT=120
+-----&gt; Setting config vars
+       CURL_TIMEOUT: 120
+$ dokku config --global
+====&gt; --global config vars
+CURL_CONNECT_TIMEOUT: 5
+CURL_TIMEOUT:         120
+</code></pre>
+
+<h2>dokku-psql-single-container プラグインのインストール</h2>
+
+<pre><code>sudo dokku plugin:install https://github.com/Flink/dokku-psql-single-container
+</code></pre>
+
+<p>でプラグインをインストールします。
+postgres の docker イメージをダウンロードするため、ある程度時間がかかります。</p>
+
+<p>アンインストールは</p>
+
+<pre><code>sudo dokku plugin:uninstall psql-single-container
+</code></pre>
+
+<p>です。(<code>dokku-</code> はつかない。)</p>
+
+<h3>sshcommand の変更</h3>
+
+<p><code>sshcommand create</code> で <code>dokku-psql-single-container</code> プラグインが使っている <code>/home/dokku/.psql-sc/data</code> の <a href="https://github.com/Flink/dokku-psql-single-container/issues/5">owner が変わってしまう問題がある</a>ため、</p>
+
+<pre><code>sudoedit /usr/local/bin/sshcommand
+</code></pre>
+
+<p>で</p>
+
+<pre><code>    chown -R $USER $USERHOME
+</code></pre>
+
+<p>を</p>
+
+<pre><code>    chown $USER $USERHOME
+    chown -R $USER $USERHOME/.ssh*
+</code></pre>
+
+<p>に変更しました。</p>
+
+<p><a href="https://github.com/dokku/dokku-postgres">公式の postgres plugin</a> だとこの変更は必要ありません。</p>
+
+<h2>Rails のサンプルアプリのデプロイの準備</h2>
+
+<p>プラグインを使うため、 <code>git push</code> 前に準備しておきます。
+(今回試したアプリの場合は <code>git push</code> 後に <code>psql:create</code> しても大丈夫でした。)</p>
+
+<pre><code>dokku apps:create ruby-rails-app
+dokku psql:create ruby-rails-app
+</code></pre>
+
+<p>まず <code>apps:create</code> で <code>/home/dokku/ruby-rails-app</code> を作成してから、そのアプリと連携するデータベースを <code>psql:create</code> で作成します。</p>
+
+<h2>Rails のサンプルアプリのデプロイ</h2>
+
+<p>Rails のサンプルアプリをデプロイします。</p>
+
+<pre><code>git clone https://github.com/heroku/ruby-rails-sample
+cd ruby-rails-sample
+git remote add dokku dokku@dokku.me:ruby-rails-app
+git push dokku master
+dokku run ruby-rails-app rake db:migrate
+</code></pre>
+
+<p>push が成功したら <code>http://ruby-rails-app.dokku.me</code> を開きます。
+<code>Hello World</code> と現在時刻が表示されていたら成功です。</p>
+
+<p>後から <code>psql:create</code> した場合は 500 エラーになるので、 <code>dokku ps:restart ruby-rails-app</code> で再起動すると環境変数の追加が反映されてなおります。</p>
+
+<h2>デプロイ前に戻す方法</h2>
+
+<p><code>dokku apps:destroy ruby-rails-app</code> で戻せるはずですが、データベースに接続中でデータベースの削除に失敗することがあります。</p>
+
+<p>失敗した場合は <code>dokku psql:admin_console</code> で接続して <code>\l</code> で削除できていないのを確認して、 <code>DROP DATABASE db_ruby_rails_app;</code> で削除できました。</p>
+
+<h2>タイムゾーン変更</h2>
+
+<p>タイムゾーンが UTC になっているので日本時間に変更しました。</p>
+
+<pre><code>dokku config:set ruby-rails-app TZ=Asia/Tokyo
+</code></pre>
+
+<h2>初期設定した以外の Virtualhost を使う方法</h2>
+
+<p><code>node-js-sample</code> を再利用して、別ドメインでも見えるようにしてみました。</p>
+
+<pre><code>cd node-js-sample
+git remote add xip dokku@dokku.me:node-js-app.127.0.0.1.xip.io
+git push xip master
+</code></pre>
+
+<p><code>http://node-js-app.127.0.0.1.xip.io</code> でも「<code>Hello World!</code>」が見えれば成功ですが、デフォルトホストとして見えているだけかもしれないので、 <code>index.js</code> の <code>'Hello World!'</code> 部分を変更して区別できるようにすると良いかもしれません。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[dokku 0.3 系から 0.4 系へのアップグレード]]></title>
+    <link href="http://blog.n-z.jp/blog/2015-10-08-dokku-03-to-04.html"/>
+    <updated>2015-10-08T22:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/dokku-03-to-04</id>
+    <content type="html"><![CDATA[<p>dokku 0.3.26 から dokku 0.4.1 へのアップグレードをしました。</p>
+
+<!--more-->
+
+
+<h2>検証環境</h2>
+
+<ul>
+<li>Ubuntu 14.04.3 LTS (trusty) amd64</li>
+<li><code>docker</code> 1.6.2 から 1.8.2</li>
+<li><code>dokku</code> 0.3.26 から 0.4.1</li>
+<li><a href="https://github.com/Flink/dokku-psql-single-container" title="dokku-psql-single-container">dokku-psql-single-container</a> プラグイン 0.4.0</li>
+</ul>
+
+
+<h2>docker の apt レポジトリの変更</h2>
+
+<p><a href="https://blog.docker.com/2015/07/new-apt-and-yum-repos/" title="New Apt and Yum Repos">New Apt and Yum Repos</a> に書いてあるように <code>docker</code> 1.8 からは新しいレポジトリにしか存在しなくなったので、 <code>/etc/apt/sources.list.d/docker.list</code> を書き換える必要がありました。</p>
+
+<p>以下の手順で変更しました。</p>
+
+<pre><code>sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+sudoedit /etc/apt/sources.list.d/docker.list
+sudo apt-get update
+</code></pre>
+
+<p><code>docker.list</code> は以下の内容に変更しました。</p>
+
+<pre><code>deb https://apt.dockerproject.org/repo ubuntu-trusty main
+</code></pre>
+
+<p>パッケージ名も <code>lxc-docker</code> で始まるものから <code>docker-engine</code> に変わっています。</p>
+
+<p><code>dokku</code> 0.3.26 ではプラグインの互換性への配慮から <code>lxc-docker-1.6.2</code> にバージョンが固定されていましたが、制限が解除されています。</p>
+
+<p>具体的には <code>herokuish</code> 0.0.1 が <code>lxc-docker-1.6.2</code> に <code>Pre-Depends</code> していたのが、 <code>herokuish</code> 0.3.3 に上がって <code>docker-engine</code> への <code>Pre-Depends</code> に変わっています。</p>
+
+<h2>アップグレード</h2>
+
+<h3>sshcommand の変更</h3>
+
+<p><code>sshcommand create</code> で <code>dokku-psql-single-container</code> プラグインが使っている <code>/home/dokku/.psql-sc/data</code> の <a href="https://github.com/Flink/dokku-psql-single-container/issues/5">owner が変わってしまう問題がある</a>ため、</p>
+
+<pre><code>sudoedit /usr/local/bin/sshcommand
+</code></pre>
+
+<p>で</p>
+
+<pre><code>    chown -R $USER $USERHOME
+</code></pre>
+
+<p>を</p>
+
+<pre><code>    chown $USER $USERHOME
+    chown -R $USER $USERHOME/.ssh*
+</code></pre>
+
+<p>に変更しています。</p>
+
+<p><code>sshcommand</code> パッケージが 0.0.1 から 0.1.0 に上がって変更が戻ってしまうので、 <code>sshcommand</code> だけ先にアップグレードして、再度変更しました。</p>
+
+<h3>パッケージのアップグレード</h3>
+
+<pre><code>sudo apt-get dist-upgrade
+</code></pre>
+
+<p>でアップグレードしました。</p>
+
+<p><code>dokku</code> や <code>herokuish</code> のアップグレードの他に、 <code>lxc-docker-1.6.2</code> が削除されて <code>docker-engine</code> と <code>plugn</code> が新しくインストールされます。</p>
+
+<p>初回インストールと同様に <code>herokuish</code> の postinst で時間がかかります。</p>
+
+<h3>不要なパッケージの削除</h3>
+
+<p><code>lxc-docker-1.6.2</code> の完全削除と (<code>plugn</code> パッケージに置き換えられた) <code>pluginhook</code> パッケージの削除をしました。</p>
+
+<pre><code>sudo apt-get purge lxc-docker*
+sudo apt-get autoremove
+</code></pre>
+
+<h3>プラグインの再インストール</h3>
+
+<p><code>psql-sc</code> は移行措置で <code>/var/lib/dokku/plugins/available/psql-sc</code> に移動されているのですが、有効になっていない (<code>/var/lib/dokku/plugins/enabled</code> からのシンボリックリンクがない) ので、パスが違うこともあり、再度インストールして、古い方は消すことにしました。</p>
+
+<pre><code>sudo dokku plugin:install https://github.com/Flink/dokku-psql-single-container
+sudo dokku plugin:uninstall psql-sc
+</code></pre>
+
+<p>プラグインのインストールやアンインストールは root 権限が必要なため、サーバー上で <code>sudo dokku</code> で実行する必要がありました。</p>
+
+<p>PostgreSQL のプラグインとしては <a href="https://github.com/dokku/dokku-postgres" title="dokku postgres (beta)">dokku postgres (beta)</a> もありますが、まだ beta なのとデータ移行の問題があるため、当面は同じプラグインを使い続けることにしました。</p>
+
+<h2>再起動して反映</h2>
+
+<pre><code>sudo reboot
+</code></pre>
+
+<p>で再起動して、問題なく動くことを確認しました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[さくらのVPSにdokkuをdebで入れてみた]]></title>
@@ -435,228 +721,6 @@ Live イメージ作成の時に proxy を使ってくれるようになりま�
 <p>live-build は cache ディレクトリにも、かなりキャッシュしてくれるのですが、
 <code>apt-get update</code> などの proxy じゃないとキャッシュしにくいものもあるので、
 どんな場合でもダウンロード量削減に役に立ちそうだと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Vagrant の Multi VM 間で IPsec を試した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-06-04-vagrant-multivm-ipsec-demo.html"/>
-    <updated>2014-06-04T22:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/vagrant-multivm-ipsec-demo</id>
-    <content type="html"><![CDATA[<p>正常に IPsec の暗号化通信ができているときの racoon のログなどを確認したかったので、
-Vagrant と ansible で
-IPsec で通信できる Multi VM 環境を作ってみました。</p>
-
-<p>playbook は
-<a href="https://github.com/znz/ansible-playbook-ipsec-demo">https://github.com/znz/ansible-playbook-ipsec-demo</a>
-で公開しています。</p>
-
-<!--more-->
-
-
-<h2>動作確認バージョン</h2>
-
-<ul>
-<li>ホスト OS : Mac OS X 10.9.3</li>
-<li>VirtualBox 4.3.12</li>
-<li>Vagrant 1.6.3</li>
-<li>ansible 1.6.2</li>
-<li>ゲスト OS : Ubuntu 14.04 &times; 2</li>
-</ul>
-
-
-<p>Ubuntu は <a href="https://cloud-images.ubuntu.com/vagrant/trusty/current/">https://cloud-images.ubuntu.com/vagrant/trusty/current/</a> のイメージを使ったので、
-daily build の状態によっては動作が変わっているかもしれません。</p>
-
-<h2>ホストオンリーネットワーク</h2>
-
-<p>使った後は</p>
-
-<ul>
-<li>vboxnet1 (192.168.50.1/24)</li>
-<li>vboxnet2 (192.168.11.1/24)</li>
-<li>vboxnet3 (192.168.12.1/24)</li>
-</ul>
-
-
-<p>が勝手に増えているので、不要なら設定で消しておくと良いと思います。</p>
-
-<p>ネットワークとしては以下のように 192.168.50.0/24 の部分で IPsec 接続をして、
-192.168.11.11 と 192.168.12.12 をつなぐ、という感じにしています。
-デフォルトの eth0 は外部への接続用としてそのままにしています。</p>
-
-<pre><code>192.168.11.11 (vm1:eth2)
-       |
-192.168.50.11 (vm1:eth1)
-       |
-192.168.50.12 (vm2:eth1)
-       |
-192.168.12.12 (vm2:eth2)
-</code></pre>
-
-<h2>準備</h2>
-
-<p>Usage に書いてあるように準備をしておきます。
-先日作った <code>ja_jp</code> role は git submodule にしているので、</p>
-
-<pre><code>% git submodule init
-% git submodule update
-</code></pre>
-
-<p>で取得する必要があります。</p>
-
-<h2>試し方</h2>
-
-<p><code>vagrant up</code>
-すると
-<code>/etc/ipsec-tools.conf</code>
-と
-<code>/etc/racoon/racoon.conf</code>
-に設定が入っている状態になっているので、
-始点アドレスを指定して
-<code>ipsec-tools.conf</code>
-に設定した経路を通るようにパケットを送ると
-IPsec VPN がつながります。</p>
-
-<p><code>ping</code> コマンドのように直接始点アドレスを指定するオプションがない場合は
-<code>ping -I eth2 192.168.12.12</code> のように network interface で指定すれば
-良いようです。</p>
-
-<h2>動作確認</h2>
-
-<p>以下のコマンドの出力が接続前後で変わることが確認できます。</p>
-
-<ul>
-<li><code>racoonctl -l show-sa isakmp</code></li>
-<li><code>racoonctl -l show-sa ipsec</code></li>
-<li><code>setkey -D</code></li>
-</ul>
-
-
-<p>racoon のログが <code>/var/log/syslog</code> に大量に出ているのを確認できます。
-(<code>racoon.conf</code> で <code>log debug</code> にしているため)</p>
-
-<h2>tshark でパケットの確認</h2>
-
-<p><code>tshark</code> パッケージをインストールした後、
-<code>sudo dpkg-reconfigure wireshark-common</code>
-で一般ユーザーでも実行を許可するようにして、
-実行を許可するユーザーを <code>wireshark</code> に追加します。</p>
-
-<p>グループの追加を反映するためにログインし直すと、
-<code>tshark -i eth1 -V 'port 500'</code>
-などでパケットの確認ができるようになります。</p>
-
-<p>暗号化されていて詳細はわかりませんが、
-UDP の 500 番ポートで Informational のパケットが流れていることが確認できました。</p>
-
-<p>GUI の wireshark の方では
-<a href="http://ask.wireshark.org/questions/12019/how-can-i-decrypt-ikev1-andor-esp-packets">http://ask.wireshark.org/questions/12019/how-can-i-decrypt-ikev1-andor-esp-packets</a>
-の方法で暗号化の解除もできるようです。</p>
-
-<p>syslog の方で racoon のログをみると、
-DPD のパケットらしいということが確認できました。
-syslog の方で <code>#012</code> となっている部分がありますが、
-これは rsyslog で改行が変換されたたもので空白として無視すれば良くて、
-例えば</p>
-
-<pre><code>Jun  4 17:54:43 vm1 racoon: DEBUG: new cookie:#012831d33d46e20f8e6
-Jun  4 17:54:43 vm1 racoon: DEBUG: final encryption key computed:
-Jun  4 17:54:43 vm1 racoon: DEBUG: #012932d361f fc62ddc2 6164d513 d40d211f b7364166 232cf490
-</code></pre>
-
-<p>というログなら cookie は <code>831d33d46e20f8e6</code> になります。</p>
-
-<p>鍵は <code>932d361ffc62ddc26164d513d40d211fb7364166232cf490</code> になると思ったのですが、
-これを
-Edit -> Preferences -> Protocols -> ISAKMP -> IKEv1 Decryption Table:
-に設定すれば良いはずなのですが、試したところ decrypt されなかったので、
-あっているのかどうかはわかりませんでした。
-cookie の方は他のログなどで確認できたので、あっているはずです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[ansible で sources.list を変更したときに update する]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-05-20-ansible-apt-update.html"/>
-    <updated>2014-05-20T22:58:09+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ansible-apt-update</id>
-    <content type="html"><![CDATA[<p>ansible で sources.list を変更したときには
-<code>apt-get update</code> して欲しいのですが、
-毎回 update するのは無駄なので、
-<code>cache_valid_time</code> も使いたいと思ったので対処しました。</p>
-
-<!--more-->
-
-
-<h2>動作確認バージョン</h2>
-
-<ul>
-<li>クライアント側 ansible 1.6.1</li>
-<li>サーバー側 Ubuntu 12.04</li>
-</ul>
-
-
-<h2>やり方</h2>
-
-<p><code>register</code> で <code>template</code> モジュールの実行結果を受けて、
-<code>changed</code> の場合は必ず update して、
-<code>skipped</code> の場合は <code>cache_valid_time</code> で情報が古い場合だけ update するようにしました。</p>
-
-<p></p>
-
-<pre><code class="yaml tasks/apt.yaml">---
-- template: src=sources.list.{{ ansible_distribution }}.j2 dest=/etc/apt/sources.list owner=root group=root mode=0644
-  register: apt_sources_list
-- apt: update_cache=yes
-  when: apt_sources_list|changed
-- apt: update_cache=yes cache_valid_time=3600
-  when: apt_sources_list|skipped
-</code></pre>
-
-<p></p>
-
-<h2>テンプレートの内容</h2>
-
-<p>gathering facts で設定された <code>ansible_distribution_release</code> と
-<code>vars</code> で別途設定した <code>apt_ubuntu_uri</code> と <code>apt_ubuntu_components</code> を
-組み合わせて apt-line を作るようにしました。</p>
-
-<p>Ubuntu をインストールした直後の sources.list では
-components が別の行になっているものもあったのですが、
-1 行にまとめました。</p>
-
-<p>
-&#8220;`text templates/sources.list.Ubuntu.j2
-deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }} {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
-deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }} {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
-deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-updates {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
-deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-updates {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}</p>
-
-<h1>deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-backports {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}</h1>
-
-<h1>deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-backports {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}</h1>
-
-<p>deb <a href="http://security.ubuntu.com/ubuntu">http://security.ubuntu.com/ubuntu</a> {{ ansible_distribution_release }}-security {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
-deb-src <a href="http://security.ubuntu.com/ubuntu">http://security.ubuntu.com/ubuntu</a> {{ ansible_distribution_release }}-security {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
-&#8220;`
-</p>
-
-<p><code>backports</code> は使っていなかったのでコメントアウトしていますが、
-<code>deb-src</code> も使わないのならコメントアウトしておいても良さそうです。</p>
-
-<h2><code>vars</code> の内容</h2>
-
-<p>例として jaist ミラーを使うようにしました。</p>
-
-<pre><code class="yaml vars/main.yml">---
-apt_ubuntu_uri: "http://ftp.jaist.ac.jp/pub/Linux/ubuntu/"
-apt_ubuntu_components:
-- main
-- restricted
-- universe
-- multiverse
-</code></pre>
 ]]></content>
   </entry>
   
