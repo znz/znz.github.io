@@ -5,14 +5,13 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>ansibleで1ファイルのplaybookからroleに書き換える方法 - @znz blog</title>
+  <title>10月25日 型システム入門読書会　第１回(大阪府)に参加しました - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="ansibleで1ファイルのplaybookからroleに書き換える方法 Dec 7th, 2013 1:30 am | Comments ansible を使い始める時は1個の YAML ファイルから始めるのが手軽で良いのですが、
-それを
-Best Practices
-にあわせて roles &hellip;">
+  <meta name="description" content="10月25日 型システム入門読書会　第１回(大阪府)に参加しました Oct 25th, 2015 12:53 pm | Comments 10月25日 型システム入門読書会　第１回(大阪府)
+に参加しました。
+今回は第 1 章から 7 章でした。 以下、今回のメモです。 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -21,7 +20,7 @@ Best Practices
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-12-07-ansible-split-playbook.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2015-10-25-amagasakirb.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -86,7 +85,7 @@ Best Practices
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">ansibleで1ファイルのplaybookからroleに書き換える方法</h1>
+      <h1 class="entry-title">10月25日 型システム入門読書会　第１回(大阪府)に参加しました</h1>
       
       <!-- zenback_title_end -->
       
@@ -98,7 +97,7 @@ Best Practices
 
 
 
-<time class='entry-date' datetime='2013-12-07T01:30:00+09:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>7</span><span class='date-suffix'>th</span>, <span class='date-year'>2013</span></span> <span class='time'>1:30 am</span></time>
+<time class='entry-date' datetime='2015-10-25T12:53:29+09:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>25</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>12:53 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -111,137 +110,40 @@ Best Practices
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><code>ansible</code> を使い始める時は1個の YAML ファイルから始めるのが手軽で良いのですが、
-それを
-<a href="http://www.ansibleworks.com/docs/playbooks_best_practices.html">Best Practices</a>
-にあわせて <code>roles</code> にしようとしたら、
-対応がよくわからなくて困ったことがあったので、
-書き換え方をまとめてみました。</p>
-
-<p>この投稿は
-<a href="http://qiita.com/advent-calendar/2013/ansible">Ansible Advent Calendar 2013</a>
-の7日目の記事です。</p>
+<div class="entry-content"><p><a href="http://kokucheese.com/event/index/345134/" title="10月25日 型システム入門読書会　第１回(大阪府)">10月25日 型システム入門読書会　第１回(大阪府)</a>
+に参加しました。
+今回は第 1 章から 7 章でした。</p>
 
 <!--more-->
 
 
-<p>全体的に動作確認せずに以前使ったファイルを参考にしているので、
-間違っている部分があるかもしれないので、その時はコメントなどで
-教えてください。</p>
-
-<h2>1個の YAML ファイルの例</h2>
-
-<p>仮にこんな感じの <code>playbook.yml</code> があって、
-これを <code>roles</code> にしたいとします。</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>playbook.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">hosts</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">foo-servers</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">sudo</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">yes</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">vars</span><span class="p-Indicator">:</span>
-</span><span class='line'>    <span class="l-Scalar-Plain">adminuser</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">vagrant</span>
-</span><span class='line'>    <span class="l-Scalar-Plain">admingroup</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">vagrant</span>
-</span><span class='line'>    <span class="l-Scalar-Plain">homedir</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/vagrant</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">tasks</span><span class="p-Indicator">:</span>
-</span><span class='line'>  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">apt</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">pkg=zsh</span>
-</span><span class='line'>  <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">src=zshrc dest=/.zshrc owner= group= mode=0644</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<p>この例だとテンプレートファイルとして <code>zshrc</code> ファイルが同じディレクトリにあります。</p>
+<div style="float:right">
+<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4274069117" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
+</div>
 
-<h2>role 作成</h2>
 
-<p>ここでは role の名前を <code>zsh</code> にしてみます。</p>
-
-<p>元の <code>playbook.yml</code> と <code>zshrc</code> から</p>
+<p>以下、今回のメモです。</p>
 
 <ul>
-<li><code>roles/zsh/tasks/main.yml</code></li>
-<li><code>roles/zsh/templates/zshrc.j2</code></li>
-<li><code>roles/zsh/vars/main.yml</code></li>
+<li>序文に章の依存関係のグラフがある</li>
+<li>まず 3 章まで読む</li>
+<li>紙の書籍を持っている人がいない (重いから)</li>
+<li><a href="http://lotusrb.org/" title="Lotus - A complete web framework for Ruby">Lotus - A complete web framework for Ruby</a></li>
+<li>この本に関するブログ記事は意外と多い</li>
+<li><a href="http://www.cis.upenn.edu/~bcpierce/tapl">http://www.cis.upenn.edu/~bcpierce/tapl</a></li>
+<li>of info の info はエラーの時用のファイル情報</li>
+<li>ラムダ計算のところはアンダースタンディングコンピュテーションでやったこととほぼ同じ</li>
+<li><a href="http://ocaml.jp/">http://ocaml.jp/</a></li>
+<li>F# は OCaml ベース</li>
+<li>OCaml で実装されているもの : Haxe, Coq</li>
+<li>XMonad の話</li>
+<li>Emacs の話</li>
+<li>Phoenix Framework の話</li>
+<li>次回は 12/27 に第 8 章からの予定</li>
 </ul>
 
-
-<p>というファイルを作ることになります。</p>
-
-<h3>roles/zsh/tasks/main.yml</h3>
-
-<p>処理のメイン部分です。
-元の <code>playbook.yml</code> の <code>tasks</code> の値に並んでいた配列を書きます。</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>roles/zsh/tasks/main.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">apt</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">pkg=zsh</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">src=zshrc dest=/.zshrc owner= group= mode=0644</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-
-<h3>roles/zsh/templates/zshrc.j2</h3>
-
-<p>元の <code>zshrc</code> にテンプレート言語がわかりやすいように拡張子を付けただけです。
-例として <code>zshrc</code> にしてしまっただけなので、
-本来は <code>vars</code> の変数を展開したいファイルを使うことになると思います。</p>
-
-<h3>roles/zsh/vars/main.yml</h3>
-
-<p>変数の定義部分です。
-元の <code>playbook.yml</code> の <code>vars</code> の値に並んでいたハッシュを書きます。</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>roles/zsh/vars/main.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
-</span><span class='line'><span class="l-Scalar-Plain">adminuser</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">vagrant</span>
-</span><span class='line'><span class="l-Scalar-Plain">admingroup</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">vagrant</span>
-</span><span class='line'><span class="l-Scalar-Plain">homedir</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">/home/vagrant</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-
-<h3>その他</h3>
-
-<p><code>roles/zsh/handleres/main.yml</code> のような他のディレクトリとか、
-<code>main.yml</code> 以外の <code>*.yml</code> ファイルとかも使えますが、
-一番最初の段階では知らなくても大丈夫だと思います。</p>
-
-<h2>読み込み側 YAML</h2>
-
-<p><code>vars</code> とか <code>tasks</code> を並べていた代わりに <code>roles</code> を使って読み込みます。
-今回は <code>role: zsh</code> で読み込みましたが、他の例をみてみると <code>- zsh</code> だけでも良さそうです。</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>site.yml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='yaml'><span class='line'><span class="nn">---</span>
-</span><span class='line'><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">hosts</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">foo-servers</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">sudo</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">yes</span>
-</span><span class='line'>  <span class="l-Scalar-Plain">roles</span><span class="p-Indicator">:</span>
-</span><span class='line'>    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">role</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">zsh</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-
-<h2>まとめ</h2>
-
-<p>最初は 1ファイルの YAML と roles 用の複数の YAML ファイルの対応関係がよくわからなくて、
-roles 用の YAML ファイルに余計な記述をしてここでは使えないと言われたりして悩んだので、
-簡単に対応関係をまとめてみました。</p>
-
-<p>まだあまり使っていなくて、間違っているところもあるかもしれないので、
-何かあればコメントなどで指摘してもらえるとありがたいです。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -260,12 +162,12 @@ roles 用の YAML ファイルに余計な記述をしてここでは使えな�
 
 
 
-<time class='entry-date' datetime='2013-12-07T01:30:00+09:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>7</span><span class='date-suffix'>th</span>, <span class='date-year'>2013</span></span> <span class='time'>1:30 am</span></time>
+<time class='entry-date' datetime='2015-10-25T12:53:29+09:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>25</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>12:53 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/ansible/'>ansible</a>
+    <a class='category' href='/blog/categories/amagasakirb/'>amagasakirb</a>, <a class='category' href='/blog/categories/event/'>event</a>
   
 </span>
 
@@ -292,10 +194,8 @@ roles 用の YAML ファイルに余計な記述をしてここでは使えな�
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-12-06-checkrestart.html" title="Previous Post: debian-goodiesのcheckrestartで再起動が必要なプロセスを調べる">&laquo; debian-goodiesのcheckrestartで再起動が必要なプロセスを調べる</a>
+        <a class="basic-alignment left" href="/blog/2015-10-08-dokku-041.html" title="Previous Post: dokku 0.4.1 の新規インストールを試してみた">&laquo; dokku 0.4.1 の新規インストールを試してみた</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-12-08-cache-digests.html" title="Next Post: Rail 3.2でcache_digestsを使ってみた">Rail 3.2でcache_digestsを使ってみた &raquo;</a>
       
     </p>
   </footer>
@@ -430,8 +330,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-12-07-ansible-split-playbook.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-12-07-ansible-split-playbook.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2015-10-25-amagasakirb.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2015-10-25-amagasakirb.html';
         var disqus_script = 'embed.js';
       
     (function () {
