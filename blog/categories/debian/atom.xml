@@ -4,7 +4,7 @@
   <title><![CDATA[Category: debian | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/debian/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2015-10-25T20:18:12+09:00</updated>
+  <updated>2015-10-26T23:13:44+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,126 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[RubyLive ISO イメージを更新した]]></title>
+    <link href="http://blog.n-z.jp/blog/2015-10-26-rubylive-builder.html"/>
+    <updated>2015-10-26T21:44:33+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubylive-builder</id>
+    <content type="html"><![CDATA[<p><a href="http://blog.n-z.jp/blog/2014-07-13-build-rubylive-on-vm.html" title="RubyLiveを仮想環境で作成">RubyLiveを仮想環境で作成</a>したものを更新しました。</p>
+
+<!--more-->
+
+
+<h2>動作確認環境</h2>
+
+<ul>
+<li>VirtualBox 5.0.6</li>
+<li>Vagrant 1.7.4</li>
+</ul>
+
+
+<h2>ビルド環境の更新</h2>
+
+<p><code>git clone https://github.com/znz/rubylive-builder</code> で取得していた <code>rubylive-builder</code> 環境の <code>Vagrantfile</code> の <code>config.vm.box</code> を <code>"ffuenf/debian-7.6.0-amd64"</code> から <code>"ffuenf/debian-8.2.0-amd64"</code> に<a href="https://github.com/znz/rubylive-builder/commit/289f2079dad86bde424aa810f0e6b28302607ccb">更新しました</a>。</p>
+
+<h2>ビルド内容の更新</h2>
+
+<h3>ruby のバージョンの更新</h3>
+
+<p><code>config/hooks/10-ruby-rails.chroot</code> でインストールしている ruby を 2.1.4 から 2.2.3 に<a href="https://github.com/znz/rubylive/commit/475e077f9bdb066628415ad602fefdde2608c57e">更新しました</a>。</p>
+
+<h3>壁紙の変更</h3>
+
+<p>壁紙を RubyKaigi 2014 のロゴから関西 Ruby 会議 06 のロゴに<a href="https://github.com/znz/rubylive/commit/f7f4136a39fd1ac4da8121204b941b12eac3e65e">変更しました</a>。</p>
+
+<p>変更しても <code>config/includes.chroot/usr/share/images/desktop-base/rubykaigi2014-mark.svg</code> にダウンロードしたファイルは残ったままで、そのまま ISO イメージを作成しなおすと古い画像も ISO イメージの中に入ってしまうので、手動で削除しておく必要があります。
+(<code>rake distclean</code> でも消えません。)</p>
+
+<p>試行錯誤した後には特に <code>config/includes.chroot</code> 以下に不要なファイルが残っていないか注意する必要があります。</p>
+
+<h3>jessie への更新 (失敗)</h3>
+
+<p>ビルド環境を jessie にあげても作成される ISO は wheezy のままだったので、以下の変更で jessie にしようとしたのですが、失敗したので結局 wheezy のままにしました。</p>
+
+<p>変更点は以下の通りです。</p>
+
+<pre><code>diff --git a/auto/config b/auto/config
+index d44fc2d..3dc3665 100755
+--- a/auto/config
++++ b/auto/config
+@@ -2,6 +2,7 @@
+
+ lb config noauto \
+        --architectures "amd64" \
++       --distribution "jessie" \
+        --bootloader "grub2" \
+        --templates "templates" \
+        --bootappend-live "quiet locales=ja_JP.UTF-8 timezone=Asia/Tokyo utc=no keyboard-layouts=jp
+diff --git a/config/package-lists/30-japanese.list.chroot b/config/package-lists/30-japanese.list.ch
+index 602270e..304d5f7 100644
+--- a/config/package-lists/30-japanese.list.chroot
++++ b/config/package-lists/30-japanese.list.chroot
+@@ -3,8 +3,8 @@ fbterm
+ lv
+ manpages-ja
+ nkf
+-ttf-mona
+-ttf-monapo
++fonts-mona
++fonts-monapo
+ fonts-ipafont-gothic
+ fonts-ipafont-mincho
+ fonts-vlgothic
+diff --git a/config/package-lists/50-editors.list.chroot b/config/package-lists/50-editors.list.chro
+index 8468dec..cb2197a 100644
+--- a/config/package-lists/50-editors.list.chroot
++++ b/config/package-lists/50-editors.list.chroot
+@@ -1,4 +1,4 @@
+-emacs23
++emacs24
+ vim
+ vim-gtk
+ gedit
+</code></pre>
+
+<p>失敗した部分は以下の通りです。</p>
+
+<pre><code>[2015-10-26 13:27:55] lb chroot_live-packages
+dpkg: dependency problems prevent removal of systemd:
+ libpam-systemd:amd64 depends on systemd (= 215-17+deb8u2).
+
+dpkg: error processing package systemd (--purge):
+ dependency problems - not removing
+dpkg: dependency problems prevent removal of systemd-sysv:
+ init depends on systemd-sysv | sysvinit-core | upstart; however:
+  Package systemd-sysv is to be removed.
+  Package sysvinit-core is not installed.
+  Package upstart is not installed.
+ libpam-systemd:amd64 depends on systemd-shim (&gt;= 8-2) | systemd-sysv; however:
+  Package systemd-shim is not installed.
+  Package systemd-sysv is to be removed.
+
+dpkg: error processing package systemd-sysv (--purge):
+ dependency problems - not removing
+Errors were encountered while processing:
+ systemd
+ systemd-sysv
+P: Begin unmounting filesystems...
+P: Saving caches...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+rake aborted!
+Command failed with status (1): [sudo lb build...]
+</code></pre>
+
+<h2>ISO のビルド</h2>
+
+<p><code>vagrant up</code> して <code>vagrant ssh</code> で入った後、<code>/vagrant/rubylive.sh</code> で作成できます。
+2 回目以降は <code>~/rubylive</code> で <code>time rake APT_HTTP_PROXY=http://localhost:3142</code> を直接実行しても良いと思います。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Ubuntu 14.04 LTS に Zabbix 2.4 を PostgreSQL を使う設定で入れた]]></title>
@@ -554,79 +674,6 @@ packer build debian-7.6.0-amd64-ja_jp.json
 <p><code>vagrant box outdated</code> や <code>vagrant box update</code> の使い方がわからなかったのですが、
 <code>box_url</code> でダウンロードしてきた box で使うものではなく Vagrant Cloud から
 ダウンロードしてきた box で使うものだったようです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[apt-cacher-ngでliveイメージ作成を繰り返す時の無駄なダウンロードを減らす]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-07-14-apt-cacher-ng.html"/>
-    <updated>2014-07-14T23:53:14+09:00</updated>
-    <id>http://blog.n-z.jp/blog/apt-cacher-ng</id>
-    <content type="html"><![CDATA[<p><a href="https://github.com/znz/rubylive-builder" title="rubylive-builder">rubylive-builder</a>
-で
-<a href="https://github.com/znz/rubylive" title="RubyLive">RubyLive</a>
-という Debian wheezy ベースの Live イメージを作成するときに
-<code>apt-get update</code> などで何度も無駄にダウンロードしてしまうので、
-<code>apt-cacher-ng</code> で Live イメージ作成を繰り返す時の無駄なダウンロードを減らすことにしました。</p>
-
-<!--more-->
-
-
-<h2>Vagrant の provision でインストール</h2>
-
-<p>Vagrantfile では</p>
-
-<pre><code class="ruby Vagrantfile">  config.vm.provision :shell do |shell|
-    shell.path = "provision.sh"
-  end
-</code></pre>
-
-<p>のようにシェルスクリプトでプロビジョニングしているだけだったので、
-その中で以下のようにインストールして設定するようにしました。</p>
-
-<pre><code class="bash provision.sh">apt-get install -y apt-cacher-ng
-echo 'Acquire::http::Proxy "http://localhost:3142/";' &gt;/etc/apt/apt.conf.d/02proxy
-</code></pre>
-
-<p>Vagrantfile で以下のようにポートフォワーディングを設定していれば
-<a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0315" title="第315回　apt-cacher-ngを使ってAPT用キャッシュプロキシの構築：Ubuntu Weekly Recipe｜gihyo.jp … 技術評論社">第315回　apt-cacher-ngを使ってAPT用キャッシュプロキシの構築：Ubuntu Weekly Recipe｜gihyo.jp … 技術評論社</a>
-の2ページ目に説明があるようにヒット率などを確認できます。</p>
-
-<pre><code class="ruby Vagrantfile">  # apt-cacher-ng
-  config.vm.network "forwarded_port", guest: 3142, host: 3142
-</code></pre>
-
-<h2>rake コマンドで環境変数を渡す</h2>
-
-<p><code>APT_HTTP_PROXY=http://localhost:3142 rake</code> でも良かったのですが、
-rake コマンドは引数の <code>FOO=bar</code> を <code>ENV</code> に設定してくれるので、
-<code>rake APT_HTTP_PROXY=http://localhost:3142</code> で渡して、
-Rakefile の中では以下のように受け取って <code>lb config</code> に渡しました。</p>
-
-<pre><code class="ruby Rakefile">desc "config RubyLive"
-task :config =&gt; [:clean] do
-  sh 'lb config'
-  if ENV['APT_HTTP_PROXY']
-    sh "lb config --apt-http-proxy #{ENV['APT_HTTP_PROXY']}"
-  end
-end
-</code></pre>
-
-<h2>live-build で apt-cacher-ng を使う</h2>
-
-<p>既に出てきたように
-<code>lb config</code> の <code>--apt-http-proxy</code> オプションや <code>--apt-ftp-proxy</code> オプションで指定すると
-Live イメージ作成の時に proxy を使ってくれるようになります。
-今回は apt-line に <code>http</code> しか使っていないので
-<code>--apt-http-proxy</code> だけ指定しています。</p>
-
-<p>もちろん、作成後の Live イメージには proxy 設定は残りません。</p>
-
-<h2>感想</h2>
-
-<p>live-build は cache ディレクトリにも、かなりキャッシュしてくれるのですが、
-<code>apt-get update</code> などの proxy じゃないとキャッシュしにくいものもあるので、
-どんな場合でもダウンロード量削減に役に立ちそうだと思いました。</p>
 ]]></content>
   </entry>
   

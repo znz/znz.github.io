@@ -4,7 +4,7 @@
   <title><![CDATA[Category: vagrant | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/vagrant/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2015-10-25T20:18:12+09:00</updated>
+  <updated>2015-10-26T23:13:44+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,126 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[RubyLive ISO イメージを更新した]]></title>
+    <link href="http://blog.n-z.jp/blog/2015-10-26-rubylive-builder.html"/>
+    <updated>2015-10-26T21:44:33+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubylive-builder</id>
+    <content type="html"><![CDATA[<p><a href="http://blog.n-z.jp/blog/2014-07-13-build-rubylive-on-vm.html" title="RubyLiveを仮想環境で作成">RubyLiveを仮想環境で作成</a>したものを更新しました。</p>
+
+<!--more-->
+
+
+<h2>動作確認環境</h2>
+
+<ul>
+<li>VirtualBox 5.0.6</li>
+<li>Vagrant 1.7.4</li>
+</ul>
+
+
+<h2>ビルド環境の更新</h2>
+
+<p><code>git clone https://github.com/znz/rubylive-builder</code> で取得していた <code>rubylive-builder</code> 環境の <code>Vagrantfile</code> の <code>config.vm.box</code> を <code>"ffuenf/debian-7.6.0-amd64"</code> から <code>"ffuenf/debian-8.2.0-amd64"</code> に<a href="https://github.com/znz/rubylive-builder/commit/289f2079dad86bde424aa810f0e6b28302607ccb">更新しました</a>。</p>
+
+<h2>ビルド内容の更新</h2>
+
+<h3>ruby のバージョンの更新</h3>
+
+<p><code>config/hooks/10-ruby-rails.chroot</code> でインストールしている ruby を 2.1.4 から 2.2.3 に<a href="https://github.com/znz/rubylive/commit/475e077f9bdb066628415ad602fefdde2608c57e">更新しました</a>。</p>
+
+<h3>壁紙の変更</h3>
+
+<p>壁紙を RubyKaigi 2014 のロゴから関西 Ruby 会議 06 のロゴに<a href="https://github.com/znz/rubylive/commit/f7f4136a39fd1ac4da8121204b941b12eac3e65e">変更しました</a>。</p>
+
+<p>変更しても <code>config/includes.chroot/usr/share/images/desktop-base/rubykaigi2014-mark.svg</code> にダウンロードしたファイルは残ったままで、そのまま ISO イメージを作成しなおすと古い画像も ISO イメージの中に入ってしまうので、手動で削除しておく必要があります。
+(<code>rake distclean</code> でも消えません。)</p>
+
+<p>試行錯誤した後には特に <code>config/includes.chroot</code> 以下に不要なファイルが残っていないか注意する必要があります。</p>
+
+<h3>jessie への更新 (失敗)</h3>
+
+<p>ビルド環境を jessie にあげても作成される ISO は wheezy のままだったので、以下の変更で jessie にしようとしたのですが、失敗したので結局 wheezy のままにしました。</p>
+
+<p>変更点は以下の通りです。</p>
+
+<pre><code>diff --git a/auto/config b/auto/config
+index d44fc2d..3dc3665 100755
+--- a/auto/config
++++ b/auto/config
+@@ -2,6 +2,7 @@
+
+ lb config noauto \
+        --architectures "amd64" \
++       --distribution "jessie" \
+        --bootloader "grub2" \
+        --templates "templates" \
+        --bootappend-live "quiet locales=ja_JP.UTF-8 timezone=Asia/Tokyo utc=no keyboard-layouts=jp
+diff --git a/config/package-lists/30-japanese.list.chroot b/config/package-lists/30-japanese.list.ch
+index 602270e..304d5f7 100644
+--- a/config/package-lists/30-japanese.list.chroot
++++ b/config/package-lists/30-japanese.list.chroot
+@@ -3,8 +3,8 @@ fbterm
+ lv
+ manpages-ja
+ nkf
+-ttf-mona
+-ttf-monapo
++fonts-mona
++fonts-monapo
+ fonts-ipafont-gothic
+ fonts-ipafont-mincho
+ fonts-vlgothic
+diff --git a/config/package-lists/50-editors.list.chroot b/config/package-lists/50-editors.list.chro
+index 8468dec..cb2197a 100644
+--- a/config/package-lists/50-editors.list.chroot
++++ b/config/package-lists/50-editors.list.chroot
+@@ -1,4 +1,4 @@
+-emacs23
++emacs24
+ vim
+ vim-gtk
+ gedit
+</code></pre>
+
+<p>失敗した部分は以下の通りです。</p>
+
+<pre><code>[2015-10-26 13:27:55] lb chroot_live-packages
+dpkg: dependency problems prevent removal of systemd:
+ libpam-systemd:amd64 depends on systemd (= 215-17+deb8u2).
+
+dpkg: error processing package systemd (--purge):
+ dependency problems - not removing
+dpkg: dependency problems prevent removal of systemd-sysv:
+ init depends on systemd-sysv | sysvinit-core | upstart; however:
+  Package systemd-sysv is to be removed.
+  Package sysvinit-core is not installed.
+  Package upstart is not installed.
+ libpam-systemd:amd64 depends on systemd-shim (&gt;= 8-2) | systemd-sysv; however:
+  Package systemd-shim is not installed.
+  Package systemd-sysv is to be removed.
+
+dpkg: error processing package systemd-sysv (--purge):
+ dependency problems - not removing
+Errors were encountered while processing:
+ systemd
+ systemd-sysv
+P: Begin unmounting filesystems...
+P: Saving caches...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+rake aborted!
+Command failed with status (1): [sudo lb build...]
+</code></pre>
+
+<h2>ISO のビルド</h2>
+
+<p><code>vagrant up</code> して <code>vagrant ssh</code> で入った後、<code>/vagrant/rubylive.sh</code> で作成できます。
+2 回目以降は <code>~/rubylive</code> で <code>time rake APT_HTTP_PROXY=http://localhost:3142</code> を直接実行しても良いと思います。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[vagrantなどのローカルへのssh接続のみarcfour256で高速化する]]></title>
@@ -338,137 +458,6 @@ Live イメージ作成の時に proxy を使ってくれるようになりま�
 <p>live-build は cache ディレクトリにも、かなりキャッシュしてくれるのですが、
 <code>apt-get update</code> などの proxy じゃないとキャッシュしにくいものもあるので、
 どんな場合でもダウンロード量削減に役に立ちそうだと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[RubyLiveを仮想環境で作成]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-07-13-build-rubylive-on-vm.html"/>
-    <updated>2014-07-13T09:35:02+09:00</updated>
-    <id>http://blog.n-z.jp/blog/build-rubylive-on-vm</id>
-    <content type="html"><![CDATA[<p>最近流行りの仮想環境を使ってクリーンな wheezy 環境で RubyLive を作成できるようにしました。</p>
-
-<p>VirtualBox + Vagrant は特殊な制限のない仮想環境なので Live イメージが作成できたのですが、
-docker は後述の制限のために作成できませんでした。</p>
-
-<!--more-->
-
-
-<h2>RubyLive を Vagrant で作成</h2>
-
-<p>Vagrant を使ってクリーンな wheezy 環境で RubyLive の ISO を作成できるようにしました。
-こちらは問題なく作成できました。</p>
-
-<h3>動作確認バージョン</h3>
-
-<ul>
-<li>VirtualBox 4.3.12</li>
-<li>Vagrant 1.6.3</li>
-</ul>
-
-
-<h3>使い方</h3>
-
-<ul>
-<li>VirtualBox と Vagrant をインストールしておきます。</li>
-<li><code>git clone https://github.com/znz/rubylive-builder</code> で取得します。</li>
-<li><code>cd rubylive-builder</code> で中に入ります。</li>
-<li><code>VM_MEMORY=512 vagrant up</code> のように適当なメモリ容量を指定して起動します。 (指定なしなら 1024)
-
-<ul>
-<li>他の項目も環境変数である程度変更できるようにしています。</li>
-<li>初回起動時は box をダウンロードするので非常に時間がかかります。</li>
-<li>provision で live-build などの必要なパッケージをインストールしています。</li>
-</ul>
-</li>
-<li><code>vagrant ssh</code> でゲストにログインします。</li>
-<li><code>/vagrant/rubylive.sh</code> を実行すると <code>/home/vagrant/rubylive</code> で RubyLive のイメージを作成します。
-
-<ul>
-<li>実行するたびにタイムスタンプの入ったファイル名の ISO ファイルが作成されます。</li>
-<li>ネットワークの速度やマシンスペックに影響を受けると思いますが、試した環境では約1時間かかりました。</li>
-</ul>
-</li>
-<li>作成できた <code>/home/vagrant/rubylive/*.iso</code> を <code>/vagrant</code> にコピーまたは移動して、ホスト OS 側に取り出します。</li>
-<li>取り出した ISO ファイルを使用します。</li>
-</ul>
-
-
-<p>なぜか
-    chroot: failed to run command <code>/usr/bin/env': No such file or directory
-で失敗することがありましたが、再度</code>/vagrant/rubylive.sh` を実行すれば問題なく作成できました。</p>
-
-<h3>片付け方</h3>
-
-<ul>
-<li><code>vagrant destroy</code> で VM を破棄します。</li>
-<li><code>git clone</code> した作業ディレクトリを削除します。</li>
-<li>wheezy の box が不要なら <code>vagrant box remove opscode_debian-7.4_chef-provisionerless</code> で削除します。</li>
-<li>Vagrant や VirtualBox も不要ならアンインストールします。</li>
-</ul>
-
-
-<h2>RubyLive を Docker で作成 (失敗)</h2>
-
-<p>docker 環境の中では <code>chroot /rubylive/chroot mount -t proc proc /proc</code> が <code>EPERM</code> で失敗するため、作成できませんでした。</p>
-
-<h3>動作確認バージョン</h3>
-
-<ul>
-<li>docker 1.1.1</li>
-</ul>
-
-
-<h3>試し方</h3>
-
-<ul>
-<li>docker をインストールしておきます。</li>
-<li><code>git clone https://github.com/znz/rubylive-builder</code> で取得します。</li>
-<li><code>docker build rubylive-builder</code> で作成に挑戦します。
-
-<ul>
-<li>または <code>cd rubylive-builder</code> で中に入って <code>docker build .</code> です。</li>
-</ul>
-</li>
-<li><code>docker ps -a</code> で最近の CREATED の IMAGE を確認します。
-
-<ul>
-<li>もしくは <code>docker images</code> で確認します。</li>
-<li>最後の失敗した後の状態は残っていないようでした。</li>
-</ul>
-</li>
-<li><code>docker run -i -t --rm 4b8bc4523794 /bin/bash</code> のように中に入ります。
-
-<ul>
-<li>4b8bc4523794 のところは確認した IMAGE の ID にしてください。</li>
-</ul>
-</li>
-<li><code>cd rubylive</code> で rubylive ディレクトリに入って <code>rake</code> で作成に再挑戦します。</li>
-<li><code>less /rubylive/chroot/debootstrap/debootstrap.log</code> でログを確認したり、
-<code>chroot /rubylive/chroot mount -t proc proc /proc</code> や
-<code>mount -t proc proc /rubylive/chroot/proc</code> を直接実行してみたりして
-原因を確認します。</li>
-</ul>
-
-
-<h3>失敗部分のメッセージ</h3>
-
-<pre><code>W: Failure trying to run: chroot /rubylive/chroot mount -t proc proc /proc
-W: See /rubylive/chroot/debootstrap/debootstrap.log for details
-P: Begin unmounting filesystems...
-P: Saving caches...
-/usr/bin/env: apt-get: No such file or directory
-rake aborted!
-Command failed with status (1): [sudo lb build...]
-</code></pre>
-
-<p><code>/rubylive/chroot/debootstrap/debootstrap.log</code> をみると <code>mount: permission denied</code> と出ていました。</p>
-
-<h3>Dockerfile 直接指定 (失敗)</h3>
-
-<p><code>docker build https://raw.githubusercontent.com/znz/rubylive-builder/master/Dockerfile</code>
-のように直接 URL を指定する方法は
-<code>sources.list</code> を国内ミラーに差し替える部分が失敗して使えませんでした。</p>
 ]]></content>
   </entry>
   

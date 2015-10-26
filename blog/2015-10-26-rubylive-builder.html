@@ -5,11 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>zabbixでmemcachedのヒット率を記録する - @znz blog</title>
+  <title>RubyLive ISO イメージを更新した - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="zabbixでmemcachedのヒット率を記録する Feb 4th, 2014 7:14 pm | Comments rails の dalli_store でキャッシュの保存場所として使っている memcached のキャッシュのヒット率を zabbix で記録して、 &hellip;">
+  <meta name="description" content="RubyLive ISO イメージを更新した Oct 26th, 2015 9:44 pm | Comments RubyLiveを仮想環境で作成したものを更新しました。 動作確認環境 VirtualBox 5.0.6
+Vagrant 1.7.4 ビルド環境の更新 git clone https &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-02-04-zabbix-memcached.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2015-10-26-rubylive-builder.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -83,7 +84,7 @@
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">zabbixでmemcachedのヒット率を記録する</h1>
+      <h1 class="entry-title">RubyLive ISO イメージを更新した</h1>
       
       <!-- zenback_title_end -->
       
@@ -95,7 +96,7 @@
 
 
 
-<time class='entry-date' datetime='2014-02-04T19:14:01+09:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>4</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>7:14 pm</span></time>
+<time class='entry-date' datetime='2015-10-26T21:44:33+09:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>26</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>9:44 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -108,64 +109,182 @@
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p>rails の dalli_store でキャッシュの保存場所として使っている memcached のキャッシュのヒット率を zabbix で記録して、コードの改善でどのくらい変わるのか調べてみることにしました。</p>
+<div class="entry-content"><p><a href="http://blog.n-z.jp/blog/2014-07-13-build-rubylive-on-vm.html" title="RubyLiveを仮想環境で作成">RubyLiveを仮想環境で作成</a>したものを更新しました。</p>
 
 <!--more-->
 
 
-<h2>参考</h2>
-
-<p>memcached からのデータ取得方法は <a href="http://blog.withsin.net/2010/09/06/zabbix%E3%81%A7memcached%E7%9B%A3%E8%A6%96/">zabbixでmemcached監視 at technote</a> を参考にしました。</p>
-
-<h2>前提</h2>
-
-<p>zabbix-server は別サーバーで既に設定済みで動いているものを使いました。
-zabbix-agent は新規インストールしました。
-OS は Ubuntu 12.04.4 LTS です。</p>
-
-<h2>memcached からデータ取得部分</h2>
-
-<p><code>/etc/cron.d/zabbix-memcached</code> に以下の内容で取得部分を作成しました。
-継続的にエラーが出ている時ぐらいは原因を調べられるように、標準エラー出力も最新のものだけファイルに残すようにしました。</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>/etc/cron.d/zabbix-memcached</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>*/5 * * * *   zabbix    test -d /run/zabbix &amp;&amp; { echo stats | nc localhost 11211 &gt; /run/zabbix/memcached.stats 2&gt;/run/zabbix/memcached.stats.err; }
-</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-
-<h2>zabbix_agentd 設定</h2>
-
-<p>以下の設定を変更しました。</p>
+<h2>動作確認環境</h2>
 
 <ul>
-<li>Server=<code>zabbix-serverのIPアドレス</code></li>
-<li>Hostname=<code>zabbix の Web UI のホスト名にあわせる</code></li>
-<li>DisableActive=1 : zabbix-agent 側からの接続ができない環境だったので、 zabbix-server からの接続を待ち受けるだけにしました。</li>
-<li><code>UserParameter=memcached.stats[*],grep $1 /run/zabbix/memcached.stats | cut -d' ' -f3</code> : grep と組み合わせるには awk は重い気がしたので cut に変更しました。</li>
+<li>VirtualBox 5.0.6</li>
+<li>Vagrant 1.7.4</li>
 </ul>
 
 
-<h2>firewall 設定</h2>
+<h2>ビルド環境の更新</h2>
 
-<p><code>ufw allow from zabbix-serverのIPアドレス to any port 10050</code> で zabbix-server からのみ許可しました。
-インターネット上を平文で流れてしまうのは、機密データではないということで、許容することにしました。
-暗号化が必要なら別途 openvpn などを使うと思います。</p>
+<p><code>git clone https://github.com/znz/rubylive-builder</code> で取得していた <code>rubylive-builder</code> 環境の <code>Vagrantfile</code> の <code>config.vm.box</code> を <code>"ffuenf/debian-7.6.0-amd64"</code> から <code>"ffuenf/debian-8.2.0-amd64"</code> に<a href="https://github.com/znz/rubylive-builder/commit/289f2079dad86bde424aa810f0e6b28302607ccb">更新しました</a>。</p>
 
-<h2>動作確認</h2>
+<h2>ビルド内容の更新</h2>
 
-<ul>
-<li>Server に localhost 以外を指定したので zabbix-agent を動かしているマシン上で <code>nc -v localhost 10050</code> は繋がった後、すぐに切断されます。</li>
-<li>zabbix-server 側で <code>zabbix_get -s 49.212.178.112 -k agent.ping</code> を実行して <code>1</code> と出れば zabbix-agent へ接続できています。</li>
-<li>zabbix の Web UI からテンプレートを作成して、 <code>cmd_get</code> <code>cmd_set</code> <code>cmd_hits</code> を記録するようにしました。
-(キー: <code>memcached.stats[cmd_get]</code> など, 保存時の計算: なし (2014-02-06: 差分はやめました), 更新間隔: 300 (cronを5分間隔にしているので))</li>
-<li>さらに計算アイテムとして式に <code>100*last("memcached.stats[get_hits]")/last("memcached.stats[cmd_get]")</code> を設定したものを追加しました。</li>
-</ul>
+<h3>ruby のバージョンの更新</h3>
+
+<p><code>config/hooks/10-ruby-rails.chroot</code> でインストールしている ruby を 2.1.4 から 2.2.3 に<a href="https://github.com/znz/rubylive/commit/475e077f9bdb066628415ad602fefdde2608c57e">更新しました</a>。</p>
+
+<h3>壁紙の変更</h3>
+
+<p>壁紙を RubyKaigi 2014 のロゴから関西 Ruby 会議 06 のロゴに<a href="https://github.com/znz/rubylive/commit/f7f4136a39fd1ac4da8121204b941b12eac3e65e">変更しました</a>。</p>
+
+<p>変更しても <code>config/includes.chroot/usr/share/images/desktop-base/rubykaigi2014-mark.svg</code> にダウンロードしたファイルは残ったままで、そのまま ISO イメージを作成しなおすと古い画像も ISO イメージの中に入ってしまうので、手動で削除しておく必要があります。
+(<code>rake distclean</code> でも消えません。)</p>
+
+<p>試行錯誤した後には特に <code>config/includes.chroot</code> 以下に不要なファイルが残っていないか注意する必要があります。</p>
+
+<h3>jessie への更新 (失敗)</h3>
+
+<p>ビルド環境を jessie にあげても作成される ISO は wheezy のままだったので、以下の変更で jessie にしようとしたのですが、失敗したので結局 wheezy のままにしました。</p>
+
+<p>変更点は以下の通りです。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>diff --git a/auto/config b/auto/config
+</span><span class='line'>index d44fc2d..3dc3665 100755
+</span><span class='line'>--- a/auto/config
+</span><span class='line'>+++ b/auto/config
+</span><span class='line'>@@ -2,6 +2,7 @@
+</span><span class='line'>
+</span><span class='line'> lb config noauto \
+</span><span class='line'>        --architectures "amd64" \
+</span><span class='line'>+       --distribution "jessie" \
+</span><span class='line'>        --bootloader "grub2" \
+</span><span class='line'>        --templates "templates" \
+</span><span class='line'>        --bootappend-live "quiet locales=ja_JP.UTF-8 timezone=Asia/Tokyo utc=no keyboard-layouts=jp
+</span><span class='line'>diff --git a/config/package-lists/30-japanese.list.chroot b/config/package-lists/30-japanese.list.ch
+</span><span class='line'>index 602270e..304d5f7 100644
+</span><span class='line'>--- a/config/package-lists/30-japanese.list.chroot
+</span><span class='line'>+++ b/config/package-lists/30-japanese.list.chroot
+</span><span class='line'>@@ -3,8 +3,8 @@ fbterm
+</span><span class='line'> lv
+</span><span class='line'> manpages-ja
+</span><span class='line'> nkf
+</span><span class='line'>-ttf-mona
+</span><span class='line'>-ttf-monapo
+</span><span class='line'>+fonts-mona
+</span><span class='line'>+fonts-monapo
+</span><span class='line'> fonts-ipafont-gothic
+</span><span class='line'> fonts-ipafont-mincho
+</span><span class='line'> fonts-vlgothic
+</span><span class='line'>diff --git a/config/package-lists/50-editors.list.chroot b/config/package-lists/50-editors.list.chro
+</span><span class='line'>index 8468dec..cb2197a 100644
+</span><span class='line'>--- a/config/package-lists/50-editors.list.chroot
+</span><span class='line'>+++ b/config/package-lists/50-editors.list.chroot
+</span><span class='line'>@@ -1,4 +1,4 @@
+</span><span class='line'>-emacs23
+</span><span class='line'>+emacs24
+</span><span class='line'> vim
+</span><span class='line'> vim-gtk
+</span><span class='line'> gedit</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<p>差分で記録しているからなのか、データが少ないタイミングだったからか、計算に使うアイテムのタイミングの問題なのかわかりませんが、計算アイテムのヒット率が 100% を超えることがありました。</p>
+<p>失敗した部分は以下の通りです。</p>
 
-<p>2014-02-06 追記:
-差分はやめて、そのまま記録した値を使うようにして、ヒット率の計算が安定するようにしました。</p>
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>[2015-10-26 13:27:55] lb chroot_live-packages
+</span><span class='line'>dpkg: dependency problems prevent removal of systemd:
+</span><span class='line'> libpam-systemd:amd64 depends on systemd (= 215-17+deb8u2).
+</span><span class='line'>
+</span><span class='line'>dpkg: error processing package systemd (--purge):
+</span><span class='line'> dependency problems - not removing
+</span><span class='line'>dpkg: dependency problems prevent removal of systemd-sysv:
+</span><span class='line'> init depends on systemd-sysv | sysvinit-core | upstart; however:
+</span><span class='line'>  Package systemd-sysv is to be removed.
+</span><span class='line'>  Package sysvinit-core is not installed.
+</span><span class='line'>  Package upstart is not installed.
+</span><span class='line'> libpam-systemd:amd64 depends on systemd-shim (&gt;= 8-2) | systemd-sysv; however:
+</span><span class='line'>  Package systemd-shim is not installed.
+</span><span class='line'>  Package systemd-sysv is to be removed.
+</span><span class='line'>
+</span><span class='line'>dpkg: error processing package systemd-sysv (--purge):
+</span><span class='line'> dependency problems - not removing
+</span><span class='line'>Errors were encountered while processing:
+</span><span class='line'> systemd
+</span><span class='line'> systemd-sysv
+</span><span class='line'>P: Begin unmounting filesystems...
+</span><span class='line'>P: Saving caches...
+</span><span class='line'>Reading package lists...
+</span><span class='line'>Building dependency tree...
+</span><span class='line'>Reading state information...
+</span><span class='line'>rake aborted!
+</span><span class='line'>Command failed with status (1): [sudo lb build...]</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h2>ISO のビルド</h2>
+
+<p><code>vagrant up</code> して <code>vagrant ssh</code> で入った後、<code>/vagrant/rubylive.sh</code> で作成できます。
+2 回目以降は <code>~/rubylive</code> で <code>time rake APT_HTTP_PROXY=http://localhost:3142</code> を直接実行しても良いと思います。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -184,12 +303,12 @@ OS は Ubuntu 12.04.4 LTS です。</p>
 
 
 
-<time class='entry-date' datetime='2014-02-04T19:14:01+09:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>4</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>7:14 pm</span></time>
+<time class='entry-date' datetime='2015-10-26T21:44:33+09:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>26</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>9:44 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/memcached/'>memcached</a>, <a class='category' href='/blog/categories/zabbix/'>zabbix</a>
+    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/live/'>live</a>, <a class='category' href='/blog/categories/vagrant/'>vagrant</a>
   
 </span>
 
@@ -216,10 +335,8 @@ OS は Ubuntu 12.04.4 LTS です。</p>
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2014-02-03-bundle-update.html" title="Previous Post: bundle updateした記録">&laquo; bundle updateした記録</a>
+        <a class="basic-alignment left" href="/blog/2015-10-25-amagasakirb.html" title="Previous Post: 10月25日 型システム入門読書会　第１回(大阪府)に参加しました">&laquo; 10月25日 型システム入門読書会　第１回(大阪府)に参加しました</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2014-02-05-rails-best-practices-1-15-0-broken.html" title="Next Post: rails_best_practices 1.15.0でtryが壊れた">rails_best_practices 1.15.0でtryが壊れた &raquo;</a>
       
     </p>
   </footer>
@@ -354,8 +471,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-02-04-zabbix-memcached.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2014-02-04-zabbix-memcached.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2015-10-26-rubylive-builder.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2015-10-26-rubylive-builder.html';
         var disqus_script = 'embed.js';
       
     (function () {
