@@ -1,0 +1,247 @@
+---
+layout: post
+title: "RubyKaigi 2015 の 2 日目に参加しました"
+date: 2015-12-12 09:46:59 +0900
+comments: true
+categories: ruby event
+---
+[RubyKaigi 2015](http://rubykaigi.org/2015 "RubyKaigi 2015") の 2 日目に参加したので、そのメモです。
+
+<!--more-->
+
+## スポンサーセッション (Cookpad)
+
+## Keynote
+
+- 小崎さんの Keynote
+- Linuxport maintainer
+- [Bug #3543](https://bugs.ruby-lang.org/issues/3543 "Bug #3543") など
+- Patch for open source is like a Tetris
+- The Debugging Big 3
+- Ftrace
+- Perf tools
+- SystemTap
+- https://twitter.com/t_wada/status/675484076191666176
+- 発表資料を作っているとバグが見つかる話
+- probe 一覧はソースの [probes.d](https://github.com/ruby/ruby/blob/trunk/probes.d) に書いてある
+
+## The history of testing framework in Ruby
+
+- テスティングフレームワークの歴史
+- `/\Atest.+unit\z/i` が標準添付されたのは Ruby 1.8 から
+- `/\Atest.+unit\z/i` とは `Test::Unit` 互換 API が重要
+- テストのグループ化
+- テストの共有
+- failure 時の表示の違い
+- assert の書き方の違い
+- 質疑応答
+- `yield` 付きの `setup` について
+- http://slide.rabbit-shocker.org/authors/kou/rubykaigi-2015/
+
+## Running Ruby on Solaris
+
+- 自己紹介
+- BioRuby
+- Solaris とは
+- 古いバイナリがそのまま動くというデモ
+- SPARC
+- Big-endian
+- Solaris
+- ビルドに必要なツールの話
+- PATH が重要 (make がたくさんとか)
+- コンパイラもいろいろ
+- いろんな標準に準拠している
+- 64 ビット OS になってもコンパイラのデフォルトは 32 ビットのまま
+- ライブラリの話
+- `make V=1` でコンパイルオプションなども表示
+- バグ報告の話
+- ファイル名衝突の例: [Bug #7287](https://bugs.ruby-lang.org/issues/7287 "Bug #7287")
+- word alignment のバグの例: [Bug #5469](https://bugs.ruby-lang.org/issues/5469 "Bug #5469")
+- [Bug #10646](https://bugs.ruby-lang.org/issues/10646 "Bug #10646")
+- [Bug #11277](https://bugs.ruby-lang.org/issues/11277 "Bug #11277")
+- などなど
+- http://www.slideshare.net/ngotogenome/running-ruby-on-solaris-rubykaigi-2015-12dec2015-56073698
+
+## Lunch on your own
+
+また築地の方に行って、今度は間に合うように戻ってこれました。
+
+## Data Analytics Service Company and Its Ruby Usage
+
+- 英語で自己紹介
+- https://www.treasuredata.com/
+- fluentd
+- embulk
+- ステッカーが人気
+- Ruby や Java を使っているらしい
+- OSS 重視
+- https://github.com/treasure-data/perfectsched
+- At-least-once semantics
+- https://github.com/treasure-data/perfectqueue
+- Done is better than perfect.
+- `<<~` があるので Ruby 2.3 が使いたい話
+- 質疑応答
+- PerfectQueue でスループットが問題になった時にどうするのかという質問
+
+## Ruby for one day game programming camp for beginners
+
+- 自己紹介
+- KMC の紹介
+- programming camp の紹介
+- 未経験から 8,9 割が動くものを作れる
+- 続けてゲームを作ろうとする人はだいたい Unity か C#
+- 重力は難しい
+- シューティングゲームが簡単
+
+## Ruby meets Go
+
+- cgo
+- ruby から C の関数を呼び出すには ffi gem を使う方法と標準添付の fiddle を使う方法がある
+- https://speakerdeck.com/naruse/writing-extension-libraries-in-go
+- マクロや wrapper 関数の話
+- 文字列のコピーが発生するのを避ける話
+- http://qiita.com/mattn/items/176459728ff4f854b165
+- Ruby での参照を Go にも反映させて GC されないようにする話
+- Go のコードを含む gem を生成する方法
+- 拡張ライブラリの例 : https://github.com/mmasaki/memberlist
+- 質疑応答
+- extconf.rb のハックを mkmf に入れる気はないのかという話
+- bundler の雛形生成での対応を考えている
+- http://www.slideshare.net/td-nttcom/ruby-meets-go
+
+## Rhebok, High Performance Rack Handler
+
+- Mercari
+- unicorn より速い Rhebok
+- Perl の Gazelle の Ruby 版
+- Gazelle や Rhebok はツノが 2 本の動物
+- unicorn が 1 本だから
+- WebSocket や Streaming には向かない
+- reverse proxy なしで直接公開にも向かない
+- 専用コマンドはないので `rackup -s Rhebok ...` で起動
+- Hot Deploy
+- `start_server` コマンドを wrapper として使う
+- Benchmark
+- ISUCON 4 の問題でもベンチマークしても unicorn より速い
+- rack の説明
+- Rack Handler の簡易実装
+- その問題点と解決方法
+- https://github.com/kazeburo/prefork_engine
+- IO timeout
+- unicorn はタイムアウトで SIGKILL している (乱暴)
+- Parse HTTP request
+- `PicoHTTPParser` を使った
+- TCP optimization
+- `TCP_NODELAY` disable it
+- Nagle's algorithm
+- `writev(2)`
+
+## Pragmatic Testing of Ruby Core
+
+- 自己紹介
+- GMO Pepabo の紹介
+- https://github.com/yaocloud
+- ruby 2.3.0-preview がビルドできない問題の原因が判明したという業務連絡
+- オープンソースへの貢献の話
+- Documentation is hard
+- Testing and Running are easy
+- テスト実行の tips
+- .travis.yml を見る
+- ruby の場合は .travis.yml が複雑なので簡易な手順を紹介
+- test 関係のターゲットが common.mk にいろいろ
+- `sample/test.rb`
+- `make btest-ruby`
+- `bootstraptest/` を実行
+- `make test-all`
+- `test/` を実行
+- `make test-all TESTS=logger`
+- `make test-all TESTS=-j4`
+- `test/-ext-/` は `ext/-test-/` を使って C API をテストしている
+- `make check` はだいたい全部を実行するもの
+- `test-testframework` は fork した minitest + test/unit をテストしている
+- rubygems と rdoc は upstream がある
+- rubygems と rdoc はまだ Ruby 1.8 をサポートしている
+- `test/lib/envutil.rb`
+- rubyspec
+- http://rubini.us/2014/12/31/matz-s-ruby-developers-don-t-use-rubyspec/
+- rubyspec は仕様ではない
+- `make update-rubyspec`
+- `make test-rubyspec`
+- https://github.com/ruby/rubyspec で生きている
+- rubyci and chkbuild
+- http://rubyci.org/
+- https://github.com/akr/chkbuild
+- `make run`
+- `make bisect`
+- coverage
+
+## スポンサーセッション (pixiv)
+
+## Lightning Talks
+
+- Dora Brain
+
+### Update Early, Update Often
+
+- deppbot
+- `bundle lock --update`
+
+## Automating View Internationalization in Ruby on Rails
+
+- `h` が自動化されたように `t` や `l` も自動化した話
+- `.new` のような例がうまくいかない
+- gem はまだ公開されていない
+
+## A new testing framework Rgot
+
+- Ruby + Golang Testing
+- Diversity
+- https://github.com/ksss/rgot
+
+## Building an Unbreakable MRI-based Embedded Computer Appliance
+
+- 3Bees
+- Make filesystem read-only
+- JeOS
+
+## Do you trust that certificate?
+
+- Web アプリが外部サイトにアクセスする時の話
+- ルート CA の更新の話
+
+## How I debugged debugger
+
+- byebug のパフォーマンスバグを修正した話
+- [gdbを使ったrubyのデバッグ](http://techlife.cookpad.com/entry/2015/12/09/163746 "gdbを使ったrubyのデバッグ")
+
+## Padrino Travel Guide
+
+- Padrino の 2 つの見方
+- full-stack Web Application Framework
+- Sinatra Plugin
+- 使用例
+- dwango.jp
+- animelo mix
+- ssnote.net
+
+## What I learned by implementing a Ruby VM in Erlang
+
+- concurrent
+- https://github.com/johnlinvc/erruby
+
+## Rubygemsで作るお手軽データ分析基盤 〜あるいは 私はどうやって他人の褌で相撲を取ったか〜
+
+- https://github.com/esminc/adhoq
+- pull request を送る時に気をつけるべきこと
+- https://github.com/aamine/activerecord4-redshift-adapter
+- https://github.com/aamine/bricolage
+
+## Rationalを最適化してみた
+
+- How to optimize Rational
+- Let's read CRuby source code more!
+- https://github.com/tadd/ruby/commits/ragrant2015development
+
+## The Mythical Creatures of Summer of Code
+
+- Rails Girls Summer of Code など
