@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2015-12-27T22:27:20+09:00</updated>
+  <updated>2015-12-28T19:19:07+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,52 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[gem install rabbit に失敗したのを解決した]]></title>
+    <link href="http://blog.n-z.jp/blog/2015-12-28-gem-install-rabbit.html"/>
+    <updated>2015-12-28T18:48:40+09:00</updated>
+    <id>http://blog.n-z.jp/blog/gem-install-rabbit</id>
+    <content type="html"><![CDATA[<p>Mac OS X 上で <code>gem install rabbit</code> でひっかかったので、その解決方法のメモです。</p>
+
+<!--more-->
+
+
+<h2>gobject-introspection</h2>
+
+<p><a href="http://www.cozmixng.org/~w3ml/index.rb/rabbit-shocker/msg/1283">http://www.cozmixng.org/~w3ml/index.rb/rabbit-shocker/msg/1283</a>
+( <a href="https://gist.github.com/znz/59ae1b8785a640916ce9">https://gist.github.com/znz/59ae1b8785a640916ce9</a> )
+のようなエラーで gobject-introspection-3.0.7 のインストールで失敗したので、
+ML で教えてもらったように
+<code>PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig gem install rabbit</code>
+でインストールすると進むようになりました。</p>
+
+<h2>poppler</h2>
+
+<p>次に poppler gem (3.0.7) のエラーでひっかかったのですが ( <a href="http://www.cozmixng.org/~w3ml/index.rb/rabbit-shocker/msg/1285">http://www.cozmixng.org/~w3ml/index.rb/rabbit-shocker/msg/1285</a> )、
+<a href="https://bugs.launchpad.net/poppler-python/+bug/1528489">https://bugs.launchpad.net/poppler-python/+bug/1528489</a> で同じエラーが python binding で報告されていて、原因は poppler-0.39.0 での変更ということだったので、
+poppler-0.38.0 に戻すことにした。</p>
+
+<p>まず homebrew のディレクトリに移動して <code>Formula/poppler.rb</code> のログをみて poppler 0.38.0 に戻せる commit hash を調べて checkout して、インストールし直して、 poppler は 0.38.0 で止めておきました。</p>
+
+<pre><code>    cd /usr/local
+    git log Library/Formula/poppler.rb
+    git checkout 6f7b9d57b25451e811e8901c560d17abd7a464f9
+    brew reinstall poppler
+    git checkout master
+    brew pin poppler
+</code></pre>
+
+<p>問題が解決したら <code>brew unpin poppler</code> でまた最新に戻せます。</p>
+
+<p>ruby-gnome2 の方でも <a href="https://github.com/ruby-gnome2/ruby-gnome2/commit/3dda85661515d71101f1028dc7d68d4e53de45b1">https://github.com/ruby-gnome2/ruby-gnome2/commit/3dda85661515d71101f1028dc7d68d4e53de45b1</a> でなおっているので、
+poppler gem の新しいバージョンがリリースされたら解決しそうです。</p>
+
+<h2>成功</h2>
+
+<p>poppler をダウングレードして <code>PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig gem install rabbit</code> で rabbit のインストールは成功しました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[RubyKaigi 2015 の 3 日目に参加しました]]></title>
@@ -823,79 +869,6 @@ Keynote が A ホールのみなので、この後はずっと A ホールにい
 
 <p>次回の本は<a href="http://www.amazon.co.jp/gp/product/4274069117/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4274069117&amp;linkCode=as2&amp;tag=znz-22">型システム入門 −プログラミング言語と型の理論−</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4274069117" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />に決定しました。
 次回は10月の予定で詳細は未定です。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第68回 Ruby関西 勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2015-08-08-rubykansai68.html"/>
-    <updated>2015-08-08T13:07:42+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubykansai68</id>
-    <content type="html"><![CDATA[<p><a href="https://rubykansai.doorkeeper.jp/events/25693" title="第68回 Ruby関西 勉強会">第68回 Ruby関西 勉強会</a>
-(<a href="https://github.com/rubykansai/workshops/wiki/Kansaiworkshop068" title="KansaiWorkshop068">KansaiWorkshop068</a>)
-に参加しました。</p>
-
-<!--more-->
-
-
-<p>以下、そのメモです。</p>
-
-<h2>前説</h2>
-
-<p>主にちゃんとリアクションをしましょうという話でした。</p>
-
-<h2>Middleware Configuration as Code</h2>
-
-<ul>
-<li><a href="https://speakerdeck.com/matsumoto_r/middleware-configuration-as-code">https://speakerdeck.com/matsumoto_r/middleware-configuration-as-code</a></li>
-<li>本番環境での使い方について詳細は @hsbt さんの <a href="http://www.slideshare.net/hsbt/middleware-as-code-with-mruby">Details of mruby usage in production</a> を参照ということで省略</li>
-<li><code>mod_mruby</code> や <code>ngx_mruby</code> でユーザーに見せるクラス構成などを似せて学習コストを下げている</li>
-<li><code>ngx_mruby</code> チュートリアル用 docker イメージ <a href="https://github.com/matsumoto-r/docker-ngx_mruby">https://github.com/matsumoto-r/docker-ngx_mruby</a></li>
-<li>事例紹介</li>
-<li><a href="http://harasou.github.io/2015/07/15/%E9%96%A2%E8%A5%BFRuby%E4%BC%9A%E8%AD%B006-%E3%81%AB%E7%99%BB%E5%A3%87%E3%81%95%E3%81%9B%E3%81%A6%E3%82%82%E3%82%89%E3%81%A3%E3%81%9F/" title="関西Ruby会議06 に登壇させてもらった">関西Ruby会議06 に登壇させてもらった</a></li>
-<li>質疑応答</li>
-<li>AOT コンパイラについては不明</li>
-<li>mruby はスレッドごとに VM が動かせる</li>
-<li>C 拡張直接と比べてメモリ消費は増えるのか</li>
-</ul>
-
-
-<h2>Rails と ERD（アソシエーション）</h2>
-
-<ul>
-<li><a href="https://speakerdeck.com/ogom/erd-on-rails">https://speakerdeck.com/ogom/erd-on-rails</a></li>
-<li><a href="https://github.com/ogom/draw_erd">https://github.com/ogom/draw_erd</a> <a href="https://rubygems.org/gems/draw_erd">https://rubygems.org/gems/draw_erd</a></li>
-<li>ライブコーディングをしならがらの説明</li>
-<li>(空気を読まずに 15 時のおやつの時間を教えてくれる pepper くん)</li>
-<li>質疑応答</li>
-<li>コミュニティーではなくグループなのは doorkeeper がそうなっていたから</li>
-<li>余った時間を使ってホワイトボードで解説</li>
-</ul>
-
-
-<h2>Ruby 初級者向けレッスン（クラス）</h2>
-
-<ul>
-<li><a href="https://github.com/higaki/learn_ruby_kansai_68">https://github.com/higaki/learn_ruby_kansai_68</a></li>
-<li>Struct を使うかどうか</li>
-<li><a href="http://docs.ruby-lang.org/ja/2.2.0/method/Struct/s/=5b=5d.html">http://docs.ruby-lang.org/ja/2.2.0/method/Struct/s/=5b=5d.html</a> には「Structをカスタマイズする場合はこの方法が推奨されます。無名クラスのサブクラスを作成する方法でカスタマイズする場合は無名クラスが使用されなくなってしまうことがあるためです。」と書いてあってブロックを指定する方法が推奨されている(が、<a href="http://www.amazon.co.jp/gp/product/487311697X/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=487311697X&amp;linkCode=as2&amp;tag=znz-22">アンダースタンディング コンピュテーション ―単純な機械から不可能なプログラムまで</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=487311697X" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />では継承して使っている)</li>
-</ul>
-
-
-<h2>スポンサーセッション</h2>
-
-<ul>
-<li>ファーストサーバさんの Zenlogic の紹介</li>
-</ul>
-
-
-<h2>クロージング</h2>
-
-<ul>
-<li>関西の Ruby 関連のイベント紹介</li>
-<li>次回は 10 月</li>
-</ul>
-
 ]]></content>
   </entry>
   
