@@ -1,0 +1,625 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>letsencrypt をメールサーバーにも導入して自動化するまで - @znz blog</title>
+  <meta name="author" content="Kazuhiro NISHIYAMA">
+
+  
+  <meta name="description" content="letsencrypt をメールサーバーにも導入して自動化するまで Mar 6th, 2016 11:00 pm | Comments Ubuntu 12.04.5 LTS で letsencrypt 0.4.2 を使って apache2 と postfix と dovecot &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2016-03-06-letsencrypt.html">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-43859023-1', 'n-z.jp');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">@znz blog</a></h1>
+  
+    <h2>ZnZ の memo のようなもの</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://www.google.co.jp/cse" id="cse-search-box">
+  <div>
+    <input type="hidden" name="cx" value="partner-pub-4711975605457723:5173725094" />
+    <input type="hidden" name="ie" value="UTF-8" />
+    <input type="text" name="q" size="40" />
+    <input type="submit" name="sa" value="検索" />
+  </div>
+</form>
+
+<script type="text/javascript" src="http://www.google.co.jp/coop/cse/brand?form=cse-search-box&amp;lang=ja"></script>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      
+      <!-- zenback_title_begin -->
+      
+      <h1 class="entry-title">letsencrypt をメールサーバーにも導入して自動化するまで</h1>
+      
+      <!-- zenback_title_end -->
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2016-03-06T23:00:00+09:00'><span class='date'><span class='date-month'>Mar</span> <span class='date-day'>6</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>11:00 pm</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+
+<!-- zenback_body_begin -->
+
+<div class="entry-content"><p>Ubuntu 12.04.5 LTS で letsencrypt 0.4.2 を使って apache2 と postfix と dovecot の証明書の自動更新を設定してみました。</p>
+
+<!--more-->
+
+
+<h2>対象環境</h2>
+
+<ul>
+<li>Ubuntu 12.04.5 LTS (amd64)</li>
+<li>letsencrypt 0.4.2</li>
+<li>apache2-mpm-prefork 2.2.22-1ubuntu1.10</li>
+<li>postfix 2.9.6-1~12.04.3</li>
+<li>dovecot-imapd 1:2.0.19-0ubuntu2.2</li>
+<li>python 2.7.3-0ubuntu2.2</li>
+<li>git 1:1.7.9.5-1ubuntu0.2</li>
+</ul>
+
+
+<h2>事前知識</h2>
+
+<p><a href="https://letsencrypt.jp/">https://letsencrypt.jp/</a> や <a href="http://qiita.com/tags/letsencrypt">Qiita の記事</a> などを見て事前に予備知識を得た上で、
+<a href="https://letsencrypt.org/getting-started/" title="Getting Started">Getting Started</a> などで最新情報を確認しました。</p>
+
+<p><a href="http://qiita.com/hidekuro/items/482520f220a305dc147b" title="Let's Encrypt 証明書の自動発行とELB自動登録を行ったログ">Let&rsquo;s Encrypt 証明書の自動発行とELB自動登録を行ったログ</a>に書いてある</p>
+
+<ul>
+<li>letsencrypt-auto は virtualenv 上で動き、実行ユーザーの ~/.local に Python 環境を作ります。</li>
+<li>Let&rsquo;s Encrypt は、 5 renew / 7 days の制限があります。</li>
+</ul>
+
+
+<p>の 2 点は事前に知っておくと良いと思います。</p>
+
+<h2>初期設定 (インストール)</h2>
+
+<p>まず
+<a href="https://letsencrypt.org/getting-started/" title="Getting Started">Getting Started</a>
+に従って初期設定をしました。</p>
+
+<ul>
+<li>一般ユーザーのホームディレクトリで <code>git clone https://github.com/letsencrypt/letsencrypt</code> で最新版をとってきます。</li>
+<li><code>cd letsencrypt</code> で clone したディレクトリに入ります。</li>
+<li><code>letsencrypt-auto</code> スクリプトの中をある程度確認しておきます。
+
+<ul>
+<li>ここで precise (Ubuntu 12.04 LTS) や wheezy (Debian 7) だと backports の apt-line が設定されていない場合は自動で追加されるというのを知りました。 (apache プラグインが libaugeas0 の 1.0 以上に依存しているため)</li>
+</ul>
+</li>
+<li><code>./letsencrypt-auto --help</code> で依存関係の自動インストールが走ります。
+
+<ul>
+<li>sudo のパスワードがきかれるので入力します。</li>
+<li>apt で libaugeas0 などが勝手に入ります。</li>
+<li>その後、<code>Installing Python packages...</code> でしばらく時間がかかります。 (ここで <code>~/.local/share/letsencrypt</code> 以下にファイルがインストールされるので、何か不具合があった時には <code>~/.local</code> 以下を消して試すと良いらしいです。)</li>
+</ul>
+</li>
+</ul>
+
+
+<p>この時点では <code>/etc</code> 以下に変化はありませんでした。 (backports の apt-line は既に追加済みだったため)</p>
+
+<h2>ヘルプ表示</h2>
+
+<p><code>./letsencrypt-auto --help</code> や <code>./letsencrypt-auto --help all</code> でヘルプが確認できます。
+ヘルプの表示だけでも <code>sudo</code> を経由するようです。</p>
+
+<h2>テスト実行</h2>
+
+<p>1 週間に 5 回までの制限にひっかからないように、最初は staging サーバーで試そうと思ったため、 <code>--test-cert</code> を付けて
+<code>./letsencrypt-auto certonly --test-cert --webroot -w /srv/www/hoge.n-z.jp/htdocs -d hoge.n-z.jp</code>
+のように実行しました。</p>
+
+<p>初回実行のため、メールアドレスと ToS の Agree が必要でした。</p>
+
+<pre><code> ┌──────────────────────────────────────────────────────────────────────┐
+ │ Enter email address (used for urgent notices and lost key recovery)  │
+ │ ┌──────────────────────────────────────────────────────────────────┐ │
+ │ │                                                                  │ │
+ │ └──────────────────────────────────────────────────────────────────┘ │
+ ├──────────────────────────────────────────────────────────────────────┤
+ │                     &lt; 了解 &gt;           &lt; 取消 &gt;                      │
+ └──────────────────────────────────────────────────────────────────────┘
+</code></pre>
+
+<p>でメールアドレスを入力しました。</p>
+
+<pre><code> ┌──────────────────────────────────────────────────────────────────────┐
+ │ Please read the Terms of Service at                                  │
+ │ https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf. You │
+ │ must agree in order to register with the ACME server at              │
+ │ https://acme-v01.api.letsencrypt.org/directory                       │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ ├──────────────────────────────────────────────────────────────────────┤
+ │                     &lt;Agree &gt;           &lt;Cancel&gt;                      │
+ └──────────────────────────────────────────────────────────────────────┘
+</code></pre>
+
+<p>で表示された URL の PDF の内容を確認して Agree しました。</p>
+
+<p>成功すると最後に以下のような注意事項が表示されました。
+メールアドレスや ToS への同意は <code>/etc/letsencrypt/accounts</code> 以下にアカウントの秘密鍵などと一緒に保存されるようです。</p>
+
+<pre><code>IMPORTANT NOTES:
+ - If you lose your account credentials, you can recover through
+   e-mails sent to mail@example.jp.
+ - Congratulations! Your certificate and chain have been saved at
+   /etc/letsencrypt/live/hoge.n-z.jp/fullchain.pem. Your cert will
+   expire on 2016-06-04. To obtain a new version of the certificate in
+   the future, simply run Let's Encrypt again.
+ - Your account credentials have been saved in your Let's Encrypt
+   configuration directory at /etc/letsencrypt. You should make a
+   secure backup of this folder now. This configuration directory will
+   also contain certificates and private keys obtained by Let's
+   Encrypt so making regular backups of this folder is ideal.
+ - If you like Let's Encrypt, please consider supporting our work by:
+
+   Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
+   Donating to EFF:                    https://eff.org/donate-le
+</code></pre>
+
+<h2>Apache 2.2 への設定反映</h2>
+
+<p>Apache 2.4.8 未満のため、 <code>fullchain.pem</code> ではなく <code>chain.pem</code> と <code>cert.pem</code> で設定します。</p>
+
+<pre><code>SSLCertificateKeyFile /etc/letsencrypt/live/hoge.n-z.jp/privkey.pem
+SSLCertificateChainFile /etc/letsencrypt/live/hoge.n-z.jp/chain.pem
+SSLCertificateFile /etc/letsencrypt/live/hoge.n-z.jp/cert.pem
+</code></pre>
+
+<p><code>sudo apache2ctl graceful</code> で反映し、 <code>https://hoge.n-z.jp</code> を開いて信頼していないルート証明書の問題による証明書エラーが出るのを確認しました。</p>
+
+<h2>本番実行</h2>
+
+<p><code>--test-cert</code> を外して、
+<code>./letsencrypt-auto certonly --webroot -w /srv/www/hoge.n-z.jp/htdocs -d hoge.n-z.jp</code>
+のように実行しました。</p>
+
+<p>staging サーバー (<code>acme-staging.api.letsencrypt.org</code>) ではなく、本番サーバー (<code>acme-v01.api.letsencrypt.org</code>) への接続になるため、メールアドレスの入力と ToS への同意が再度必要になりました。</p>
+
+<p>再作成扱いのためか、こんな確認ダイアログが出たので、 2 を選択して OK を押しました。</p>
+
+<pre><code>┌──────────────────────────────────────────────────────────────────────┐
+│ You have an existing certificate that contains exactly the same      │
+│ domains you requested and isn't close to expiry.                     │
+│ (ref: /etc/letsencrypt/renewal/hoge.n-z.jp.conf)                     │
+│                                                                      │
+│ What would you like to do?                                           │
+│ ┌──────────────────────────────────────────────────────────────────┐ │
+│ │        1  Keep the existing certificate for now                  │ │
+│ │        2  Renew &amp; replace the cert (limit ~5 per 7 days)         │ │
+│ │                                                                  │ │
+│ │                                                                  │ │
+│ │                                                                  │ │
+│ │                                                                  │ │
+│ │                                                                  │ │
+│ │                                                                  │ │
+│ │                                                                  │ │
+│ └──────────────────────────────────────────────────────────────────┘ │
+├──────────────────────────────────────────────────────────────────────┤
+│                     &lt;  OK  &gt;           &lt;Cancel&gt;                      │
+└──────────────────────────────────────────────────────────────────────┘
+</code></pre>
+
+<p><code>sudo apache2ctl graceful</code> で反映し、 <code>https://hoge.n-z.jp</code> を開いて証明書エラーが出ないのを確認しました。</p>
+
+<h2>renew</h2>
+
+<p>letsencrypt 0.4 で <code>letsencrypt renew</code> というサブコマンドが増えていて、有効期限が 30 日未満の証明書の更新が簡単にできるようになっています。</p>
+
+<p>これも最初は <code>--dry-run</code> を付けて staging サーバーで試してみました。
+cron で実行する時のことを考えて、最初から root 権限付きになるように <code>sudo</code> 付きで実行してみました。
+すると以下のようになって <code>/etc/letsencrypt/csr</code> と <code>/etc/letsencrypt/keys</code> 以下にはファイルが作成されてしまいました。
+<code>/etc</code> を汚したくない場合は <code>--dry-run</code> はあまり実行しない方が良さそうだと思いました。</p>
+
+<pre><code>% sudo /home/hoge/letsencrypt-auto renew --dry-run
+Checking for new version...
+Requesting root privileges to run letsencrypt...
+   /home/hoge/.local/share/letsencrypt/bin/letsencrypt renew --dry-run
+Processing /etc/letsencrypt/renewal/hoge.n-z.jp.conf
+** DRY RUN: simulating 'letsencrypt renew' close to cert expiry
+**          (The test certificates below have not been saved.)
+
+Congratulations, all renewals succeeded. The following certs have been renewed:
+  /etc/letsencrypt/live/hoge.n-z.jp/fullchain.pem (success)
+** DRY RUN: simulating 'letsencrypt renew' close to cert expiry
+**          (The test certificates above have not been saved.)
+</code></pre>
+
+<p>普通に実行したら skipped になって何も変化はありませんでした。</p>
+
+<pre><code>% sudo /home/hoge/letsencrypt/letsencrypt-auto renew
+Checking for new version...
+Requesting root privileges to run letsencrypt...
+   /home/hoge/.local/share/letsencrypt/bin/letsencrypt renew
+Processing /etc/letsencrypt/renewal/hoge.n-z.jp.conf
+
+The following certs are not due for renewal yet:
+  /etc/letsencrypt/live/hoge.n-z.jp/fullchain.pem (skipped)
+No renewals were attempted.
+</code></pre>
+
+<h2>メールサーバー用証明書作成</h2>
+
+<p>まず、ドメイン認証で必要になるため、 <code>mx6.n-z.jp</code> にも apache2 の VirtualHost 設定を追加しました。
+<code>https</code> は必要ないため、 <code>http</code> だけの設定をしました。</p>
+
+<p>今回は 2 度目なので、いきなり <code>--test-cert</code> なしで実行しました。</p>
+
+<pre><code>% /home/hoge/letsencrypt/letsencrypt-auto certonly --webroot -w /srv/www/mx6.n-z.jp/htdocs -d mx6.n-z.jp
+Checking for new version...
+Requesting root privileges to run letsencrypt...
+   sudo /home/hoge/.local/share/letsencrypt/bin/letsencrypt certonly --webroot -w /srv/www/mx6.n-z.jp/htdocs -d mx6.n-z.jp
+
+IMPORTANT NOTES:
+ - Congratulations! Your certificate and chain have been saved at
+   /etc/letsencrypt/live/mx6.n-z.jp/fullchain.pem. Your cert will
+   expire on 2016-06-04. To obtain a new version of the certificate in
+   the future, simply run Let's Encrypt again.
+ - If you like Let's Encrypt, please consider supporting our work by:
+
+   Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
+   Donating to EFF:                    https://eff.org/donate-le
+</code></pre>
+
+<h2>postfix の設定変更</h2>
+
+<p><code>/etc/postfix/main.cf</code> で以下の設定をしました。</p>
+
+<pre><code>smtpd_tls_cert_file = /etc/letsencrypt/live/mx6.n-z.jp/fullchain.pem
+smtpd_tls_key_file = /etc/letsencrypt/live/mx6.n-z.jp/privkey.pem
+smtpd_tls_mandatory_protocols = !SSLv2,!SSLv3
+</code></pre>
+
+<p>そして <code>sudo service postfix reload</code> で反映しました。</p>
+
+<p>postfix の reload は <code>apache2ctl graceful</code> などと違ってメッセージが出てくるのが後の自動化の時に邪魔だったので標準出力に捨てるようにしました (後述)。</p>
+
+<pre><code>% sudo service postfix reload
+ * Reloading Postfix configuration...
+   ...done.
+</code></pre>
+
+<h2>dovecot の設定変更</h2>
+
+<p><code>/etc/dovecot/local.conf</code> で以下の設定をしました。</p>
+
+<pre><code>ssl_cert = &lt;/etc/letsencrypt/live/mx6.n-z.jp/fullchain.pem
+ssl_key = &lt;/etc/letsencrypt/live/mx6.n-z.jp/privkey.pem
+</code></pre>
+
+<p><code>sudo service dovecot reload</code> で反映しました。</p>
+
+<h2>自動更新</h2>
+
+<p><a href="https://letsencrypt.org/getting-started/#writing-your-own-renewal-script" title="Writing your own renewal script">Writing your own renewal script</a> を参考にして、以下のように <code>/etc/cron.daily/letsencrypt</code> を作成して毎日 <code>letsencrypt-auto renew</code> が実行されるようにしました。
+postfix と dovecot の reload を追加しています。
+前述したように、 postfix の reload は標準出力を捨てて、余計なメールが飛ばないようにしています。</p>
+
+<pre><code>% sudoedit /etc/cron.daily/letsencrypt
+% cat /etc/cron.daily/letsencrypt
+#!/bin/sh
+if ! /home/hoge/letsencrypt/letsencrypt-auto renew &gt; /var/log/letsencrypt/renew.log 2&gt;&amp;1 ; then
+    echo Automated renewal failed:
+    cat /var/log/letsencrypt/renew.log
+    exit 1
+fi
+apachectl graceful
+service postfix reload &gt;/dev/null
+service dovecot reload
+% sudo chmod +x /etc/cron.daily/letsencrypt
+</code></pre>
+
+<p>作成したファイルの動作確認をしておきます。</p>
+
+<pre><code>% sudo /etc/cron.daily/letsencrypt
+% sudo cat /var/log/letsencrypt/renew.log
+Checking for new version...
+Requesting root privileges to run letsencrypt...
+   /home/hoge/.local/share/letsencrypt/bin/letsencrypt renew
+Processing /etc/letsencrypt/renewal/mx6.n-z.jp.conf
+Processing /etc/letsencrypt/renewal/hoge.n-z.jp.conf
+
+The following certs are not due for renewal yet:
+  /etc/letsencrypt/live/mx6.n-z.jp/fullchain.pem (skipped)
+  /etc/letsencrypt/live/hoge.n-z.jp/fullchain.pem (skipped)
+No renewals were attempted.
+%
+</code></pre>
+
+<h2>まとめ</h2>
+
+<p>letsencrypt の導入から証明書の自動更新の設定までしました。</p>
+
+<p>簡単に導入できて自動化もでき、しかも無料なので、まだベータ版であるという点が問題にならないところでは、積極的に使っていけば良さそうだと思いました。</p>
+</div>
+
+<!-- zenback_body_end -->
+
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2016-03-06T23:00:00+09:00'><span class='date'><span class='date-month'>Mar</span> <span class='date-day'>6</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>11:00 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/letsencrypt/'>letsencrypt</a>, <a class='category' href='/blog/categories/linux/'>linux</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2016-03-05-rubykansai71.html" title="Previous Post: 第71回 Ruby関西 勉強会に参加しました">&laquo; 第71回 Ruby関西 勉強会に参加しました</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+<section>
+  <!-- X:S ZenBackWidget --><div id="zenback-widget-loader"></div><script type="text/javascript">!function(d,i){if(!d.getElementById(i)){var r=Math.ceil((new Date()*1)*Math.random());var j=d.createElement("script");j.id=i;j.async=true;j.src="//w.zenback.jp/v1/?base_uri=http%3A//blog.n-z.jp/&nsid=122901358100652638%3A%3A122901381991399941&rand="+r;d.body.appendChild(j);}}(document,"zenback-widget-js");</script><!-- X:E ZenBackWidget -->
+
+</section>
+
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- sidebar -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:160px;height:600px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4210402292"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+<section>
+  <h1>About Me</h1>
+  <img src="/favicon.png" style="float:right">
+  <p>
+    <a href="http://rubycommitters.org/">Ruby のコミッター</a>とかやってます。
+    フルスタックエンジニア(って何?)かもしれません。
+  </p>
+<script data-gittip-username="znz"
+        data-gittip-widget="button"
+        src="//gttp.co/v1.js"></script>
+</section>
+<script language="javascript" type="text/javascript" src="http://b.hatena.ne.jp/js/widget.js" charset="utf-8"></script>
+<script language="javascript" type="text/javascript">
+Hatena.BookmarkWidget.url   = "http://blog.n-z.jp/";
+Hatena.BookmarkWidget.title = "人気エントリー";
+Hatena.BookmarkWidget.sort  = "count";
+Hatena.BookmarkWidget.width = 0;
+Hatena.BookmarkWidget.num   = 6;
+Hatena.BookmarkWidget.theme = "default";
+Hatena.BookmarkWidget.load();
+</script>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2016-03-06-letsencrypt.html">letsencrypt をメールサーバーにも導入して自動化するまで</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2016-03-05-rubykansai71.html">第71回 Ruby関西 勉強会に参加しました</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2016-02-27-kof.html">KOF勉強会に参加しました</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2016-02-07-amagasakirb.html">2月7日 「型システム入門」読書会第3回(兵庫県)に参加しました</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2016-01-16-lilo-tokaidolug.html">LILO&東海道らぐオフラインミーティング 2016/01/16 に参加しました</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>Tag Cloud</h1>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 101.3953488372093%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 111.16279069767442%'>amagasakirb(16)</a> <a href='/blog/categories/ansible' style='font-size: 106.27906976744185%'>ansible(9)</a> <a href='/blog/categories/anyenv' style='font-size: 100.69767441860465%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 100.69767441860465%'>authorization(1)</a> <a href='/blog/categories/book' style='font-size: 101.3953488372093%'>book(2)</a> <a href='/blog/categories/boot2docker' style='font-size: 103.48837209302326%'>boot2docker(5)</a> <a href='/blog/categories/bootstrap' style='font-size: 100.69767441860465%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 100.69767441860465%'>bts(1)</a> <a href='/blog/categories/capistrano' style='font-size: 100.69767441860465%'>capistrano(1)</a> <a href='/blog/categories/cdr' style='font-size: 102.09302325581396%'>cdr(3)</a> <a href='/blog/categories/certification' style='font-size: 100.69767441860465%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 101.3953488372093%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 102.09302325581396%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 118.13953488372093%'>debian(26)</a> <a href='/blog/categories/devise' style='font-size: 103.48837209302326%'>devise(5)</a> <a href='/blog/categories/dkms' style='font-size: 100.69767441860465%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 112.55813953488372%'>docker(18)</a> <a href='/blog/categories/dokku' style='font-size: 104.18604651162791%'>dokku(6)</a> <a href='/blog/categories/doorkeeper' style='font-size: 102.79069767441861%'>doorkeeper(4)</a> <a href='/blog/categories/drb' style='font-size: 100.69767441860465%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 100.69767441860465%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 105.5813953488372%'>emacs(8)</a> <a href='/blog/categories/event' style='font-size: 152.32558139534882%'>event(75)</a> <a href='/blog/categories/fluentd' style='font-size: 100.69767441860465%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 102.79069767441861%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 101.3953488372093%'>ghq(2)</a> <a href='/blog/categories/git' style='font-size: 103.48837209302326%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 104.88372093023256%'>github(7)</a> <a href='/blog/categories/go' style='font-size: 100.69767441860465%'>go(1)</a> <a href='/blog/categories/gpg' style='font-size: 100.69767441860465%'>gpg(1)</a> <a href='/blog/categories/haml' style='font-size: 100.69767441860465%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 102.09302325581396%'>heroku(3)</a> <a href='/blog/categories/homebrew' style='font-size: 104.88372093023256%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 102.09302325581396%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 102.09302325581396%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 100.69767441860465%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 100.69767441860465%'>irb(1)</a> <a href='/blog/categories/isbn' style='font-size: 100.69767441860465%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 102.79069767441861%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 100.69767441860465%'>jenkins(1)</a> <a href='/blog/categories/jquery' style='font-size: 100.69767441860465%'>jquery(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 101.3953488372093%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 100.69767441860465%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 102.09302325581396%'>jus(3)</a> <a href='/blog/categories/k-of' style='font-size: 102.09302325581396%'>k-of(3)</a> <a href='/blog/categories/kansaidebian' style='font-size: 103.48837209302326%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 100.69767441860465%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 100.69767441860465%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 102.79069767441861%'>land-of-lisp(4)</a> <a href='/blog/categories/letsencrypt' style='font-size: 100.69767441860465%'>letsencrypt(1)</a> <a href='/blog/categories/lilo' style='font-size: 103.48837209302326%'>lilo(5)</a> <a href='/blog/categories/linux' style='font-size: 113.25581395348837%'>linux(19)</a> <a href='/blog/categories/live' style='font-size: 102.79069767441861%'>live(4)</a> <a href='/blog/categories/ll' style='font-size: 100.69767441860465%'>ll(1)</a> <a href='/blog/categories/lxc' style='font-size: 100.69767441860465%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 102.09302325581396%'>lxcjp(3)</a> <a href='/blog/categories/mail' style='font-size: 100.69767441860465%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 101.3953488372093%'>mailman(2)</a> <a href='/blog/categories/mavericks' style='font-size: 102.79069767441861%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 100.69767441860465%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 100.69767441860465%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 100.69767441860465%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 101.3953488372093%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 100.69767441860465%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 102.79069767441861%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 104.18604651162791%'>octopress(6)</a> <a href='/blog/categories/omniauth' style='font-size: 101.3953488372093%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 101.3953488372093%'>openssl(2)</a> <a href='/blog/categories/osx' style='font-size: 120.23255813953489%'>osx(29)</a> <a href='/blog/categories/owncloud' style='font-size: 101.3953488372093%'>owncloud(2)</a> <a href='/blog/categories/packer' style='font-size: 100.69767441860465%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 100.69767441860465%'>passenger(1)</a> <a href='/blog/categories/peco' style='font-size: 100.69767441860465%'>peco(1)</a> <a href='/blog/categories/postfix' style='font-size: 101.3953488372093%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 102.09302325581396%'>postgresql(3)</a> <a href='/blog/categories/pundit' style='font-size: 100.69767441860465%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 100.69767441860465%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 102.09302325581396%'>r(3)</a> <a href='/blog/categories/rabbit' style='font-size: 101.3953488372093%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 124.4186046511628%'>rails(35)</a> <a href='/blog/categories/ransack' style='font-size: 100.69767441860465%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 102.79069767441861%'>rbenv(4)</a> <a href='/blog/categories/redmine' style='font-size: 101.3953488372093%'>redmine(2)</a> <a href='/blog/categories/rspec' style='font-size: 100.69767441860465%'>rspec(1)</a> <a href='/blog/categories/rsyslog' style='font-size: 100.69767441860465%'>rsyslog(1)</a> <a href='/blog/categories/rubima' style='font-size: 100.69767441860465%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(86)</a> <a href='/blog/categories/rubykaigi' style='font-size: 100.69767441860465%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 106.97674418604652%'>rubykansai(10)</a> <a href='/blog/categories/rubymotion' style='font-size: 112.55813953488372%'>rubymotion(18)</a> <a href='/blog/categories/security' style='font-size: 102.09302325581396%'>security(3)</a> <a href='/blog/categories/shell' style='font-size: 102.79069767441861%'>shell(4)</a> <a href='/blog/categories/slim' style='font-size: 100.69767441860465%'>slim(1)</a> <a href='/blog/categories/ssh' style='font-size: 100.69767441860465%'>ssh(1)</a> <a href='/blog/categories/sylpheed' style='font-size: 100.69767441860465%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 100.69767441860465%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 102.79069767441861%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 116.74418604651163%'>ubuntu(24)</a> <a href='/blog/categories/upstart' style='font-size: 101.3953488372093%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 100.69767441860465%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 105.5813953488372%'>vagrant(8)</a> <a href='/blog/categories/vagrantcloud' style='font-size: 101.3953488372093%'>vagrantcloud(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 101.3953488372093%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 100.69767441860465%'>weechat(1)</a> <a href='/blog/categories/yaml' style='font-size: 100.69767441860465%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.3953488372093%'>zabbix(2)</a> <a href='/blog/categories/zsh' style='font-size: 109.06976744186046%'>zsh(13)</a> </span>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/znz">@znz</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'znz',
+            count: 3,
+            skip_forks: false,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2016 - Kazuhiro NISHIYAMA -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'znzblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2016-03-06-letsencrypt.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2016-03-06-letsencrypt.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" src="http://b.st-hatena.com/js/bookmark_button.js" charset="utf-8" async="async"></script>
+
+
+</body>
+</html>

@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-03-05T18:42:04+09:00</updated>
+  <updated>2016-03-06T23:24:01+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,319 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[letsencrypt をメールサーバーにも導入して自動化するまで]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-03-06-letsencrypt.html"/>
+    <updated>2016-03-06T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/letsencrypt</id>
+    <content type="html"><![CDATA[<p>Ubuntu 12.04.5 LTS で letsencrypt 0.4.2 を使って apache2 と postfix と dovecot の証明書の自動更新を設定してみました。</p>
+
+<!--more-->
+
+
+<h2>対象環境</h2>
+
+<ul>
+<li>Ubuntu 12.04.5 LTS (amd64)</li>
+<li>letsencrypt 0.4.2</li>
+<li>apache2-mpm-prefork 2.2.22-1ubuntu1.10</li>
+<li>postfix 2.9.6-1~12.04.3</li>
+<li>dovecot-imapd 1:2.0.19-0ubuntu2.2</li>
+<li>python 2.7.3-0ubuntu2.2</li>
+<li>git 1:1.7.9.5-1ubuntu0.2</li>
+</ul>
+
+
+<h2>事前知識</h2>
+
+<p><a href="https://letsencrypt.jp/">https://letsencrypt.jp/</a> や <a href="http://qiita.com/tags/letsencrypt">Qiita の記事</a> などを見て事前に予備知識を得た上で、
+<a href="https://letsencrypt.org/getting-started/" title="Getting Started">Getting Started</a> などで最新情報を確認しました。</p>
+
+<p><a href="http://qiita.com/hidekuro/items/482520f220a305dc147b" title="Let's Encrypt 証明書の自動発行とELB自動登録を行ったログ">Let&rsquo;s Encrypt 証明書の自動発行とELB自動登録を行ったログ</a>に書いてある</p>
+
+<ul>
+<li>letsencrypt-auto は virtualenv 上で動き、実行ユーザーの ~/.local に Python 環境を作ります。</li>
+<li>Let&rsquo;s Encrypt は、 5 renew / 7 days の制限があります。</li>
+</ul>
+
+
+<p>の 2 点は事前に知っておくと良いと思います。</p>
+
+<h2>初期設定 (インストール)</h2>
+
+<p>まず
+<a href="https://letsencrypt.org/getting-started/" title="Getting Started">Getting Started</a>
+に従って初期設定をしました。</p>
+
+<ul>
+<li>一般ユーザーのホームディレクトリで <code>git clone https://github.com/letsencrypt/letsencrypt</code> で最新版をとってきます。</li>
+<li><code>cd letsencrypt</code> で clone したディレクトリに入ります。</li>
+<li><code>letsencrypt-auto</code> スクリプトの中をある程度確認しておきます。
+
+<ul>
+<li>ここで precise (Ubuntu 12.04 LTS) や wheezy (Debian 7) だと backports の apt-line が設定されていない場合は自動で追加されるというのを知りました。 (apache プラグインが libaugeas0 の 1.0 以上に依存しているため)</li>
+</ul>
+</li>
+<li><code>./letsencrypt-auto --help</code> で依存関係の自動インストールが走ります。
+
+<ul>
+<li>sudo のパスワードがきかれるので入力します。</li>
+<li>apt で libaugeas0 などが勝手に入ります。</li>
+<li>その後、<code>Installing Python packages...</code> でしばらく時間がかかります。 (ここで <code>~/.local/share/letsencrypt</code> 以下にファイルがインストールされるので、何か不具合があった時には <code>~/.local</code> 以下を消して試すと良いらしいです。)</li>
+</ul>
+</li>
+</ul>
+
+
+<p>この時点では <code>/etc</code> 以下に変化はありませんでした。 (backports の apt-line は既に追加済みだったため)</p>
+
+<h2>ヘルプ表示</h2>
+
+<p><code>./letsencrypt-auto --help</code> や <code>./letsencrypt-auto --help all</code> でヘルプが確認できます。
+ヘルプの表示だけでも <code>sudo</code> を経由するようです。</p>
+
+<h2>テスト実行</h2>
+
+<p>1 週間に 5 回までの制限にひっかからないように、最初は staging サーバーで試そうと思ったため、 <code>--test-cert</code> を付けて
+<code>./letsencrypt-auto certonly --test-cert --webroot -w /srv/www/hoge.n-z.jp/htdocs -d hoge.n-z.jp</code>
+のように実行しました。</p>
+
+<p>初回実行のため、メールアドレスと ToS の Agree が必要でした。</p>
+
+<pre><code> ┌──────────────────────────────────────────────────────────────────────┐
+ │ Enter email address (used for urgent notices and lost key recovery)  │
+ │ ┌──────────────────────────────────────────────────────────────────┐ │
+ │ │                                                                  │ │
+ │ └──────────────────────────────────────────────────────────────────┘ │
+ ├──────────────────────────────────────────────────────────────────────┤
+ │                     &lt; 了解 &gt;           &lt; 取消 &gt;                      │
+ └──────────────────────────────────────────────────────────────────────┘
+</code></pre>
+
+<p>でメールアドレスを入力しました。</p>
+
+<pre><code> ┌──────────────────────────────────────────────────────────────────────┐
+ │ Please read the Terms of Service at                                  │
+ │ https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf. You │
+ │ must agree in order to register with the ACME server at              │
+ │ https://acme-v01.api.letsencrypt.org/directory                       │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ │                                                                      │
+ ├──────────────────────────────────────────────────────────────────────┤
+ │                     &lt;Agree &gt;           &lt;Cancel&gt;                      │
+ └──────────────────────────────────────────────────────────────────────┘
+</code></pre>
+
+<p>で表示された URL の PDF の内容を確認して Agree しました。</p>
+
+<p>成功すると最後に以下のような注意事項が表示されました。
+メールアドレスや ToS への同意は <code>/etc/letsencrypt/accounts</code> 以下にアカウントの秘密鍵などと一緒に保存されるようです。</p>
+
+<pre><code>IMPORTANT NOTES:
+ - If you lose your account credentials, you can recover through
+   e-mails sent to mail@example.jp.
+ - Congratulations! Your certificate and chain have been saved at
+   /etc/letsencrypt/live/hoge.n-z.jp/fullchain.pem. Your cert will
+   expire on 2016-06-04. To obtain a new version of the certificate in
+   the future, simply run Let's Encrypt again.
+ - Your account credentials have been saved in your Let's Encrypt
+   configuration directory at /etc/letsencrypt. You should make a
+   secure backup of this folder now. This configuration directory will
+   also contain certificates and private keys obtained by Let's
+   Encrypt so making regular backups of this folder is ideal.
+ - If you like Let's Encrypt, please consider supporting our work by:
+
+   Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
+   Donating to EFF:                    https://eff.org/donate-le
+</code></pre>
+
+<h2>Apache 2.2 への設定反映</h2>
+
+<p>Apache 2.4.8 未満のため、 <code>fullchain.pem</code> ではなく <code>chain.pem</code> と <code>cert.pem</code> で設定します。</p>
+
+<pre><code>SSLCertificateKeyFile /etc/letsencrypt/live/hoge.n-z.jp/privkey.pem
+SSLCertificateChainFile /etc/letsencrypt/live/hoge.n-z.jp/chain.pem
+SSLCertificateFile /etc/letsencrypt/live/hoge.n-z.jp/cert.pem
+</code></pre>
+
+<p><code>sudo apache2ctl graceful</code> で反映し、 <code>https://hoge.n-z.jp</code> を開いて信頼していないルート証明書の問題による証明書エラーが出るのを確認しました。</p>
+
+<h2>本番実行</h2>
+
+<p><code>--test-cert</code> を外して、
+<code>./letsencrypt-auto certonly --webroot -w /srv/www/hoge.n-z.jp/htdocs -d hoge.n-z.jp</code>
+のように実行しました。</p>
+
+<p>staging サーバー (<code>acme-staging.api.letsencrypt.org</code>) ではなく、本番サーバー (<code>acme-v01.api.letsencrypt.org</code>) への接続になるため、メールアドレスの入力と ToS への同意が再度必要になりました。</p>
+
+<p>再作成扱いのためか、こんな確認ダイアログが出たので、 2 を選択して OK を押しました。</p>
+
+<pre><code>┌──────────────────────────────────────────────────────────────────────┐
+│ You have an existing certificate that contains exactly the same      │
+│ domains you requested and isn't close to expiry.                     │
+│ (ref: /etc/letsencrypt/renewal/hoge.n-z.jp.conf)                     │
+│                                                                      │
+│ What would you like to do?                                           │
+│ ┌──────────────────────────────────────────────────────────────────┐ │
+│ │        1  Keep the existing certificate for now                  │ │
+│ │        2  Renew &amp; replace the cert (limit ~5 per 7 days)         │ │
+│ │                                                                  │ │
+│ │                                                                  │ │
+│ │                                                                  │ │
+│ │                                                                  │ │
+│ │                                                                  │ │
+│ │                                                                  │ │
+│ │                                                                  │ │
+│ └──────────────────────────────────────────────────────────────────┘ │
+├──────────────────────────────────────────────────────────────────────┤
+│                     &lt;  OK  &gt;           &lt;Cancel&gt;                      │
+└──────────────────────────────────────────────────────────────────────┘
+</code></pre>
+
+<p><code>sudo apache2ctl graceful</code> で反映し、 <code>https://hoge.n-z.jp</code> を開いて証明書エラーが出ないのを確認しました。</p>
+
+<h2>renew</h2>
+
+<p>letsencrypt 0.4 で <code>letsencrypt renew</code> というサブコマンドが増えていて、有効期限が 30 日未満の証明書の更新が簡単にできるようになっています。</p>
+
+<p>これも最初は <code>--dry-run</code> を付けて staging サーバーで試してみました。
+cron で実行する時のことを考えて、最初から root 権限付きになるように <code>sudo</code> 付きで実行してみました。
+すると以下のようになって <code>/etc/letsencrypt/csr</code> と <code>/etc/letsencrypt/keys</code> 以下にはファイルが作成されてしまいました。
+<code>/etc</code> を汚したくない場合は <code>--dry-run</code> はあまり実行しない方が良さそうだと思いました。</p>
+
+<pre><code>% sudo /home/hoge/letsencrypt-auto renew --dry-run
+Checking for new version...
+Requesting root privileges to run letsencrypt...
+   /home/hoge/.local/share/letsencrypt/bin/letsencrypt renew --dry-run
+Processing /etc/letsencrypt/renewal/hoge.n-z.jp.conf
+** DRY RUN: simulating 'letsencrypt renew' close to cert expiry
+**          (The test certificates below have not been saved.)
+
+Congratulations, all renewals succeeded. The following certs have been renewed:
+  /etc/letsencrypt/live/hoge.n-z.jp/fullchain.pem (success)
+** DRY RUN: simulating 'letsencrypt renew' close to cert expiry
+**          (The test certificates above have not been saved.)
+</code></pre>
+
+<p>普通に実行したら skipped になって何も変化はありませんでした。</p>
+
+<pre><code>% sudo /home/hoge/letsencrypt/letsencrypt-auto renew
+Checking for new version...
+Requesting root privileges to run letsencrypt...
+   /home/hoge/.local/share/letsencrypt/bin/letsencrypt renew
+Processing /etc/letsencrypt/renewal/hoge.n-z.jp.conf
+
+The following certs are not due for renewal yet:
+  /etc/letsencrypt/live/hoge.n-z.jp/fullchain.pem (skipped)
+No renewals were attempted.
+</code></pre>
+
+<h2>メールサーバー用証明書作成</h2>
+
+<p>まず、ドメイン認証で必要になるため、 <code>mx6.n-z.jp</code> にも apache2 の VirtualHost 設定を追加しました。
+<code>https</code> は必要ないため、 <code>http</code> だけの設定をしました。</p>
+
+<p>今回は 2 度目なので、いきなり <code>--test-cert</code> なしで実行しました。</p>
+
+<pre><code>% /home/hoge/letsencrypt/letsencrypt-auto certonly --webroot -w /srv/www/mx6.n-z.jp/htdocs -d mx6.n-z.jp
+Checking for new version...
+Requesting root privileges to run letsencrypt...
+   sudo /home/hoge/.local/share/letsencrypt/bin/letsencrypt certonly --webroot -w /srv/www/mx6.n-z.jp/htdocs -d mx6.n-z.jp
+
+IMPORTANT NOTES:
+ - Congratulations! Your certificate and chain have been saved at
+   /etc/letsencrypt/live/mx6.n-z.jp/fullchain.pem. Your cert will
+   expire on 2016-06-04. To obtain a new version of the certificate in
+   the future, simply run Let's Encrypt again.
+ - If you like Let's Encrypt, please consider supporting our work by:
+
+   Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
+   Donating to EFF:                    https://eff.org/donate-le
+</code></pre>
+
+<h2>postfix の設定変更</h2>
+
+<p><code>/etc/postfix/main.cf</code> で以下の設定をしました。</p>
+
+<pre><code>smtpd_tls_cert_file = /etc/letsencrypt/live/mx6.n-z.jp/fullchain.pem
+smtpd_tls_key_file = /etc/letsencrypt/live/mx6.n-z.jp/privkey.pem
+smtpd_tls_mandatory_protocols = !SSLv2,!SSLv3
+</code></pre>
+
+<p>そして <code>sudo service postfix reload</code> で反映しました。</p>
+
+<p>postfix の reload は <code>apache2ctl graceful</code> などと違ってメッセージが出てくるのが後の自動化の時に邪魔だったので標準出力に捨てるようにしました (後述)。</p>
+
+<pre><code>% sudo service postfix reload
+ * Reloading Postfix configuration...
+   ...done.
+</code></pre>
+
+<h2>dovecot の設定変更</h2>
+
+<p><code>/etc/dovecot/local.conf</code> で以下の設定をしました。</p>
+
+<pre><code>ssl_cert = &lt;/etc/letsencrypt/live/mx6.n-z.jp/fullchain.pem
+ssl_key = &lt;/etc/letsencrypt/live/mx6.n-z.jp/privkey.pem
+</code></pre>
+
+<p><code>sudo service dovecot reload</code> で反映しました。</p>
+
+<h2>自動更新</h2>
+
+<p><a href="https://letsencrypt.org/getting-started/#writing-your-own-renewal-script" title="Writing your own renewal script">Writing your own renewal script</a> を参考にして、以下のように <code>/etc/cron.daily/letsencrypt</code> を作成して毎日 <code>letsencrypt-auto renew</code> が実行されるようにしました。
+postfix と dovecot の reload を追加しています。
+前述したように、 postfix の reload は標準出力を捨てて、余計なメールが飛ばないようにしています。</p>
+
+<pre><code>% sudoedit /etc/cron.daily/letsencrypt
+% cat /etc/cron.daily/letsencrypt
+#!/bin/sh
+if ! /home/hoge/letsencrypt/letsencrypt-auto renew &gt; /var/log/letsencrypt/renew.log 2&gt;&amp;1 ; then
+    echo Automated renewal failed:
+    cat /var/log/letsencrypt/renew.log
+    exit 1
+fi
+apachectl graceful
+service postfix reload &gt;/dev/null
+service dovecot reload
+% sudo chmod +x /etc/cron.daily/letsencrypt
+</code></pre>
+
+<p>作成したファイルの動作確認をしておきます。</p>
+
+<pre><code>% sudo /etc/cron.daily/letsencrypt
+% sudo cat /var/log/letsencrypt/renew.log
+Checking for new version...
+Requesting root privileges to run letsencrypt...
+   /home/hoge/.local/share/letsencrypt/bin/letsencrypt renew
+Processing /etc/letsencrypt/renewal/mx6.n-z.jp.conf
+Processing /etc/letsencrypt/renewal/hoge.n-z.jp.conf
+
+The following certs are not due for renewal yet:
+  /etc/letsencrypt/live/mx6.n-z.jp/fullchain.pem (skipped)
+  /etc/letsencrypt/live/hoge.n-z.jp/fullchain.pem (skipped)
+No renewals were attempted.
+%
+</code></pre>
+
+<h2>まとめ</h2>
+
+<p>letsencrypt の導入から証明書の自動更新の設定までしました。</p>
+
+<p>簡単に導入できて自動化もでき、しかも無料なので、まだベータ版であるという点が問題にならないところでは、積極的に使っていけば良さそうだと思いました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第71回 Ruby関西 勉強会に参加しました]]></title>
@@ -2468,112 +2781,6 @@ Minitest も機会があれば使ってみようと思いました。</p>
 
 <ul>
 <li><a href="https://goo.gl/g75FNJ">https://goo.gl/g75FNJ</a></li>
-</ul>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第67回 Ruby関西 勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2015-06-13-rubykansai67.html"/>
-    <updated>2015-06-13T13:23:57+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubykansai67</id>
-    <content type="html"><![CDATA[<p><a href="https://rubykansai.doorkeeper.jp/events/23266" title="第67回 Ruby関西 勉強会">第67回 Ruby関西 勉強会</a>
-に参加しました。
-(<a href="https://github.com/rubykansai/workshops/wiki/Kansaiworkshop067">KansaiWorkshop067</a>)</p>
-
-<p>今回は京都女子大学での開催でした。</p>
-
-<!--more-->
-
-
-<h2>ドメイン駆動設計とRuby</h2>
-
-<ul>
-<li><a href="https://speakerdeck.com/ogom/ddd-infinite">DDD Infinite</a></li>
-<li><a href="http://ogom.github.io/python-mcider/">Markdown で書ける自作プレゼンツール</a>を使っている</li>
-<li>Sublime Text との関係の都合で Python 製</li>
-</ul>
-
-
-<h2>ある教育系のサービスを開発してきた裏側</h2>
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4863541686" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-<ul>
-<li>会場アンケート からあげ好き ほぼ100%</li>
-<li>本を書いたらしい: <a href="http://www.amazon.co.jp/gp/product/4863541686/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4863541686&amp;linkCode=as2&amp;tag=znz-22">Webエンジニアの教科書</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4863541686" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" /></li>
-<li>Classi</li>
-<li>Slack のカスタム絵文字を絵文字職人がいつの間にか作っている</li>
-<li>Qiita:Team (esa という似たサービスが最近出てきたらしい)</li>
-<li>朝会</li>
-<li>GitHub でのレビュー</li>
-<li><a href="http://www.amazon.co.jp/gp/product/4873116309/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4873116309&amp;linkCode=as2&amp;tag=znz-22">Team Geek ―Googleのギークたちはいかにしてチームを作るのか</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4873116309" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" />の「自分の疑問として謙虚に聞く」</li>
-<li>チームランチ</li>
-</ul>
-
-
-<h2>Ruby で操る AWS</h2>
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4797380357" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=B00UWCYRZK" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-<ul>
-<li><a href="http://www.slideshare.net/takurosasaki/rubyaws-67ruby" title="Rubyで操るAWS 第67回Ruby関西 勉強会">Rubyで操るAWS 第67回Ruby関西 勉強会</a></li>
-<li>本をいくつか書いている</li>
-<li>会場アンケート どの項目も意外と多い</li>
-<li>クラウドファースト</li>
-<li>クラウドネイティブ</li>
-<li>3-Tier アーキテクチャ</li>
-<li>2-Tier アーキテクチャ</li>
-<li><a href="http://www.nri-net.com/mobileconf/spec.html">モバイル会議Ⅱ</a></li>
-<li>Ruby で AWS</li>
-<li>SDK V1 (レガシーバージョン) V2 (現行バージョン)</li>
-<li>名前空間が V1 は AWS で V2 は Aws なので AWS になっている情報は古い</li>
-<li>認可は IAM</li>
-<li>認証は 3 種類</li>
-<li>AccessKey と SecretAccessKey による認証</li>
-<li>IAM ロール</li>
-<li>Cognito</li>
-<li>Lambda</li>
-</ul>
-
-
-<h2>正規表現の \z の話</h2>
-
-<p>自分の発表 (LT) でした。</p>
-
-<ul>
-<li><a href="http://slide.rabbit-shocker.org/authors/znz/rubykansai67-regexp/">http://slide.rabbit-shocker.org/authors/znz/rubykansai67-regexp/</a></li>
-<li>1文字の場合は選択 <code>(ん|ン)</code> ではなく文字クラス <code>[んン]</code> を使おう</li>
-<li>文字列末尾は <code>$</code> ではなく <code>\z</code></li>
-</ul>
-
-
-<h2>Ruby初級者向けレッスン 53回───ArrayとHash</h2>
-
-<ul>
-<li><code>Array.new(3){|i| i.to_s}</code> のようなブロック付き <code>Array.new</code> って使ったことがなかったけど、テストデータを作るのに便利そう。</li>
-<li><code>Array#to_h</code> っていつからあるんだっけ、と思って確認したら 2.1.0 からだった。</li>
-<li><a href="https://github.com/higaki/learn_ruby_kansai_67">https://github.com/higaki/learn_ruby_kansai_67</a></li>
-</ul>
-
-
-<h2>クロージング</h2>
-
-<ul>
-<li>8/7(金)-8(土) <a href="http://www.ospn.jp/osc2015-kyoto/" title="オープンソースカンファレンス2015 Kansai@Kyoto">オープンソースカンファレンス2015 Kansai@Kyoto</a></li>
-<li>関西のたくさんある Ruby 勉強会の紹介</li>
-<li>7/9(木) Ruby ビジネスフォーラム</li>
-<li>7/10(金) 関西Ruby会議06 前夜祭</li>
-<li>7/11(土) <a href="http://regional.rubykaigi.org/kansai06/">関西Ruby会議06</a></li>
-<li>8/8(土) <a href="https://rubykansai.doorkeeper.jp/events/25693">第68回 Ruby関西 勉強会</a></li>
 </ul>
 
 ]]></content>
