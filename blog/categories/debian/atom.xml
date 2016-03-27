@@ -4,7 +4,7 @@
   <title><![CDATA[Category: debian | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/debian/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-03-22T14:16:14+09:00</updated>
+  <updated>2016-03-27T22:12:54+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,92 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 108 回 関西 Debian 勉強会に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-03-27-kansai-debian-meeting.html"/>
+    <updated>2016-03-27T14:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
+    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20160327" title="第 108 回 関西 Debian 勉強会">第 108 回 関西 Debian 勉強会</a>に参加しました。</p>
+
+<!--more-->
+
+
+<p>以下メモです。</p>
+
+<h2>オープニングなど</h2>
+
+<ul>
+<li><a href="https://twitter.com/search?q=%23kansaidebian&amp;src=typd">ハッシュタグは #kansaidebian</a></li>
+<li><a href="https://wiki.debian.org/KansaiDebianMeeting/20160228">前回</a> の事前配布資料がまだアップロードされていなかった。</li>
+<li><a href="http://mozilla.debian.net/">http://mozilla.debian.net/</a> から jessie にも firefox がインストールできる。</li>
+<li><a href="http://abi-laboratory.pro/tracker/">Application Binary Interface (ABI) Tracker</a></li>
+<li>その他の話題</li>
+<li><a href="http://badlock.org/" title="Badlock Bug">Badlock Bug</a></li>
+<li><a href="http://security.srad.jp/story/16/03/25/2045223/" title="WindowsおよびSambaの重大なバグ「Badlock」、4月12日のパッチリリースが告知される">WindowsおよびSambaの重大なバグ「Badlock」、4月12日のパッチリリースが告知される</a></li>
+<li>Wheezy LTS</li>
+<li><a href="https://debian-handbook.info/browse/ja-JP/stable/" title="Debian 管理者ハンドブック">Debian 管理者ハンドブック</a> のペーパーバック版が発売されているという話</li>
+<li>jessie で tdiary が消えた理由などを聞いた。</li>
+<li><a href="https://packages.qa.debian.org/t/tdiary/news/20140624T163916Z.html" title="tdiary REMOVED from testing">tdiary REMOVED from testing</a> にあるように ruby-imagesize が壊れたのが原因で upstream で ruby-fastimage に依存が変わっていたので、新規パッケージで入れて tdiary の更新をしようとしたら freeze されて jessie に入らなかったという感じの話だった。</li>
+<li>doorkeeper の申し込みで事前課題の入力必須だったのがわかりにくいという話</li>
+<li>doorkeeper で管理者側でアンケート結果の一覧が表示できないので不便という話</li>
+<li>doorkeeper の方は事前課題として「systemd で起動する Jessie 環境を御用意下さい．幾つか設定を変更することがありますので，VM 環境の方が無難かもしれません．」というのが出ていたのに debian wiki の方には書いていなかった話</li>
+</ul>
+
+
+<h2>休憩</h2>
+
+<ul>
+<li>tdiary で org-mode</li>
+</ul>
+
+
+<h2>systemd に浸ってみた</h2>
+
+<ul>
+<li><code>systemctl</code></li>
+<li><code>systemctl status</code></li>
+<li><code>systemd-analyze</code></li>
+<li><code>systemd-analyze blame</code></li>
+<li><code>systemd-cgls</code></li>
+<li><code>timedatectl</code></li>
+<li><code>systemctl status systemd-timesyncd</code></li>
+<li><code>sudo timedatectl set-ntp true</code></li>
+<li><code>systemctl status -l systemd-timesyncd</code></li>
+<li><code>/etc/systemd/timesyncd.conf</code></li>
+<li><code>timesyncd.conf(5)</code> の man がない (jessie だと)</li>
+<li>sid だと設定が変わっているが jessie と同じ設定でも動いている</li>
+<li><code>/usr/lib/systemd/ntp-units.d/</code></li>
+<li><code>/usr/share/doc/systemd/changelog.Debian.gz</code> に <code>* Run timesyncd in virtual machines. (Closes: #762343)</code> という行があって仮想環境では upstream の timesyncd は動かないようになっている</li>
+<li><code>dmesg</code> と <code>dmesg -T</code></li>
+<li><a href="https://0xstubs.org/systemd-timesyncd-and-leap-seconds/" title="How systemd-timesyncd handles leap seconds">How systemd-timesyncd handles leap seconds</a></li>
+<li><code>systemctl status systemd-resolved</code></li>
+<li>使うには有効にした後、 <code>/etc/nsswitch.conf</code> の <code>dns</code> を <code>resolve</code> に変更、または <code>/run/systemd/resolve/resolv.conf</code> を <code>/etc/resolv.conf</code> にシンボリックリンク</li>
+<li><code>/etc/systemd/resolved.conf</code> に設定</li>
+<li><code>systemctl status systemd-networkd</code></li>
+<li><code>/etc/systemd/network/</code> 以下で設定</li>
+<li>debian では udev に設定が入っていて eth0 とかになる</li>
+<li><code>systemd.network(5)</code> の man を見る</li>
+<li><code>Driver=</code> が有効になるのは systemd 216 で jessie では使えない</li>
+<li><code>[DHCP]</code> セクションに <code>UseDNS=</code> という設定がある</li>
+<li><code>systemd.link(5)</code> や <code>systemd.netdev(5)</code> も参照</li>
+<li><code>ConditionHost=</code> などを使えば単一の設定ファイルを複数ホストで共有できる</li>
+<li>無線を使う場合には向かない</li>
+<li>NetworkManager とは排他</li>
+<li><code>sudo apt-get install systemd-cron</code></li>
+<li>cron, anacron とは conflict していて入れ替わる</li>
+<li><code>systemctl list-unit-files | grep cron</code></li>
+<li><code>cat /lib/systemd/system/cron-hourly.timer</code></li>
+<li><code>crontab -e</code> は動かなくなる</li>
+<li><code>~/.config/systemd/user/</code> 以下にユーザーごとの設定を置ける</li>
+<li><code>systemctl --user list-unit-files</code></li>
+<li>GNOME や KDE だと systemd を使うしかなさそう</li>
+<li>Xfce だと systemd はハイバネーションで失敗するのでやめた方が良い</li>
+<li>systemd の情報を見る時はバージョン番号を確認しましょう</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[さくらの VPS の Debian wheezy を jessie にあげた]]></title>
@@ -847,85 +933,6 @@ epoch をつけて解決しますが、
 ownCloud 公式は Debian からみると非公式パッケージになるので、
 将来の Debian のアップグレードの邪魔にならないように epoch を使わなかったため、
 こういう問題が起きたのでないかと推測しました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Vagrant Cloudでboxを公開してみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-07-21-vagrantcloud-box.html"/>
-    <updated>2014-07-21T15:52:35+09:00</updated>
-    <id>http://blog.n-z.jp/blog/vagrantcloud-box</id>
-    <content type="html"><![CDATA[<p><a href="http://blog.n-z.jp/blog/2014-07-18-wheezy-from-vagrant-cloud.html" title="Vagrant CloudからWheezyを入れてみた">Vagrant CloudからWheezyを入れてみた</a>で公開されているものを使ってみたので、
-今回は
-<a href="https://vagrantcloud.com/">Vagrant Cloud</a>
-で日本語で日本向けの Box の公開も試してみました。</p>
-
-<!--more-->
-
-
-<h2>手順概要</h2>
-
-<ol>
-<li><a href="https://vagrantcloud.com/">https://vagrantcloud.com/</a> にログイン</li>
-<li><a href="https://vagrantcloud.com/boxes/new">Create Box</a> で作成</li>
-<li>Create new version でバージョンを作成</li>
-<li>Create new provider でバージョンに対応する provider を作成</li>
-<li>無料アカウントだと Upload は使えないようなので URL を指定</li>
-<li>バージョンの編集で Release すると公開</li>
-</ol>
-
-
-<h2>登録される情報</h2>
-
-<p>ユーザーアカウントに複数の Box が対応していて、
-Box に複数のバージョンが対応していて、
-バージョンに複数の provider (VirtualBox とか VMware とか) が対応している、
-という構造になっているようです。</p>
-
-<p>バージョンは Release するまでは公開されないようです。</p>
-
-<p>古いバージョンは Revoke で破棄できるようなので、
-box を置く URL を使い回すなら Revoke してから
-ファイルを置き換えて新しいバージョンを登録するのが
-良さそうに思いました。</p>
-
-<h2>作成した box の packer テンプレート</h2>
-
-<p><a href="https://github.com/znz/packer-templates">packer-templates</a>
-で公開しています。</p>
-
-<p>使い方は</p>
-
-<pre><code>git clone https://github.com/znz/packer-templates
-cd debian-7.6.0-amd64-ja_jp
-packer build debian-7.6.0-amd64-ja_jp.json
-</code></pre>
-
-<p>で <code>debian-7.6.0-amd64-ja_jp_virtualbox.box</code> が作成できます。
-試した環境では1時間ぐらいかかりました。</p>
-
-<h2>使用方法</h2>
-
-<p><code>vagrant init znzj/debian-7.6.0-amd64-ja_jp</code>
-のように <code>vagrant init</code> の引数に <code>ユーザー名/BOX名</code> を指定して
-<code>Vagrantfile</code> を作成すると
-<code>config.vm.box = "znzj/debian-7.6.0-amd64-ja_jp"</code>
-と指定されていて <code>vagrant up</code> で自動ダウンロードされて使えます。</p>
-
-<h2>登録した URL の扱い</h2>
-
-<p>box は URL で登録したので、
-<code>https://vagrantcloud.com/znzj/debian-7.6.0-amd64-ja_jp/version/1/provider/virtualbox.box</code>
-のように <code>vagrantcloud.com</code> の URL に見えるところからダウンロードしようとした時、
-リダイレクトされて登録した URL からのダウンロードになるようです。</p>
-
-<p><code>vagrantcloud</code> 側でキャッシュなどをしてくれるわけではないようなので、
-置き場所には注意する必要がありそうです。</p>
-
-<p>今回は需要も多くなさそうで、
-日本向けということで
-さくらのVPS
-に置いてみました。</p>
 ]]></content>
   </entry>
   

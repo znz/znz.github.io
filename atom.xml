@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-03-22T14:16:14+09:00</updated>
+  <updated>2016-03-27T22:12:54+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,92 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 108 回 関西 Debian 勉強会に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-03-27-kansai-debian-meeting.html"/>
+    <updated>2016-03-27T14:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
+    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20160327" title="第 108 回 関西 Debian 勉強会">第 108 回 関西 Debian 勉強会</a>に参加しました。</p>
+
+<!--more-->
+
+
+<p>以下メモです。</p>
+
+<h2>オープニングなど</h2>
+
+<ul>
+<li><a href="https://twitter.com/search?q=%23kansaidebian&amp;src=typd">ハッシュタグは #kansaidebian</a></li>
+<li><a href="https://wiki.debian.org/KansaiDebianMeeting/20160228">前回</a> の事前配布資料がまだアップロードされていなかった。</li>
+<li><a href="http://mozilla.debian.net/">http://mozilla.debian.net/</a> から jessie にも firefox がインストールできる。</li>
+<li><a href="http://abi-laboratory.pro/tracker/">Application Binary Interface (ABI) Tracker</a></li>
+<li>その他の話題</li>
+<li><a href="http://badlock.org/" title="Badlock Bug">Badlock Bug</a></li>
+<li><a href="http://security.srad.jp/story/16/03/25/2045223/" title="WindowsおよびSambaの重大なバグ「Badlock」、4月12日のパッチリリースが告知される">WindowsおよびSambaの重大なバグ「Badlock」、4月12日のパッチリリースが告知される</a></li>
+<li>Wheezy LTS</li>
+<li><a href="https://debian-handbook.info/browse/ja-JP/stable/" title="Debian 管理者ハンドブック">Debian 管理者ハンドブック</a> のペーパーバック版が発売されているという話</li>
+<li>jessie で tdiary が消えた理由などを聞いた。</li>
+<li><a href="https://packages.qa.debian.org/t/tdiary/news/20140624T163916Z.html" title="tdiary REMOVED from testing">tdiary REMOVED from testing</a> にあるように ruby-imagesize が壊れたのが原因で upstream で ruby-fastimage に依存が変わっていたので、新規パッケージで入れて tdiary の更新をしようとしたら freeze されて jessie に入らなかったという感じの話だった。</li>
+<li>doorkeeper の申し込みで事前課題の入力必須だったのがわかりにくいという話</li>
+<li>doorkeeper で管理者側でアンケート結果の一覧が表示できないので不便という話</li>
+<li>doorkeeper の方は事前課題として「systemd で起動する Jessie 環境を御用意下さい．幾つか設定を変更することがありますので，VM 環境の方が無難かもしれません．」というのが出ていたのに debian wiki の方には書いていなかった話</li>
+</ul>
+
+
+<h2>休憩</h2>
+
+<ul>
+<li>tdiary で org-mode</li>
+</ul>
+
+
+<h2>systemd に浸ってみた</h2>
+
+<ul>
+<li><code>systemctl</code></li>
+<li><code>systemctl status</code></li>
+<li><code>systemd-analyze</code></li>
+<li><code>systemd-analyze blame</code></li>
+<li><code>systemd-cgls</code></li>
+<li><code>timedatectl</code></li>
+<li><code>systemctl status systemd-timesyncd</code></li>
+<li><code>sudo timedatectl set-ntp true</code></li>
+<li><code>systemctl status -l systemd-timesyncd</code></li>
+<li><code>/etc/systemd/timesyncd.conf</code></li>
+<li><code>timesyncd.conf(5)</code> の man がない (jessie だと)</li>
+<li>sid だと設定が変わっているが jessie と同じ設定でも動いている</li>
+<li><code>/usr/lib/systemd/ntp-units.d/</code></li>
+<li><code>/usr/share/doc/systemd/changelog.Debian.gz</code> に <code>* Run timesyncd in virtual machines. (Closes: #762343)</code> という行があって仮想環境では upstream の timesyncd は動かないようになっている</li>
+<li><code>dmesg</code> と <code>dmesg -T</code></li>
+<li><a href="https://0xstubs.org/systemd-timesyncd-and-leap-seconds/" title="How systemd-timesyncd handles leap seconds">How systemd-timesyncd handles leap seconds</a></li>
+<li><code>systemctl status systemd-resolved</code></li>
+<li>使うには有効にした後、 <code>/etc/nsswitch.conf</code> の <code>dns</code> を <code>resolve</code> に変更、または <code>/run/systemd/resolve/resolv.conf</code> を <code>/etc/resolv.conf</code> にシンボリックリンク</li>
+<li><code>/etc/systemd/resolved.conf</code> に設定</li>
+<li><code>systemctl status systemd-networkd</code></li>
+<li><code>/etc/systemd/network/</code> 以下で設定</li>
+<li>debian では udev に設定が入っていて eth0 とかになる</li>
+<li><code>systemd.network(5)</code> の man を見る</li>
+<li><code>Driver=</code> が有効になるのは systemd 216 で jessie では使えない</li>
+<li><code>[DHCP]</code> セクションに <code>UseDNS=</code> という設定がある</li>
+<li><code>systemd.link(5)</code> や <code>systemd.netdev(5)</code> も参照</li>
+<li><code>ConditionHost=</code> などを使えば単一の設定ファイルを複数ホストで共有できる</li>
+<li>無線を使う場合には向かない</li>
+<li>NetworkManager とは排他</li>
+<li><code>sudo apt-get install systemd-cron</code></li>
+<li>cron, anacron とは conflict していて入れ替わる</li>
+<li><code>systemctl list-unit-files | grep cron</code></li>
+<li><code>cat /lib/systemd/system/cron-hourly.timer</code></li>
+<li><code>crontab -e</code> は動かなくなる</li>
+<li><code>~/.config/systemd/user/</code> 以下にユーザーごとの設定を置ける</li>
+<li><code>systemctl --user list-unit-files</code></li>
+<li>GNOME や KDE だと systemd を使うしかなさそう</li>
+<li>Xfce だと systemd はハイバネーションで失敗するのでやめた方が良い</li>
+<li>systemd の情報を見る時はバージョン番号を確認しましょう</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[さくらの VPS の Debian wheezy を jessie にあげた]]></title>
@@ -2899,128 +2985,6 @@ postgres の docker イメージをダウンロードするため、ある程度
 <li>関西の Ruby 関連のイベント紹介</li>
 <li>次回は 10 月</li>
 </ul>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[関西Ruby会議06に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2015-07-11-kanrk06.html"/>
-    <updated>2015-07-11T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kanrk06</id>
-    <content type="html"><![CDATA[<p><a href="http://regional.rubykaigi.org/kansai06/" title="関西Ruby会議06">関西Ruby会議06</a>
-と前夜祭に参加しました。</p>
-
-<!--more-->
-
-
-<p>メモはとらずに話を聞くことに集中していたので、この記事は感想がメインです。</p>
-
-<h2>前夜祭</h2>
-
-<p>matz への質問コーナーで <code>.emacs</code> の行数という質問の答えのときに行数だけではなく内容もざっと見せてもらえて、
-morq というのがちらっと目に付いたので、
-会場からの質問のタイミングでメールリーダーについてきいてみたところ、
-morq をまだ使っていて、最初は全文検索に Rast を使っていたという話から
-Hyper Estraier? (Estraier と言っていたかも?) に乗り換えて、
-さらに今は groonga を使っているということが聞けました。</p>
-
-<h2>基調講演1</h2>
-
-<p>matz の昔話が中心でした。</p>
-
-<p>PC-1211 は前夜祭のときの思い出のコンピューターは何かという質問の答えのときにも使われていた画像だったので、
-あの時に出した画像は、この講演の資料の画像だったのかと思いました。</p>
-
-<h2>スポンサーLT</h2>
-
-<p>作っているサービスの宣伝は少なめで、技術的な話が多めでした。</p>
-
-<p><code>wicked_pdf</code> の画像などのメソッドの切り替えは、みんな同じようなラッパーメソッドを作って使っていそうなので、もうちょっと <code>wicked_pdf</code> の方でなんとかできると良さそうなのに、と思いました。</p>
-
-<h2>講演</h2>
-
-<p>Rspec と Minitest の比較の話が一番印象に残りました。
-個人的には transpec で Rspec 2 から 3 に問題なく移行できたので、
-Rspec を使い続けていますが、
-Minitest も機会があれば使ってみようと思いました。</p>
-
-<h2>LT</h2>
-
-<p>Ruby 関西のイベントとしては珍しくちゃんと5分で強制終了になるという形式でした。
-時間に収まらずに続きがきになる発表もあったので、後で発表資料を確認したいと思いました。</p>
-
-<h2>基調講演2</h2>
-
-<p>最後は笹田さんの Ruby 2.2 でのキーワード引数の速度改善の話でした。</p>
-
-<p>キーワード引数はまだほとんど使ったことがなかったので、
-話に出てきた Proc との組み合わせなどを
-<code>irb</code> で試してみると
-以下のような挙動でした。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% rbenv exec irb -r irb/completion --simple-prompt
-</span><span class='line'>&gt;&gt; def foo(a, b, key1: 1, key2: 2);end
-</span><span class='line'>=&gt; :foo
-</span><span class='line'>&gt;&gt; foo(1,2, key3: 3)
-</span><span class='line'>ArgumentError: unknown keyword: key3
-</span><span class='line'>         from (irb):3
-</span><span class='line'>         from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `&lt;main&gt;'
-</span><span class='line'>&gt;&gt; lambda{|a,b|p [a, b]}.call(1,2,3)
-</span><span class='line'>ArgumentError: wrong number of arguments (3 for 2)
-</span><span class='line'>         from (irb):6:in `block in irb_binding'
-</span><span class='line'>         from (irb):6:in `call'
-</span><span class='line'>         from (irb):6
-</span><span class='line'>         from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `&lt;main&gt;'
-</span><span class='line'>&gt;&gt; lambda{|a,b|p [a, b]}.call(1)
-</span><span class='line'>ArgumentError: wrong number of arguments (1 for 2)
-</span><span class='line'>         from (irb):7:in `block in irb_binding'
-</span><span class='line'>         from (irb):7:in `call'
-</span><span class='line'>         from (irb):7
-</span><span class='line'>         from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `&lt;main&gt;'
-</span><span class='line'>&gt;&gt; proc{|a,b|p [a, b]}.call(1)
-</span><span class='line'>[1, nil]
-</span><span class='line'>=&gt; [1, nil]
-</span><span class='line'>&gt;&gt; proc{|a,b|p [a, b]}.call(1,2,3)
-</span><span class='line'>[1, 2]
-</span><span class='line'>=&gt; [1, 2]
-</span><span class='line'>&gt;&gt; proc{|k1:1,k2:2|p [k1, k2]}.call(k3: 3)
-</span><span class='line'>ArgumentError: unknown keyword: k3
-</span><span class='line'>         from (irb):10:in `call'
-</span><span class='line'>         from (irb):10
-</span><span class='line'>         from /Users/kazu/.rbenv/versions/2.1.5/bin/irb:11:in `&lt;main&gt;'
-</span><span class='line'>&gt;&gt;</span></code></pre></td></tr></table></div></figure>
 
 ]]></content>
   </entry>
