@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: irc | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/irc/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2016-03-30T22:32:15+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[jessie で inspircd を設定した]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-03-29-inspircd.html"/>
+    <updated>2016-03-29T21:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/inspircd</id>
+    <content type="html"><![CDATA[<p><a href="/blog/2016-03-22-wheezy-to-jessie.html">先日 wheezy から jessie にあげた</a>マシンでサーバー管理にも使っている ircd として inspircd の設定をしたので、そのメモです。</p>
+
+<!--more-->
+
+
+<h2>確認バージョン</h2>
+
+<ul>
+<li>Debian GNU/Linux 8.3 (jessie)</li>
+<li>inspircd 2.0.17-1+deb8u1</li>
+</ul>
+
+
+<h2>インストールと起動確認</h2>
+
+<p><code>sudo aptitude install inspircd</code> でインストールしました。</p>
+
+<p>systemd 管理になって <code>/etc/default/inspircd</code> の <code>INSPIRCD_ENABLED=0</code> に関係なく起動するようになっていました。</p>
+
+<pre><code>% systemctl status inspircd
+● inspircd.service - IRC server
+   Loaded: loaded (/lib/systemd/system/inspircd.service; enabled)
+   Active: active (running) since 火 2016-03-29 17:37:37 JST; 3min 34s ago
+ Main PID: 11613 (inspircd)
+   CGroup: /system.slice/inspircd.service
+           └─11613 /usr/sbin/inspircd --logfile /var/log/inspircd.log --config /etc/inspircd/insp...
+
+ 3月 29 17:37:37 ns8 inspircd[11613]: Inspire Internet Relay Chat Server, compiled on Mar 23...1:24
+ 3月 29 17:37:37 ns8 inspircd[11613]: (C) InspIRCd Development Team.
+ 3月 29 17:37:37 ns8 inspircd[11613]: Developers:
+ 3月 29 17:37:37 ns8 inspircd[11613]:         Brain, FrostyCoolSlug, w00t, Om, Special, peavey
+ 3月 29 17:37:37 ns8 inspircd[11613]: aquanight, psychon, dz, danieldg, jackmcbarn
+ 3月 29 17:37:37 ns8 inspircd[11613]: Attila
+ 3月 29 17:37:37 ns8 inspircd[11613]: Others:                        See /INFO Output
+ 3月 29 17:37:37 ns8 inspircd[11613]: Loading core commands........................................
+ 3月 29 17:37:37 ns8 inspircd[11613]: InspIRCd is now running as 'irc.local'[811] with 1024 ...kets
+Hint: Some lines were ellipsized, use -l to show in full.
+</code></pre>
+
+<p><code>systemd-journal</code> グループに所属しているので、ログも出ています。</p>
+
+<h2>設定変更</h2>
+
+<p><code>sudoedit /etc/inspircd/inspircd.conf</code> で設定変更して、 <code>sudo service inspircd reload</code> で反映しました。</p>
+
+<pre><code>&lt;server name="irc.example.org"
+        description="Example.org IRC Server"
+        network="example.org"&gt;
+
+&lt;admin name="Kazuhiro Nishiyama"
+       nick="znz"
+       email="zn@mbf.nifty.com"&gt;
+</code></pre>
+
+<p>に変更しました。</p>
+
+<p>NAT の中のサーバー群からも接続するので connect の localmax と globalmax を 3 から 9 に変更しました。</p>
+
+<h3>tls 設定</h3>
+
+<p>推奨設定の gnutls を使って設定をしました。
+証明書は <a href="https://www.startssl.com/">https://www.startssl.com/</a> で無料で発行してもらったものを使いました。</p>
+
+<pre><code>&lt;bind address="" port="6697" ssl="gnutls"&gt;
+&lt;module name="m_ssl_gnutls.so"&gt;
+&lt;gnutls cafile="" crlfile="" certfile="/etc/ssl/certs/irc.example.org.2016.crt" keyfile="/etc/ssl/private/irc.example.org.2016.key" dh_bits="1024"&gt;
+</code></pre>
+
+<h3>auto join 設定</h3>
+
+<p>slack に似せて <code>#general</code> と <code>#random</code> に自動で join するように</p>
+
+<pre><code>&lt;module name="m_conn_join.so"&gt;
+&lt;autojoin channel="#general,#random"&gt;
+</code></pre>
+
+<p>を追加しました。</p>
+
+<h3>server password 設定</h3>
+
+<p>connect タグに password 属性を追加しました。</p>
+
+<h3>permchannels 設定</h3>
+
+<p><code>#general</code> と <code>#random</code> はトピックを自動設定、 <code>#servers</code> についてはパスワードを設定するために permchannels 設定を使いました。</p>
+
+<pre><code>&lt;module name="m_permchannels.so"&gt;
+&lt;permchannels channel="#general" modes="n" topic="General Talk"&gt;
+&lt;permchannels channel="#random" modes="n" topic="Random Talk"&gt;
+&lt;permchannels channel="#servers" modes="stnk PASSWORD" topic="Servers Status"&gt;
+</code></pre>
+
+<p>を追加しました。</p>
+
+<h2>ufw</h2>
+
+<pre><code>sudo ufw allow 6697/tcp
+</code></pre>
+
+<p>で 6697 番ポートへの接続を許可しました。</p>
+
+<h2>tls 関係ファイル設置</h2>
+
+<p>inspircd は irc ユーザー権限で動くので、そのユーザーが読めるように秘密鍵を設置しました。
+<code>/etc/ssl/private</code> ディレクトリを読めるようにするために <code>ssl-cert</code> グループへの追加も行いました。</p>
+
+<pre><code>%  sudoedit /etc/ssl/irc.example.org.2016.csr
+%  sudoedit /etc/ssl/certs/irc.example.org.2016.crt
+%  sudoedit /etc/ssl/private/irc.example.org.2016.key
+%  sudo chmod 640 /etc/ssl/private/irc.example.org.2016.key
+%  sudo chgrp irc /etc/ssl/private/irc.example.org.2016.key
+%  sudo adduser irc ssl-cert
+ユーザ `irc' をグループ `ssl-cert' に追加しています...
+ユーザ irc をグループ ssl-cert に追加
+完了。
+</code></pre>
+
+<h2>DNS 設定</h2>
+
+<p>今まで別のサーバーで動かしていたので、 DNS の A レコードを変更して、変更が反映されるのを待ち、新しいサーバーにクライアントが接続されるのを確認しました。</p>
+
+<h2>まとめ</h2>
+
+<p><code>systemd</code> になって <code>/etc/default/inspircd</code> がきかなくなるなど、 Debian 的にまだ過渡期な部分があるようですが、 inspircd としては問題なく動かすことができました。</p>
+]]></content>
+  </entry>
+  
+</feed>

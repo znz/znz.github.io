@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-03-27T22:12:54+09:00</updated>
+  <updated>2016-03-30T22:32:15+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,269 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[dokku 0.5.3 を vagrant 環境で試してみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-03-30-dokku-053.html"/>
+    <updated>2016-03-30T22:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/dokku-053</id>
+    <content type="html"><![CDATA[<p>社内向けアプリで本番環境でも使っている dokku のバージョン 0.5.3 をいろいろ試しやすくするために vagrant 環境で試してみました。</p>
+
+<!--more-->
+
+
+<h2>確認バージョン</h2>
+
+<ul>
+<li>VirtualBox 5.0.16</li>
+<li>Vagrant 1.8.1</li>
+<li>dokku 0.5.3</li>
+</ul>
+
+
+<h2>dokku v0.5.0 での主な変更点</h2>
+
+<p><a href="https://github.com/dokku/dokku/releases/tag/v0.5.0">v0.5.0</a> での主な変更点は以下の通りです。</p>
+
+<ul>
+<li>docker 1.10/1.11 のサポートと、 docker 1.9.1 以上の必須化</li>
+<li>ドキュメント改善</li>
+<li><a href="http://dokku.viewdocs.io/dokku/deployment/deployment-tasks/" title="Deployment Tasks">Deployment Tasks</a> (<code>app.json</code> での <code>scripts.dokku.predeploy</code> と <code>scripts.dokku.postdeploy</code> のサポート)</li>
+<li><a href="http://dokku.viewdocs.io/dokku/deployment/dockerfiles/" title="Dockerfile Deployment">Dockerfile Deployment</a> で <code>Procfile</code> サポート、<code>EXPOSE</code> の扱いの変更</li>
+<li><a href="http://dokku.viewdocs.io/dokku/dokku-storage/">persistent storage plugin</a> のオフィシャル化</li>
+</ul>
+
+
+<h2>初期設定</h2>
+
+<p><code>git clone https://github.com/dokku/dokku</code> で clone してきたディレクトリの中に入って <code>vagrant up</code> します。
+最初は box のダウンロードもあるので時間がかかります。</p>
+
+<p><a href="http://xip.io/">xip.io</a> を使ってサブドメインを使ったデプロイを試します。</p>
+
+<p><code>http://10.0.0.2.xip.io/</code> を開き、 <code>Hostname</code> を <code>10.0.0.2.xip.io</code> にして <code>Use virtualhost naming for apps</code> にチェックを入れて、 <code>Finish Setup</code> を押します。</p>
+
+<p><a href="http://dokku.viewdocs.io/dokku/application-deployment/">http://dokku.viewdocs.io/dokku/application-deployment/</a> にリダイレクトされるので、そのチュートリアルを試します。</p>
+
+<h2>チュートリアル前の準備</h2>
+
+<p><code>vagrant ssh</code> で入って操作します。</p>
+
+<p><code>docker</code> コマンドや <code>dokku</code> コマンドで <code>sudo</code> を不要にするためにグループに追加します。</p>
+
+<ul>
+<li><code>sudo usermod -aG docker vagrant</code></li>
+<li><code>sudo usermod -aG dokku vagrant</code></li>
+</ul>
+
+
+<p>ビルド中のダウンロードでタイムアウトしにくくするためにタイムアウト時間をのばします。</p>
+
+<ul>
+<li><code>dokku config:set --global CURL_TIMEOUT=120</code></li>
+</ul>
+
+
+<p><code>dokku run</code> などで実行して終了したコンテナが溜まっていかないようにするために、デフォルトで <code>--rm</code> をつけるようにします。(この設定をしなくても <code>git push</code> したときに自動で実行される <code>dokku cleanup</code> で削除されます。)</p>
+
+<ul>
+<li><code>dokku config:set --global DOKKU_RM_CONTAINER=1</code></li>
+</ul>
+
+
+<h2>チュートリアル</h2>
+
+<p>チュートリアルも <code>vagrant ssh</code> で入った環境で試します。
+<code>sudo dokku plugin:install</code> 以外はホスト側からでも実行できます。</p>
+
+<ul>
+<li><code>git clone git@github.com:heroku/ruby-rails-sample.git</code> で rails のサンプルを clone しておきます。</li>
+<li><code>dokku apps:create ruby-rails-sample</code> でアプリケーションを作成します。データベースとのリンクに必要なので、事前に作成していますが、 <a href="https://github.com/heroku/node-js-sample">https://github.com/heroku/node-js-sample</a> のように単独で動くアプリケーションでは事前に <code>apps:create</code> しなくても構いません。</li>
+<li><code>sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git</code> で postgres プラグインをインストールします。インストールの後処理で <code>postgres:9.5.0</code>, <code>svendowideit/ambassador:latest</code>, <code>dokkupaas/wait:latest</code> が docker pull されるので、ダウンロードに少し時間がかかります。</li>
+<li><code>docker images</code> で確認するとわかるのですが、なぜか <code>gliderlabs/herokuish</code> が 0 バイトのイメージになってしまっているので <code>docker pull gliderlabs/herokuish</code> でダウンロードしておきます。ここもダウンロードに時間がかかります。この手順は普通にインストールした場合は不要なはずです。</li>
+<li><code>dokku postgres:create rails-database</code> でデータベースのコンテナを作成して <code>dokku postgres:link rails-database ruby-rails-sample</code> でリンクします。</li>
+<li><code>git remote add dokku dokku@10.0.0.2:ruby-rails-sample</code> で remote に dokku を登録して <code>git push dokku master</code> でデプロイします。</li>
+<li><code>curl</code> コマンドでエラーになった場合、 <code>CURL_TIMEOUT</code> をのばして、再度 <code>git push dokku master</code> します。</li>
+<li><code>http://ruby-rails-sample.10.0.0.2.xip.io/</code> を開いて <code>Hello World</code> と現在時刻が UTC (+0000) で表示されていたら成功です。</li>
+</ul>
+
+
+<h2>チュートリアル後の変更例</h2>
+
+<p>現在時刻が UTC で表示されていたので JST に変更してみます。</p>
+
+<ul>
+<li><code>dokku config:set ruby-rails-sample TZ=Asia/Tokyo</code></li>
+</ul>
+
+
+<p><code>http://ruby-rails-sample.10.0.0.2.xip.io/</code> を開いて <code>Hello World</code> と現在時刻が JST (+0900) で表示されていたら成功です。</p>
+
+<h2><code>rake db:migrate</code> を実行する</h2>
+
+<p><code>dokku run ruby-rails-sample bundle exec rake db:migrate</code> で実行できます。</p>
+
+<h2><code>scripts.dokku.predeploy</code> で <code>rake db:migrate</code> を自動実行する</h2>
+
+<p><a href="http://dokku.viewdocs.io/dokku~v0.5.3/deployment/deployment-tasks/">Deployment Tasks</a> に書いてあるように v0.5.0 から <code>app.json</code> に <code>scripts.dokku.predeploy</code> を設定できるようになっているので、そこで <code>rake db:migrate</code> を自動実行するように設定してみます。</p>
+
+<p>heroku が対応している <code>scripts.postdeploy</code> は初回の deploy 時にしか実行されないのに対して、 <code>scripts.dokku.predeploy</code> と <code>scripts.dokku.postdeploy</code> は毎回実行されるという違いがあります。</p>
+
+<pre><code class="diff">diff --git a/app.json b/app.json
+index 452cef1..4c828fa 100644
+--- a/app.json
++++ b/app.json
+@@ -5,6 +5,9 @@
+   "repository": "https://github.com/heroku/ruby-rails-sample",
+   "logo": "https://upload.wikimedia.org/wikipedia/commons/c/c3/Ruby_on_Rails_logo.svg",
+   "scripts": {
++    "dokku": {
++      "predeploy": "bundle exec rake db:migrate"
++    },
+     "postdeploy": "bundle exec rake db:migrate"
+   },
+   "env": {
+</code></pre>
+
+<p>という変更を commit して push して動作確認します。</p>
+
+<p>さらに <code>rails g model</code> などで migration ファイルを作成してさらに動作確認できます。</p>
+
+<h2>pre-flight checks</h2>
+
+<p><a href="http://dokku.viewdocs.io/dokku~v0.5.3/checks-examples/">Zero Downtime Deploys</a> に書いてあるようにゼロダウンタイムデプロイを実現するために <code>CHECKS</code> ファイルを作成します。
+(デプロイ後のメッセージに <code>Shutting down old containers in 60 seconds</code> とあるように、デプロイして新しいコンテナに切り替わった直後の 1 分間は古いコンテナも動いています。)</p>
+
+<p>以下の内容の <code>CHECKS</code> ファイルを作成して、デプロイ時の起動確認をデフォルトの 10 秒待つだけの動作から、 http で特定の URL にアクセスして指定した内容が含まれるかどうかのチェックに変更します。</p>
+
+<pre><code>/ Hello World
+</code></pre>
+
+<p>デフォルトでは 5 秒ごとに 5 回までのチェックですが、以下の内容にすると 10 秒ごとに 20 回までのチェックになります。
+起動に時間がかかるアプリケーションの場合に、回数を増やしたり時間をのばしたりすると良いと思います。</p>
+
+<pre><code>WAIT=10
+ATTEMPTS=20
+/ Hello World
+</code></pre>
+
+<h2>アプリケーションを削除する</h2>
+
+<p><code>dokku apps:destroy ruby-rails-sample</code> で削除できます。
+heroku での削除と同じように、確認のため、アプリケーション名を再度入力しないと消えないようになっています。</p>
+
+<p>データベースも作成していたので、同様に <code>dokku postgres:destroy rails-database</code> で削除します。</p>
+
+<h2>node-js-sample を試す</h2>
+
+<p>Dokku の昔のバージョンのチュートリアルは node-js-sample を使っていたので、 node-js-sample も試してみます。</p>
+
+<ul>
+<li><code>git clone git@github.com:heroku/node-js-sample.git</code></li>
+<li><code>cd node-js-sample</code></li>
+<li><code>git remote add dokku dokku@10.0.0.2:node-js-sample</code></li>
+<li><code>git push dokku master</code></li>
+</ul>
+
+
+<p><code>http://node-js-sample.10.0.0.2.xip.io/</code> を開いて <code>Hello World!</code> が表示されたら成功です。</p>
+
+<h2>動作確認用シェルスクリプト</h2>
+
+<p><code>rails g model</code> 用に <a href="https://github.com/riywo/anyenv">anyenv</a> と <a href="https://github.com/rbenv/rbenv">rbenv</a> を使って ruby と rails のインストールまでしています。</p>
+
+<p>実行途中で <code>http://10.0.0.2.xip.io/</code> を開いて設定をしないと途中で失敗して止まります。</p>
+
+<pre><code class="bash">#!/bin/bash
+set -euo pipefail
+set -x
+cd /home/vagrant
+sudo usermod -aG docker vagrant
+sudo usermod -aG dokku vagrant
+dokku config:set --global CURL_TIMEOUT=120
+dokku config:set --global DOKKU_RM_CONTAINER=1
+if [[ ! -d ruby-rails-sample ]]; then
+  git clone git@github.com:heroku/ruby-rails-sample.git
+fi
+if [[ ! -d /home/dokku/ruby-rails-sample ]]; then
+  dokku apps:create ruby-rails-sample
+fi
+if [[ ! -d /var/lib/dokku/plugins/available/postgres ]]; then
+  sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git || :
+  sudo docker pull gliderlabs/herokuish
+fi
+if [[ ! -f /home/dokku/ruby-rails-sample/DOCKER_OPTIONS_RUN ]]; then
+  dokku postgres:create rails-database || :
+  dokku postgres:link rails-database ruby-rails-sample
+fi
+pushd ~/ruby-rails-sample
+if ! git remote | grep -q dokku; then
+  git remote add dokku dokku@10.0.0.2:ruby-rails-sample
+fi
+git push dokku master
+if ! dokku config ruby-rails-sample | grep -q '^TZ'; then
+  dokku config:set ruby-rails-sample TZ=Asia/Tokyo
+fi
+popd
+if [[ ! -d node-js-sample ]]; then
+  git clone git@github.com:heroku/node-js-sample.git
+fi
+pushd ~/node-js-sample
+if ! git remote | grep -q dokku; then
+  git remote add dokku dokku@10.0.0.2:node-js-sample
+fi
+git push dokku master
+popd
+if dpkg -l | grep -q nodejs; then
+  sudo sed -i~ -e 's/us\.archive/jp.archive/' /etc/apt/sources.list
+  sudo apt-get update
+  sudo apt-get install autoconf bison build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm3 libgdbm-dev
+  sudo apt-get install libpq-dev
+  sudo apt-get install nodejs
+fi
+if [[ ! -d ~/.anyenv ]]; then
+  git clone https://github.com/riywo/anyenv ~/.anyenv
+  echo 'export PATH="$HOME/.anyenv/bin:$PATH"' &gt;&gt; ~/.bashrc
+  echo 'eval "$(anyenv init -)"' &gt;&gt; ~/.bashrc
+fi
+if [[ -z "$(command -v anyenv)" ]]; then
+  export PATH="$HOME/.anyenv/bin:$PATH"
+  set +x
+  eval "$(anyenv init - --no-rehash)"
+  set -x
+fi
+if [[ ! -d ~/.anyenv/envs/rbenv ]]; then
+  anyenv install rbenv
+fi
+if [[ -z "$(command -v rbenv)" ]]; then
+  set +x
+  eval "$(anyenv init - --no-rehash)"
+  set -x
+fi
+ruby_version=$(awk '/^ruby/{print $2}' ~/ruby-rails-sample/Gemfile | tr -d "'")
+if ! rbenv versions | grep -q "$ruby_version"; then
+  rbenv install "$ruby_version"
+fi
+if [[ ! -f ~/.gemrc ]]; then
+  cat &lt;&lt;EOF &gt;~/.gemrc
+install: --no-rdoc --no-ri --format-executable
+update: --no-rdoc --no-ri --format-executable
+EOF
+fi
+export RBENV_VERSION="$ruby_version"
+if ! gem list | grep -q bundler; then
+  gem install bundler
+fi
+pushd ~/ruby-rails-sample
+bundle
+popd
+</code></pre>
+
+<h2>まとめ</h2>
+
+<p>vagrant を使って dokku をいろいろ試す環境を簡単に作ることができました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[letsencrypt をメールサーバーにも導入して自動化するまで]]></title>
@@ -828,139 +1091,6 @@ git push dokku-vps master
 
 <p><code>http://node-js-app.サーバーのIPアドレス.xip.io/</code> を開いて
 <code>Hello World!</code> と表示されたら成功です。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Ubuntu 14.04 LTS に Zabbix 2.4 を PostgreSQL を使う設定で入れた]]></title>
-    <link href="http://blog.n-z.jp/blog/2015-03-13-zabbix-24-pgsql.html"/>
-    <updated>2015-03-13T21:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/zabbix-24-pgsql</id>
-    <content type="html"><![CDATA[<p><a href="https://www.zabbix.com/documentation/2.4/manual/installation/install_from_packages" title="3 Installation from packages [Zabbix Documentation 2.4]">3 Installation from packages [Zabbix Documentation 2.4]</a>
-だと MySQL の例しかなく、
-PostgreSQL で入れるとちょっとひっかかったところがあったので、
-そのメモです。</p>
-
-<p>Debian や Ubuntu の公式パッケージの zabbix との違いも気づいた範囲で書いておきました。</p>
-
-<!--more-->
-
-
-<h2>zabbix-release のインストール</h2>
-
-<p><code>zabbix-release</code> をインストールして apt-line を設定して
-<code>apt-get update</code> するところまでは公式マニュアルと同じです。</p>
-
-<pre><code>wget http://repo.zabbix.com/zabbix/2.4/ubuntu/pool/main/z/zabbix-release/zabbix-release_2.4-1+trusty_all.deb
-sudo dpkg -i zabbix-release_2.4-1+trusty_all.deb
-sudo apt-get update
-</code></pre>
-
-<h2>zabbix-server のインストール</h2>
-
-<p><code>zabbix-server-mysql</code> の代わりに <code>zabbix-server-pgsql</code> をインストールします。
-途中で入力するパスワードは後で必要になるのでメモするか覚えておきます。
-(Debian や Ubuntu の公式パッケージの zabbix と違って <code>dbconfig-common</code> を使うようになっています。)</p>
-
-<pre><code>sudo apt-get install zabbix-server-pgsql
-</code></pre>
-
-<p>ただし、先に postgresql を入れておかないとデータベースの作成のところでエラーになるようです。</p>
-
-<h2>zabbix-frontend-php のインストール</h2>
-
-<p><code>/usr/share/doc/zabbix-frontend-php/README.Debian</code> に書いてあるのですが、
-<code>php5-pgsql</code> を入れておくと初期設定の時のデータベースの選択肢に PostgreSQL が出てきます。</p>
-
-<pre><code>sudo apt-get install zabbix-frontend-php php5-pgsql
-</code></pre>
-
-<h2>PHP のタイムゾーンの設定</h2>
-
-<pre><code>sudoedit /etc/zabbix/apache.conf
-</code></pre>
-
-<p>で</p>
-
-<pre><code># php_value date.timezone Europe/Riga
-</code></pre>
-
-<p>を</p>
-
-<pre><code>php_value date.timezone Asia/Tokyo
-</code></pre>
-
-<p>に変更して</p>
-
-<pre><code>sudo service apache2 reload
-</code></pre>
-
-<p>で反映します。
-(Debian や Ubuntu の公式パッケージの zabbix と違って <code>apache2</code> のみ対応です。
-<code>php5-fpm</code>+<code>nginx</code> には対応していないので <code>nginx</code> で使うなら完全に独自設定が必要です。)</p>
-
-<h2>初期設定</h2>
-
-<p><code>http://localhost/zabbix/</code> を開いて初期設定を開始します。
-<code>Next</code> ボタンで進んでいってデータベースの設定のところは</p>
-
-<ul>
-<li>Database Type : PostgreSQL</li>
-<li>Database host : localhost のまま</li>
-<li>Database port : 0 のまま</li>
-<li>Database name : zabbix のまま</li>
-<li>User : root から zabbix に変更</li>
-<li>Password : <code>zabbix-server-pgsql</code> をインストールしたときに設定したパスワード</li>
-</ul>
-
-
-<p>と設定します。</p>
-
-<p>そして <code>Next</code> で進んでいって <code>Finish</code> まで行くと初期設定終了です。
-(Debian や Ubuntu の公式パッケージの zabbix と違って
-<code>/etc/zabbix/web/</code> が <code>www-data</code> から書き込み可能になっていて
-ダウンロードして自分で設置しなくても設定完了するようになっています。)</p>
-
-<h2>ログイン</h2>
-
-<ul>
-<li>Username : Admin</li>
-<li>Password : zabbix</li>
-</ul>
-
-
-<p>でログインします。</p>
-
-<p>右上の Profile から Language を Japanese (ja_JP) に変更して Update すると
-日本語で使えるようになります。
-パスワードもここで変更できます。</p>
-
-<p>ログイン前の画面は guest ユーザーの言語が反映されているので、
-「管理」-「ユーザー」からメンバーの「guest」を開いて言語を変更して更新します。</p>
-
-<h2>zabbix-agent のインストール</h2>
-
-<pre><code>sudo apt-get install zabbix-agent
-</code></pre>
-
-<p>でインストールできます。</p>
-
-<h2>Zabbix server の監視</h2>
-
-<p><code>zabbix-agent</code> をインストールした後、
-「設定」-「ホスト」でステータスを「無効」から「有効」に切り替えます。</p>
-
-<p>しばらくするとエージェントの状態の「Z」が緑色になって監視できていることがわかります。</p>
-
-<h2>グラフの日本語の文字化け対策</h2>
-
-<p>グラフなどの図の中の日本語が文字化けするときは
-適当な日本語フォントを入れて
-<code>zabbix-frontend-php</code> の設定をし直せば直ります。</p>
-
-<pre><code>sudo apt-get install fonts-vlgothic
-sudo dpkg-reconfigure zabbix-frontend-php
-</code></pre>
 ]]></content>
   </entry>
   

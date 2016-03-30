@@ -4,7 +4,7 @@
   <title><![CDATA[Category: dokku | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/dokku/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-03-27T22:12:54+09:00</updated>
+  <updated>2016-03-30T22:32:15+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,269 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[dokku 0.5.3 を vagrant 環境で試してみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-03-30-dokku-053.html"/>
+    <updated>2016-03-30T22:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/dokku-053</id>
+    <content type="html"><![CDATA[<p>社内向けアプリで本番環境でも使っている dokku のバージョン 0.5.3 をいろいろ試しやすくするために vagrant 環境で試してみました。</p>
+
+<!--more-->
+
+
+<h2>確認バージョン</h2>
+
+<ul>
+<li>VirtualBox 5.0.16</li>
+<li>Vagrant 1.8.1</li>
+<li>dokku 0.5.3</li>
+</ul>
+
+
+<h2>dokku v0.5.0 での主な変更点</h2>
+
+<p><a href="https://github.com/dokku/dokku/releases/tag/v0.5.0">v0.5.0</a> での主な変更点は以下の通りです。</p>
+
+<ul>
+<li>docker 1.10/1.11 のサポートと、 docker 1.9.1 以上の必須化</li>
+<li>ドキュメント改善</li>
+<li><a href="http://dokku.viewdocs.io/dokku/deployment/deployment-tasks/" title="Deployment Tasks">Deployment Tasks</a> (<code>app.json</code> での <code>scripts.dokku.predeploy</code> と <code>scripts.dokku.postdeploy</code> のサポート)</li>
+<li><a href="http://dokku.viewdocs.io/dokku/deployment/dockerfiles/" title="Dockerfile Deployment">Dockerfile Deployment</a> で <code>Procfile</code> サポート、<code>EXPOSE</code> の扱いの変更</li>
+<li><a href="http://dokku.viewdocs.io/dokku/dokku-storage/">persistent storage plugin</a> のオフィシャル化</li>
+</ul>
+
+
+<h2>初期設定</h2>
+
+<p><code>git clone https://github.com/dokku/dokku</code> で clone してきたディレクトリの中に入って <code>vagrant up</code> します。
+最初は box のダウンロードもあるので時間がかかります。</p>
+
+<p><a href="http://xip.io/">xip.io</a> を使ってサブドメインを使ったデプロイを試します。</p>
+
+<p><code>http://10.0.0.2.xip.io/</code> を開き、 <code>Hostname</code> を <code>10.0.0.2.xip.io</code> にして <code>Use virtualhost naming for apps</code> にチェックを入れて、 <code>Finish Setup</code> を押します。</p>
+
+<p><a href="http://dokku.viewdocs.io/dokku/application-deployment/">http://dokku.viewdocs.io/dokku/application-deployment/</a> にリダイレクトされるので、そのチュートリアルを試します。</p>
+
+<h2>チュートリアル前の準備</h2>
+
+<p><code>vagrant ssh</code> で入って操作します。</p>
+
+<p><code>docker</code> コマンドや <code>dokku</code> コマンドで <code>sudo</code> を不要にするためにグループに追加します。</p>
+
+<ul>
+<li><code>sudo usermod -aG docker vagrant</code></li>
+<li><code>sudo usermod -aG dokku vagrant</code></li>
+</ul>
+
+
+<p>ビルド中のダウンロードでタイムアウトしにくくするためにタイムアウト時間をのばします。</p>
+
+<ul>
+<li><code>dokku config:set --global CURL_TIMEOUT=120</code></li>
+</ul>
+
+
+<p><code>dokku run</code> などで実行して終了したコンテナが溜まっていかないようにするために、デフォルトで <code>--rm</code> をつけるようにします。(この設定をしなくても <code>git push</code> したときに自動で実行される <code>dokku cleanup</code> で削除されます。)</p>
+
+<ul>
+<li><code>dokku config:set --global DOKKU_RM_CONTAINER=1</code></li>
+</ul>
+
+
+<h2>チュートリアル</h2>
+
+<p>チュートリアルも <code>vagrant ssh</code> で入った環境で試します。
+<code>sudo dokku plugin:install</code> 以外はホスト側からでも実行できます。</p>
+
+<ul>
+<li><code>git clone git@github.com:heroku/ruby-rails-sample.git</code> で rails のサンプルを clone しておきます。</li>
+<li><code>dokku apps:create ruby-rails-sample</code> でアプリケーションを作成します。データベースとのリンクに必要なので、事前に作成していますが、 <a href="https://github.com/heroku/node-js-sample">https://github.com/heroku/node-js-sample</a> のように単独で動くアプリケーションでは事前に <code>apps:create</code> しなくても構いません。</li>
+<li><code>sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git</code> で postgres プラグインをインストールします。インストールの後処理で <code>postgres:9.5.0</code>, <code>svendowideit/ambassador:latest</code>, <code>dokkupaas/wait:latest</code> が docker pull されるので、ダウンロードに少し時間がかかります。</li>
+<li><code>docker images</code> で確認するとわかるのですが、なぜか <code>gliderlabs/herokuish</code> が 0 バイトのイメージになってしまっているので <code>docker pull gliderlabs/herokuish</code> でダウンロードしておきます。ここもダウンロードに時間がかかります。この手順は普通にインストールした場合は不要なはずです。</li>
+<li><code>dokku postgres:create rails-database</code> でデータベースのコンテナを作成して <code>dokku postgres:link rails-database ruby-rails-sample</code> でリンクします。</li>
+<li><code>git remote add dokku dokku@10.0.0.2:ruby-rails-sample</code> で remote に dokku を登録して <code>git push dokku master</code> でデプロイします。</li>
+<li><code>curl</code> コマンドでエラーになった場合、 <code>CURL_TIMEOUT</code> をのばして、再度 <code>git push dokku master</code> します。</li>
+<li><code>http://ruby-rails-sample.10.0.0.2.xip.io/</code> を開いて <code>Hello World</code> と現在時刻が UTC (+0000) で表示されていたら成功です。</li>
+</ul>
+
+
+<h2>チュートリアル後の変更例</h2>
+
+<p>現在時刻が UTC で表示されていたので JST に変更してみます。</p>
+
+<ul>
+<li><code>dokku config:set ruby-rails-sample TZ=Asia/Tokyo</code></li>
+</ul>
+
+
+<p><code>http://ruby-rails-sample.10.0.0.2.xip.io/</code> を開いて <code>Hello World</code> と現在時刻が JST (+0900) で表示されていたら成功です。</p>
+
+<h2><code>rake db:migrate</code> を実行する</h2>
+
+<p><code>dokku run ruby-rails-sample bundle exec rake db:migrate</code> で実行できます。</p>
+
+<h2><code>scripts.dokku.predeploy</code> で <code>rake db:migrate</code> を自動実行する</h2>
+
+<p><a href="http://dokku.viewdocs.io/dokku~v0.5.3/deployment/deployment-tasks/">Deployment Tasks</a> に書いてあるように v0.5.0 から <code>app.json</code> に <code>scripts.dokku.predeploy</code> を設定できるようになっているので、そこで <code>rake db:migrate</code> を自動実行するように設定してみます。</p>
+
+<p>heroku が対応している <code>scripts.postdeploy</code> は初回の deploy 時にしか実行されないのに対して、 <code>scripts.dokku.predeploy</code> と <code>scripts.dokku.postdeploy</code> は毎回実行されるという違いがあります。</p>
+
+<pre><code class="diff">diff --git a/app.json b/app.json
+index 452cef1..4c828fa 100644
+--- a/app.json
++++ b/app.json
+@@ -5,6 +5,9 @@
+   "repository": "https://github.com/heroku/ruby-rails-sample",
+   "logo": "https://upload.wikimedia.org/wikipedia/commons/c/c3/Ruby_on_Rails_logo.svg",
+   "scripts": {
++    "dokku": {
++      "predeploy": "bundle exec rake db:migrate"
++    },
+     "postdeploy": "bundle exec rake db:migrate"
+   },
+   "env": {
+</code></pre>
+
+<p>という変更を commit して push して動作確認します。</p>
+
+<p>さらに <code>rails g model</code> などで migration ファイルを作成してさらに動作確認できます。</p>
+
+<h2>pre-flight checks</h2>
+
+<p><a href="http://dokku.viewdocs.io/dokku~v0.5.3/checks-examples/">Zero Downtime Deploys</a> に書いてあるようにゼロダウンタイムデプロイを実現するために <code>CHECKS</code> ファイルを作成します。
+(デプロイ後のメッセージに <code>Shutting down old containers in 60 seconds</code> とあるように、デプロイして新しいコンテナに切り替わった直後の 1 分間は古いコンテナも動いています。)</p>
+
+<p>以下の内容の <code>CHECKS</code> ファイルを作成して、デプロイ時の起動確認をデフォルトの 10 秒待つだけの動作から、 http で特定の URL にアクセスして指定した内容が含まれるかどうかのチェックに変更します。</p>
+
+<pre><code>/ Hello World
+</code></pre>
+
+<p>デフォルトでは 5 秒ごとに 5 回までのチェックですが、以下の内容にすると 10 秒ごとに 20 回までのチェックになります。
+起動に時間がかかるアプリケーションの場合に、回数を増やしたり時間をのばしたりすると良いと思います。</p>
+
+<pre><code>WAIT=10
+ATTEMPTS=20
+/ Hello World
+</code></pre>
+
+<h2>アプリケーションを削除する</h2>
+
+<p><code>dokku apps:destroy ruby-rails-sample</code> で削除できます。
+heroku での削除と同じように、確認のため、アプリケーション名を再度入力しないと消えないようになっています。</p>
+
+<p>データベースも作成していたので、同様に <code>dokku postgres:destroy rails-database</code> で削除します。</p>
+
+<h2>node-js-sample を試す</h2>
+
+<p>Dokku の昔のバージョンのチュートリアルは node-js-sample を使っていたので、 node-js-sample も試してみます。</p>
+
+<ul>
+<li><code>git clone git@github.com:heroku/node-js-sample.git</code></li>
+<li><code>cd node-js-sample</code></li>
+<li><code>git remote add dokku dokku@10.0.0.2:node-js-sample</code></li>
+<li><code>git push dokku master</code></li>
+</ul>
+
+
+<p><code>http://node-js-sample.10.0.0.2.xip.io/</code> を開いて <code>Hello World!</code> が表示されたら成功です。</p>
+
+<h2>動作確認用シェルスクリプト</h2>
+
+<p><code>rails g model</code> 用に <a href="https://github.com/riywo/anyenv">anyenv</a> と <a href="https://github.com/rbenv/rbenv">rbenv</a> を使って ruby と rails のインストールまでしています。</p>
+
+<p>実行途中で <code>http://10.0.0.2.xip.io/</code> を開いて設定をしないと途中で失敗して止まります。</p>
+
+<pre><code class="bash">#!/bin/bash
+set -euo pipefail
+set -x
+cd /home/vagrant
+sudo usermod -aG docker vagrant
+sudo usermod -aG dokku vagrant
+dokku config:set --global CURL_TIMEOUT=120
+dokku config:set --global DOKKU_RM_CONTAINER=1
+if [[ ! -d ruby-rails-sample ]]; then
+  git clone git@github.com:heroku/ruby-rails-sample.git
+fi
+if [[ ! -d /home/dokku/ruby-rails-sample ]]; then
+  dokku apps:create ruby-rails-sample
+fi
+if [[ ! -d /var/lib/dokku/plugins/available/postgres ]]; then
+  sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git || :
+  sudo docker pull gliderlabs/herokuish
+fi
+if [[ ! -f /home/dokku/ruby-rails-sample/DOCKER_OPTIONS_RUN ]]; then
+  dokku postgres:create rails-database || :
+  dokku postgres:link rails-database ruby-rails-sample
+fi
+pushd ~/ruby-rails-sample
+if ! git remote | grep -q dokku; then
+  git remote add dokku dokku@10.0.0.2:ruby-rails-sample
+fi
+git push dokku master
+if ! dokku config ruby-rails-sample | grep -q '^TZ'; then
+  dokku config:set ruby-rails-sample TZ=Asia/Tokyo
+fi
+popd
+if [[ ! -d node-js-sample ]]; then
+  git clone git@github.com:heroku/node-js-sample.git
+fi
+pushd ~/node-js-sample
+if ! git remote | grep -q dokku; then
+  git remote add dokku dokku@10.0.0.2:node-js-sample
+fi
+git push dokku master
+popd
+if dpkg -l | grep -q nodejs; then
+  sudo sed -i~ -e 's/us\.archive/jp.archive/' /etc/apt/sources.list
+  sudo apt-get update
+  sudo apt-get install autoconf bison build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm3 libgdbm-dev
+  sudo apt-get install libpq-dev
+  sudo apt-get install nodejs
+fi
+if [[ ! -d ~/.anyenv ]]; then
+  git clone https://github.com/riywo/anyenv ~/.anyenv
+  echo 'export PATH="$HOME/.anyenv/bin:$PATH"' &gt;&gt; ~/.bashrc
+  echo 'eval "$(anyenv init -)"' &gt;&gt; ~/.bashrc
+fi
+if [[ -z "$(command -v anyenv)" ]]; then
+  export PATH="$HOME/.anyenv/bin:$PATH"
+  set +x
+  eval "$(anyenv init - --no-rehash)"
+  set -x
+fi
+if [[ ! -d ~/.anyenv/envs/rbenv ]]; then
+  anyenv install rbenv
+fi
+if [[ -z "$(command -v rbenv)" ]]; then
+  set +x
+  eval "$(anyenv init - --no-rehash)"
+  set -x
+fi
+ruby_version=$(awk '/^ruby/{print $2}' ~/ruby-rails-sample/Gemfile | tr -d "'")
+if ! rbenv versions | grep -q "$ruby_version"; then
+  rbenv install "$ruby_version"
+fi
+if [[ ! -f ~/.gemrc ]]; then
+  cat &lt;&lt;EOF &gt;~/.gemrc
+install: --no-rdoc --no-ri --format-executable
+update: --no-rdoc --no-ri --format-executable
+EOF
+fi
+export RBENV_VERSION="$ruby_version"
+if ! gem list | grep -q bundler; then
+  gem install bundler
+fi
+pushd ~/ruby-rails-sample
+bundle
+popd
+</code></pre>
+
+<h2>まとめ</h2>
+
+<p>vagrant を使って dokku をいろいろ試す環境を簡単に作ることができました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[dokku 0.4.1 の新規インストールを試してみた]]></title>
@@ -715,172 +978,6 @@ Connection to 10.0.0.2 closed.
 
 <pre><code>ssh dokku config:set ruby-rails-app CURL_TIMEOUT=120
 </code></pre>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Ubuntu 14.04 で dokku を使う]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-04-18-ubuntu-1404-dokku.html"/>
-    <updated>2014-04-18T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ubuntu-1404-dokku</id>
-    <content type="html"><![CDATA[<p>Ubuntu 14.04 がリリースされたので、
-<a href="https://github.com/progrium/dokku">dokku</a>
-を Ubuntu 14.04 で試してみました。</p>
-
-<!--more-->
-
-
-<h2>dokku の Vagrantfile を確認する</h2>
-
-<p>まず dokku を clone して中の Vagrantfile をみて、
-環境変数で設定できる項目があるのを確認しておきます。</p>
-
-<pre><code class="console">% git clone https://github.com/progrium/dokku
-% cd dokku
-% vi Vagrantfile
-</code></pre>
-
-<h2>Vagantfile を変更する</h2>
-
-<p>デフォルトの apt-line のままだとダウンロードが遅いので、
-<a href="http://mirrors.ubuntu.com/mirrors.txt">http://mirrors.ubuntu.com/mirrors.txt</a>
-からミラーサーバーを選んで (今回は jaist を選択)、
-shell provision のところで書き換えておきます。
-(関係ないところにマッチして問題が起きる可能性はほぼないので、置換元の URL の <code>.</code> はエスケープしていません。)</p>
-
-<pre><code class="diff">diff --git a/Vagrantfile b/Vagrantfile
-index a310f6b..7c1a133 100644
---- a/Vagrantfile
-+++ b/Vagrantfile
-@@ -29,5 +29,10 @@ Vagrant::configure("2") do |config|
-     vb.customize ["modifyvm", :id, "--memory", BOX_MEMORY]
-   end
-
--  config.vm.provision :shell, :inline =&gt; "apt-get -y install git &amp;&amp; cd /root/dokku &amp;&amp; #{make_cmd}"
-+  config.vm.provision :shell, :inline =&gt; &lt;&lt;-SHELL
-+    sed -i~ -e 's;http://archive.ubuntu.com/ubuntu;http://ftp.jaist.ac.jp/pub/Linux/ubuntu;' /etc/apt/sources.list &amp;&amp;
-+    apt-get update &amp;&amp;
-+    apt-get -y install git &amp;&amp;
-+    cd /root/dokku &amp;&amp; #{make_cmd}
-+  SHELL
- end
-</code></pre>
-
-<h2>初回起動</h2>
-
-<p><code>BOX_NAME</code>, <code>BOX_URI</code> に trusty を指定して、
-<code>BOX_MEMORY</code> も 512 から 2048 に増やした値を指定して起動します。</p>
-
-<p><code>node-js-sample</code> だと 512 メガでも問題ないのですが、
-Rails アプリを動かそうとするとメモリ不足で <code>bundle install</code> の途中で失敗して
-deploy できなかったので増やしています。</p>
-
-<pre><code class="console">% BOX_NAME=trusty-amd64-20140418 BOX_URI=https://cloud-images.ubuntu.com/vagrant/trusty/20140418/trusty-server-cloudimg-amd64-vagrant-disk1.box BOX_MEMORY=2048 vagrant up
-</code></pre>
-
-<p>box のダウンロードとインストール、
-VM の作成などには時間がかかるので、
-他のことをしながらゆっくり待ちます。</p>
-
-<h2>二度目以降の起動</h2>
-
-<p>VM の作成ができている状態なら、
-box の設定は参照されないので省略できます。
-<code>vagrant destroy</code> した後に <code>vagrant up</code> し直したときは参照されるので、
-毎回設定していてもかまいません。</p>
-
-<p><code>BOX_MEMORY</code> は毎回設定されるので、指定を忘れると 512 に戻ってしまいます。</p>
-
-<pre><code class="console">% BOX_MEMORY=2048 vagrant up
-</code></pre>
-
-<h2>dokku の初期設定</h2>
-
-<p>ssh の鍵を追加します。</p>
-
-<pre><code class="console">% vagrant ssh
-vagrant@dokku:~$ egrep '^ssh' ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant
-dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6
-vagrant@dokku:~$ cat ~/.ssh/authorized_keys
-# CLOUD_IMG: This file was created/modified by the Cloud Image build process
-ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
-vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
-command="FINGERPRINT=dd:3b:b8:2e:85:04:06:e9:ab:ff:a8:0a:c0:04:6e:d6 NAME=vagrant `cat /home/dokku/.sshcommand` $SSH_ORIGINAL_COMMAND",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
-</code></pre>
-
-<h2>dokku の鍵追加失敗例</h2>
-
-<p><code>cat ~/.ssh/authorized_keys | sudo sshcommand acl-add dokku vagrant</code>
-で追加してしまうと以下のように変になってしまいます。</p>
-
-<pre><code class="text">vagrant@dokku:~$ cat /home/dokku/.ssh/authorized_keys
-command="FINGERPRINT=is NAME=vagrant `cat /home/dokku/.sshcommand` $SSH_ORIGINAL_COMMAND",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding # CLOUD_IMG: This file was created/modified by the Cloud Image build process
-ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
-</code></pre>
-
-<pre><code class="bash">    KEY=$(cat)
-    FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
-    KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
-    echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
-    echo $FINGERPRINT
-</code></pre>
-
-<p>の部分を以下のように <code>while read</code> ループに変えた方が良いのかもしれません。</p>
-
-<pre><code class="bash">    while read KEY; do
-      FINGERPRINT=$(ssh-keygen -lf /dev/stdin &lt;&lt;&lt; $(echo $KEY) | awk '{print $2}')
-      KEY_PREFIX="command=\"FINGERPRINT=$FINGERPRINT NAME=$NAME \`cat $USERHOME/.sshcommand\` \$SSH_ORIGINAL_COMMAND\",no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding"
-      echo "$KEY_PREFIX $KEY" &gt;&gt; "$USERHOME/.ssh/authorized_keys"
-      echo $FINGERPRINT
-    done
-</code></pre>
-
-<h2>node-js-sample の deploy</h2>
-
-<p><code>node-js-sample</code> を <code>deploy</code> して動作確認します。
-以下の例では <code>ssh dokku</code> で VM に接続できるように <code>~/.ssh/config</code> に設定済みです。</p>
-
-<pre><code class="console">% git clone https://github.com/heroku/node-js-sample
-Cloning into 'node-js-sample'...
-remote: Reusing existing pack: 319, done.
-remote: Total 319 (delta 0), reused 0 (delta 0)
-Receiving objects: 100% (319/319), 201.92 KiB | 210.00 KiB/s, done.
-Resolving deltas: 100% (17/17), done.
-Checking connectivity... done.
-% cd node-js-sample
-% git remote add dokku dokku:node-js-app
-%  git push --set-upstream dokku master
-Counting objects: 319, done.
-Delta compression using up to 4 threads.
-Compressing objects: 100% (274/274), done.
-Writing objects: 100% (319/319), 201.92 KiB | 0 bytes/s, done.
-Total 319 (delta 17), reused 319 (delta 17)
------&gt; Cleaning up ...
-remote: Cloning into '/tmp/tmp.ChNvZEb5S9'...
------&gt; Building node-js-app ...
-remote: warning: You appear to have cloned an empty repository.
-remote: done.
-remote: HEAD is now at 2e52ce7... Update documentation links
-       Node.js app detected
------&gt; Requested node range:  0.10.x
------&gt; Resolved node version: 0.10.26
------&gt; Downloading and installing node
-(省略)
------&gt; Discovering process types
-       Procfile declares types -&gt; web
------&gt; Releasing node-js-app ...
------&gt; Deploying node-js-app ...
-=====&gt; Application deployed:
-       http://node-js-app.dokku.me
-
-To dokku:node-js-app
- * [new branch]      master -&gt; master
-Branch master set up to track remote branch master from dokku.
-</code></pre>
-
-<p>Vagrantfile で guest の 80 番ポートを host の 8080 番ポートで見えるように設定されているので
-<code>http://node-js-app.dokku.me:8080/</code>
-で開くと <code>Hello World!</code> と表示されます。</p>
 ]]></content>
   </entry>
   
