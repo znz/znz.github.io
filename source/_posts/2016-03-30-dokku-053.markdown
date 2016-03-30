@@ -1,0 +1,241 @@
+---
+layout: post
+title: "dokku 0.5.3 を vagrant 環境で試してみた"
+date: 2016-03-30 21:42:19 +0900
+comments: true
+categories: dokku ubuntu
+---
+社内向けアプリで本番環境でも使っている dokku のバージョン 0.5.3 をいろいろ試しやすくするために vagrant 環境で試してみました。
+
+<!--more-->
+
+## 確認バージョン
+
+- VirtualBox 5.0.16
+- Vagrant 1.8.1
+- dokku 0.5.3
+
+## dokku v0.5.0 での主な変更点
+
+[v0.5.0](https://github.com/dokku/dokku/releases/tag/v0.5.0) での主な変更点は以下の通りです。
+
+- docker 1.10/1.11 のサポートと、 docker 1.9.1 以上の必須化
+- ドキュメント改善
+- [Deployment Tasks](http://dokku.viewdocs.io/dokku/deployment/deployment-tasks/ "Deployment Tasks") (`app.json` での `scripts.dokku.predeploy` と `scripts.dokku.postdeploy` のサポート)
+- [Dockerfile Deployment](http://dokku.viewdocs.io/dokku/deployment/dockerfiles/ "Dockerfile Deployment") で `Procfile` サポート、`EXPOSE` の扱いの変更
+- [persistent storage plugin](http://dokku.viewdocs.io/dokku/dokku-storage/) のオフィシャル化
+
+## 初期設定
+
+`git clone https://github.com/dokku/dokku` で clone してきたディレクトリの中に入って `vagrant up` します。
+最初は box のダウンロードもあるので時間がかかります。
+
+[xip.io](http://xip.io/) を使ってサブドメインを使ったデプロイを試します。
+
+`http://10.0.0.2.xip.io/` を開き、 `Hostname` を `10.0.0.2.xip.io` にして `Use virtualhost naming for apps` にチェックを入れて、 `Finish Setup` を押します。
+
+http://dokku.viewdocs.io/dokku/application-deployment/ にリダイレクトされるので、そのチュートリアルを試します。
+
+## チュートリアル前の準備
+
+`vagrant ssh` で入って操作します。
+
+`docker` コマンドや `dokku` コマンドで `sudo` を不要にするためにグループに追加します。
+
+- `sudo usermod -aG docker vagrant`
+- `sudo usermod -aG dokku vagrant`
+
+ビルド中のダウンロードでタイムアウトしにくくするためにタイムアウト時間をのばします。
+
+- `dokku config:set --global CURL_TIMEOUT=120`
+
+`dokku run` などで実行して終了したコンテナが溜まっていかないようにするために、デフォルトで `--rm` をつけるようにします。(この設定をしなくても `git push` したときに自動で実行される `dokku cleanup` で削除されます。)
+
+- `dokku config:set --global DOKKU_RM_CONTAINER=1`
+
+## チュートリアル
+
+チュートリアルも `vagrant ssh` で入った環境で試します。
+`sudo dokku plugin:install` 以外はホスト側からでも実行できます。
+
+- `git clone git@github.com:heroku/ruby-rails-sample.git` で rails のサンプルを clone しておきます。
+- `dokku apps:create ruby-rails-sample` でアプリケーションを作成します。データベースとのリンクに必要なので、事前に作成していますが、 https://github.com/heroku/node-js-sample のように単独で動くアプリケーションでは事前に `apps:create` しなくても構いません。
+- `sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git` で postgres プラグインをインストールします。インストールの後処理で `postgres:9.5.0`, `svendowideit/ambassador:latest`, `dokkupaas/wait:latest` が docker pull されるので、ダウンロードに少し時間がかかります。
+- `docker images` で確認するとわかるのですが、なぜか `gliderlabs/herokuish` が 0 バイトのイメージになってしまっているので `docker pull gliderlabs/herokuish` でダウンロードしておきます。ここもダウンロードに時間がかかります。この手順は普通にインストールした場合は不要なはずです。
+- `dokku postgres:create rails-database` でデータベースのコンテナを作成して `dokku postgres:link rails-database ruby-rails-sample` でリンクします。
+- `git remote add dokku dokku@10.0.0.2:ruby-rails-sample` で remote に dokku を登録して `git push dokku master` でデプロイします。
+- `curl` コマンドでエラーになった場合、 `CURL_TIMEOUT` をのばして、再度 `git push dokku master` します。
+- `http://ruby-rails-sample.10.0.0.2.xip.io/` を開いて `Hello World` と現在時刻が UTC (+0000) で表示されていたら成功です。
+
+## チュートリアル後の変更例
+
+現在時刻が UTC で表示されていたので JST に変更してみます。
+
+- `dokku config:set ruby-rails-sample TZ=Asia/Tokyo`
+
+`http://ruby-rails-sample.10.0.0.2.xip.io/` を開いて `Hello World` と現在時刻が JST (+0900) で表示されていたら成功です。
+
+## `rake db:migrate` を実行する
+
+`dokku run ruby-rails-sample bundle exec rake db:migrate` で実行できます。
+
+## `scripts.dokku.predeploy` で `rake db:migrate` を自動実行する
+
+[Deployment Tasks](http://dokku.viewdocs.io/dokku~v0.5.3/deployment/deployment-tasks/) に書いてあるように v0.5.0 から `app.json` に `scripts.dokku.predeploy` を設定できるようになっているので、そこで `rake db:migrate` を自動実行するように設定してみます。
+
+heroku が対応している `scripts.postdeploy` は初回の deploy 時にしか実行されないのに対して、 `scripts.dokku.predeploy` と `scripts.dokku.postdeploy` は毎回実行されるという違いがあります。
+
+```diff
+diff --git a/app.json b/app.json
+index 452cef1..4c828fa 100644
+--- a/app.json
++++ b/app.json
+@@ -5,6 +5,9 @@
+   "repository": "https://github.com/heroku/ruby-rails-sample",
+   "logo": "https://upload.wikimedia.org/wikipedia/commons/c/c3/Ruby_on_Rails_logo.svg",
+   "scripts": {
++    "dokku": {
++      "predeploy": "bundle exec rake db:migrate"
++    },
+     "postdeploy": "bundle exec rake db:migrate"
+   },
+   "env": {
+```
+
+という変更を commit して push して動作確認します。
+
+さらに `rails g model` などで migration ファイルを作成してさらに動作確認できます。
+
+## pre-flight checks
+
+[Zero Downtime Deploys](http://dokku.viewdocs.io/dokku~v0.5.3/checks-examples/) に書いてあるようにゼロダウンタイムデプロイを実現するために `CHECKS` ファイルを作成します。
+(デプロイ後のメッセージに `Shutting down old containers in 60 seconds` とあるように、デプロイして新しいコンテナに切り替わった直後の 1 分間は古いコンテナも動いています。)
+
+以下の内容の `CHECKS` ファイルを作成して、デプロイ時の起動確認をデフォルトの 10 秒待つだけの動作から、 http で特定の URL にアクセスして指定した内容が含まれるかどうかのチェックに変更します。
+
+```
+/ Hello World
+```
+
+デフォルトでは 5 秒ごとに 5 回までのチェックですが、以下の内容にすると 10 秒ごとに 20 回までのチェックになります。
+起動に時間がかかるアプリケーションの場合に、回数を増やしたり時間をのばしたりすると良いと思います。
+
+```
+WAIT=10
+ATTEMPTS=20
+/ Hello World
+```
+
+## アプリケーションを削除する
+
+`dokku apps:destroy ruby-rails-sample` で削除できます。
+heroku での削除と同じように、確認のため、アプリケーション名を再度入力しないと消えないようになっています。
+
+データベースも作成していたので、同様に `dokku postgres:destroy rails-database` で削除します。
+
+## node-js-sample を試す
+
+Dokku の昔のバージョンのチュートリアルは node-js-sample を使っていたので、 node-js-sample も試してみます。
+
+- `git clone git@github.com:heroku/node-js-sample.git`
+- `cd node-js-sample`
+- `git remote add dokku dokku@10.0.0.2:node-js-sample`
+- `git push dokku master`
+
+`http://node-js-sample.10.0.0.2.xip.io/` を開いて `Hello World!` が表示されたら成功です。
+
+## 動作確認用シェルスクリプト
+
+`rails g model` 用に [anyenv](https://github.com/riywo/anyenv) と [rbenv](https://github.com/rbenv/rbenv) を使って ruby と rails のインストールまでしています。
+
+実行途中で `http://10.0.0.2.xip.io/` を開いて設定をしないと途中で失敗して止まります。
+
+```bash
+#!/bin/bash
+set -euo pipefail
+set -x
+cd /home/vagrant
+sudo usermod -aG docker vagrant
+sudo usermod -aG dokku vagrant
+dokku config:set --global CURL_TIMEOUT=120
+dokku config:set --global DOKKU_RM_CONTAINER=1
+if [[ ! -d ruby-rails-sample ]]; then
+  git clone git@github.com:heroku/ruby-rails-sample.git
+fi
+if [[ ! -d /home/dokku/ruby-rails-sample ]]; then
+  dokku apps:create ruby-rails-sample
+fi
+if [[ ! -d /var/lib/dokku/plugins/available/postgres ]]; then
+  sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git || :
+  sudo docker pull gliderlabs/herokuish
+fi
+if [[ ! -f /home/dokku/ruby-rails-sample/DOCKER_OPTIONS_RUN ]]; then
+  dokku postgres:create rails-database || :
+  dokku postgres:link rails-database ruby-rails-sample
+fi
+pushd ~/ruby-rails-sample
+if ! git remote | grep -q dokku; then
+  git remote add dokku dokku@10.0.0.2:ruby-rails-sample
+fi
+git push dokku master
+if ! dokku config ruby-rails-sample | grep -q '^TZ'; then
+  dokku config:set ruby-rails-sample TZ=Asia/Tokyo
+fi
+popd
+if [[ ! -d node-js-sample ]]; then
+  git clone git@github.com:heroku/node-js-sample.git
+fi
+pushd ~/node-js-sample
+if ! git remote | grep -q dokku; then
+  git remote add dokku dokku@10.0.0.2:node-js-sample
+fi
+git push dokku master
+popd
+if dpkg -l | grep -q nodejs; then
+  sudo sed -i~ -e 's/us\.archive/jp.archive/' /etc/apt/sources.list
+  sudo apt-get update
+  sudo apt-get install autoconf bison build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm3 libgdbm-dev
+  sudo apt-get install libpq-dev
+  sudo apt-get install nodejs
+fi
+if [[ ! -d ~/.anyenv ]]; then
+  git clone https://github.com/riywo/anyenv ~/.anyenv
+  echo 'export PATH="$HOME/.anyenv/bin:$PATH"' >> ~/.bashrc
+  echo 'eval "$(anyenv init -)"' >> ~/.bashrc
+fi
+if [[ -z "$(command -v anyenv)" ]]; then
+  export PATH="$HOME/.anyenv/bin:$PATH"
+  set +x
+  eval "$(anyenv init - --no-rehash)"
+  set -x
+fi
+if [[ ! -d ~/.anyenv/envs/rbenv ]]; then
+  anyenv install rbenv
+fi
+if [[ -z "$(command -v rbenv)" ]]; then
+  set +x
+  eval "$(anyenv init - --no-rehash)"
+  set -x
+fi
+ruby_version=$(awk '/^ruby/{print $2}' ~/ruby-rails-sample/Gemfile | tr -d "'")
+if ! rbenv versions | grep -q "$ruby_version"; then
+  rbenv install "$ruby_version"
+fi
+if [[ ! -f ~/.gemrc ]]; then
+  cat <<EOF >~/.gemrc
+install: --no-rdoc --no-ri --format-executable
+update: --no-rdoc --no-ri --format-executable
+EOF
+fi
+export RBENV_VERSION="$ruby_version"
+if ! gem list | grep -q bundler; then
+  gem install bundler
+fi
+pushd ~/ruby-rails-sample
+bundle
+popd
+```
+
+## まとめ
+
+vagrant を使って dokku をいろいろ試す環境を簡単に作ることができました。
