@@ -1,0 +1,122 @@
+---
+layout: post
+title: "jessie で inspircd を設定した"
+date: 2016-03-30 21:16:13 +0900
+comments: true
+categories: debian irc
+---
+[先日 wheezy から jessie にあげた](/blog/2016-03-22-wheezy-to-jessie.html)マシンでサーバー管理にも使っている ircd として inspircd の設定をしたので、そのメモです。
+
+<!--more-->
+
+## 確認バージョン
+
+- Debian GNU/Linux 8.3 (jessie)
+- inspircd 2.0.17-1+deb8u1
+
+## インストールと起動確認
+
+`sudo aptitude install inspircd` でインストールしました。
+
+systemd 管理になって `/etc/default/inspircd` の `INSPIRCD_ENABLED=0` に関係なく起動するようになっていました。
+
+```
+% systemctl status inspircd
+● inspircd.service - IRC server
+   Loaded: loaded (/lib/systemd/system/inspircd.service; enabled)
+   Active: active (running) since 火 2016-03-29 17:37:37 JST; 3min 34s ago
+ Main PID: 11613 (inspircd)
+   CGroup: /system.slice/inspircd.service
+           └─11613 /usr/sbin/inspircd --logfile /var/log/inspircd.log --config /etc/inspircd/insp...
+
+ 3月 29 17:37:37 ns8 inspircd[11613]: Inspire Internet Relay Chat Server, compiled on Mar 23...1:24
+ 3月 29 17:37:37 ns8 inspircd[11613]: (C) InspIRCd Development Team.
+ 3月 29 17:37:37 ns8 inspircd[11613]: Developers:
+ 3月 29 17:37:37 ns8 inspircd[11613]:         Brain, FrostyCoolSlug, w00t, Om, Special, peavey
+ 3月 29 17:37:37 ns8 inspircd[11613]: aquanight, psychon, dz, danieldg, jackmcbarn
+ 3月 29 17:37:37 ns8 inspircd[11613]: Attila
+ 3月 29 17:37:37 ns8 inspircd[11613]: Others:                        See /INFO Output
+ 3月 29 17:37:37 ns8 inspircd[11613]: Loading core commands........................................
+ 3月 29 17:37:37 ns8 inspircd[11613]: InspIRCd is now running as 'irc.local'[811] with 1024 ...kets
+Hint: Some lines were ellipsized, use -l to show in full.
+```
+
+`systemd-journal` グループに所属しているので、ログも出ています。
+
+## 設定変更
+
+`sudoedit /etc/inspircd/inspircd.conf` で設定変更して、 `sudo service inspircd reload` で反映しました。
+
+    <server name="irc.example.org"
+            description="Example.org IRC Server"
+            network="example.org">
+
+    <admin name="Kazuhiro Nishiyama"
+           nick="znz"
+           email="zn@mbf.nifty.com">
+
+に変更しました。
+
+NAT の中のサーバー群からも接続するので connect の localmax と globalmax を 3 から 9 に変更しました。
+
+### tls 設定
+
+推奨設定の gnutls を使って設定をしました。
+証明書は https://www.startssl.com/ で無料で発行してもらったものを使いました。
+
+    <bind address="" port="6697" ssl="gnutls">
+    <module name="m_ssl_gnutls.so">
+    <gnutls cafile="" crlfile="" certfile="/etc/ssl/certs/irc.example.org.2016.crt" keyfile="/etc/ssl/private/irc.example.org.2016.key" dh_bits="1024">
+
+### auto join 設定
+
+slack に似せて `#general` と `#random` に自動で join するように
+
+    <module name="m_conn_join.so">
+    <autojoin channel="#general,#random">
+
+を追加しました。
+
+### server password 設定
+
+connect タグに password 属性を追加しました。
+
+### permchannels 設定
+
+`#general` と `#random` はトピックを自動設定、 `#servers` についてはパスワードを設定するために permchannels 設定を使いました。
+
+    <module name="m_permchannels.so">
+    <permchannels channel="#general" modes="n" topic="General Talk">
+    <permchannels channel="#random" modes="n" topic="Random Talk">
+    <permchannels channel="#servers" modes="stnk PASSWORD" topic="Servers Status">
+
+を追加しました。
+
+## ufw
+
+    sudo ufw allow 6697/tcp
+
+で 6697 番ポートへの接続を許可しました。
+
+## tls 関係ファイル設置
+
+inspircd は irc ユーザー権限で動くので、そのユーザーが読めるように秘密鍵を設置しました。
+`/etc/ssl/private` ディレクトリを読めるようにするために `ssl-cert` グループへの追加も行いました。
+
+    %  sudoedit /etc/ssl/irc.example.org.2016.csr
+    %  sudoedit /etc/ssl/certs/irc.example.org.2016.crt
+    %  sudoedit /etc/ssl/private/irc.example.org.2016.key
+    %  sudo chmod 640 /etc/ssl/private/irc.example.org.2016.key
+    %  sudo chgrp irc /etc/ssl/private/irc.example.org.2016.key
+    %  sudo adduser irc ssl-cert
+    ユーザ `irc' をグループ `ssl-cert' に追加しています...
+    ユーザ irc をグループ ssl-cert に追加
+    完了。
+
+## DNS 設定
+
+今まで別のサーバーで動かしていたので、 DNS の A レコードを変更して、変更が反映されるのを待ち、新しいサーバーにクライアントが接続されるのを確認しました。
+
+## まとめ
+
+`systemd` になって `/etc/default/inspircd` がきかなくなるなど、 Debian 的にまだ過渡期な部分があるようですが、 inspircd としては問題なく動かすことができました。
