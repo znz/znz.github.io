@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-03-30T22:49:06+09:00</updated>
+  <updated>2016-04-02T10:40:34+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -183,7 +183,7 @@ heroku での削除と同じように、確認のため、アプリケーショ�
 
 <p><code>rails g model</code> 用に <a href="https://github.com/riywo/anyenv">anyenv</a> と <a href="https://github.com/rbenv/rbenv">rbenv</a> を使って ruby と rails のインストールまでしています。</p>
 
-<p>実行途中で <code>http://10.0.0.2.xip.io/</code> を開いて設定をしないと途中で失敗して止まります。</p>
+<p>実行前に <code>http://10.0.0.2.xip.io/</code> を開いて設定をしないと途中で失敗して止まります。</p>
 
 <pre><code class="bash">#!/bin/bash
 set -euo pipefail
@@ -194,7 +194,7 @@ sudo usermod -aG dokku vagrant
 dokku config:set --global CURL_TIMEOUT=120
 dokku config:set --global DOKKU_RM_CONTAINER=1
 if [[ ! -d ruby-rails-sample ]]; then
-  git clone git@github.com:heroku/ruby-rails-sample.git
+  git clone https://github.com/heroku/ruby-rails-sample.git
 fi
 if [[ ! -d /home/dokku/ruby-rails-sample ]]; then
   dokku apps:create ruby-rails-sample
@@ -217,7 +217,7 @@ if ! dokku config ruby-rails-sample | grep -q '^TZ'; then
 fi
 popd
 if [[ ! -d node-js-sample ]]; then
-  git clone git@github.com:heroku/node-js-sample.git
+  git clone https://github.com/heroku/node-js-sample.git
 fi
 pushd ~/node-js-sample
 if ! git remote | grep -q dokku; then
@@ -225,15 +225,15 @@ if ! git remote | grep -q dokku; then
 fi
 git push dokku master
 popd
-if ! dpkg -l | grep -q nodejs; then
+if [[ -z "$(dpkg -l | grep nodejs)" ]]; then
   sudo sed -i~ -e 's/us\.archive/jp.archive/' /etc/apt/sources.list
   sudo apt-get update
-  sudo apt-get install autoconf bison build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm3 libgdbm-dev
-  sudo apt-get install libpq-dev
-  sudo apt-get install nodejs
+  sudo apt-get -y install autoconf bison build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm3 libgdbm-dev
+  sudo apt-get -y install libpq-dev
+  sudo apt-get -y install nodejs
 fi
 if [[ ! -d ~/.anyenv ]]; then
-  git clone https://github.com/riywo/anyenv ~/.anyenv
+  git clone https://github.com/riywo/anyenv.git ~/.anyenv
   echo 'export PATH="$HOME/.anyenv/bin:$PATH"' &gt;&gt; ~/.bashrc
   echo 'eval "$(anyenv init -)"' &gt;&gt; ~/.bashrc
 fi
@@ -267,12 +267,41 @@ if ! gem list | grep -q bundler; then
 fi
 pushd ~/ruby-rails-sample
 bundle
+cat &lt;&lt;EOF &gt;CHECKS
+WAIT=10
+ATTEMPTS=20
+/ Hello World
+EOF
+git add CHECKS
+git commit -m "Add pre-flight checks file" || :
+git push dokku master
+cat &lt;&lt;EOF &gt;app.json
+{
+  "scripts": {
+    "dokku": {
+      "predeploy": "bundle exec rake db:migrate"
+    }
+  }
+}
+EOF
+git add app.json
+git commit -m "Set script.dokku.predeploy to app.json" || :
+git push dokku master
+popd
+pushd ~/node-js-sample
+cat &lt;&lt;EOF &gt;CHECKS
+/ Hello World!
+EOF
+git add CHECKS
+git commit -m "Add pre-flight checks file" || :
+git push dokku master
 popd
 </code></pre>
 
 <h2>まとめ</h2>
 
-<p>vagrant を使って dokku をいろいろ試す環境を簡単に作ることができました。</p>
+<p>vagrant を使って dokku をいろいろ試す環境を簡単に作ることができました。
+この環境を使ってテストやデバッグなどいろいろ試しやすくなると思います。</p>
 ]]></content>
   </entry>
   

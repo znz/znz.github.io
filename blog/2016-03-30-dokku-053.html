@@ -294,7 +294,7 @@ heroku での削除と同じように、確認のため、アプリケーショ�
 
 <p><code>rails g model</code> 用に <a href="https://github.com/riywo/anyenv">anyenv</a> と <a href="https://github.com/rbenv/rbenv">rbenv</a> を使って ruby と rails のインストールまでしています。</p>
 
-<p>実行途中で <code>http://10.0.0.2.xip.io/</code> を開いて設定をしないと途中で失敗して止まります。</p>
+<p>実行前に <code>http://10.0.0.2.xip.io/</code> を開いて設定をしないと途中で失敗して止まります。</p>
 
 <div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -379,6 +379,34 @@ heroku での削除と同じように、確認のため、アプリケーショ�
 <span class='line-number'>81</span>
 <span class='line-number'>82</span>
 <span class='line-number'>83</span>
+<span class='line-number'>84</span>
+<span class='line-number'>85</span>
+<span class='line-number'>86</span>
+<span class='line-number'>87</span>
+<span class='line-number'>88</span>
+<span class='line-number'>89</span>
+<span class='line-number'>90</span>
+<span class='line-number'>91</span>
+<span class='line-number'>92</span>
+<span class='line-number'>93</span>
+<span class='line-number'>94</span>
+<span class='line-number'>95</span>
+<span class='line-number'>96</span>
+<span class='line-number'>97</span>
+<span class='line-number'>98</span>
+<span class='line-number'>99</span>
+<span class='line-number'>100</span>
+<span class='line-number'>101</span>
+<span class='line-number'>102</span>
+<span class='line-number'>103</span>
+<span class='line-number'>104</span>
+<span class='line-number'>105</span>
+<span class='line-number'>106</span>
+<span class='line-number'>107</span>
+<span class='line-number'>108</span>
+<span class='line-number'>109</span>
+<span class='line-number'>110</span>
+<span class='line-number'>111</span>
 </pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#!/bin/bash</span>
 </span><span class='line'><span class="nb">set</span> -euo pipefail
 </span><span class='line'><span class="nb">set</span> -x
@@ -388,7 +416,7 @@ heroku での削除と同じように、確認のため、アプリケーショ�
 </span><span class='line'>dokku config:set --global <span class="nv">CURL_TIMEOUT</span><span class="o">=</span>120
 </span><span class='line'>dokku config:set --global <span class="nv">DOKKU_RM_CONTAINER</span><span class="o">=</span>1
 </span><span class='line'><span class="k">if</span> <span class="o">[[</span> ! -d ruby-rails-sample <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
-</span><span class='line'>  git clone git@github.com:heroku/ruby-rails-sample.git
+</span><span class='line'>  git clone https://github.com/heroku/ruby-rails-sample.git
 </span><span class='line'><span class="k">fi</span>
 </span><span class='line'><span class="k">if</span> <span class="o">[[</span> ! -d /home/dokku/ruby-rails-sample <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
 </span><span class='line'>  dokku apps:create ruby-rails-sample
@@ -411,7 +439,7 @@ heroku での削除と同じように、確認のため、アプリケーショ�
 </span><span class='line'><span class="k">fi</span>
 </span><span class='line'><span class="nb">popd</span>
 </span><span class='line'><span class="k">if</span> <span class="o">[[</span> ! -d node-js-sample <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
-</span><span class='line'>  git clone git@github.com:heroku/node-js-sample.git
+</span><span class='line'>  git clone https://github.com/heroku/node-js-sample.git
 </span><span class='line'><span class="k">fi</span>
 </span><span class='line'><span class="nb">pushd</span> ~/node-js-sample
 </span><span class='line'><span class="k">if</span> ! git remote <span class="p">|</span> grep -q dokku<span class="p">;</span> <span class="k">then</span>
@@ -419,15 +447,15 @@ heroku での削除と同じように、確認のため、アプリケーショ�
 </span><span class='line'><span class="k">fi</span>
 </span><span class='line'>git push dokku master
 </span><span class='line'><span class="nb">popd</span>
-</span><span class='line'><span class="k">if</span> ! dpkg -l <span class="p">|</span> grep -q nodejs<span class="p">;</span> <span class="k">then</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$(dpkg -l | grep nodejs)&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
 </span><span class='line'>  sudo sed -i~ -e <span class="s1">&#39;s/us\.archive/jp.archive/&#39;</span> /etc/apt/sources.list
 </span><span class='line'>  sudo apt-get update
-</span><span class='line'>  sudo apt-get install autoconf bison build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm3 libgdbm-dev
-</span><span class='line'>  sudo apt-get install libpq-dev
-</span><span class='line'>  sudo apt-get install nodejs
+</span><span class='line'>  sudo apt-get -y install autoconf bison build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm3 libgdbm-dev
+</span><span class='line'>  sudo apt-get -y install libpq-dev
+</span><span class='line'>  sudo apt-get -y install nodejs
 </span><span class='line'><span class="k">fi</span>
 </span><span class='line'><span class="k">if</span> <span class="o">[[</span> ! -d ~/.anyenv <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
-</span><span class='line'>  git clone https://github.com/riywo/anyenv ~/.anyenv
+</span><span class='line'>  git clone https://github.com/riywo/anyenv.git ~/.anyenv
 </span><span class='line'>  <span class="nb">echo</span> <span class="s1">&#39;export PATH=&quot;$HOME/.anyenv/bin:$PATH&quot;&#39;</span> &gt;&gt; ~/.bashrc
 </span><span class='line'>  <span class="nb">echo</span> <span class="s1">&#39;eval &quot;$(anyenv init -)&quot;&#39;</span> &gt;&gt; ~/.bashrc
 </span><span class='line'><span class="k">fi</span>
@@ -461,13 +489,42 @@ heroku での削除と同じように、確認のため、アプリケーショ�
 </span><span class='line'><span class="k">fi</span>
 </span><span class='line'><span class="nb">pushd</span> ~/ruby-rails-sample
 </span><span class='line'>bundle
+</span><span class='line'>cat <span class="s">&lt;&lt;EOF &gt;CHECKS</span>
+</span><span class='line'><span class="s">WAIT=10</span>
+</span><span class='line'><span class="s">ATTEMPTS=20</span>
+</span><span class='line'><span class="s">/ Hello World</span>
+</span><span class='line'><span class="s">EOF</span>
+</span><span class='line'>git add CHECKS
+</span><span class='line'>git commit -m <span class="s2">&quot;Add pre-flight checks file&quot;</span> <span class="o">||</span> :
+</span><span class='line'>git push dokku master
+</span><span class='line'>cat <span class="s">&lt;&lt;EOF &gt;app.json</span>
+</span><span class='line'><span class="s">{</span>
+</span><span class='line'><span class="s">  &quot;scripts&quot;: {</span>
+</span><span class='line'><span class="s">    &quot;dokku&quot;: {</span>
+</span><span class='line'><span class="s">      &quot;predeploy&quot;: &quot;bundle exec rake db:migrate&quot;</span>
+</span><span class='line'><span class="s">    }</span>
+</span><span class='line'><span class="s">  }</span>
+</span><span class='line'><span class="s">}</span>
+</span><span class='line'><span class="s">EOF</span>
+</span><span class='line'>git add app.json
+</span><span class='line'>git commit -m <span class="s2">&quot;Set script.dokku.predeploy to app.json&quot;</span> <span class="o">||</span> :
+</span><span class='line'>git push dokku master
+</span><span class='line'><span class="nb">popd</span>
+</span><span class='line'><span class="nb">pushd</span> ~/node-js-sample
+</span><span class='line'>cat <span class="s">&lt;&lt;EOF &gt;CHECKS</span>
+</span><span class='line'><span class="s">/ Hello World!</span>
+</span><span class='line'><span class="s">EOF</span>
+</span><span class='line'>git add CHECKS
+</span><span class='line'>git commit -m <span class="s2">&quot;Add pre-flight checks file&quot;</span> <span class="o">||</span> :
+</span><span class='line'>git push dokku master
 </span><span class='line'><span class="nb">popd</span>
 </span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
 <h2>まとめ</h2>
 
-<p>vagrant を使って dokku をいろいろ試す環境を簡単に作ることができました。</p>
+<p>vagrant を使って dokku をいろいろ試す環境を簡単に作ることができました。
+この環境を使ってテストやデバッグなどいろいろ試しやすくなると思います。</p>
 </div>
 
 <!-- zenback_body_end -->
