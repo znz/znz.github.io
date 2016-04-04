@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: ccollect | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/ccollect/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2016-04-04T23:35:08+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[ccollect によるバックアップの設定]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-04-04-ccollect.html"/>
+    <updated>2016-04-04T22:51:06+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ccollect</id>
+    <content type="html"><![CDATA[<p><code>ccollect</code> という <code>rsync</code> の <code>--link-dest</code> オプションによるハードリンクをうまく使って差分バックアップをしてくれるツールでバックアップ設定をしました。</p>
+
+<!--more-->
+
+
+<h2>インストール</h2>
+
+<p>deb パッケージは存在しないので、まず <code>git clone https://github.com/ungleich/ccollect ~/src/github.com/ungleich/ccollect</code> などで最新 (現時点で 1.0) の ccollect を github のミラーから取得します。</p>
+
+<p><a href="http://www.nico.schottelius.org/software/ccollect/">本家</a> の download ページにある tarball は 0.8 まででちょっと古いです。</p>
+
+<h2>共通設定</h2>
+
+<p>設定は <code>CCOLLECT_CONF</code> (デフォルトは <code>/etc/ccollect</code>) の中に置いていきます。</p>
+
+<p>共通設定は <code>defaults</code> の中に、バックアップごとの設定は <code>sources</code> の中に置いていきます。</p>
+
+<h3>バックアップ保存回数の設定</h3>
+
+<p><code>defaults/intervals</code> の中に適当なファイル名でバックアップの保存回数を設定していきます。</p>
+
+<p><code>daily</code> などの名前をつけることが多いようですが、 <code>ccollect</code> 自体に毎日自動実行する機能があるわけではないので、自前で <code>cron</code> などを使って実行する必要が有ります。</p>
+
+<ul>
+<li><code>sudo mkdir -p /etc/ccollect/defaults/intervals</code></li>
+<li><code>echo 10 | sudo tee /etc/ccollect/defaults/intervals/daily</code></li>
+<li><code>echo 24 | sudo tee /etc/ccollect/defaults/intervals/monthly</code></li>
+<li><code>echo 10 | sudo tee /etc/ccollect/defaults/intervals/weekly</code></li>
+</ul>
+
+
+<p>ここでは日時バックアップと週次バックアップは 10 回分、月次バックアップは 2 年分保存するようにしてみました。</p>
+
+<h3>不完全なバックアップの削除</h3>
+
+<p><code>ccollect</code> では構造化された設定ファイルをパースするのではなく、簡単な内容のファイルの中身が設定値になっていたり、ファイルの存在がフラグとなっていたりするようになっています。</p>
+
+<p>ここでは <code>rsync</code> の途中で <code>ssh</code> が切れたなどの理由で不完全なバックアップができてしまった時に削除するフラグを設定します。</p>
+
+<ul>
+<li><code>sudo touch /etc/ccollect/defaults/delete_incomplete</code></li>
+</ul>
+
+
+<h2>ローカルのバックアップ設定の追加</h2>
+
+<p>まず動作確認も兼ねて、ローカルのバックアップを取る設定を追加してみます。</p>
+
+<ul>
+<li><code>sudo mkdir -p /etc/ccollect/sources/$(hostname)-home</code></li>
+<li><code>echo '/home' | sudo tee /etc/ccollect/sources/$(hostname)-home/source</code></li>
+<li><code>echo "/srv/backup/$(hostname)-home" | sudo tee /etc/ccollect/sources/$(hostname)-home/destination</code></li>
+</ul>
+
+
+<p>バックアップから除外するファイルも設定してみます。
+除外指定ということを明示するために <code>-</code> をつけていますが、つけずにパターンだけでもこの場合は同じです。
+<code>exclude</code> ファイルの書式の詳細は <code>rsync "--exclude-from"</code> で検索して調べてください。</p>
+
+<ul>
+<li><code>echo '- *.swp' | sudo tee /etc/ccollect/sources/$(hostname)-home/exclude</code></li>
+<li><code>echo '- *~' | sudo tee -a /etc/ccollect/sources/$(hostname)-home/exclude</code></li>
+</ul>
+
+
+<p>今回は関係ないかもしれませんが、 <code>/</code> パーティションなどをバックアップする時にはつけた方が良い <code>--one-file-system</code> オプションも追加しておきます。</p>
+
+<ul>
+<li><code>echo '--one-file-system' | sudo tee /etc/ccollect/sources/$(hostname)-home/rsync_options</code></li>
+</ul>
+
+
+<p>サマリー表示を有効にしておきます。
+初回実行なので詳細表示も有効にしてみます。</p>
+
+<ul>
+<li><code>sudo touch /etc/ccollect/sources/$(hostname)-home/summary</code></li>
+<li><code>sudo touch /etc/ccollect/sources/$(hostname)-home/verbose</code></li>
+</ul>
+
+
+<h3>初回バックアップ実行</h3>
+
+<p><code>destination</code> ファイルで指定したバックアップ先ディレクトリは自動作成されないので、手動で作成してバックアップを実行します。
+2 回実行してちゃんと差分バックアップになっているのを確認します。</p>
+
+<ul>
+<li><code>sudo mkdir -pv $(cat /etc/ccollect/sources/*/destination)</code></li>
+<li><code>sudo ~/src/github.com/ungleich/ccollect/ccollect daily $(hostname)-home</code></li>
+<li><code>sudo ~/src/github.com/ungleich/ccollect/ccollect daily $(hostname)-home</code></li>
+</ul>
+
+
+<p>容量も 2 倍になっていないのを確認します。</p>
+
+<ul>
+<li><code>sudo du -s /srv/backup/$(hostname)-home /home</code></li>
+</ul>
+
+
+<p>動作確認ができたので、詳細表示オプションを削除しておきます。</p>
+
+<ul>
+<li><code>sudo rm /etc/ccollect/sources/$(hostname)-home/verbose</code></li>
+</ul>
+
+
+<h2>リモートからのバックアップ設定の追加</h2>
+
+<p><code>source</code> にリモートホストを設定する以外はローカルの設定と同様に設定していきます。</p>
+
+<ul>
+<li><code>sudo mkdir /etc/ccollect/sources/vps-etc</code></li>
+<li><code>echo /srv/backup/vps-etc | sudo tee /etc/ccollect/sources/vps-etc/destination</code></li>
+<li><code>echo root@vps.example.jp:/etc | sudo tee /etc/ccollect/sources/vps-etc/source</code></li>
+<li><code>echo '- *.swp' | sudo tee -a /etc/ccollect/sources/vps-etc/exclude</code></li>
+<li><code>echo '- *~' | sudo tee -a /etc/ccollect/sources/vps-etc/exclude</code></li>
+<li><code>sudo touch /etc/ccollect/sources/vps-etc/summary</code></li>
+</ul>
+
+
+<p>ネットワーク的につながらない時はバックアップが失敗するので、事前チェックするようにします。</p>
+
+<ul>
+<li><code>sudoedit /etc/ccollect/sources/vps-etc/pre_exec</code></li>
+<li><code>sudo chmod +x /etc/ccollect/sources/vps-etc/pre_exec</code></li>
+</ul>
+
+
+<p><code>pre_exec</code> の内容は以下の通りです。
+<a href="https://github.com/ungleich/ccollect/blob/5356370233e0883b5c6cc62b12c84ef058f8c239/doc/ccollect.text#L872-L884">ccollect のドキュメントの Testing for host reachabilty</a> を参考にしています。</p>
+
+<pre><code class="bash">#!/bin/sh
+set -e
+cur_conf_dir="${CCOLLECT_CONF:-/etc/ccollect}/sources/$name"
+SRC_HOST=`cat "$cur_conf_dir/source" | cut -d"@" -f2 | cut -d":" -f1`
+ping -c1 -q "$SRC_HOST" || exit $?
+</code></pre>
+
+<h3>ssh 設定</h3>
+
+<p>セキュリティ的にはあまり好ましくないのですが、バックアップ用に root から root に ssh で接続できるようにします。</p>
+
+<p>まず、バックアップ先のローカルのマシンで root の ssh 用の鍵を作成します。</p>
+
+<ul>
+<li><code>sudo ls -al /root/.ssh</code> で root に ssh の鍵がないのを確認したら <code>sudo ssh-keygen</code> で生成します。存在する場合は別のファイル名で生成して <code>sudoedit /root/.ssh/config</code> で <code>IdentityFile</code> を設定しておきます。自動実行で使用するので、パスフレーズは空にしておきます。</li>
+<li>ssh のポート番号を変更しているなど、別途設定が必要な場合は <code>sudoedit /root/.ssh/config</code> で設定しておくのを忘れないように注意が必要です。</li>
+<li><code>sudo cat /root/.ssh/id_rsa.pub</code> で公開鍵を表示してコピーしておきます。</li>
+</ul>
+
+
+<p>続いて、バックアップ対象の VPS (バックアップ元) の方で ssh を許可する設定をします。</p>
+
+<ul>
+<li><code>sudo install -m700 -d /root/.ssh</code> で <code>/root/.ssh</code> がなければ作成します。</li>
+<li><code>sudoedit /root/.ssh/authorized_keys</code> で接続を許可する鍵として、先ほどコピーした公開鍵を貼り付けます。</li>
+<li>必要に応じて <code>from="pattern-list"</code> や <code>no-agent-forwarding,no-user-rc,no-X11-forwarding,no-port-forwarding</code> などの制限も追加しておきます。</li>
+<li><code>sudoedit /etc/ssh/sshd_config</code> で <code>PermitRootLogin</code> を <code>no</code> 以外にします。例えば <code>without-password</code> にしておきます。</li>
+<li><code>sudoedit /etc/ssh/sshd_config</code> で <code>AllowUsers</code> による制限をしている時は <code>AllowUsers root@接続元IPアドレス</code> を追加しておきます。接続元 IP アドレスが固定ではない場合は、セキュリティ的に弱くなりますが <code>AllowUsers root</code> で許可します。</li>
+<li><code>/etc/ssh/sshd_config</code> の設定を変更した場合は <code>sudo service ssh restart</code> で反映させておきます。</li>
+</ul>
+
+
+<p>設定ができたら、接続元 (バックアップ先のローカルのマシン) から ssh の接続確認をします。</p>
+
+<ul>
+<li><code>sudo ssh root@vps.example.jp hostname</code> などで ssh 接続ができることの確認とホスト鍵の確認を済ませておきます。</li>
+</ul>
+
+
+<h3>初回バックアップ実行</h3>
+
+<p>ローカルでのバックアップと同様にバックアップ先ディレクトリを作成してからバックアップを実行します。</p>
+
+<ul>
+<li><code>sudo mkdir -pv $(cat /etc/ccollect/sources/*/destination)</code></li>
+<li><code>sudo ~/src/github.com/ungleich/ccollect/ccollect daily vps-etc</code></li>
+<li><code>sudo ~/src/github.com/ungleich/ccollect/ccollect daily vps-etc</code></li>
+</ul>
+
+
+<h2>リモートからの一般ユーザー権限でのバックアップ設定の追加</h2>
+
+<p>dokku で persistent storage としてボリュームマウントを使っているとファイルの所有者とグループがアプリケーションのデプロイのたびに変わってしまって、差分バックアップに支障が出そうだったので、一般ユーザーでのバックアップも設定しました。</p>
+
+<p><a href="https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html" title="XDG Base Directory Specification">XDG Base Directory Specification</a> の <code>XDG_CONFIG_HOME</code> を参考にして <code>~/.config</code> 以下に <code>/etc</code> 以下と同じ構造で設定を作成することにしました。</p>
+
+<ul>
+<li><code>mkdir -p ~/.config/ccollect/defaults/intervals</code></li>
+<li><code>echo 10 &gt; ~/.config/ccollect/defaults/intervals/daily</code></li>
+<li><code>echo 24 &gt; ~/.config/ccollect/defaults/intervals/monthly</code></li>
+<li><code>echo 10 &gt; ~/.config/ccollect/defaults/intervals/weekly</code></li>
+<li><code>mkdir -p ~/.config/ccollect/sources/vps-srv</code></li>
+<li><code>echo /srv/backup/vps-srv &gt; ~/.config/ccollect/sources/vps-srv/destination</code></li>
+<li><code>echo vpsuser@vps.example.jp:/srv &gt; ~/.config/ccollect/sources/vps-srv/source</code></li>
+<li><code>echo '- *.swp' &gt; ~/.config/ccollect/sources/vps-srv/exclude</code></li>
+<li><code>echo '- *~' &gt;&gt; ~/.config/ccollect/sources/vps-srv/exclude</code></li>
+<li><code>touch ~/.config/ccollect/sources/vps-srv/summary</code></li>
+</ul>
+
+
+<p>ネットワーク的につながらない時はバックアップが失敗するので、事前チェックするようにします。</p>
+
+<ul>
+<li><code>editor ~/.config/ccollect/sources/vps-srv/pre_exec</code></li>
+<li><code>chmod +x ~/.config/ccollect/sources/vps-srv/pre_exec</code></li>
+</ul>
+
+
+<p><code>pre_exec</code> の内容は以下の通りです。
+「リモートからのバックアップ設定の追加」で作成したものと全く同じ内容です。</p>
+
+<pre><code class="bash">#!/bin/sh
+set -e
+cur_conf_dir="${CCOLLECT_CONF:-/etc/ccollect}/sources/$name"
+SRC_HOST=`cat "$cur_conf_dir/source" | cut -d"@" -f2 | cut -d":" -f1`
+ping -c1 -q "$SRC_HOST" || exit $?
+</code></pre>
+
+<h3>初回バックアップ実行</h3>
+
+<p>一般ユーザー権限でバックアップするので、バックアップ先ディレクトリを <code>chown</code> しておきます。</p>
+
+<p><code>ssh vpsuser@vps.example.jp</code> で一度接続してホスト鍵の確認なども終わらせておきます。</p>
+
+<p>設定ファイルの場所が違うので、環境変数 <code>CCOLLECT_CONF</code> を設定しつつ実行します。</p>
+
+<ul>
+<li><code>sudo mkdir -pv $(cat ~/.config/ccollect/sources/*/destination)</code></li>
+<li><code>sudo chown $(id -u) /srv/backup/vps-srv</code></li>
+<li><code>env CCOLLECT_CONF=$HOME/.config/ccollect ~/src/github.com/ungleich/ccollect/ccollect daily vps-srv</code></li>
+<li><code>env CCOLLECT_CONF=$HOME/.config/ccollect ~/src/github.com/ungleich/ccollect/ccollect daily vps-srv</code></li>
+</ul>
+
+
+<h2>バックアップ自動実行設定</h2>
+
+<p>cron で毎日自動バックアップが動くように設定します。
+時間がかかるので、 <code>cron.daily</code> のファイルの中でも最後に実行されるように <code>zz-</code> で始まる名前にしています。
+そして、パッケージで入れたファイルと区別できるように <code>local</code> という文字列を名前に入れています。</p>
+
+<p>その際、保存回数が一番多くて保存期間が長い <code>monthly</code> を優先するようにしてみました。</p>
+
+<p>ログ保存用のディレクトリは一般的な debian の流儀に合わせて adm グループのみ読めるようにしています。
+<code>install</code> コマンドについては <a href="http://blog.n-z.jp/blog/2014-02-14-install.html" title="installコマンドでコマンド数を減らす">installコマンドでコマンド数を減らす</a> を参考にしてください。</p>
+
+<p>ログは rotate などはせずに全部残して、 <code>tools/ccollect_analyse_logs</code> でエラーや警告があれば cron からのメールとして飛ぶようにしました。
+その際、 <code>tools/ccollect_analyse_logs</code> の exit status が <code>grep</code> の exit status そのままなので、エラーの有無と逆の意味に感じられてしまうので、反転するようにしました。</p>
+
+<ul>
+<li><code>sudoedit /etc/cron.daily/zz-local-ccollect</code></li>
+<li><code>sudo chmod +x /etc/cron.daily/zz-local-ccollect</code></li>
+</ul>
+
+
+<pre><code class="bash /etc/cron.daily/zz-local-ccollect">#!/bin/sh
+INTERVAL=daily
+if [ 7 = "$(date +%u)" ]; then
+  INTERVAL=weekly
+fi
+if [ 01 = "$(date +%d)" ]; then
+  INTERVAL=monthly
+fi
+mkdir -p /var/log/ccollect
+LOGDIR="/var/log/ccollect"
+LOGFILE="$LOGDIR/$(date +%Y%m%d-%H%M).log"
+LOCALUSER="localuser"
+CCOLLECT_DIR="/home/$LOCALUSER/src/github.com/ungleich/ccollect"
+install -m750 -oroot -gadm -d "$LOGDIR"
+{
+  su - "$LOCALUSER" -c 'env CCOLLECT_CONF=$HOME/.config/ccollect '"$CCOLLECT_DIR"'/ccollect -a '"$INTERVAL"
+  "$CCOLLECT_DIR/ccollect" -a "$INTERVAL"
+} &gt;"$LOGFILE" 2&gt;&amp;1
+if /bin/sh "$CCOLLECT_DIR/tools/ccollect_analyse_logs" "we" &lt; "$LOGFILE"; then
+  # found
+  exit 1
+else
+  # not found
+  exit 0
+fi
+</code></pre>
+
+<h2>リモートの dokku の home のバックアップ設定</h2>
+
+<p>他の設定例として、リモートの dokku の home のバックアップ設定もしてみました。
+設定が似ている <code>vps-etc</code> を雛形としてコピーして <code>destination</code> と <code>source</code> などを書き換える形で設定しました。</p>
+
+<ul>
+<li><code>cd /etc/ccollect/sources</code></li>
+<li><code>sudo cp -a vps-etc vps-home</code></li>
+<li><code>sudoedit vps-home/destination</code> で <code>/srv/backup/vps-home</code> に変更</li>
+<li><code>sudoedit vps-home/source</code> で <code>root@vps.example.jp:/home</code> に変更</li>
+<li><code>sudoedit vps-home/exclude</code> で <code>- cache</code> を追加 (<code>/home/dokku/$APP/cache/</code> は buildpack での build 時などのキャッシュに使われるのと、ファイルの所有者とグループがどんどん変わるので、バックアップからは除外)</li>
+</ul>
+
+
+<h3>初回バックアップ実行</h3>
+
+<p><code>vps-etc</code> のバックアップと同様にバックアップ先ディレクトリを作成してからバックアップを実行します。</p>
+
+<ul>
+<li><code>sudo mkdir -pv $(cat /etc/ccollect/sources/*/destination)</code></li>
+<li><code>sudo ~/src/github.com/ungleich/ccollect/ccollect daily vps-home</code></li>
+<li><code>sudo ~/src/github.com/ungleich/ccollect/ccollect daily vps-home</code></li>
+</ul>
+
+
+<h2>uid, gid 問題</h2>
+
+<p>LDAP などでアカウントを共通化していれば問題ないのですが、 <code>rsync</code> では uid や gid を数値のまま保存してコピーするので、バックアップ元とバックアップ先で同じ uid に対して別のユーザーが存在すると、意図しないユーザーが読めるバックアップができてしまうので、注意が必要です。</p>
+
+<p>この記事の例だと <code>/srv/backup/vps-home</code> のパーミッションを変更する (<code>sudo chmod 700 /srv/backup/vps-home</code>) などの対処をしておくと良いと思います。</p>
+
+<h2>バックアップの差分の確認</h2>
+
+<p><a href="https://github.com/ungleich/ccollect/blob/5356370233e0883b5c6cc62b12c84ef058f8c239/doc/ccollect.text#L858-L869" title="ccollect.text の Comparing backups">ccollect.text の Comparing backups</a> によると <code>rsync -n -a --delete --stats --progress daily.20080324-0313.17841/ daily.20080325-0313.31148/</code> のように <code>-n</code> オプション付きで <code>rsync</code> を実行することによってバックアップの差分を確認できるようです。</p>
+
+<h2>まとめ</h2>
+
+<p><code>ccollect</code> で差分バックアップを作成するようにしました。</p>
+
+<p><code>rsync</code> によるバックアップなので、圧縮などもするバックアップツールと違い、バックアップの内容も元のディレクトリ構造そのままでわかりやすいので、一部だけ復元するなどの操作も素直に実行しやすくなっています。</p>
+
+<p>ハードリンクなので i-node は消費しますが、変化がないファイルについては容量を消費しないので、バックアップサイズも抑えられます。</p>
+]]></content>
+  </entry>
+  
+</feed>
