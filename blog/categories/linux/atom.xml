@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-04-08T01:07:17+09:00</updated>
+  <updated>2016-04-08T01:23:44+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -134,6 +134,236 @@ More detailed help:
 
    all, automation, paths, security, testing, or any of the subcommands or
    plugins (certonly, install, nginx, apache, standalone, webroot, etc)
+</code></pre>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[dokku-letsencrypt を使ってみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-04-06-dokku-letsencrypt.html"/>
+    <updated>2016-04-06T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/dokku-letsencrypt</id>
+    <content type="html"><![CDATA[<p><a href="https://github.com/dokku/dokku-letsencrypt">dokku-letsencrypt</a> を試してみたのでそのメモです。</p>
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Ubuntu 14.04.4 LTS</li>
+<li>Docker 1.10.3</li>
+<li>Dokku 0.5.3</li>
+<li>dokku-letsencrypt v0.7.0-7-gb4950b8</li>
+</ul>
+
+
+<h2>インストール</h2>
+
+<p>README.md に書いてある手順の通りインストールして、 <code>git describe --tags</code> でバージョンを確認しておきました。</p>
+
+<pre><code>$ sudo dokku plugin:install https://github.com/dokku/dokku-letsencrypt.git
+-----&gt; Cloning plugin repo https://github.com/dokku/dokku-letsencrypt.git to /var/lib/dokku/plugins/available/letsencrypt
+Cloning into 'letsencrypt'...
+remote: Counting objects: 233, done.
+remote: Compressing objects: 100% (4/4), done.
+remote: Total 233 (delta 0), reused 0 (delta 0), pack-reused 229
+Receiving objects: 100% (233/233), 48.62 KiB | 0 bytes/s, done.
+Resolving deltas: 100% (136/136), done.
+Checking connectivity... done.
+-----&gt; Plugin letsencrypt enabled
+-----&gt; Migrating zero downtime env variables. The following variables have been deprecated
+=====&gt; DOKKU_SKIP_ALL_CHECKS DOKKU_SKIP_DEFAULT_CHECKS
+=====&gt; Please use dokku checks:[disable|enable] &lt;app&gt; to control zero downtime functionality
+=====&gt; Migration complete
+=====&gt;
+=====&gt; Migration complete
+=====&gt;
+=====&gt; Migration complete
+=====&gt;
+=====&gt; Migration complete
+=====&gt;
+=====&gt; Migration complete
+=====&gt;
+Adding user dokku to group adm
+$ cd /var/lib/dokku/plugins/available/letsencrypt/
+$ git describe --tags
+v0.7.0-7-gb4950b8
+$ cd
+</code></pre>
+
+<h2>アップグレード</h2>
+
+<p>README.md にアップグレードの手順も書いてあったので、試しておきました。</p>
+
+<pre><code>$ sudo dokku plugin:update letsencrypt
+Plugin (letsencrypt) updated
+</code></pre>
+
+<h2>対象アプリの確認</h2>
+
+<p><code>dokku apps</code> でアプリケーション一覧を表示して、対象とするアプリケーションの名前を確認しておきました。</p>
+
+<ul>
+<li><code>dokku help</code></li>
+<li><code>dokku apps:help</code></li>
+<li><code>dokku apps</code></li>
+</ul>
+
+
+<h2>メールアドレス設定</h2>
+
+<p>Let&rsquo;s Encrypt に登録するメールアドレスを設定しておきます。
+<a href="https://letsencrypt.jp/usage/" title="Let's Encrypt の使い方">Let&rsquo;s Encrypt の使い方</a>の説明によると「ここで入力したメールアドレスは、緊急の通知や鍵を紛失したときの復旧に使われます。」</p>
+
+<p>dokku-letsencrypt プラグインでは「利用規約への同意」に相当する手順がありませんが、念のため利用規約 (現在のバージョンは <a href="https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf">https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf</a> ) に目を通しておくと良いと思います。</p>
+
+<p>ちなみに今のところ letsencrypt に登録したメールアドレスに letsencrypt からメールが来たことはありません。</p>
+
+<pre><code>$ dokku config:set --no-restart staging.example.co.jp DOKKU_LETSENCRYPT_EMAIL=root@example.co.jp
+-----&gt; Setting config vars
+       DOKKU_LETSENCRYPT_EMAIL: root@example.co.jp
+</code></pre>
+
+<h2>メールアドレスをグローバルに設定するかアプリケーションごとに設定するか</h2>
+
+<p>グローバルに設定することも可能だと思いますが、メールアドレスを設定していなければ <code>dokku letsencrypt APP</code> の最初のチェックで止まって、既存の TLS 設定を上書きされる心配がないので、すべてのアプリケーションで letsencrypt を使うのでなければ、アプリケーションごとに設定することをおすすめします。</p>
+
+<p>メールアドレスを設定していなければ、以下のように失敗して止まってくれます。</p>
+
+<pre><code>$ dokku letsencrypt node-js-app
+=====&gt; Let's Encrypt node-js-app...
+ !     ERROR: Cannot request a certificate without an e-mail address!
+ !       please provide your e-mail address using
+ !       dokku config:set --no-restart node-js-app DOKKU_LETSENCRYPT_EMAIL=&lt;e-mail&gt;
+</code></pre>
+
+<h2>証明書発行と設定</h2>
+
+<p><code>dokku letsencrypt APP</code> で証明書発行から設定まで自動で実行されます。</p>
+
+<p>すでに <code>tls/server.{crt,key}</code> が存在していても強制的にシンボリックリンクで上書きされるので、他で発行された証明書を使っている場合は注意が必要です。</p>
+
+<pre><code>$ dokku letsencrypt staging.example.co.jp
+=====&gt; Let's Encrypt staging.example.co.jp...
+-----&gt; Updating letsencrypt docker image...
+latest: Pulling from m3adow/letsencrypt-simp_le
+420890c9e918: Pull complete
+acbaf1e6012f: Pull complete
+5f71a1a2d3dc: Pull complete
+Digest: sha256:be1d7aca214d5277af18d7bf75a2bc78afa5a1eabf98aaa8a606c4ca2a7fdeb5
+Status: Downloaded newer image for m3adow/letsencrypt-simp_le:latest
+       done
+-----&gt; Enabling ACME proxy for staging.example.co.jp...
+-----&gt; Getting letsencrypt certificate for staging.example.co.jp...
+        - Domain 'staging.example.co.jp'
+darkhttpd/1.11, copyright (c) 2003-2015 Emil Mikulic.
+listening on: http://0.0.0.0:80/
+2016-04-04 03:26:42,946:INFO:__main__:1202: Generating new account key
+2016-04-04 03:26:43,831:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
+2016-04-04 03:26:44,110:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
+2016-04-04 03:26:44,302:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
+2016-04-04 03:26:44,841:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): letsencrypt.org
+2016-04-04 03:26:45,410:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
+2016-04-04 03:26:45,664:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
+2016-04-04 03:26:45,940:INFO:requests.packages.urllib3.connectionpool:207: Starting new HTTP connection (1): staging.example.co.jp
+2016-04-04 03:26:45,946:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): staging.example.co.jp
+2016-04-04 03:26:45,995:INFO:__main__:1294: staging.example.co.jp was successfully self-verified
+2016-04-04 03:26:46,022:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
+2016-04-04 03:26:46,272:INFO:__main__:1302: Generating new certificate private key
+2016-04-04 03:26:47,528:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
+2016-04-04 03:26:47,723:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
+2016-04-04 03:26:47,987:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
+2016-04-04 03:26:48,215:INFO:__main__:385: Saving account_key.json
+2016-04-04 03:26:48,216:INFO:__main__:385: Saving fullchain.pem
+2016-04-04 03:26:48,216:INFO:__main__:385: Saving chain.pem
+2016-04-04 03:26:48,216:INFO:__main__:385: Saving cert.pem
+2016-04-04 03:26:48,216:INFO:__main__:385: Saving key.pem
+-----&gt; Certificate retrieved successfully.
+-----&gt; Symlinking let's encrypt certificates
+-----&gt; Configuring staging.example.co.jp...(using built-in template)
+-----&gt; Creating https nginx.conf
+-----&gt; Running nginx-pre-reload
+       Reloading nginx
+-----&gt; Disabling ACME proxy for staging.example.co.jp...
+       done
+</code></pre>
+
+<h2>有効になっているアプリケーション一覧確認</h2>
+
+<p><code>dokku letsencrypt:ls</code> で有効になっているアプリケーションとその有効期限を確認します。</p>
+
+<pre><code>$ dokku letsencrypt:ls
+-----&gt; App name           Certificate Expiry        Time before expiry        Time before renewal
+staging.example.co.jp 2016-07-03 11:27:00       89d, 22h, 56m, 55s        59d, 22h, 56m, 55s
+</code></pre>
+
+<h2>自動更新</h2>
+
+<p>有効期限が 30 日 (<code>DOKKU_LETSENCRYPT_GRACEPERIOD</code> で変更可能) を切ると自動更新してくれる <code>dokku letsencrypt:auto-renew</code> も試しておきます。</p>
+
+<pre><code>$ dokku letsencrypt:auto-renew
+=====&gt; Auto-renewing all apps...
+       staging.example.co.jp still has 59d, 22h, 48m, 36s days left before renewal
+=====&gt; Finished auto-renewal
+</code></pre>
+
+<p>問題なさそうなので、<code>dokku</code> ユーザーの <code>crontab</code> で設定して自動実行するようにしておきます。
+リモートからのトリガーで実行されるように ssh で入れるユーザーの <code>crontab</code> で <code>ssh dokku letsencrypt:auto-renew</code> を設定しておくのでも良いと思います。</p>
+
+<h2>セキュリティ上の問題点</h2>
+
+<p><code>dokku-letsencrypt</code> が使用している <a href="https://github.com/kuba/simp_le" title="Simple Let's Encrypt Client">Simple Let&rsquo;s Encrypt Client</a> の issue の <a href="https://github.com/kuba/simp_le/issues/29" title="private key permissions">private key permissions</a> で指摘されているように、 <code>ls -al /home/dokku/staging.example.co.jp/letsencrypt/certs/current/</code> で確認してみると、他のユーザーからは読めなくするべき <code>account_key.json</code> や <code>key.pem</code> も誰でも読めるパーミッションになってしまっているので、 <code>sudo chmod 700 /home/dokku/staging.example.co.jp/letsencrypt</code> などでパーミッションを落としておく方が良さそうです。</p>
+
+<p>ファイル自体のパーミッションを落としても良さそうですが、更新された後のことも考えると <code>/home/dokku/APP/letsencrypt</code> ディレクトリ自体のパーミッションを落としておくのが良さそうです。</p>
+
+<h2>Rate Limit</h2>
+
+<p><a href="https://letsencrypt.jp/faq/#RateLimiting" title="Let's Encrypt の証明書に取得数制限はありますか？">Let&rsquo;s Encrypt の証明書に取得数制限はありますか？</a> のリンク先に書いてあるように、この記事執筆時点では「アカウント登録/IP アドレスごと」(3 時間で 10 個) と「証明書発行/ドメインごと」(1 週間で 5 個) の制限があるので、注意が必要です。</p>
+
+<p>特に dokku-letsencrypt では<a href="https://github.com/letsencrypt/letsencrypt">公式のクライアント</a>が <code>/etc/letsencrypt/accounts</code> でアカウントを共有するのと違って、 <code>account_key.json</code> をアプリケーションごとに作成しているので、注意が必要そうです。</p>
+
+<p>ただし、現状の制限だと証明書発行数の制限の方が引っかかりやすいので、アカウント登録の制限は問題にならないようにも思います。</p>
+
+<p>証明書発行数の制限については <code>dokku domains:add</code> や <code>dokku domains:remove</code> で適切にドメインの追加や削除をしてから <code>dokku letsencrypt</code> を実行するように README.md の <a href="https://github.com/dokku/dokku-letsencrypt/tree/b4950b8254f683e4af775bad44e390763a699de1#dealing-with-rate-limit" title="Dealing with rate limit">Dealing with rate limit</a> に書いてあります。</p>
+
+<h2>証明書の情報表示</h2>
+
+<p><code>dokku certs:info</code> で letsencrypt のものに限らず、証明書の情報を表示できます。</p>
+
+<pre><code>adminuser@tk2-213-16013:~$ dokku certs:info staging.example.co.jp
+-----&gt; Fetching SSL Endpoint info for staging.example.co.jp...
+-----&gt; Certificate details:
+=====&gt; Common Name(s):
+=====&gt;    staging.example.co.jp
+=====&gt;    staging.example.co.jp
+=====&gt; Expires At: Jul  3 02:27:00 2016 GMT
+=====&gt; Issuer: C=US, O=Lets Encrypt, CN=Lets Encrypt Authority X3
+=====&gt; Starts At: Apr  4 02:27:00 2016 GMT
+=====&gt; Subject: CN=staging.example.co.jp
+=====&gt; SSL certificate is self signed.
+adminuser@tk2-213-16013:~$ dokku certs:info production.example.co.jp
+-----&gt; Fetching SSL Endpoint info for production.example.co.jp...
+-----&gt; Certificate details:
+=====&gt; Common Name(s):
+=====&gt;    production.example.co.jp
+=====&gt;    production.example.co.jp
+=====&gt;    example.co.jp
+=====&gt; Expires At: Aug  4 00:05:31 2016 GMT
+=====&gt; Issuer: C=IL, O=StartCom Ltd., OU=Secure Digital Certificate Signing, CN=StartCom Class 1 Primary Intermediate Server CA
+=====&gt; Starts At: Aug  3 18:20:22 2015 GMT
+=====&gt; Subject: C=JP; CN=production.example.co.jp; emailAddress=hostmaster@example.co.jp
+=====&gt; SSL certificate is self signed.
+adminuser@tk2-213-16013:~$ dokku certs:info another.example.co.jp
+-----&gt; Fetching SSL Endpoint info for another.example.co.jp...
+-----&gt; Certificate details:
+=====&gt; Common Name(s):
+=====&gt;    another.example.co.jp
+=====&gt;    another.example.co.jp
+=====&gt;    example.co.jp
+=====&gt; Expires At: Apr 23 04:56:14 2016 GMT
+=====&gt; Issuer: C=IL, O=StartCom Ltd., OU=Secure Digital Certificate Signing, CN=StartCom Class 1 Primary Intermediate Server CA
+=====&gt; Starts At: Apr 22 23:55:13 2015 GMT
+=====&gt; Subject: C=JP; CN=another.example.co.jp; emailAddress=hostmaster@example.co.jp
+=====&gt; SSL certificate is self signed.
+adminuser@tk2-213-16013:~$
 </code></pre>
 ]]></content>
   </entry>
@@ -1088,99 +1318,6 @@ No renewals were attempted.
 <p>letsencrypt の導入から証明書の自動更新の設定までしました。</p>
 
 <p>簡単に導入できて自動化もでき、しかも無料なので、まだベータ版であるという点が問題にならないところでは、積極的に使っていけば良さそうだと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[LILO&東海道らぐオフラインミーティング 2016/01/16 に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-01-16-lilo-tokaidolug.html"/>
-    <updated>2016-01-16T13:00:34+09:00</updated>
-    <id>http://blog.n-z.jp/blog/lilo-tokaidolug</id>
-    <content type="html"><![CDATA[<p><a href="https://lilo.doorkeeper.jp/events/36903" title="LILO&amp;東海道らぐオフラインミーティング 2016/01/16 - LILO | Doorkeeper">LILO&amp;東海道らぐオフラインミーティング 2016/01/16 - LILO | Doorkeeper</a>
-に参加しました。</p>
-
-<p>今回もアンカンファレンス形式でした。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<p>今回のメモです。</p>
-
-<ul>
-<li>ハッシュタグ: <code>#lilo_jp</code> <code>#東海道らぐ</code></li>
-<li>登録参加者数 10名</li>
-<li>自己紹介から</li>
-<li>Chromecast を持ってきている人がいてプロジェクターにさしていた。</li>
-<li>Kapper さん : ARM Linux、Android、RaspberryPi で Windows とアプリをX86エミュで動かそう</li>
-<li>ARM は x86 に比べて浮動小数点演算が遅い</li>
-<li>ExaGear Desktop という商用のエミュレータもあるらしい</li>
-<li>qemu より速い</li>
-<li>DOSBox, Bochs は遅いが移植性が高い</li>
-<li>qemu-user-static と schroot で Wine などを動かしている話</li>
-<li>Debian は mutlilib をサポートしているが multi-binary はサポートしていないので <code>apt-get *:i386</code> で i386 のバイナリで上書きされてしまわないように schroot で環境を分けているという話</li>
-<li>プレゼンに使った環境は Ubuntu を追加で入れた Chromebook</li>
-<li><code>uname</code> は <code>armv7l</code></li>
-<li>Crouton</li>
-<li>派生して Windows 上で仮想環境の話</li>
-<li>Virtual PC, Hyper-V, VirtualBox, VMware Player</li>
-<li>山内さん : Raspberry Pi で遊んだ後は Piface を買ってホームエレクトロニクスとホームセキュリティで実用しよう</li>
-<li>Tocos 無線DIO</li>
-<li>TWE-Lite DIP (トワイライト・ディップ)</li>
-<li><a href="https://osdn.jp/projects/pepolinux/wiki/epicon">epicon</a> でシリアル通信</li>
-<li>休憩</li>
-<li>榎さん : LibreOffice の最近の動向と Debian での LibreOffice パッケージについて</li>
-<li>LibreOffice Online (LOOL)</li>
-<li>ownCloud の編集画面で LOOL を使うデモがある</li>
-<li>VirtualBox のイメージが用意されているので簡単に試せる</li>
-<li>LibreOffice Viewer for Android</li>
-<li>Advisory Board</li>
-<li>ヨーロッパでは行政中心に導入が進行中</li>
-<li>日本での活動</li>
-<li>UI の翻訳率は高い</li>
-<li>Help などは追いついていない</li>
-<li>イベント</li>
-<li>HackFest</li>
-<li>LibreOffice Conference 2015 への日本からの参加者は 3 名</li>
-<li>各言語のコミュニティ : LibreItalia (非営利団体), ベトナムコミュニティ</li>
-<li><a href="http://itpro.nikkeibp.co.jp/atcl/column/15/102800252/102800003/" title="ヨーロッパでのLibreOffice活用は移行期から安定期に、アジアも活発な動き">ヨーロッパでのLibreOffice活用は移行期から安定期に、アジアも活発な動き</a></li>
-<li>LibreOffice mini Conference 2016 in Japan</li>
-<li>現時点での参加者が 13 名に増えている話</li>
-<li>Debian での LibreOffice パッケージ</li>
-<li>遅れてきた人の自己紹介</li>
-<li>Shimada Hirofumi さん : opencocon</li>
-<li>新ビルドサーバ</li>
-<li>Allwinner タブレットの OS を作ってみる (途中)</li>
-<li>linux-sunxi コミュニティ</li>
-<li><a href="http://linux-sunxi.org/Identification_guide">http://linux-sunxi.org/Identification_guide</a></li>
-<li><a href="http://linux-sunxi.org/GPL_Violations">http://linux-sunxi.org/GPL_Violations</a></li>
-<li>Android 上だと型番などの情報がわからないので、バラしてプロセッサなどを確認</li>
-<li><a href="http://linux-sunxi.org/Format_Q8">http://linux-sunxi.org/Format_Q8</a></li>
-<li>OpenEmbedded + meta-sunxi</li>
-<li><a href="https://github.com/linux-sunxi/meta-sunxi">https://github.com/linux-sunxi/meta-sunxi</a></li>
-<li>Device Tree, FEX</li>
-<li>sunxi-tools</li>
-<li>microUSB で転送</li>
-<li>現状はカーネルが起動するところまで</li>
-<li>デモ</li>
-<li>まとめ</li>
-<li>上周りはどうするのかが問題</li>
-<li>選択肢のひとつ : <a href="http://plasma-mobile.org/technology/">http://plasma-mobile.org/technology/</a></li>
-<li>休憩</li>
-<li>矢吹さん : Sphinx + VOoM</li>
-<li><a href="http://www.vim.org/scripts/script.php?script_id=2657" title="VOoM : Vim two-pane outliner">VOoM : Vim two-pane outliner</a></li>
-<li><a href="http://vim-voom.github.io/" title="VOoM: two-pane text outliner">VOoM: two-pane text outliner</a></li>
-<li><a href="http://sphinx-users.jp/" title="Sphinx-Users.jp — Python製ドキュメンテーションビルダー、Sphinxの日本ユーザ会">Sphinx-Users.jp — Python製ドキュメンテーションビルダー、Sphinxの日本ユーザ会</a></li>
-<li><a rel="nofollow" href="http://www.amazon.co.jp/gp/product/4478490279/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4478490279&amp;linkCode=as2&amp;tag=znz-22">考える技術・書く技術―問題解決力を伸ばすピラミッド原則</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4478490279" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" /></li>
-<li><a href="https://packages.debian.org/sid/vim-voom">https://packages.debian.org/sid/vim-voom</a></li>
-<li>すがさん : <a href="http://www.geocities.jp/sugachan1973/doc/funtouki.html" title="システム奮闘記">システム奮闘記</a> 進捗</li>
-<li>LAN の減衰、表皮効果</li>
-<li>さとうさん : Raspberry Pi と魚眼レンズのカメラなどの実演</li>
-<li>丸市 展之さん : OSM 3D マップの話</li>
-<li>榎さん : 最後にちょっとだけ ownCloud + LibreOffice Online のデモ</li>
-</ul>
-
 ]]></content>
   </entry>
   
