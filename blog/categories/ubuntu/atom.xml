@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-04-04T23:35:08+09:00</updated>
+  <updated>2016-04-08T01:07:17+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,131 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[letsencrypt-auto の自動アップグレードを止めて手動でアップグレード]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-04-07-letsencrypt.html"/>
+    <updated>2016-04-07T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/letsencrypt</id>
+    <content type="html"><![CDATA[<p><code>/etc/cron.daily/letsencrypt</code> は <code>root</code> 権限で実行されるため、そこで自動アップグレードがかかるとファイルのオーナーが <code>root</code> になってしまうかもしれないと思ったので、自動更新を止めて手動でアップグレードするようにしました。</p>
+
+<!--more-->
+
+
+<h2>自動アップグレードを止めた <code>/etc/cron.daily/letsencrypt</code></h2>
+
+<p><a href="http://blog.n-z.jp/blog/2016-03-06-letsencrypt.html">前回の記事</a> からの差分としては <a href="http://packages.debian.org/debianutils">debianutils</a> の <code>savelog</code> でログをローテートして、証明書の有効期限の 90 日分残すようにしたのと、 <code>--no-self-upgrade</code> をつけて自動アップグレードを止めたことです。</p>
+
+<pre><code class="bash">#!/bin/sh
+LOGFILE=/var/log/letsencrypt/renew.log
+if [ -f "$LOGFILE" ]; then
+    /usr/bin/savelog -c 90 -q "$LOGFILE"
+fi
+if ! /home/hoge/letsencrypt/letsencrypt-auto renew --no-self-upgrade &gt; "$LOGFILE" 2&gt;&amp;1 ; then
+    echo Automated renewal failed:
+    cat "$LOGFILE"
+    exit 1
+fi
+apachectl graceful
+service postfix reload &gt;/dev/null
+service dovecot reload
+</code></pre>
+
+<h2>手動アップグレードしたログ</h2>
+
+<p>手動実行したところ、ちょうど 0.4.2 から 0.5.0 へのアップグレードが実行されました。</p>
+
+<pre><code>% ~/letsencrypt/letsencrypt-auto --help
+Checking for new version...
+Upgrading letsencrypt-auto 0.4.2 to 0.5.0...
+Replacing letsencrypt-auto...
+   sudo cp -p /home/hoge/letsencrypt/letsencrypt-auto /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto.permission-clone
+   sudo cp /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto.permission-clone
+   sudo mv -f /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto.permission-clone /home/hoge/letsencrypt/letsencrypt-auto
+Creating virtual environment...
+Installing Python packages...
+Installation succeeded.
+Requesting root privileges to run letsencrypt...
+   sudo /home/hoge/.local/share/letsencrypt/bin/letsencrypt --help
+
+  letsencrypt-auto [SUBCOMMAND] [options] [-d domain] [-d domain] ...
+
+The Let's Encrypt agent can obtain and install HTTPS/TLS/SSL certificates.  By
+default, it will attempt to use a webserver both for obtaining and installing
+the cert. Major SUBCOMMANDS are:
+
+  (default) run        Obtain &amp; install a cert in your current webserver
+  certonly             Obtain cert, but do not install it (aka "auth")
+  install              Install a previously obtained cert in a server
+  renew                Renew previously obtained certs that are near expiry
+  revoke               Revoke a previously obtained certificate
+  rollback             Rollback server configuration changes made during install
+  config_changes       Show changes made to server config during installation
+  plugins              Display information about installed plugins
+
+Choice of server plugins for obtaining and installing cert:
+
+  --apache          Use the Apache plugin for authentication &amp; installation
+  --standalone      Run a standalone webserver for authentication
+  (nginx support is experimental, buggy, and not installed by default)
+  --webroot         Place files in a server's webroot folder for authentication
+
+OR use different plugins to obtain (authenticate) the cert and then install it:
+
+  --authenticator standalone --installer apache
+
+More detailed help:
+
+  -h, --help [topic]    print this message, or detailed help on a topic;
+                        the available topics are:
+
+   all, automation, paths, security, testing, or any of the subcommands or
+   plugins (certonly, install, nginx, apache, standalone, webroot, etc)
+</code></pre>
+
+<h2>アップグレードがないときのログ</h2>
+
+<pre><code>% ~/letsencrypt/letsencrypt-auto --help
+Checking for new version...
+Requesting root privileges to run letsencrypt...
+   sudo /home/hoge/.local/share/letsencrypt/bin/letsencrypt --help
+
+  letsencrypt-auto [SUBCOMMAND] [options] [-d domain] [-d domain] ...
+
+The Let's Encrypt agent can obtain and install HTTPS/TLS/SSL certificates.  By
+default, it will attempt to use a webserver both for obtaining and installing
+the cert. Major SUBCOMMANDS are:
+
+  (default) run        Obtain &amp; install a cert in your current webserver
+  certonly             Obtain cert, but do not install it (aka "auth")
+  install              Install a previously obtained cert in a server
+  renew                Renew previously obtained certs that are near expiry
+  revoke               Revoke a previously obtained certificate
+  rollback             Rollback server configuration changes made during install
+  config_changes       Show changes made to server config during installation
+  plugins              Display information about installed plugins
+
+Choice of server plugins for obtaining and installing cert:
+
+  --apache          Use the Apache plugin for authentication &amp; installation
+  --standalone      Run a standalone webserver for authentication
+  (nginx support is experimental, buggy, and not installed by default)
+  --webroot         Place files in a server's webroot folder for authentication
+
+OR use different plugins to obtain (authenticate) the cert and then install it:
+
+  --authenticator standalone --installer apache
+
+More detailed help:
+
+  -h, --help [topic]    print this message, or detailed help on a topic;
+                        the available topics are:
+
+   all, automation, paths, security, testing, or any of the subcommands or
+   plugins (certonly, install, nginx, apache, standalone, webroot, etc)
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ccollect によるバックアップの設定]]></title>
@@ -1128,112 +1253,6 @@ git push xip master
 </code></pre>
 
 <p><code>http://node-js-app.127.0.0.1.xip.io</code> でも「<code>Hello World!</code>」が見えれば成功ですが、デフォルトホストとして見えているだけかもしれないので、 <code>index.js</code> の <code>'Hello World!'</code> 部分を変更して区別できるようにすると良いかもしれません。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[dokku 0.3 系から 0.4 系へのアップグレード]]></title>
-    <link href="http://blog.n-z.jp/blog/2015-10-08-dokku-03-to-04.html"/>
-    <updated>2015-10-08T22:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/dokku-03-to-04</id>
-    <content type="html"><![CDATA[<p>dokku 0.3.26 から dokku 0.4.1 へのアップグレードをしました。</p>
-
-<!--more-->
-
-
-<h2>検証環境</h2>
-
-<ul>
-<li>Ubuntu 14.04.3 LTS (trusty) amd64</li>
-<li><code>docker</code> 1.6.2 から 1.8.2</li>
-<li><code>dokku</code> 0.3.26 から 0.4.1</li>
-<li><a href="https://github.com/Flink/dokku-psql-single-container" title="dokku-psql-single-container">dokku-psql-single-container</a> プラグイン 0.4.0</li>
-</ul>
-
-
-<h2>docker の apt レポジトリの変更</h2>
-
-<p><a href="https://blog.docker.com/2015/07/new-apt-and-yum-repos/" title="New Apt and Yum Repos">New Apt and Yum Repos</a> に書いてあるように <code>docker</code> 1.8 からは新しいレポジトリにしか存在しなくなったので、 <code>/etc/apt/sources.list.d/docker.list</code> を書き換える必要がありました。</p>
-
-<p>以下の手順で変更しました。</p>
-
-<pre><code>sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
-sudoedit /etc/apt/sources.list.d/docker.list
-sudo apt-get update
-</code></pre>
-
-<p><code>docker.list</code> は以下の内容に変更しました。</p>
-
-<pre><code>deb https://apt.dockerproject.org/repo ubuntu-trusty main
-</code></pre>
-
-<p>パッケージ名も <code>lxc-docker</code> で始まるものから <code>docker-engine</code> に変わっています。</p>
-
-<p><code>dokku</code> 0.3.26 ではプラグインの互換性への配慮から <code>lxc-docker-1.6.2</code> にバージョンが固定されていましたが、制限が解除されています。</p>
-
-<p>具体的には <code>herokuish</code> 0.0.1 が <code>lxc-docker-1.6.2</code> に <code>Pre-Depends</code> していたのが、 <code>herokuish</code> 0.3.3 に上がって <code>docker-engine</code> への <code>Pre-Depends</code> に変わっています。</p>
-
-<h2>アップグレード</h2>
-
-<h3>sshcommand の変更</h3>
-
-<p><code>sshcommand create</code> で <code>dokku-psql-single-container</code> プラグインが使っている <code>/home/dokku/.psql-sc/data</code> の <a href="https://github.com/Flink/dokku-psql-single-container/issues/5">owner が変わってしまう問題がある</a>ため、</p>
-
-<pre><code>sudoedit /usr/local/bin/sshcommand
-</code></pre>
-
-<p>で</p>
-
-<pre><code>    chown -R $USER $USERHOME
-</code></pre>
-
-<p>を</p>
-
-<pre><code>    chown $USER $USERHOME
-    chown -R $USER $USERHOME/.ssh*
-</code></pre>
-
-<p>に変更しています。</p>
-
-<p><code>sshcommand</code> パッケージが 0.0.1 から 0.1.0 に上がって変更が戻ってしまうので、 <code>sshcommand</code> だけ先にアップグレードして、再度変更しました。</p>
-
-<h3>パッケージのアップグレード</h3>
-
-<pre><code>sudo apt-get dist-upgrade
-</code></pre>
-
-<p>でアップグレードしました。</p>
-
-<p><code>dokku</code> や <code>herokuish</code> のアップグレードの他に、 <code>lxc-docker-1.6.2</code> が削除されて <code>docker-engine</code> と <code>plugn</code> が新しくインストールされます。</p>
-
-<p>初回インストールと同様に <code>herokuish</code> の postinst で時間がかかります。</p>
-
-<h3>不要なパッケージの削除</h3>
-
-<p><code>lxc-docker-1.6.2</code> の完全削除と (<code>plugn</code> パッケージに置き換えられた) <code>pluginhook</code> パッケージの削除をしました。</p>
-
-<pre><code>sudo apt-get purge lxc-docker*
-sudo apt-get autoremove
-</code></pre>
-
-<h3>プラグインの再インストール</h3>
-
-<p><code>psql-sc</code> は移行措置で <code>/var/lib/dokku/plugins/available/psql-sc</code> に移動されているのですが、有効になっていない (<code>/var/lib/dokku/plugins/enabled</code> からのシンボリックリンクがない) ので、パスが違うこともあり、再度インストールして、古い方は消すことにしました。</p>
-
-<pre><code>sudo dokku plugin:install https://github.com/Flink/dokku-psql-single-container
-sudo dokku plugin:uninstall psql-sc
-</code></pre>
-
-<p>プラグインのインストールやアンインストールは root 権限が必要なため、サーバー上で <code>sudo dokku</code> で実行する必要がありました。</p>
-
-<p>PostgreSQL のプラグインとしては <a href="https://github.com/dokku/dokku-postgres" title="dokku postgres (beta)">dokku postgres (beta)</a> もありますが、まだ beta なのとデータ移行の問題があるため、当面は同じプラグインを使い続けることにしました。</p>
-
-<h2>再起動して反映</h2>
-
-<pre><code>sudo reboot
-</code></pre>
-
-<p>で再起動して、問題なく動くことを確認しました。</p>
 ]]></content>
   </entry>
   

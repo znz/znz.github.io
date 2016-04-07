@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-04-04T23:35:08+09:00</updated>
+  <updated>2016-04-08T01:07:17+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,231 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[letsencrypt-auto の自動アップグレードを止めて手動でアップグレード]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-04-07-letsencrypt.html"/>
+    <updated>2016-04-07T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/letsencrypt</id>
+    <content type="html"><![CDATA[<p><code>/etc/cron.daily/letsencrypt</code> は <code>root</code> 権限で実行されるため、そこで自動アップグレードがかかるとファイルのオーナーが <code>root</code> になってしまうかもしれないと思ったので、自動更新を止めて手動でアップグレードするようにしました。</p>
+
+<!--more-->
+
+
+<h2>自動アップグレードを止めた <code>/etc/cron.daily/letsencrypt</code></h2>
+
+<p><a href="http://blog.n-z.jp/blog/2016-03-06-letsencrypt.html">前回の記事</a> からの差分としては <a href="http://packages.debian.org/debianutils">debianutils</a> の <code>savelog</code> でログをローテートして、証明書の有効期限の 90 日分残すようにしたのと、 <code>--no-self-upgrade</code> をつけて自動アップグレードを止めたことです。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#!/bin/sh</span>
+</span><span class='line'><span class="nv">LOGFILE</span><span class="o">=</span>/var/log/letsencrypt/renew.log
+</span><span class='line'><span class="k">if</span> <span class="o">[</span> -f <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>    /usr/bin/savelog -c <span class="m">90</span> -q <span class="s2">&quot;$LOGFILE&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> ! /home/hoge/letsencrypt/letsencrypt-auto renew --no-self-upgrade &gt; <span class="s2">&quot;$LOGFILE&quot;</span> 2&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>    <span class="nb">echo </span>Automated renewal failed:
+</span><span class='line'>    cat <span class="s2">&quot;$LOGFILE&quot;</span>
+</span><span class='line'>    <span class="nb">exit </span>1
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'>apachectl graceful
+</span><span class='line'>service postfix reload &gt;/dev/null
+</span><span class='line'>service dovecot reload
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>手動アップグレードしたログ</h2>
+
+<p>手動実行したところ、ちょうど 0.4.2 から 0.5.0 へのアップグレードが実行されました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>% ~/letsencrypt/letsencrypt-auto --help
+</span><span class='line'>Checking <span class="k">for</span> new version...
+</span><span class='line'>Upgrading letsencrypt-auto 0.4.2 to 0.5.0...
+</span><span class='line'>Replacing letsencrypt-auto...
+</span><span class='line'>   sudo cp -p /home/hoge/letsencrypt/letsencrypt-auto /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto.permission-clone
+</span><span class='line'>   sudo cp /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto.permission-clone
+</span><span class='line'>   sudo mv -f /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto.permission-clone /home/hoge/letsencrypt/letsencrypt-auto
+</span><span class='line'>Creating virtual environment...
+</span><span class='line'>Installing Python packages...
+</span><span class='line'>Installation succeeded.
+</span><span class='line'>Requesting root privileges to run letsencrypt...
+</span><span class='line'>   sudo /home/hoge/.local/share/letsencrypt/bin/letsencrypt --help
+</span><span class='line'>
+</span><span class='line'>  letsencrypt-auto <span class="o">[</span>SUBCOMMAND<span class="o">]</span> <span class="o">[</span>options<span class="o">]</span> <span class="o">[</span>-d domain<span class="o">]</span> <span class="o">[</span>-d domain<span class="o">]</span> ...
+</span><span class='line'>
+</span><span class='line'>The Let<span class="s1">&#39;s Encrypt agent can obtain and install HTTPS/TLS/SSL certificates.  By</span>
+</span><span class='line'><span class="s1">default, it will attempt to use a webserver both for obtaining and installing</span>
+</span><span class='line'><span class="s1">the cert. Major SUBCOMMANDS are:</span>
+</span><span class='line'>
+</span><span class='line'><span class="s1">  (default) run        Obtain &amp; install a cert in your current webserver</span>
+</span><span class='line'><span class="s1">  certonly             Obtain cert, but do not install it (aka &quot;auth&quot;)</span>
+</span><span class='line'><span class="s1">  install              Install a previously obtained cert in a server</span>
+</span><span class='line'><span class="s1">  renew                Renew previously obtained certs that are near expiry</span>
+</span><span class='line'><span class="s1">  revoke               Revoke a previously obtained certificate</span>
+</span><span class='line'><span class="s1">  rollback             Rollback server configuration changes made during install</span>
+</span><span class='line'><span class="s1">  config_changes       Show changes made to server config during installation</span>
+</span><span class='line'><span class="s1">  plugins              Display information about installed plugins</span>
+</span><span class='line'>
+</span><span class='line'><span class="s1">Choice of server plugins for obtaining and installing cert:</span>
+</span><span class='line'>
+</span><span class='line'><span class="s1">  --apache          Use the Apache plugin for authentication &amp; installation</span>
+</span><span class='line'><span class="s1">  --standalone      Run a standalone webserver for authentication</span>
+</span><span class='line'><span class="s1">  (nginx support is experimental, buggy, and not installed by default)</span>
+</span><span class='line'><span class="s1">  --webroot         Place files in a server&#39;</span>s webroot folder <span class="k">for</span> authentication
+</span><span class='line'>
+</span><span class='line'>OR use different plugins to obtain <span class="o">(</span>authenticate<span class="o">)</span> the cert and <span class="k">then</span> install it:
+</span><span class='line'>
+</span><span class='line'>  --authenticator standalone --installer apache
+</span><span class='line'>
+</span><span class='line'>More detailed <span class="nb">help</span>:
+</span><span class='line'>
+</span><span class='line'>  -h, --help <span class="o">[</span>topic<span class="o">]</span>    print this message, or detailed <span class="nb">help </span>on a topic<span class="p">;</span>
+</span><span class='line'>                        the available topics are:
+</span><span class='line'>
+</span><span class='line'>   all, automation, paths, security, testing, or any of the subcommands or
+</span><span class='line'>   plugins <span class="o">(</span>certonly, install, nginx, apache, standalone, webroot, etc<span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>アップグレードがないときのログ</h2>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>% ~/letsencrypt/letsencrypt-auto --help
+</span><span class='line'>Checking <span class="k">for</span> new version...
+</span><span class='line'>Requesting root privileges to run letsencrypt...
+</span><span class='line'>   sudo /home/hoge/.local/share/letsencrypt/bin/letsencrypt --help
+</span><span class='line'>
+</span><span class='line'>  letsencrypt-auto <span class="o">[</span>SUBCOMMAND<span class="o">]</span> <span class="o">[</span>options<span class="o">]</span> <span class="o">[</span>-d domain<span class="o">]</span> <span class="o">[</span>-d domain<span class="o">]</span> ...
+</span><span class='line'>
+</span><span class='line'>The Let<span class="s1">&#39;s Encrypt agent can obtain and install HTTPS/TLS/SSL certificates.  By</span>
+</span><span class='line'><span class="s1">default, it will attempt to use a webserver both for obtaining and installing</span>
+</span><span class='line'><span class="s1">the cert. Major SUBCOMMANDS are:</span>
+</span><span class='line'>
+</span><span class='line'><span class="s1">  (default) run        Obtain &amp; install a cert in your current webserver</span>
+</span><span class='line'><span class="s1">  certonly             Obtain cert, but do not install it (aka &quot;auth&quot;)</span>
+</span><span class='line'><span class="s1">  install              Install a previously obtained cert in a server</span>
+</span><span class='line'><span class="s1">  renew                Renew previously obtained certs that are near expiry</span>
+</span><span class='line'><span class="s1">  revoke               Revoke a previously obtained certificate</span>
+</span><span class='line'><span class="s1">  rollback             Rollback server configuration changes made during install</span>
+</span><span class='line'><span class="s1">  config_changes       Show changes made to server config during installation</span>
+</span><span class='line'><span class="s1">  plugins              Display information about installed plugins</span>
+</span><span class='line'>
+</span><span class='line'><span class="s1">Choice of server plugins for obtaining and installing cert:</span>
+</span><span class='line'>
+</span><span class='line'><span class="s1">  --apache          Use the Apache plugin for authentication &amp; installation</span>
+</span><span class='line'><span class="s1">  --standalone      Run a standalone webserver for authentication</span>
+</span><span class='line'><span class="s1">  (nginx support is experimental, buggy, and not installed by default)</span>
+</span><span class='line'><span class="s1">  --webroot         Place files in a server&#39;</span>s webroot folder <span class="k">for</span> authentication
+</span><span class='line'>
+</span><span class='line'>OR use different plugins to obtain <span class="o">(</span>authenticate<span class="o">)</span> the cert and <span class="k">then</span> install it:
+</span><span class='line'>
+</span><span class='line'>  --authenticator standalone --installer apache
+</span><span class='line'>
+</span><span class='line'>More detailed <span class="nb">help</span>:
+</span><span class='line'>
+</span><span class='line'>  -h, --help <span class="o">[</span>topic<span class="o">]</span>    print this message, or detailed <span class="nb">help </span>on a topic<span class="p">;</span>
+</span><span class='line'>                        the available topics are:
+</span><span class='line'>
+</span><span class='line'>   all, automation, paths, security, testing, or any of the subcommands or
+</span><span class='line'>   plugins <span class="o">(</span>certonly, install, nginx, apache, standalone, webroot, etc<span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ccollect によるバックアップの設定]]></title>
@@ -3483,126 +3708,6 @@ postgres の docker イメージをダウンロードするため、ある程度
 
 
 <p><code>http://node-js-app.127.0.0.1.xip.io</code> でも「<code>Hello World!</code>」が見えれば成功ですが、デフォルトホストとして見えているだけかもしれないので、 <code>index.js</code> の <code>'Hello World!'</code> 部分を変更して区別できるようにすると良いかもしれません。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[dokku 0.3 系から 0.4 系へのアップグレード]]></title>
-    <link href="http://blog.n-z.jp/blog/2015-10-08-dokku-03-to-04.html"/>
-    <updated>2015-10-08T22:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/dokku-03-to-04</id>
-    <content type="html"><![CDATA[<p>dokku 0.3.26 から dokku 0.4.1 へのアップグレードをしました。</p>
-
-<!--more-->
-
-
-<h2>検証環境</h2>
-
-<ul>
-<li>Ubuntu 14.04.3 LTS (trusty) amd64</li>
-<li><code>docker</code> 1.6.2 から 1.8.2</li>
-<li><code>dokku</code> 0.3.26 から 0.4.1</li>
-<li><a href="https://github.com/Flink/dokku-psql-single-container" title="dokku-psql-single-container">dokku-psql-single-container</a> プラグイン 0.4.0</li>
-</ul>
-
-
-<h2>docker の apt レポジトリの変更</h2>
-
-<p><a href="https://blog.docker.com/2015/07/new-apt-and-yum-repos/" title="New Apt and Yum Repos">New Apt and Yum Repos</a> に書いてあるように <code>docker</code> 1.8 からは新しいレポジトリにしか存在しなくなったので、 <code>/etc/apt/sources.list.d/docker.list</code> を書き換える必要がありました。</p>
-
-<p>以下の手順で変更しました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
-</span><span class='line'>sudoedit /etc/apt/sources.list.d/docker.list
-</span><span class='line'>sudo apt-get update</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>docker.list</code> は以下の内容に変更しました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>deb https://apt.dockerproject.org/repo ubuntu-trusty main</span></code></pre></td></tr></table></div></figure>
-
-
-<p>パッケージ名も <code>lxc-docker</code> で始まるものから <code>docker-engine</code> に変わっています。</p>
-
-<p><code>dokku</code> 0.3.26 ではプラグインの互換性への配慮から <code>lxc-docker-1.6.2</code> にバージョンが固定されていましたが、制限が解除されています。</p>
-
-<p>具体的には <code>herokuish</code> 0.0.1 が <code>lxc-docker-1.6.2</code> に <code>Pre-Depends</code> していたのが、 <code>herokuish</code> 0.3.3 に上がって <code>docker-engine</code> への <code>Pre-Depends</code> に変わっています。</p>
-
-<h2>アップグレード</h2>
-
-<h3>sshcommand の変更</h3>
-
-<p><code>sshcommand create</code> で <code>dokku-psql-single-container</code> プラグインが使っている <code>/home/dokku/.psql-sc/data</code> の <a href="https://github.com/Flink/dokku-psql-single-container/issues/5">owner が変わってしまう問題がある</a>ため、</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>sudoedit /usr/local/bin/sshcommand</span></code></pre></td></tr></table></div></figure>
-
-
-<p>で</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>chown -R $USER $USERHOME</span></code></pre></td></tr></table></div></figure>
-
-
-<p>を</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>chown $USER $USERHOME
-</span><span class='line'>chown -R $USER $USERHOME/.ssh*</span></code></pre></td></tr></table></div></figure>
-
-
-<p>に変更しています。</p>
-
-<p><code>sshcommand</code> パッケージが 0.0.1 から 0.1.0 に上がって変更が戻ってしまうので、 <code>sshcommand</code> だけ先にアップグレードして、再度変更しました。</p>
-
-<h3>パッケージのアップグレード</h3>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>sudo apt-get dist-upgrade</span></code></pre></td></tr></table></div></figure>
-
-
-<p>でアップグレードしました。</p>
-
-<p><code>dokku</code> や <code>herokuish</code> のアップグレードの他に、 <code>lxc-docker-1.6.2</code> が削除されて <code>docker-engine</code> と <code>plugn</code> が新しくインストールされます。</p>
-
-<p>初回インストールと同様に <code>herokuish</code> の postinst で時間がかかります。</p>
-
-<h3>不要なパッケージの削除</h3>
-
-<p><code>lxc-docker-1.6.2</code> の完全削除と (<code>plugn</code> パッケージに置き換えられた) <code>pluginhook</code> パッケージの削除をしました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>sudo apt-get purge lxc-docker*
-</span><span class='line'>sudo apt-get autoremove</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>プラグインの再インストール</h3>
-
-<p><code>psql-sc</code> は移行措置で <code>/var/lib/dokku/plugins/available/psql-sc</code> に移動されているのですが、有効になっていない (<code>/var/lib/dokku/plugins/enabled</code> からのシンボリックリンクがない) ので、パスが違うこともあり、再度インストールして、古い方は消すことにしました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>sudo dokku plugin:install https://github.com/Flink/dokku-psql-single-container
-</span><span class='line'>sudo dokku plugin:uninstall psql-sc</span></code></pre></td></tr></table></div></figure>
-
-
-<p>プラグインのインストールやアンインストールは root 権限が必要なため、サーバー上で <code>sudo dokku</code> で実行する必要がありました。</p>
-
-<p>PostgreSQL のプラグインとしては <a href="https://github.com/dokku/dokku-postgres" title="dokku postgres (beta)">dokku postgres (beta)</a> もありますが、まだ beta なのとデータ移行の問題があるため、当面は同じプラグインを使い続けることにしました。</p>
-
-<h2>再起動して反映</h2>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>sudo reboot</span></code></pre></td></tr></table></div></figure>
-
-
-<p>で再起動して、問題なく動くことを確認しました。</p>
 ]]></content>
   </entry>
   
