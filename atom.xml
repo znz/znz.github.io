@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-04-08T01:25:48+09:00</updated>
+  <updated>2016-04-08T14:36:21+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,361 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[jessie に backports から letsencrypt を入れてみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-04-08-jessie-letsencrypt.html"/>
+    <updated>2016-04-08T14:30:02+09:00</updated>
+    <id>http://blog.n-z.jp/blog/jessie-letsencrypt</id>
+    <content type="html"><![CDATA[<p>現在リリースされている Ubuntu と違って Debian jessie には backports に letsencrypt パッケージがあるので、ちょっと古いですがパッケージ版の letsencrypt を使ってみることにしました。</p>
+
+<p>Ubuntu も今月リリースされる 16.04 (xenial) には universe ですが letsencrypt パッケージが含まれるので、それが使えると思います。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Debian GNU/Linux 8.4 (jessie) (amd64)</li>
+<li>letsencrypt 0.4.1-1~bpo8+1</li>
+<li>apache2 2.4.10-10+deb8u4</li>
+</ul>
+
+
+<h2>インストール</h2>
+
+<p><code>/etc/apt/sources.list</code> で <code>deb http://ftp.jp.debian.org/debian jessie-backports main contrib non-free</code> のように backports を有効にしておきます。</p>
+
+<p>依存パッケージも backports のものが必要なので <code>-t jessie-backports</code> 付きでインストールする必要がありました。</p>
+
+<p><code>webroot</code> を使う予定だったので、 <code>python-letsencrypt-apache</code> はインストールしませんでした。</p>
+
+<p>stable にあるパッケージのうち、いくつかのパッケージも backports のものに上がってしまうので、そのリスクが許容できない場合は <code>letsencrypt-auto</code> など、他のインストール方法を検討した方が良さそうです。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>%  sudo apt install letsencrypt
+</span><span class='line'>パッケージリストを読み込んでいます... 完了
+</span><span class='line'>依存関係ツリーを作成しています
+</span><span class='line'>状態情報を読み取っています... 完了
+</span><span class='line'>インストールすることができないパッケージがありました。おそらく、あり得
+</span><span class='line'>ない状況を要求したか、(不安定版ディストリビューションを使用しているの
+</span><span class='line'>であれば) 必要なパッケージがまだ作成されていなかったり Incoming から移
+</span><span class='line'>動されていないことが考えられます。
+</span><span class='line'>以下の情報がこの問題を解決するために役立つかもしれません:
+</span><span class='line'>
+</span><span class='line'>以下のパッケージには満たせない依存関係があります:
+</span><span class='line'> letsencrypt : 依存: python-letsencrypt (= 0.4.1-1~bpo8+1) しかし、インストールされようとしていませ ん
+</span><span class='line'>E: 問題を解決することができません。壊れた変更禁止パッケージがあります。
+</span><span class='line'>zsh: exit 100   sudo apt install letsencrypt
+</span><span class='line'>%  sudo apt install -t jessie-backports letsencrypt
+</span><span class='line'>パッケージリストを読み込んでいます... 完了
+</span><span class='line'>依存関係ツリーを作成しています
+</span><span class='line'>状態情報を読み取っています... 完了
+</span><span class='line'>以下のパッケージが自動でインストールされましたが、もう必要とされていません:
+</span><span class='line'>  python-cffi python-ply python-pycparser
+</span><span class='line'>これを削除するには 'apt-get autoremove' を利用してください。
+</span><span class='line'>以下の追加パッケージがインストールされます:
+</span><span class='line'>  dialog python-acme python-cffi python-cffi-backend python-configargparse python-configobj
+</span><span class='line'>  python-cryptography python-dialog python-enum34 python-funcsigs python-idna python-ipaddress
+</span><span class='line'>  python-letsencrypt python-mock python-ndg-httpsclient python-openssl python-parsedatetime
+</span><span class='line'>  python-pbr python-psutil python-pyasn1 python-pyicu python-requests python-rfc3339 python-six
+</span><span class='line'>  python-urllib3 python-zope.component python-zope.event python-zope.interface
+</span><span class='line'>提案パッケージ:
+</span><span class='line'>  python-letsencrypt-apache python-letsencrypt-doc python-configobj-doc python-cryptography-doc
+</span><span class='line'>  python-cryptography-vectors python-enum34-doc python-funcsigs-doc python-mock-doc
+</span><span class='line'>  python-openssl-doc python-openssl-dbg doc-base python-ntlm
+</span><span class='line'>以下のパッケージが新たにインストールされます:
+</span><span class='line'>  dialog letsencrypt python-acme python-cffi-backend python-configargparse python-configobj
+</span><span class='line'>  python-dialog python-enum34 python-funcsigs python-idna python-ipaddress python-letsencrypt
+</span><span class='line'>  python-mock python-ndg-httpsclient python-parsedatetime python-pbr python-psutil python-pyasn1
+</span><span class='line'>  python-pyicu python-requests python-rfc3339 python-urllib3 python-zope.component
+</span><span class='line'>  python-zope.event python-zope.interface
+</span><span class='line'>以下のパッケージはアップグレードされます:
+</span><span class='line'>  python-cffi python-cryptography python-openssl python-six
+</span><span class='line'>アップグレード: 4 個、新規インストール: 25 個、削除: 0 個、保留: 24 個。
+</span><span class='line'>1,906 kB のアーカイブを取得する必要があります。
+</span><span class='line'>この操作後に追加で 8,772 kB のディスク容量が消費されます。
+</span><span class='line'>続行しますか? [Y/n]</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>letsencrypt コマンド実行</h2>
+
+<p>一般ユーザー権限で実行するとエラーになり、カレントディレクトリに <code>letsencrypt.log</code> が作成されていました。
+<code>--help</code> 付きでの実行は特にエラーもなく、 <code>letsencrypt.log</code> も作成されることなくヘルプが表示されました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>%  letsencrypt
+</span><span class='line'>An unexpected error occurred:
+</span><span class='line'>OSError: [Errno 13] Permission denied: '/etc/letsencrypt'
+</span><span class='line'>Please see the logfile 'letsencrypt.log' for more details.
+</span><span class='line'>%  rm letsencrypt.log
+</span><span class='line'>%  letsencrypt --help
+</span><span class='line'>
+</span><span class='line'>  letsencrypt [SUBCOMMAND] [options] [-d domain] [-d domain] ...
+</span><span class='line'>
+</span><span class='line'>The Let's Encrypt agent can obtain and install HTTPS/TLS/SSL certificates.  By
+</span><span class='line'>default, it will attempt to use a webserver both for obtaining and installing
+</span><span class='line'>the cert. Major SUBCOMMANDS are:
+</span><span class='line'>
+</span><span class='line'>  (default) run        Obtain & install a cert in your current webserver
+</span><span class='line'>  certonly             Obtain cert, but do not install it (aka "auth")
+</span><span class='line'>  install              Install a previously obtained cert in a server
+</span><span class='line'>  renew                Renew previously obtained certs that are near expiry
+</span><span class='line'>  revoke               Revoke a previously obtained certificate
+</span><span class='line'>  rollback             Rollback server configuration changes made during install
+</span><span class='line'>  config_changes       Show changes made to server config during installation
+</span><span class='line'>  plugins              Display information about installed plugins
+</span><span class='line'>
+</span><span class='line'>Choice of server plugins for obtaining and installing cert:
+</span><span class='line'>
+</span><span class='line'>  (the apache plugin is not installed)
+</span><span class='line'>  --standalone      Run a standalone webserver for authentication
+</span><span class='line'>  (nginx support is experimental, buggy, and not installed by default)
+</span><span class='line'>  --webroot         Place files in a server's webroot folder for authentication
+</span><span class='line'>
+</span><span class='line'>OR use different plugins to obtain (authenticate) the cert and then install it:
+</span><span class='line'>
+</span><span class='line'>  --authenticator standalone --installer apache
+</span><span class='line'>
+</span><span class='line'>More detailed help:
+</span><span class='line'>
+</span><span class='line'>  -h, --help [topic]    print this message, or detailed help on a topic;
+</span><span class='line'>                        the available topics are:
+</span><span class='line'>
+</span><span class='line'>   all, automation, paths, security, testing, or any of the subcommands or
+</span><span class='line'>   plugins (certonly, install, nginx, apache, standalone, webroot, etc)</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>本番実行</h2>
+
+<p><code>letsencrypt certonly</code> で証明書発行します。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>%  sudo letsencrypt certonly --webroot -w /srv/www/www.example.org/htdocs -d www.example.org</span></code></pre></td></tr></table></div></figure>
+
+
+<p>まず、アカウントの作成があるので、アカウントの作成はメールアドレス入力しました。
+アカウントのリカバリや緊急時の連絡などに使われるだけのようで、今の所ここで入力したメールアドレスに letsencrypt からメールが来たことはありません。</p>
+
+<pre><code>         ┌──────────────────────────────────────────────────────────────────────┐
+         │ Enter email address (used for urgent notices and lost key recovery)  │
+         │ ┌──────────────────────────────────────────────────────────────────┐ │
+         │ │                                                                  │ │
+         │ └──────────────────────────────────────────────────────────────────┘ │
+         ├──────────────────────────────────────────────────────────────────────┤
+         │                     &lt; 了解 &gt;           &lt; 取消 &gt;                      │
+         └──────────────────────────────────────────────────────────────────────┘
+</code></pre>
+
+<p>Terms of Service は前回みた時から変わっていないので、今度も Agree しました。</p>
+
+<pre><code>         ┌──────────────────────────────────────────────────────────────────────┐
+         │ Please read the Terms of Service at                                  │
+         │ https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf. You │
+         │ must agree in order to register with the ACME server at              │
+         │ https://acme-v01.api.letsencrypt.org/directory                       │
+         │                                                                      │
+         │                                                                      │
+         │                                                                      │
+         │                                                                      │
+         │                                                                      │
+         │                                                                      │
+         │                                                                      │
+         │                                                                      │
+         │                                                                      │
+         │                                                                      │
+         │                                                                      │
+         │                                                                      │
+         ├──────────────────────────────────────────────────────────────────────┤
+         │                     &lt;Agree &gt;           &lt;Cancel&gt;                      │
+         └──────────────────────────────────────────────────────────────────────┘
+</code></pre>
+
+<p>以下のような作成完了のメッセージが出ました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>IMPORTANT NOTES:
+</span><span class='line'> - If you lose your account credentials, you can recover through
+</span><span class='line'>   e-mails sent to z@n-z.jp.
+</span><span class='line'> - Congratulations! Your certificate and chain have been saved at
+</span><span class='line'>   /etc/letsencrypt/live/www.example.org/fullchain.pem. Your cert will
+</span><span class='line'>   expire on 2016-07-07. To obtain a new version of the certificate in
+</span><span class='line'>   the future, simply run Let's Encrypt again.
+</span><span class='line'> - Your account credentials have been saved in your Let's Encrypt
+</span><span class='line'>   configuration directory at /etc/letsencrypt. You should make a
+</span><span class='line'>   secure backup of this folder now. This configuration directory will
+</span><span class='line'>   also contain certificates and private keys obtained by Let's
+</span><span class='line'>   Encrypt so making regular backups of this folder is ideal.
+</span><span class='line'> - If you like Let's Encrypt, please consider supporting our work by:
+</span><span class='line'>
+</span><span class='line'>   Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
+</span><span class='line'>   Donating to EFF:                    https://eff.org/donate-le</span></code></pre></td></tr></table></div></figure>
+
+
+<p>問題があれば <code>/var/log/letsencrypt/letsencrypt.log</code> でログを確認します。</p>
+
+<h2>apache2 の設定変更</h2>
+
+<p>apache2 の設定を変更して、 <code>sudo service apache2 reload</code> で反映します。
+ブラウザーで Let&rsquo;s Encrypt Authority X3 の証明書になっていることが確認できたら設定完了です。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>SSLCertificateKeyFile /etc/letsencrypt/live/www.example.org/privkey.pem
+</span><span class='line'>SSLCertificateFile /etc/letsencrypt/live/www.example.org/fullchain.pem</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>自動更新設定</h2>
+
+<p>パッケージの <code>letsencrypt</code> でインストールされたものではないということを明示するために <code>local</code> をつけて <code>/etc/cron.daily/local-letsencrypt</code> に自動更新の設定をしました。</p>
+
+<p>試しに実行してみてちゃんと動いていれば設定完了です。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% sudoedit /etc/cron.daily/local-letsencrypt
+</span><span class='line'>% sudo chmod +x /etc/cron.daily/local-letsencrypt
+</span><span class='line'>% sudo /etc/cron.daily/local-letsencrypt
+</span><span class='line'>% sudo cat /var/log/letsencrypt/renew.log
+</span><span class='line'>Processing /etc/letsencrypt/renewal/www.example.org.conf
+</span><span class='line'>
+</span><span class='line'>The following certs are not due for renewal yet:
+</span><span class='line'>  /etc/letsencrypt/live/www.example.org/fullchain.pem (skipped)
+</span><span class='line'>No renewals were attempted.</span></code></pre></td></tr></table></div></figure>
+
+
+<p><a href="http://blog.n-z.jp/blog/2016-04-07-letsencrypt.html">前回の記事</a> のように <a href="http://packages.debian.org/debianutils">debianutils</a> の <code>savelog</code> でログをローテートして、証明書の有効期限の 90 日分残すようにしています。</p>
+
+<figure class='code'><figcaption><span>/etc/cron.daily/local-letsencrypt</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#!/bin/sh</span>
+</span><span class='line'><span class="nv">LOGFILE</span><span class="o">=</span>/var/log/letsencrypt/renew.log
+</span><span class='line'><span class="k">if</span> <span class="o">[</span> -f <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>    savelog -c <span class="m">90</span> -q <span class="s2">&quot;$LOGFILE&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> ! letsencrypt renew &gt; <span class="s2">&quot;$LOGFILE&quot;</span> 2&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>    <span class="nb">echo </span>Automated renewal failed:
+</span><span class='line'>    cat <span class="s2">&quot;$LOGFILE&quot;</span>
+</span><span class='line'>    <span class="nb">exit </span>1
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'>apachectl graceful
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[letsencrypt-auto の自動アップグレードを止めて手動でアップグレード]]></title>
@@ -23,11 +378,12 @@
 <!--more-->
 
 
-<h2>自動アップグレードを止めた <code>/etc/cron.daily/letsencrypt</code></h2>
+<h2>自動アップグレードを止めた <code>/etc/cron.daily/local-letsencrypt</code></h2>
 
-<p><a href="http://blog.n-z.jp/blog/2016-03-06-letsencrypt.html">前回の記事</a> からの差分としては <a href="http://packages.debian.org/debianutils">debianutils</a> の <code>savelog</code> でログをローテートして、証明書の有効期限の 90 日分残すようにしたのと、 <code>--no-self-upgrade</code> をつけて自動アップグレードを止めたことです。</p>
+<p><a href="http://blog.n-z.jp/blog/2016-03-06-letsencrypt.html">前回の記事</a> からの差分としては <a href="http://packages.debian.org/debianutils">debianutils</a> の <code>savelog</code> でログをローテートして、証明書の有効期限の 90 日分残すようにしたのと、 <code>--no-self-upgrade</code> をつけて自動アップグレードを止めたことです。
+それから、パッケージで入れたものではないということを明示するために <code>local</code> という文字列を入れたファイル名に変更しました。</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>/etc/cron.daily/local-letsencrypt</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -60,7 +416,7 @@
 
 <p>手動実行したところ、ちょうど 0.4.2 から 0.5.0 へのアップグレードが実行されました。</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>/etc/cron.daily/local-letsencrypt</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -157,7 +513,7 @@
 
 <h2>アップグレードがないときのログ</h2>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>/etc/cron.daily/local-letsencrypt</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -3819,48 +4175,6 @@ Keynote が A ホールのみなので、この後はずっと A ホールにい
 
 <p><code>vagrant up</code> して <code>vagrant ssh</code> で入った後、<code>/vagrant/rubylive.sh</code> で作成できます。
 2 回目以降は <code>~/rubylive</code> で <code>time rake APT_HTTP_PROXY=http://localhost:3142</code> を直接実行しても良いと思います。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[10月25日 型システム入門読書会　第１回(大阪府)に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2015-10-25-amagasakirb.html"/>
-    <updated>2015-10-25T12:53:29+09:00</updated>
-    <id>http://blog.n-z.jp/blog/amagasakirb</id>
-    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/event/index/345134/" title="10月25日 型システム入門読書会　第１回(大阪府)">10月25日 型システム入門読書会　第１回(大阪府)</a>
-に参加しました。
-今回は第 1 章から 7 章でした。</p>
-
-<!--more-->
-
-
-
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4274069117" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-<p>以下、今回のメモです。</p>
-
-<ul>
-<li>序文に章の依存関係のグラフがある</li>
-<li>まず 3 章まで読む</li>
-<li>紙の書籍を持っている人がいない (重いから)</li>
-<li><a href="http://lotusrb.org/" title="Lotus - A complete web framework for Ruby">Lotus - A complete web framework for Ruby</a></li>
-<li>この本に関するブログ記事は意外と多い</li>
-<li><a href="http://www.cis.upenn.edu/~bcpierce/tapl">http://www.cis.upenn.edu/~bcpierce/tapl</a></li>
-<li>of info の info はエラーの時用のファイル情報</li>
-<li>ラムダ計算のところはアンダースタンディングコンピュテーションでやったこととほぼ同じ</li>
-<li><a href="http://ocaml.jp/">http://ocaml.jp/</a></li>
-<li>F# は OCaml ベース</li>
-<li>OCaml で実装されているもの : Haxe, Coq</li>
-<li>XMonad の話</li>
-<li>Emacs の話</li>
-<li>Phoenix Framework の話</li>
-<li>次回は 12/27 に第 8 章からの予定</li>
-</ul>
-
 ]]></content>
   </entry>
   
