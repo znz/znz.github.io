@@ -9,11 +9,13 @@ categories: letsencrypt ubuntu linux
 
 <!--more-->
 
-## 自動アップグレードを止めた `/etc/cron.daily/letsencrypt`
+## 自動アップグレードを止めた `/etc/cron.daily/local-letsencrypt`
 
 [前回の記事](http://blog.n-z.jp/blog/2016-03-06-letsencrypt.html) からの差分としては [debianutils](http://packages.debian.org/debianutils) の `savelog` でログをローテートして、証明書の有効期限の 90 日分残すようにしたのと、 `--no-self-upgrade` をつけて自動アップグレードを止めたことです。
+それから、パッケージで入れたものではないということを明示するために `local` という文字列を入れたファイル名に変更しました。
 
-```bash
+
+```bash /etc/cron.daily/local-letsencrypt
 #!/bin/sh
 LOGFILE=/var/log/letsencrypt/renew.log
 if [ -f "$LOGFILE" ]; then
