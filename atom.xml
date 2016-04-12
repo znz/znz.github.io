@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-04-09T20:00:54+09:00</updated>
+  <updated>2016-04-12T22:13:02+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,122 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[aasm 4.10.0 の警告に monkey patch で対処した]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-04-12-aasm-warn.html"/>
+    <updated>2016-04-12T22:08:11+09:00</updated>
+    <id>http://blog.n-z.jp/blog/aasm-warn</id>
+    <content type="html"><![CDATA[<p>aasm を 4.10.0 にあげると <code>Job: overriding method 'sleeping?'!</code> のような警告が出るようになってしまい、<a href="https://github.com/aasm/aasm/issues/347">Warning when specifing states at ActiveRecord enum</a> で報告されているものの、まだ何も対応されていないので、とりあえず monkey patch で対処することにしました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>ruby 2.2.4</li>
+<li>rails 4.2.6</li>
+<li>aasm 4.10.0</li>
+</ul>
+
+
+<h2>対処方針</h2>
+
+<p>モデルごとに対応するのは面倒なことになるので、 Rails 5 で導入される予定の <code>ApplicationRecord</code> に対応して、そこに対処を入れることにしました。</p>
+
+<h2>ApplicationRecord 対応</h2>
+
+<p>まず <code>sed -i~ -e 's/ActiveRecord::Base/ApplicationRecord/' app/models/*.rb</code> などで継承元を <code>ActiveRecord::Base</code> から <code>ApplicationRecord</code> に書き換えます。
+(実際には <code>application_record.rb</code> の作成後にやってしまって <code>RuntimeError: Circular dependency detected while autoloading constant ApplicationRecord</code> になってしまったので、 <code>application_record.rb</code> だけ元に戻しました。)</p>
+
+<p>次に以下の内容で <code>app/models/application_record.rb</code> を作成します。</p>
+
+<figure class='code'><figcaption><span>app/models/application_record.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">ApplicationRecord</span> <span class="o">&lt;</span> <span class="no">ActiveRecord</span><span class="o">::</span><span class="no">Base</span>
+</span><span class='line'>  <span class="nb">self</span><span class="o">.</span><span class="n">abstract_class</span> <span class="o">=</span> <span class="kp">true</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>テスト実行などで影響がないことを確認します。</p>
+
+<h2>monkey patch</h2>
+
+<p>aasm の README に書いてあるように</p>
+
+<figure class='code'><figcaption><span>app/models/job.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">Job</span> <span class="o">&lt;</span> <span class="no">ApplicationRecord</span>
+</span><span class='line'>  <span class="kp">include</span> <span class="no">AASM</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">enum</span> <span class="ss">state</span><span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>    <span class="ss">sleeping</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+</span><span class='line'>    <span class="ss">running</span><span class="p">:</span> <span class="mi">99</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">aasm</span> <span class="ss">:column</span> <span class="o">=&gt;</span> <span class="ss">:state</span><span class="p">,</span> <span class="ss">:enum</span> <span class="o">=&gt;</span> <span class="kp">true</span> <span class="k">do</span>
+</span><span class='line'>    <span class="n">state</span> <span class="ss">:sleeping</span><span class="p">,</span> <span class="ss">:initial</span> <span class="o">=&gt;</span> <span class="kp">true</span>
+</span><span class='line'>    <span class="n">state</span> <span class="ss">:running</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のようなハッシュを使った <code>enum</code> 呼び出ししかしていなかった (<code>enum status: [ :active, :archived ]</code> のような配列を使った呼び出しはしていなかった) ので、以下のように <code>each_value</code> と <code>each_key</code> の組み合わせ決め打ちで <code>undef_method</code> を呼び出すことにしました。</p>
+
+<figure class='code'><figcaption><span>app/models/application_record.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">class</span> <span class="nc">ApplicationRecord</span> <span class="o">&lt;</span> <span class="no">ActiveRecord</span><span class="o">::</span><span class="no">Base</span>
+</span><span class='line'>  <span class="nb">self</span><span class="o">.</span><span class="n">abstract_class</span> <span class="o">=</span> <span class="kp">true</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">if</span> <span class="no">AASM</span><span class="o">::</span><span class="no">VERSION</span> <span class="o">==</span> <span class="s1">&#39;4.10.0&#39;</span>
+</span><span class='line'>    <span class="k">def</span> <span class="nc">self</span><span class="o">.</span><span class="nf">enum</span><span class="p">(</span><span class="n">definitions</span><span class="p">)</span>
+</span><span class='line'>      <span class="k">super</span>
+</span><span class='line'>      <span class="n">definitions</span><span class="o">.</span><span class="n">each_value</span> <span class="k">do</span> <span class="o">|</span><span class="n">statuses</span><span class="o">|</span>
+</span><span class='line'>        <span class="n">statuses</span><span class="o">.</span><span class="n">each_key</span> <span class="k">do</span> <span class="o">|</span><span class="n">key</span><span class="o">|</span>
+</span><span class='line'>          <span class="n">undef_method</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">key</span><span class="si">}</span><span class="s2">?&quot;</span>
+</span><span class='line'>        <span class="k">end</span>
+</span><span class='line'>      <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>ActiveRecord::Enum</code> では <code>enum</code> を呼び出したクラスに直接 <code>sleeping?</code> などのメソッドを定義するのではなく、無名モジュールに定義されているので、 <code>remove_method</code> ではなく <code>undef_method</code> を使う必要がありました。
+(<code>aasm</code> は <code>aasm</code> を呼び出したクラスに直接定義していました。)</p>
+
+<h2>今後の予定</h2>
+
+<p>将来のバージョンでどう挙動が変わるのかわからないので、バージョン番号決め打ちで monkey patch をあてていて、バージョンアップで問題が再発するようならバージョン番号を更新、解決するようなら monkey patch を削除しようと思っています。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[4月9日 型システム入門読書会 第4回(兵庫県)に参加しました]]></title>
@@ -3890,149 +4006,6 @@ Keynote が A ホールのみなので、この後はずっと A ホールにい
 
 <ul>
 <li>Rails Girls Summer of Code など</li>
-</ul>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[RubyKaigi 2015 の 1 日目に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2015-12-11-rubykaigi-2015.html"/>
-    <updated>2015-12-11T14:06:46+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubykaigi-2015</id>
-    <content type="html"><![CDATA[<p><a href="http://rubykaigi.org/2015" title="RubyKaigi 2015">RubyKaigi 2015</a> の 1 日目に参加したので、そのメモです。</p>
-
-<!--more-->
-
-
-<h2>Opening &amp; Ruby 2.3 Preview Release</h2>
-
-<p>オープニングの諸注意などと Ruby 2.3.0-preview2 のリリースアナウンスがありました。</p>
-
-<h2>スポンサーセッション (Money Forward)</h2>
-
-<h2>Ruby3 challenges (Keynote)</h2>
-
-<ul>
-<li>First timer が半分近い</li>
-<li>プログラマの三大美徳</li>
-<li>anger や niceness の話</li>
-<li>MINASWAN (Matz is nice And so we are nice)</li>
-<li>Ruby 2.3.0</li>
-<li>Event Driven Programming</li>
-<li><code>did_you_mean</code> gem</li>
-<li><code>Enumerable#grep_v</code></li>
-<li><code>Hash#fetch_values</code></li>
-<li>Strict version of <code>Hash#values_at</code></li>
-<li><code>Numeric#positive?</code>, <code>negative?</code></li>
-<li>Hash comparisons (<code>&lt;=</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&gt;</code>)</li>
-<li>全順序じゃないので <code>&lt;=&gt;</code> はない</li>
-<li><code>Hash#to_proc</code></li>
-<li><code>Array</code>,<code>Hash</code>,<code>Struct#dig</code></li>
-<li>Idented here document <code>&lt;&lt;~</code></li>
-<li>インデントが一番浅いところに合わせて削ってくれる</li>
-<li>frozen string literal pragma</li>
-<li>Safe navigation operator <code>&amp;.</code></li>
-<li>Lonely operator</li>
-<li>Faster</li>
-<li>5-10% faster each year</li>
-<li>mruby 1.2</li>
-<li><a href="https://github.com/matz/streem">Streem</a></li>
-<li>OCaaS = OSS community as a Shark</li>
-<li>Make something people want → Make something people need</li>
-<li>Secret of Ruby&rsquo;s success</li>
-<li>Change is pain</li>
-<li>Took 5 or more years to be adapted</li>
-<li>Migration bait</li>
-<li>concurrency</li>
-<li>ピタゴラスイッチプログラミング</li>
-<li>Performance</li>
-<li>Ruby3x3</li>
-<li>Ruby 3 は Ruby 2.0 の 3 倍速くするという目標</li>
-<li>heroku</li>
-<li>appfolio</li>
-<li>Money Forward</li>
-<li>IBM J9</li>
-<li>Ruby is no longer my language</li>
-<li>It&rsquo;s a community effort</li>
-</ul>
-
-
-<h2>Compiling Ruby scripts</h2>
-
-<ul>
-<li>昼食に時間がかかったので最後の方しか聞けませんでした。</li>
-<li>保存場所は決めていない</li>
-<li>ISeq をバイナリ String で返すので好きな場所に保存</li>
-<li>ロード時にフックが定義されていれば呼ばれる</li>
-<li>サンプルとして 3 種類の保存方法を用意している</li>
-<li>experimental として Ruby 2.3 に入っている</li>
-</ul>
-
-
-<h2>Saving people from typos</h2>
-
-<ul>
-<li><code>did_you_mean</code> gem の話</li>
-<li>Ruby commiter になった</li>
-<li><code>kaminari</code> gem のメンテナもしている</li>
-<li>Pivotal の紹介</li>
-<li><code>git</code> や Google には did you mean がある</li>
-<li>ruby には <code>did_you_mean</code> gem</li>
-<li>どうやって動いているか</li>
-<li>A spell checker</li>
-<li>Monkey patches</li>
-<li>Spell Checker</li>
-<li>Dictionary</li>
-<li>制御機構</li>
-<li>最適化手法</li>
-<li>Mistype Correction</li>
-<li>Misspell Correction</li>
-<li>Levenshtein Distance</li>
-<li>Jaro-Winkler Distance</li>
-<li>Jaro Distance + Prefix Bonus</li>
-<li><a href="http://git.io/vRdYW">http://git.io/vRdYW</a></li>
-<li>実装の説明</li>
-<li>質疑応答</li>
-<li>necessary と nessecary のような例は Levenshtein Distance だけだと予測ができない</li>
-</ul>
-
-
-<h2>mruby on the minimal embedded resource</h2>
-
-<ul>
-<li>デモ</li>
-<li>ハードウェアの説明</li>
-<li>なぜ mruby を使うのかという話</li>
-<li>いろいろなハードウェアの話</li>
-</ul>
-
-
-<h2>Afternoon Break</h2>
-
-<p>スシが今日だけだとアナウンスがあったので、行ってみたらちょうど終わったところでもらえませんでした。</p>
-
-<h2>High Performance Template Engine: Guide to optimize your Ruby code</h2>
-
-<ul>
-<li>faml と hamlit がいかにして haml より速くしたのかという話でした。</li>
-<li><a href="http://k0kubun.hatenablog.com/entry/2015/12/12/000037" title="#RubyKaigi 2015 でテンプレートエンジンの高速化について話しました - k0kubun's blog">#RubyKaigi 2015 でテンプレートエンジンの高速化について話しました - k0kubun&rsquo;s blog</a></li>
-</ul>
-
-
-<h2>TRICK 2015: The second Transcendental Ruby Imbroglio Contest for RubyKaigi</h2>
-
-<ul>
-<li>1 回目は 2013</li>
-<li>今回は 2 回目</li>
-<li><a href="https://github.com/tric/trick2015">https://github.com/tric/trick2015</a></li>
-<li><p>srand は storage</p></li>
-<li><p>追加メモ</p></li>
-<li><a href="http://d.hatena.ne.jp/ku-ma-me/20151211">http://d.hatena.ne.jp/ku-ma-me/20151211</a></li>
-<li><a href="http://monae.github.io/trick2015.html">http://monae.github.io/trick2015.html</a></li>
-<li><a href="http://www.garbagecollect.jp/~usa/d/201512b.html#id20151211_P1">http://www.garbagecollect.jp/~usa/d/201512b.html#id20151211_P1</a></li>
-<li><a href="http://www.callcc.net/diary/20151212.html">http://www.callcc.net/diary/20151212.html</a></li>
-<li><a href="http://www.kmonos.net/wlog/140.html#_2126151211">http://www.kmonos.net/wlog/140.html#_2126151211</a></li>
 </ul>
 
 ]]></content>

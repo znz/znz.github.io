@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rails | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rails/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-04-09T20:00:54+09:00</updated>
+  <updated>2016-04-12T22:13:02+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,89 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[aasm 4.10.0 の警告に monkey patch で対処した]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-04-12-aasm-warn.html"/>
+    <updated>2016-04-12T22:08:11+09:00</updated>
+    <id>http://blog.n-z.jp/blog/aasm-warn</id>
+    <content type="html"><![CDATA[<p>aasm を 4.10.0 にあげると <code>Job: overriding method 'sleeping?'!</code> のような警告が出るようになってしまい、<a href="https://github.com/aasm/aasm/issues/347">Warning when specifing states at ActiveRecord enum</a> で報告されているものの、まだ何も対応されていないので、とりあえず monkey patch で対処することにしました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>ruby 2.2.4</li>
+<li>rails 4.2.6</li>
+<li>aasm 4.10.0</li>
+</ul>
+
+
+<h2>対処方針</h2>
+
+<p>モデルごとに対応するのは面倒なことになるので、 Rails 5 で導入される予定の <code>ApplicationRecord</code> に対応して、そこに対処を入れることにしました。</p>
+
+<h2>ApplicationRecord 対応</h2>
+
+<p>まず <code>sed -i~ -e 's/ActiveRecord::Base/ApplicationRecord/' app/models/*.rb</code> などで継承元を <code>ActiveRecord::Base</code> から <code>ApplicationRecord</code> に書き換えます。
+(実際には <code>application_record.rb</code> の作成後にやってしまって <code>RuntimeError: Circular dependency detected while autoloading constant ApplicationRecord</code> になってしまったので、 <code>application_record.rb</code> だけ元に戻しました。)</p>
+
+<p>次に以下の内容で <code>app/models/application_record.rb</code> を作成します。</p>
+
+<pre><code class="ruby app/models/application_record.rb">class ApplicationRecord &lt; ActiveRecord::Base
+  self.abstract_class = true
+end
+</code></pre>
+
+<p>テスト実行などで影響がないことを確認します。</p>
+
+<h2>monkey patch</h2>
+
+<p>aasm の README に書いてあるように</p>
+
+<pre><code class="ruby app/models/job.rb">class Job &lt; ApplicationRecord
+  include AASM
+
+  enum state: {
+    sleeping: 5,
+    running: 99
+  }
+
+  aasm :column =&gt; :state, :enum =&gt; true do
+    state :sleeping, :initial =&gt; true
+    state :running
+  end
+end
+</code></pre>
+
+<p>のようなハッシュを使った <code>enum</code> 呼び出ししかしていなかった (<code>enum status: [ :active, :archived ]</code> のような配列を使った呼び出しはしていなかった) ので、以下のように <code>each_value</code> と <code>each_key</code> の組み合わせ決め打ちで <code>undef_method</code> を呼び出すことにしました。</p>
+
+<pre><code class="ruby app/models/application_record.rb">class ApplicationRecord &lt; ActiveRecord::Base
+  self.abstract_class = true
+
+  if AASM::VERSION == '4.10.0'
+    def self.enum(definitions)
+      super
+      definitions.each_value do |statuses|
+        statuses.each_key do |key|
+          undef_method "#{key}?"
+        end
+      end
+    end
+  end
+end
+</code></pre>
+
+<p><code>ActiveRecord::Enum</code> では <code>enum</code> を呼び出したクラスに直接 <code>sleeping?</code> などのメソッドを定義するのではなく、無名モジュールに定義されているので、 <code>remove_method</code> ではなく <code>undef_method</code> を使う必要がありました。
+(<code>aasm</code> は <code>aasm</code> を呼び出したクラスに直接定義していました。)</p>
+
+<h2>今後の予定</h2>
+
+<p>将来のバージョンでどう挙動が変わるのかわからないので、バージョン番号決め打ちで monkey patch をあてていて、バージョンアップで問題が再発するようならバージョン番号を更新、解決するようなら monkey patch を削除しようと思っています。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[doorkeeper gem を 1.4 系から 2.0 系にアップデートした]]></title>
@@ -270,52 +353,6 @@ wiki やチケットなどは後からでも参照できるようにローカル
 
 
 <p>ログインして今まで通り見えることを確認して終了です。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[font-awesome-sass を 4.1.0 から 4.2.0 にあげたらアイコンが表示されなくなったので対処した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-09-03-font-awesome-sass-4-2-0.html"/>
-    <updated>2014-09-03T20:52:56+09:00</updated>
-    <id>http://blog.n-z.jp/blog/font-awesome-sass-4-2-0</id>
-    <content type="html"><![CDATA[<p>Rails 4.1.5 で使っている <code>font-awesome-sass</code> gem を 4.1.0 から 4.2.0 にあげたところ、
-アイコンが表示されなくなったので、原因を調べてみました。</p>
-
-<h2>解決方法</h2>
-
-<p><a href="https://github.com/FortAwesome/font-awesome-sass">https://github.com/FortAwesome/font-awesome-sass</a> には 3.x からのアップグレード方法しか
-書いていないのですが、
-4.1.0 などの 4.x 系から 4.2.0 にあげるときは</p>
-
-<pre><code>*= require font-awesome
-</code></pre>
-
-<p>の代わりに</p>
-
-<pre><code>@import "font-awesome-sprockets";
-@import "font-awesome";
-</code></pre>
-
-<p>のように <code>@import</code> を使う必要があり、
-既に <code>@import</code> を使っている場合でも
-<code>@import "font-awesome-sprockets";</code>
-の行の追加が必要でした。</p>
-
-<h2>詳細</h2>
-
-<p>4.1.0 と 4.2.0 の差分の
-<a href="https://github.com/FortAwesome/font-awesome-sass/commit/a527acdf693cf0bced797e75f387a8f8e2a9c844" title="Refactoring for use in multiple Ruby envs and upgrading to FontAwesome 4.2.0">Refactoring for use in multiple Ruby envs and upgrading to FontAwesome 4.2.0</a>
-を眺めてみると、
-FontAwesome を 4.2.0 にあげる以外に
-<code>vendor/assets/</code> から <code>assets/</code> に移動していたり、
-それに関係する変更をしていたりするようです。</p>
-
-<p>それから詳しいことはわかりませんが、
-<code>icon-font-path($path)</code> と <code>icon-image-path($path)</code> で
-それぞれ
-sprockets では <code>font-path($path)</code> と <code>image-path($path)</code> で、
-compass では <code>font-url($path, true)</code> と <code>image-url($path, true)</code> を
-使うようになった影響で <code>@import "font-awesome-sprockets"</code> が必要になったようです。</p>
 ]]></content>
   </entry>
   
