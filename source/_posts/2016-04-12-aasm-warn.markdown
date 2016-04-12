@@ -1,0 +1,81 @@
+---
+layout: post
+title: "aasm 4.10.0 の警告に monkey patch で対処した"
+date: 2016-04-12 22:08:11 +0900
+comments: true
+categories: ruby rails
+---
+aasm を 4.10.0 にあげると `Job: overriding method 'sleeping?'!` のような警告が出るようになってしまい、[Warning when specifing states at ActiveRecord enum](https://github.com/aasm/aasm/issues/347) で報告されているものの、まだ何も対応されていないので、とりあえず monkey patch で対処することにしました。
+
+<!--more-->
+
+## 対象バージョン
+
+- ruby 2.2.4
+- rails 4.2.6
+- aasm 4.10.0
+
+## 対処方針
+
+モデルごとに対応するのは面倒なことになるので、 Rails 5 で導入される予定の `ApplicationRecord` に対応して、そこに対処を入れることにしました。
+
+## ApplicationRecord 対応
+
+まず `sed -i~ -e 's/ActiveRecord::Base/ApplicationRecord/' app/models/*.rb` などで継承元を `ActiveRecord::Base` から `ApplicationRecord` に書き換えます。
+(実際には `application_record.rb` の作成後にやってしまって `RuntimeError: Circular dependency detected while autoloading constant ApplicationRecord` になってしまったので、 `application_record.rb` だけ元に戻しました。)
+
+次に以下の内容で `app/models/application_record.rb` を作成します。
+
+```ruby app/models/application_record.rb
+class ApplicationRecord < ActiveRecord::Base
+  self.abstract_class = true
+end
+```
+
+テスト実行などで影響がないことを確認します。
+
+## monkey patch
+
+aasm の README に書いてあるように
+
+```ruby app/models/job.rb
+class Job < ApplicationRecord
+  include AASM
+
+  enum state: {
+    sleeping: 5,
+    running: 99
+  }
+
+  aasm :column => :state, :enum => true do
+    state :sleeping, :initial => true
+    state :running
+  end
+end
+```
+
+のようなハッシュを使った `enum` 呼び出ししかしていなかった (`enum status: [ :active, :archived ]` のような配列を使った呼び出しはしていなかった) ので、以下のように `each_value` と `each_key` の組み合わせ決め打ちで `undef_method` を呼び出すことにしました。
+
+```ruby app/models/application_record.rb
+class ApplicationRecord < ActiveRecord::Base
+  self.abstract_class = true
+
+  if AASM::VERSION == '4.10.0'
+    def self.enum(definitions)
+      super
+      definitions.each_value do |statuses|
+        statuses.each_key do |key|
+          undef_method "#{key}?"
+        end
+      end
+    end
+  end
+end
+```
+
+`ActiveRecord::Enum` では `enum` を呼び出したクラスに直接 `sleeping?` などのメソッドを定義するのではなく、無名モジュールに定義されているので、 `remove_method` ではなく `undef_method` を使う必要がありました。
+(`aasm` は `aasm` を呼び出したクラスに直接定義していました。)
+
+## 今後の予定
+
+将来のバージョンでどう挙動が変わるのかわからないので、バージョン番号決め打ちで monkey patch をあてていて、バージョンアップで問題が再発するようならバージョン番号を更新、解決するようなら monkey patch を削除しようと思っています。
