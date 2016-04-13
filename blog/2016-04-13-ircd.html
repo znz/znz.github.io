@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>ci_reporter から rspec_junit_formatter に移行した - @znz blog</title>
+  <title>ngircd から inspircd に移行した - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="ci_reporter から rspec_junit_formatter に移行した Jun 13th, 2014 10:33 pm | Comments rspec 2 から rpsec 3 への移行で ci_reporter がうまく動かなくなって困っていたら、 &hellip;">
+  <meta name="description" content="ngircd から inspircd に移行した Apr 13th, 2016 10:42 pm | Comments jessie で inspircd を設定した話に書いたように、 inspircd を設定したのですが、移行元の ngircd &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-06-13-ci-reporter-to-rspec-junit-formatter.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2016-04-13-ircd.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -83,7 +83,7 @@
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">ci_reporter から rspec_junit_formatter に移行した</h1>
+      <h1 class="entry-title">ngircd から inspircd に移行した</h1>
       
       <!-- zenback_title_end -->
       
@@ -95,7 +95,7 @@
 
 
 
-<time class='entry-date' datetime='2014-06-13T22:33:12+09:00'><span class='date'><span class='date-month'>Jun</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>10:33 pm</span></time>
+<time class='entry-date' datetime='2016-04-13T22:42:32+09:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>10:42 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -108,88 +108,39 @@
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p>rspec 2 から rpsec 3 への移行で <code>ci_reporter</code> がうまく動かなくなって困っていたら、
-<code>rspec_junit_formatter</code> というのを<a href="https://twitter.com/joker1007/status/477372843601055744">教えてもらった</a>ので、
-移行してみました。</p>
+<div class="entry-content"><p><a href="/blog/2016-03-29-inspircd.html">jessie で inspircd を設定した</a>話に書いたように、 inspircd を設定したのですが、移行元の ngircd との機能比較を使っている範囲内でしてみたいと思います。</p>
 
 <!--more-->
 
 
-<h2>対象バージョン</h2>
+<h2>確認バージョン</h2>
 
 <ul>
-<li><code>ruby</code> 2.1.2</li>
-<li><code>rails</code> 3.2.18</li>
-<li><code>rspec-rails</code> 3.0.1</li>
-<li><code>rspec_junit_formatter</code> 0.2.0</li>
+<li>ngircd 18-2 (on Ubuntu 12.04.5 LTS)</li>
+<li>inspircd 2.0.17-1+deb8u1 (on Debian GNU/Linux 8.4 (jessie))</li>
 </ul>
 
 
-<h2>Gemfile の変更</h2>
+<h2>SSL/TLS 設定</h2>
 
-<p><code>group :test</code> の <code>gem 'ci_reporter', require: false</code> を <code>gem 'rspec_junit_formatter'</code> に変更しました。</p>
+<p>ngircd では <code>[SSL]</code> セクションで設定するだけでしたが、 inspircd では推奨されている <code>m_ssl_gnutls</code> を使うか <code>m_ssl_openssl</code> を使うか選ぶ必要がありました。
+推奨があるので、特に迷うことはありませんでした。</p>
 
-<h2>jenkins で実行しているシェルスクリプトの変更</h2>
+<h2>nick の長さ制限</h2>
 
-<p><code>bundle exec rake -f $(bundle show ci_reporter)/stub.rake ci:setup:rspec default SPEC_OPTS=--no-drb COVERAGE=on</code>
-のように実行していたのを</p>
+<p>ngircd では <code>MaxNickLength</code> を 9 から 18 に変えていたのですが、 inspircd ではデフォルトで <code>NICKLEN=32</code> になっていて、設定は少し探した範囲では見つけられませんでした。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>rm -rf spec/reports
-</span><span class='line'>cat &gt;.rspec &lt;&lt;EOF
-</span><span class='line'>--format RspecJunitFormatter
-</span><span class='line'>--out spec/reports/rspec.xml
-</span><span class='line'>EOF
-</span><span class='line'>bundle exec rake COVERAGE=on</span></code></pre></td></tr></table></div></figure></notextile></div>
+<h2>チャンネルの作成制限</h2>
 
+<p>ngircd では <code>PredefChannelsOnly = yes</code> にしていました。 inspircd では <a href="https://wiki.inspircd.org/Modules/2.0/restrictchans">m_restrictchans</a> で制限することができました。</p>
 
-<p>に変更しました。
-<code>spec/reports</code> は自動で作成してくれるようで、事前に作成しておく必要はないようです。
-<code>ci_reporter</code> はタスクの最初の方で <code>spec/reports</code> を削除していたので、同様に削除するようにしました。</p>
+<h2>チャンネル自動作成</h2>
 
-<p><code>COVERAGE=on</code> は <code>simplecov</code>, <code>simplecov-rcov</code> を有効にするかどうかのフラグとして使っているので今回の移行とは無関係です。</p>
+<p>ngircd では <code>[Channel]</code> でチャンネルをサーバー起動時に作成していました。 inspircd では <a href="https://wiki.inspircd.org/Modules/2.0/permchannels">m_permchannels</a> で作成しておくことができました。</p>
 
-<p><a href="https://github.com/sj26/rspec_junit_formatter">RSpec JUnit Formatter の README</a> に書いてある
-<code>rspec --format RspecJunitFormatter --out rspec.xml</code>
-という実行方法だとテスト用データベースの初期化関連で問題がおきたので、
-<code>rspec</code> コマンド直接ではなく <code>rake</code> コマンドのデフォルトタスクで実行するために、
-<code>.rspec</code> ファイルを書き換えるようにしました。
-<code>SPEC_OPTS</code> で指定する方法でも良かったかもしれません。</p>
+<h2>チャンネル自動参加</h2>
 
-<h2>Jenkins の設定</h2>
-
-<p><code>ci_reporter</code> の設定のときに
-<code>ビルド後の処理</code> で <code>JUnitテスト結果の集計</code> を追加していて、
-<code>テスト結果XML</code> は <code>spec/reports/**/*.xml</code> という設定にしていて、
-<code>RspecJunitFormatter</code> の出力先の方をそちらにあわせたので、
-Jenkins 側の設定は変更していません。</p>
-
-<h2>テスト結果</h2>
-
-<p>Jenkins のテスト結果の表示では <code>spec.controllers</code> や <code>spec.models</code> などがパッケージになっていました。</p>
-
-<p><code>spec/support/*.rb</code> で <code>shared_examples</code> を定義していたら、
-<code>spec.support</code> がパッケージになってしまっているのが気になりましたが、
-<code>ci_reporter</code> のときはほぼすべてが <code>(root)</code> というパッケージになっていたのに比べると
-便利になったように思います。</p>
-
-<h2><code>RSpec::Core::DeprecationError</code></h2>
-
-<p><code>RSpec.configure do |config|</code> で <code>config.raise_errors_for_deprecations!</code> を実行していると</p>
-
-<pre><code>.../gems/rspec-core-3.0.1/lib/rspec/core/formatters/deprecation_formatter.rb:186:in `puts': Treating `metadata[:execution_result]` as a hash is deprecated. Use the attributes methods to access the data instead. Called from .../rspec_junit_formatter-0.2.0/lib/rspec_junit_formatter/rspec3.rb:43:in `result_of'. (RSpec::Core::DeprecationError)`
-</code></pre>
-
-<p>というエラーになったので、
-<code>config.raise_errors_for_deprecations!</code>
-を外しました。</p>
-
-<p><a href="https://github.com/sj26/rspec_junit_formatter/commit/96f0115f7dabbea623f04b60dc23519683f39cfa">github の master では直っている</a>ので、次のバージョンがリリースされたら解決しそうです。</p>
+<p>ngircd では接続時に自動参加させることはできなかったのですが、 inspircd では <a href="https://wiki.inspircd.org/Modules/2.0/conn_join">m_conn_join</a> で接続時に強制的にチャンネルに参加させる設定ができました。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -208,12 +159,12 @@ Jenkins 側の設定は変更していません。</p>
 
 
 
-<time class='entry-date' datetime='2014-06-13T22:33:12+09:00'><span class='date'><span class='date-month'>Jun</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>10:33 pm</span></time>
+<time class='entry-date' datetime='2016-04-13T22:42:32+09:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>10:42 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/jenkins/'>jenkins</a>, <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/rspec/'>rspec</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
+    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/irc/'>irc</a>
   
 </span>
 
@@ -240,10 +191,8 @@ Jenkins 側の設定は変更していません。</p>
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2014-06-06-squeeze-lts.html" title="Previous Post: Debian squeeze (6.0) LTS の使い方">&laquo; Debian squeeze (6.0) LTS の使い方</a>
+        <a class="basic-alignment left" href="/blog/2016-04-13-devise-default-domain.html" title="Previous Post: devise で電子メールアドレスのドメイン部分を省略してもログインできるようにする">&laquo; devise で電子メールアドレスのドメイン部分を省略してもログインできるようにする</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2014-06-13-fluentd-drb.html" title="Next Post: fluentd に drb で接続してみた">fluentd に drb で接続してみた &raquo;</a>
       
     </p>
   </footer>
@@ -378,8 +327,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-06-13-ci-reporter-to-rspec-junit-formatter.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2014-06-13-ci-reporter-to-rspec-junit-formatter.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2016-04-13-ircd.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2016-04-13-ircd.html';
         var disqus_script = 'embed.js';
       
     (function () {
