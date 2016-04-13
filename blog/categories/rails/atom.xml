@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rails | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rails/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-04-12T22:13:02+09:00</updated>
+  <updated>2016-04-13T21:32:05+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,54 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[devise で電子メールアドレスのドメイン部分を省略してもログインできるようにする]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-04-13-devise-default-domain.html"/>
+    <updated>2016-04-13T21:29:43+09:00</updated>
+    <id>http://blog.n-z.jp/blog/devise-default-domain</id>
+    <content type="html"><![CDATA[<p>社内向けアプリケーションのように、特定のドメインのユーザーがほとんどの場合、メールアドレスの全体を入力させるのは、余計な手間をしいていることが多いです。</p>
+
+<p>そこで省略可能にするように変更しました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>ruby 2.2.4</li>
+<li>rails 4.2.6</li>
+<li>devise 3.5.6</li>
+<li>warden 1.2.6</li>
+</ul>
+
+
+<h2>config/initializers/devise.rb での設定</h2>
+
+<p>直接は関係ないですが、 <code>config/initializers/devise.rb</code> では以下のような感じの設定でユーザー登録できるメールアドレスのドメインを制限しています。</p>
+
+<p>特殊用途に別ドメインのユーザーを登録する必要があったので、そこは <code>|</code> (or) で繋げて許可しています。</p>
+
+<pre><code class="ruby config/initializers/devise.rb">  config.email_regexp = /\A[\w+\-.]+@example\.co\.jp\z\|\Aspecial@example\.com\z/i
+</code></pre>
+
+<h2>User クラスへの追加</h2>
+
+<p><a href="https://github.com/plataformatec/devise/wiki/How-To:-Allow-users-to-sign-in-using-their-username-or-email-address">How To: Allow users to sign in using their username or email address</a> を参考にして <code>User.find_first_by_auth_conditions(warden_conditions)</code> を定義すれば良いということがわかったので、以下のように定義しました。</p>
+
+<pre><code class="ruby app/models/user.rb">  def self.find_for_database_authentication(warden_conditions)
+    if /@/ =~ warden_conditions[:email]
+      super
+    else
+      super(warden_conditions.merge(email: "#{warden_conditions[:email]}@example.co.jp"))
+    end
+  end
+</code></pre>
+
+<p>メールアドレス全体が入力された時 (<code>@</code> を含む時) はデフォルトの挙動をそのまま使い、省略された時はデフォルトのドメイン (例では <code>example.co.jp</code>) を補ってデフォルトの挙動を呼び出すようにしました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[aasm 4.10.0 の警告に monkey patch で対処した]]></title>
@@ -305,54 +353,6 @@ capistrano 3.3.4 と capistrano-stats 1.1.0 にあがって、
 <h2>対処</h2>
 
 <p><code>dalli</code> gem 経由で <code>memcached</code> をキャッシュ使っていたので <code>sudo service memcached restart</code> してキャッシュを破棄しました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[redmine の運用停止前のバックアップ]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-10-09-redmine-backup.html"/>
-    <updated>2014-10-09T21:55:27+09:00</updated>
-    <id>http://blog.n-z.jp/blog/redmine-backup</id>
-    <content type="html"><![CDATA[<p>ある redmine の運用を止める前にリポジトリとの連携部分は止まってしまうのは仕方がないとして、
-wiki やチケットなどは後からでも参照できるようにローカルにバックアップを残しておくことにしました。
-その手順のメモです。</p>
-
-<!--more-->
-
-
-<h2>データベースのバックアップ</h2>
-
-<p><a href="http://blog.n-z.jp/blog/2014-01-28-yaml-db.html" title="yaml_dbでMySQLからPostgreSQLに移行した">yaml_dbでMySQLからPostgreSQLに移行した</a>話で使った <code>yaml_db</code> を使いました。</p>
-
-<p>まず、
-<code>Gemfile.local</code> をなければ作成して、以下の内容を追加します。</p>
-
-<pre><code class="ruby Gemfile.local">gem 'yaml_db', github: 'jetthoughts/yaml_db'
-</code></pre>
-
-<p>そして <code>RAILS_ENV=production bundle exec rake db:data:dump</code> で <code>db/data.yml</code> を作成します。</p>
-
-<h2>ローカル環境の作成</h2>
-
-<p>ローカルにも redmine 環境を作成します。</p>
-
-<ol>
-<li>redmine-2.5.2.tar.gz をダウンロードして展開</li>
-<li><code>config/database.yml.example</code> を元に <code>config/database.yml</code> を作成 (今回はバックアップ環境なので sqlite3 を使用)</li>
-<li>Gemfile.local 作成</li>
-<li><code>plugins/</code> に使っていたプラグインをインストール (サーバーから rsync でコピーなど)</li>
-<li>プラグインの設定も必要に応じてコピー (<code>config/wiki_external_filter.yml</code> など)</li>
-<li><code>bundle install</code> で gem のインストール</li>
-<li><code>RAILS_ENV=production bundle exec rake db:migrate</code> と <code>RAILS_ENV=production bundle exec rake redmine:plugins:migrate</code> でデータベース作成</li>
-<li><code>db/data.yml</code> をコピーしてきて <code>RAILS_ENV=production bundle exec rake db:data:load</code> で読み込み (<code>db:migrate</code> していないとテーブル不足で読み込めない)</li>
-<li><code>files/</code> の添付ファイルをコピー (サーバーから rsync でコピーなど)</li>
-<li><code>config/configuration.yml</code> や <code>favicon.ico</code> などカスタマイズしているものがあれば必要に応じて設定やコピー</li>
-<li><code>bundle exec rake generate_secret_token</code> で secret token を生成</li>
-<li><code>bundle exec rails server -e production</code> で起動</li>
-</ol>
-
-
-<p>ログインして今まで通り見えることを確認して終了です。</p>
 ]]></content>
   </entry>
   

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-04-12T22:13:02+09:00</updated>
+  <updated>2016-04-13T21:32:05+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,54 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[devise で電子メールアドレスのドメイン部分を省略してもログインできるようにする]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-04-13-devise-default-domain.html"/>
+    <updated>2016-04-13T21:29:43+09:00</updated>
+    <id>http://blog.n-z.jp/blog/devise-default-domain</id>
+    <content type="html"><![CDATA[<p>社内向けアプリケーションのように、特定のドメインのユーザーがほとんどの場合、メールアドレスの全体を入力させるのは、余計な手間をしいていることが多いです。</p>
+
+<p>そこで省略可能にするように変更しました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>ruby 2.2.4</li>
+<li>rails 4.2.6</li>
+<li>devise 3.5.6</li>
+<li>warden 1.2.6</li>
+</ul>
+
+
+<h2>config/initializers/devise.rb での設定</h2>
+
+<p>直接は関係ないですが、 <code>config/initializers/devise.rb</code> では以下のような感じの設定でユーザー登録できるメールアドレスのドメインを制限しています。</p>
+
+<p>特殊用途に別ドメインのユーザーを登録する必要があったので、そこは <code>|</code> (or) で繋げて許可しています。</p>
+
+<pre><code class="ruby config/initializers/devise.rb">  config.email_regexp = /\A[\w+\-.]+@example\.co\.jp\z\|\Aspecial@example\.com\z/i
+</code></pre>
+
+<h2>User クラスへの追加</h2>
+
+<p><a href="https://github.com/plataformatec/devise/wiki/How-To:-Allow-users-to-sign-in-using-their-username-or-email-address">How To: Allow users to sign in using their username or email address</a> を参考にして <code>User.find_first_by_auth_conditions(warden_conditions)</code> を定義すれば良いということがわかったので、以下のように定義しました。</p>
+
+<pre><code class="ruby app/models/user.rb">  def self.find_for_database_authentication(warden_conditions)
+    if /@/ =~ warden_conditions[:email]
+      super
+    else
+      super(warden_conditions.merge(email: "#{warden_conditions[:email]}@example.co.jp"))
+    end
+  end
+</code></pre>
+
+<p>メールアドレス全体が入力された時 (<code>@</code> を含む時) はデフォルトの挙動をそのまま使い、省略された時はデフォルトのドメイン (例では <code>example.co.jp</code>) を補ってデフォルトの挙動を呼び出すようにしました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[aasm 4.10.0 の警告に monkey patch で対処した]]></title>
@@ -665,52 +713,6 @@ AH01215: \tfrom index.rb:2:in `&lt;main&gt;'
 <li><a href="https://rubyassociation.doorkeeper.jp/events/35687" title="[大阪] Rubyビジネスセミナー loTのエコシステムとワークライフバランス">大阪 Rubyビジネスセミナー loTのエコシステムとワークライフバランス</a></li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[gem install rabbit に失敗したのを解決した]]></title>
-    <link href="http://blog.n-z.jp/blog/2015-12-28-gem-install-rabbit.html"/>
-    <updated>2015-12-28T18:48:40+09:00</updated>
-    <id>http://blog.n-z.jp/blog/gem-install-rabbit</id>
-    <content type="html"><![CDATA[<p>Mac OS X 上で <code>gem install rabbit</code> でひっかかったので、その解決方法のメモです。</p>
-
-<!--more-->
-
-
-<h2>gobject-introspection</h2>
-
-<p><a href="http://www.cozmixng.org/~w3ml/index.rb/rabbit-shocker/msg/1283">http://www.cozmixng.org/~w3ml/index.rb/rabbit-shocker/msg/1283</a>
-( <a href="https://gist.github.com/znz/59ae1b8785a640916ce9">https://gist.github.com/znz/59ae1b8785a640916ce9</a> )
-のようなエラーで gobject-introspection-3.0.7 のインストールで失敗したので、
-ML で教えてもらったように
-<code>PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig gem install rabbit</code>
-でインストールすると進むようになりました。</p>
-
-<h2>poppler</h2>
-
-<p>次に poppler gem (3.0.7) のエラーでひっかかったのですが ( <a href="http://www.cozmixng.org/~w3ml/index.rb/rabbit-shocker/msg/1285">http://www.cozmixng.org/~w3ml/index.rb/rabbit-shocker/msg/1285</a> )、
-<a href="https://bugs.launchpad.net/poppler-python/+bug/1528489">https://bugs.launchpad.net/poppler-python/+bug/1528489</a> で同じエラーが python binding で報告されていて、原因は poppler-0.39.0 での変更ということだったので、
-poppler-0.38.0 に戻すことにした。</p>
-
-<p>まず homebrew のディレクトリに移動して <code>Formula/poppler.rb</code> のログをみて poppler 0.38.0 に戻せる commit hash を調べて checkout して、インストールし直して、 poppler は 0.38.0 で止めておきました。</p>
-
-<pre><code>    cd /usr/local
-    git log Library/Formula/poppler.rb
-    git checkout 6f7b9d57b25451e811e8901c560d17abd7a464f9
-    brew reinstall poppler
-    git checkout master
-    brew pin poppler
-</code></pre>
-
-<p>問題が解決したら <code>brew unpin poppler</code> でまた最新に戻せます。</p>
-
-<p>ruby-gnome2 の方でも <a href="https://github.com/ruby-gnome2/ruby-gnome2/commit/3dda85661515d71101f1028dc7d68d4e53de45b1">https://github.com/ruby-gnome2/ruby-gnome2/commit/3dda85661515d71101f1028dc7d68d4e53de45b1</a> でなおっているので、
-poppler gem の新しいバージョンがリリースされたら解決しそうです。</p>
-
-<h2>成功</h2>
-
-<p>poppler をダウングレードして <code>PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig gem install rabbit</code> で rabbit のインストールは成功しました。</p>
 ]]></content>
   </entry>
   

@@ -5,12 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>第5回 コンテナ型仮想化の情報交換会＠大阪に参加しました - @znz blog</title>
+  <title>devise で電子メールアドレスのドメイン部分を省略してもログインできるようにする - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="第5回 コンテナ型仮想化の情報交換会＠大阪に参加しました Nov 14th, 2014 7:00 pm | Comments 第5回 コンテナ型仮想化の情報交換会＠大阪
-に参加しました。 以下メモです。 いまさら聞けない Docker 前半はさくらインターネットの話でした。 &hellip;">
+  <meta name="description" content="devise で電子メールアドレスのドメイン部分を省略してもログインできるようにする Apr 13th, 2016 9:29 pm | Comments 社内向けアプリケーションのように、特定のドメインのユーザーがほとんどの場合、メールアドレスの全体を入力させるのは、 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-11-14-ct-study-osaka-5.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2016-04-13-devise-default-domain.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -84,7 +83,7 @@
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">第5回 コンテナ型仮想化の情報交換会＠大阪に参加しました</h1>
+      <h1 class="entry-title">devise で電子メールアドレスのドメイン部分を省略してもログインできるようにする</h1>
       
       <!-- zenback_title_end -->
       
@@ -96,7 +95,7 @@
 
 
 
-<time class='entry-date' datetime='2014-11-14T19:00:32+09:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>14</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>7:00 pm</span></time>
+<time class='entry-date' datetime='2016-04-13T21:29:43+09:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>9:29 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -109,70 +108,56 @@
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><a href="http://ct-study.connpass.com/event/9068/" title="第5回 コンテナ型仮想化の情報交換会＠大阪">第5回 コンテナ型仮想化の情報交換会＠大阪</a>
-に参加しました。</p>
+<div class="entry-content"><p>社内向けアプリケーションのように、特定のドメインのユーザーがほとんどの場合、メールアドレスの全体を入力させるのは、余計な手間をしいていることが多いです。</p>
+
+<p>そこで省略可能にするように変更しました。</p>
 
 <!--more-->
 
 
-<p>以下メモです。</p>
-
-<h2>いまさら聞けない Docker</h2>
+<h2>対象バージョン</h2>
 
 <ul>
-<li>前半はさくらインターネットの話でした。</li>
-<li>仮想環境を動かす基盤として専用サーバがまた増えているらしいというのが興味深いと思いました。</li>
-<li>後半は docker の基本についての話でした。</li>
-<li><a href="http://www.slideshare.net/kunihirotanaka1/immutable-infrastructuredockercontainerstudyosaka20141114">http://www.slideshare.net/kunihirotanaka1/immutable-infrastructuredockercontainerstudyosaka20141114</a></li>
+<li>ruby 2.2.4</li>
+<li>rails 4.2.6</li>
+<li>devise 3.5.6</li>
+<li>warden 1.2.6</li>
 </ul>
 
 
-<h2>Docker Registry入門</h2>
+<h2>config/initializers/devise.rb での設定</h2>
 
-<ul>
-<li><a href="https://github.com/docker/docker-registry">https://github.com/docker/docker-registry</a> の話</li>
-<li>起動は簡単</li>
-<li>pip でインストールも可能 (公式の <a href="https://github.com/docker/docker-registry/blob/master/Dockerfile">Dockerfile</a> 参照)</li>
-<li>設定は <a href="https://github.com/docker/docker-registry/blob/master/config/config_sample.yml">config_sample.yml</a> などを参照</li>
-<li>docker-registry-ui, docker-registry-web で検索すると非公式の Web UI が出てくる</li>
-<li>ミラーリングに使える
+<p>直接は関係ないですが、 <code>config/initializers/devise.rb</code> では以下のような感じの設定でユーザー登録できるメールアドレスのドメインを制限しています。</p>
 
-<ul>
-<li>docker コマンドで <code>--registry-mirror</code> オプション</li>
-<li>private registry では <code>MIRROR_SOURCE</code> を指定</li>
-</ul>
-</li>
-</ul>
+<p>特殊用途に別ドメインのユーザーを登録する必要があったので、そこは <code>|</code> (or) で繋げて許可しています。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>config/initializers/devise.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">email_regexp</span> <span class="o">=</span> <span class="sr">/\A[\w+\-.]+@example\.co\.jp\z\|\Aspecial@example\.com\z/i</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<h2>Linuxコンテナの基本と最新情報</h2>
+<h2>User クラスへの追加</h2>
 
-<ul>
-<li>namespace と cgroup</li>
-<li>sane_behavior オプション</li>
-<li>CRIU のデモ</li>
-</ul>
+<p><a href="https://github.com/plataformatec/devise/wiki/How-To:-Allow-users-to-sign-in-using-their-username-or-email-address">How To: Allow users to sign in using their username or email address</a> を参考にして <code>User.find_first_by_auth_conditions(warden_conditions)</code> を定義すれば良いということがわかったので、以下のように定義しました。</p>
 
-
-<h2>LT</h2>
-
-<p>LT では boot2docker について話しました。
-他の発表者も含めて、特に 5 分という制限はなく、緩い感じで発表していました。</p>
-
-<iframe src="http://slide.rabbit-shocker.org/authors/znz/boot2docker-upgrade/viewer.html"
-        width="640" height="524"
-        frameborder="0"
-        marginwidth="0"
-        marginheight="0"
-        scrolling="no"
-        style="border: 1px solid #ccc; border-width: 1px 1px 0; margin-bottom: 5px"
-        allowfullscreen> </iframe>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>app/models/user.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="k">def</span> <span class="nc">self</span><span class="o">.</span><span class="nf">find_for_database_authentication</span><span class="p">(</span><span class="n">warden_conditions</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">if</span> <span class="sr">/@/</span> <span class="o">=~</span> <span class="n">warden_conditions</span><span class="o">[</span><span class="ss">:email</span><span class="o">]</span>
+</span><span class='line'>      <span class="k">super</span>
+</span><span class='line'>    <span class="k">else</span>
+</span><span class='line'>      <span class="k">super</span><span class="p">(</span><span class="n">warden_conditions</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="ss">email</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">warden_conditions</span><span class="o">[</span><span class="ss">:email</span><span class="o">]</span><span class="si">}</span><span class="s2">@example.co.jp&quot;</span><span class="p">))</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>  <span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<div style="margin-bottom: 5px">
-  <a href="http://slide.rabbit-shocker.org/authors/znz/boot2docker-upgrade/" title="boot2docker upgrade">boot2docker upgrade</a>
-</div>
-
+<p>メールアドレス全体が入力された時 (<code>@</code> を含む時) はデフォルトの挙動をそのまま使い、省略された時はデフォルトのドメイン (例では <code>example.co.jp</code>) を補ってデフォルトの挙動を呼び出すようにしました。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -191,12 +176,12 @@
 
 
 
-<time class='entry-date' datetime='2014-11-14T19:00:32+09:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>14</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>7:00 pm</span></time>
+<time class='entry-date' datetime='2016-04-13T21:29:43+09:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>9:29 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/boot2docker/'>boot2docker</a>, <a class='category' href='/blog/categories/docker/'>docker</a>, <a class='category' href='/blog/categories/event/'>event</a>, <a class='category' href='/blog/categories/lxcjp/'>lxcjp</a>
+    <a class='category' href='/blog/categories/devise/'>devise</a>, <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
   
 </span>
 
@@ -223,10 +208,8 @@
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2014-11-08-k-of-jp.html" title="Previous Post: 関西オープンフォーラム2014に行ってきました">&laquo; 関西オープンフォーラム2014に行ってきました</a>
+        <a class="basic-alignment left" href="/blog/2016-04-12-aasm-warn.html" title="Previous Post: aasm 4.10.0 の警告に monkey patch で対処した">&laquo; aasm 4.10.0 の警告に monkey patch で対処した</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2014-11-19-rubymotion-mokumoku-osaka.html" title="Next Post: 第 17 回 RubyMotion もくもく会 in Osaka に参加した">第 17 回 RubyMotion もくもく会 in Osaka に参加した &raquo;</a>
       
     </p>
   </footer>
@@ -361,8 +344,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-11-14-ct-study-osaka-5.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2014-11-14-ct-study-osaka-5.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2016-04-13-devise-default-domain.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2016-04-13-devise-default-domain.html';
         var disqus_script = 'embed.js';
       
     (function () {
