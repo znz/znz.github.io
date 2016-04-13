@@ -1,0 +1,36 @@
+---
+layout: post
+title: "ngircd から inspircd に移行した"
+date: 2016-04-13 22:42:32 +0900
+comments: true
+categories: debian irc
+---
+[jessie で inspircd を設定した](/blog/2016-03-29-inspircd.html)話に書いたように、 inspircd を設定したのですが、移行元の ngircd との機能比較を使っている範囲内でしてみたいと思います。
+
+<!--more-->
+
+## 確認バージョン
+
+- ngircd 18-2 (on Ubuntu 12.04.5 LTS)
+- inspircd 2.0.17-1+deb8u1 (on Debian GNU/Linux 8.4 (jessie))
+
+## SSL/TLS 設定
+
+ngircd では `[SSL]` セクションで設定するだけでしたが、 inspircd では推奨されている `m_ssl_gnutls` を使うか `m_ssl_openssl` を使うか選ぶ必要がありました。
+推奨があるので、特に迷うことはありませんでした。
+
+## nick の長さ制限
+
+ngircd では `MaxNickLength` を 9 から 18 に変えていたのですが、 inspircd ではデフォルトで `NICKLEN=32` になっていて、設定は少し探した範囲では見つけられませんでした。
+
+## チャンネルの作成制限
+
+ngircd では `PredefChannelsOnly = yes` にしていました。 inspircd では [m_restrictchans](https://wiki.inspircd.org/Modules/2.0/restrictchans) で制限することができました。
+
+## チャンネル自動作成
+
+ngircd では `[Channel]` でチャンネルをサーバー起動時に作成していました。 inspircd では [m_permchannels](https://wiki.inspircd.org/Modules/2.0/permchannels) で作成しておくことができました。
+
+## チャンネル自動参加
+
+ngircd では接続時に自動参加させることはできなかったのですが、 inspircd では [m_conn_join](https://wiki.inspircd.org/Modules/2.0/conn_join) で接続時に強制的にチャンネルに参加させる設定ができました。
