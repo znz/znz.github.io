@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-04-13T23:03:00+09:00</updated>
+  <updated>2016-04-17T21:18:19+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,204 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[jessie で dovecot-imapd と postfix の設定をして Thunderbird 用の autoconfig ファイルを用意した]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-04-17-jessie-dovecot.html"/>
+    <updated>2016-04-17T21:14:05+09:00</updated>
+    <id>http://blog.n-z.jp/blog/jessie-dovecot</id>
+    <content type="html"><![CDATA[<p><a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0387?page=4">Ubuntu Weekly Recipe 第387回　UbuntuでSSLを利用したサービスを構築する</a> を参考にして、 Debian jessie で dovecot-imapd で IMAP サーバーの設定をしました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Debian GNU/Linux 8.4 (jessie)</li>
+<li>postfix 2.11.3-1</li>
+<li>dovecot-imapd 1:2.2.13-12~deb8u1</li>
+<li>Thunderbird 38.6.0</li>
+</ul>
+
+
+<h2>インストール</h2>
+
+<p><code>sudo aptitude install dovecot-imapd</code> でインストールしました。</p>
+
+<h2>認証設定</h2>
+
+<p>クライアントによっては plain 認証は使えず login 認証が必要なので <code>sudoedit /etc/dovecot/conf.d/10-auth.conf</code> で <code>auth_mechanisms = plain login</code> に設定を変更しました。</p>
+
+<h2>ssl 設定</h2>
+
+<p><code>sudoedit /etc/dovecot/conf.d/10-ssl.conf</code> で以下の設定を変更しました。</p>
+
+<ul>
+<li><code>ssl = no</code> を <code>ssl = required</code> に</li>
+<li><code>ssl_cert</code>, <code>ssl_key</code> を設定</li>
+<li><code>#ssl_protocols = !SSLv2</code> を <code>ssl_protocols = !SSLv2 !SSLv3</code> に</li>
+</ul>
+
+
+<p><a href="http://wiki.dovecot.org/SSL/DovecotConfiguration">http://wiki.dovecot.org/SSL/DovecotConfiguration</a> によると <code>ssl</code> の設定については <code>ssl=no</code>, <code>ssl=yes and disable_plaintext_auth=yes</code>, <code>ssl=yes and disable_plaintext_auth=yes</code>, <code>ssl=required</code> という設定の組み合わせがあるようです。</p>
+
+<h2>Maildir 設定</h2>
+
+<p>postfix の設定で <code>Maildir</code> への配送を使っているので、 <code>sudoedit /etc/dovecot/conf.d/10-mail.conf</code> で <code>mail_location = mbox:~/mail:INBOX=/var/mail/%u</code> を <code>mail_location = maildir:~/Maildir</code> に設定を変更しました。</p>
+
+<h2>postfix との認証連携</h2>
+
+<p>まず <code>sudo ls -al /var/spool/postfix/private</code> で <code>auth</code> がないのを確認しました。</p>
+
+<p><code>sudoedit /etc/dovecot/conf.d/10-master.conf</code> で</p>
+
+<figure class='code'><figcaption><span>/etc/dovecot/conf.d/10-master.conf</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  #unix_listener /var/spool/postfix/private/auth {
+</span><span class='line'>  #  mode = 0666
+</span><span class='line'>  #}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>を</p>
+
+<figure class='code'><figcaption><span>/etc/dovecot/conf.d/10-master.conf</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  unix_listener /var/spool/postfix/private/auth {
+</span><span class='line'>    mode = 0660
+</span><span class='line'>    user = postfix
+</span><span class='line'>    group = postfix
+</span><span class='line'>  }</span></code></pre></td></tr></table></div></figure>
+
+
+<p>に変更しました。</p>
+
+<p>設定反映後に <code>sudo ls -al /var/spool/postfix/private</code> で <code>auth</code> が owner も group も postfix でパーミッションが <code>srw-rw----</code> になっているのを確認します。</p>
+
+<h2>設定反映</h2>
+
+<p><code>sudo service dovecot restart</code> で設定を反映しました。</p>
+
+<p><code>journalctl -u dovecot.service</code> や <code>sudo ss -lntp | grep dovecot</code> で問題なく起動していることを確認しました。</p>
+
+<h2>ufw でポート開放</h2>
+
+<p><code>ufw allow 993/tcp</code> と <code>ufw limit 993/tcp</code> でポートを開放して連続接続数制限をしました。</p>
+
+<h2>postfix 設定</h2>
+
+<h3>SSL 設定</h3>
+
+<p><code>smtpd_tls_cert_file</code> と <code>smtpd_tls_key_file</code> を設定します。
+<code>smtpd_tls_cert_file</code> は中間証明書も結合したファイルを指定します。</p>
+
+<p>その他の設定は以下のように設定しました。</p>
+
+<figure class='code'><figcaption><span>/etc/postfix/main.cf</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3
+</span><span class='line'>smtpd_tls_protocols = !SSLv2, !SSLv3
+</span><span class='line'>smtp_tls_mandatory_protocols = !SSLv2, !SSLv3
+</span><span class='line'>smtp_tls_protocols = !SSLv2, !SSLv3</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>smtpd_tls_security_level = may</code> は設定すると外部からのメール送信で問題が起きたことがあったので、メールの送信テストをしつつ、様子を見ながら設定するかどうか決めます。</p>
+
+<h3>SASL 設定</h3>
+
+<p><a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0387?page=4">Ubuntu Weekly Recipe</a> では <code>smtpd_sasl_auth_enable</code> は <code>/etc/postfix/main.cf</code> でも <code>yes</code> にしていますが、 <code>/etc/postfix/master.cf</code> で <code>smtps</code> と <code>submission</code> で個別に <code>yes</code> に設定されているので、 <code>/etc/postfix/main.cf</code> では <code>no</code> のままにしておきます。</p>
+
+<p>そうしておかないと 25 番ポートでも SMTP-Auth が有効になって、しかも <code>smtpd_tls_security_level = may</code> だとパスワードが平文で流れても良いということになるので、危険なことが起きる可能性があります。
+最近は OBP25B という対策が普及しているので、一般のクライアントが間違って平文で送信してしまう可能性は低いと思いますが、余計な危険は避けておくのが良いと思います。</p>
+
+<p>CRAM-MD5 が有効なら <code>smtpd_sasl_security_options = noanonymous,noplaintext</code> にして <code>master.cf</code> で <code>noanonymous</code> だけにしても良いかと思ったのですが、 plain 認証と login 認証しかない状態で <code>noplaintext</code> もつけてしまうと 25 番ポートで listen しているのに接続しても最初の <code>220 mail.example.org ESMTP Postfix (Debian/GNU)</code> が出てこなくてログに <code>fatal: no SASL authentication mechanisms</code> と記録されるという状態になってしまいました。
+<code>/etc/passwd</code> (<code>/etc/shadow</code>) による認証だとパスワードをハッシュ化された状態でしか保存していないため、 CRAM-MD5 は使えないので、これ以上の検証はできませんでした。</p>
+
+<p>以上を踏まえて以下のように設定しました。</p>
+
+<figure class='code'><figcaption><span>/etc/postfix/main.cf</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>smtpd_sasl_auth_enable = no
+</span><span class='line'>smtpd_sasl_local_domain = $myhostname
+</span><span class='line'>smtpd_sasl_security_options = noanonymous
+</span><span class='line'>smtpd_sasl_type = dovecot
+</span><span class='line'>smtpd_sasl_path = private/auth
+</span><span class='line'>broken_sasl_auth_clients = yes</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>smtpd_sasl_local_domain</code> や <code>broken_sasl_auth_clients</code> は不要かもしれません。</p>
+
+<h2>Thunderbird 用自動設定ファイル設置</h2>
+
+<p><a href="https://developer.mozilla.org/ja/docs/Mozilla/Thunderbird/Autoconfiguration">Thunderbird のアカウント情報自動設定機能</a>のために <code>mail/config-v1.1.xml</code> を設置します。</p>
+
+<p><code>@example.com</code> のメールアドレスに対して <code>http://autoconfig.example.com/mail/config-v1.1.xml</code> か <code>http://example.com/.well-known/autoconfig/mail/config-v1.1.xml</code> を用意します。</p>
+
+<p>内容は以下のような感じになります。
+<code>mozilla.org</code> の例との主な違いは <code>authentication</code> を <code>password-encrypted</code> ではなく <code>password-cleartext</code> にしているところと、 <code>username</code> を <code>%EMAILADDRESS%</code> ではなく <code>%EMAILLOCALPART%</code> にしているところです。</p>
+
+<figure class='code'><figcaption><span>mail/config-v1.1.xml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='xml'><span class='line'><span class="cp">&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;</span>
+</span><span class='line'><span class="nt">&lt;clientConfig</span> <span class="na">version=</span><span class="s">&quot;1.1&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;emailProvider</span> <span class="na">id=</span><span class="s">&quot;example.com&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;domain&gt;</span>example.com<span class="nt">&lt;/domain&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;displayName&gt;</span>Example.com Mail<span class="nt">&lt;/displayName&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;displayShortName&gt;</span>example.com<span class="nt">&lt;/displayShortName&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;incomingServer</span> <span class="na">type=</span><span class="s">&quot;imap&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;hostname&gt;</span>mail.example.com<span class="nt">&lt;/hostname&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;port&gt;</span>993<span class="nt">&lt;/port&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;socketType&gt;</span>SSL<span class="nt">&lt;/socketType&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;authentication&gt;</span>password-cleartext<span class="nt">&lt;/authentication&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;username&gt;</span>%EMAILLOCALPART%<span class="nt">&lt;/username&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/incomingServer&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;outgoingServer</span> <span class="na">type=</span><span class="s">&quot;smtp&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;hostname&gt;</span>mail.example.com<span class="nt">&lt;/hostname&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;port&gt;</span>587<span class="nt">&lt;/port&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;socketType&gt;</span>STARTTLS<span class="nt">&lt;/socketType&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;authentication&gt;</span>password-cleartext<span class="nt">&lt;/authentication&gt;</span>
+</span><span class='line'>      <span class="nt">&lt;username&gt;</span>%EMAILLOCALPART%<span class="nt">&lt;/username&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/outgoingServer&gt;</span>
+</span><span class='line'>  <span class="nt">&lt;/emailProvider&gt;</span>
+</span><span class='line'><span class="nt">&lt;/clientConfig&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p><a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0387?page=4">Ubuntu Weekly Recipe</a></p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ngircd から inspircd に移行した]]></title>
@@ -3462,58 +3660,6 @@ poppler gem の新しいバージョンがリリースされたら解決しそ�
 <h2>成功</h2>
 
 <p>poppler をダウングレードして <code>PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig gem install rabbit</code> で rabbit のインストールは成功しました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[12月27日 型システム入門読書会　第2回(兵庫県)に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2015-12-27-amagasakirb.html"/>
-    <updated>2015-12-27T13:06:28+09:00</updated>
-    <id>http://blog.n-z.jp/blog/amagasakirb</id>
-    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/event/index/362134/" title="12月27日 型システム入門読書会　第2回(兵庫県)">12月27日 型システム入門読書会　第2回(兵庫県)</a>
-に参加しました。
-今回は第 8 章から第 14 章でした。</p>
-
-<!--more-->
-
-
-
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4274069117" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-<p>以下、今回のメモです。</p>
-
-<ul>
-<li>(前回参加していない) 初参加の人の方が多かった</li>
-<li>8.3 安全性よりも健全性という方がよく使うという話</li>
-<li>p.83 の下の方から p.84 にかけてがわかりにくい話</li>
-<li>λ の右下に → という表記が珍しいという話</li>
-<li><a href="https://ja.wikipedia.org/wiki/2018%E5%B9%B4%E5%95%8F%E9%A1%8C" title="2018年問題">2018年問題</a>の話</li>
-<li>OCaml の let rec と F# の話</li>
-<li>p.92 脱糖衣 という用語が珍しいという話</li>
-<li>p.93 (例えば Java では、設計により、すべての型が短縮名で表される。第 19 章参照)</li>
-<li>p.113 正しく型付けされたプログラムの評価は有限ステップで停止することが保証されている</li>
-<li>関数の型の話らしい</li>
-<li>13?15?章を読んでから12章を読んだ方が良いかもしれないという話</li>
-<li>ノート PC で Linux を使った時の消費電力の話</li>
-<li><a href="http://science.srad.jp/story/15/12/08/0552206/">バナナの病気</a>の話</li>
-<li>代入の返り値が unit の利点欠点の話</li>
-<li>swift は unit らしい</li>
-<li>機械学習の話</li>
-<li>swift は型推論に時間がかかるとコンパイルエラーになるという話</li>
-<li>swift は言語としては良い言語という話 (クラスライブラリが負の遺産という話)</li>
-<li>swift の Optional の話</li>
-<li>教育に使う言語の話</li>
-<li><a href="https://ja.wikipedia.org/wiki/LabVIEW" title="LabVIEW">LabVIEW</a> の話</li>
-<li>レゴ マインドストーム の話</li>
-<li>演習問題の答えが付いている話</li>
-<li>訳語集など付録が充実している話</li>
-<li>次回は 2/7(日) 予定</li>
-</ul>
-
 ]]></content>
   </entry>
   

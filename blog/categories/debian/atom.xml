@@ -4,7 +4,7 @@
   <title><![CDATA[Category: debian | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/debian/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-04-13T23:03:00+09:00</updated>
+  <updated>2016-04-17T21:18:19+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,163 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[jessie で dovecot-imapd と postfix の設定をして Thunderbird 用の autoconfig ファイルを用意した]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-04-17-jessie-dovecot.html"/>
+    <updated>2016-04-17T21:14:05+09:00</updated>
+    <id>http://blog.n-z.jp/blog/jessie-dovecot</id>
+    <content type="html"><![CDATA[<p><a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0387?page=4">Ubuntu Weekly Recipe 第387回　UbuntuでSSLを利用したサービスを構築する</a> を参考にして、 Debian jessie で dovecot-imapd で IMAP サーバーの設定をしました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Debian GNU/Linux 8.4 (jessie)</li>
+<li>postfix 2.11.3-1</li>
+<li>dovecot-imapd 1:2.2.13-12~deb8u1</li>
+<li>Thunderbird 38.6.0</li>
+</ul>
+
+
+<h2>インストール</h2>
+
+<p><code>sudo aptitude install dovecot-imapd</code> でインストールしました。</p>
+
+<h2>認証設定</h2>
+
+<p>クライアントによっては plain 認証は使えず login 認証が必要なので <code>sudoedit /etc/dovecot/conf.d/10-auth.conf</code> で <code>auth_mechanisms = plain login</code> に設定を変更しました。</p>
+
+<h2>ssl 設定</h2>
+
+<p><code>sudoedit /etc/dovecot/conf.d/10-ssl.conf</code> で以下の設定を変更しました。</p>
+
+<ul>
+<li><code>ssl = no</code> を <code>ssl = required</code> に</li>
+<li><code>ssl_cert</code>, <code>ssl_key</code> を設定</li>
+<li><code>#ssl_protocols = !SSLv2</code> を <code>ssl_protocols = !SSLv2 !SSLv3</code> に</li>
+</ul>
+
+
+<p><a href="http://wiki.dovecot.org/SSL/DovecotConfiguration">http://wiki.dovecot.org/SSL/DovecotConfiguration</a> によると <code>ssl</code> の設定については <code>ssl=no</code>, <code>ssl=yes and disable_plaintext_auth=yes</code>, <code>ssl=yes and disable_plaintext_auth=yes</code>, <code>ssl=required</code> という設定の組み合わせがあるようです。</p>
+
+<h2>Maildir 設定</h2>
+
+<p>postfix の設定で <code>Maildir</code> への配送を使っているので、 <code>sudoedit /etc/dovecot/conf.d/10-mail.conf</code> で <code>mail_location = mbox:~/mail:INBOX=/var/mail/%u</code> を <code>mail_location = maildir:~/Maildir</code> に設定を変更しました。</p>
+
+<h2>postfix との認証連携</h2>
+
+<p>まず <code>sudo ls -al /var/spool/postfix/private</code> で <code>auth</code> がないのを確認しました。</p>
+
+<p><code>sudoedit /etc/dovecot/conf.d/10-master.conf</code> で</p>
+
+<pre><code class="plain /etc/dovecot/conf.d/10-master.conf">  #unix_listener /var/spool/postfix/private/auth {
+  #  mode = 0666
+  #}
+</code></pre>
+
+<p>を</p>
+
+<pre><code class="plain /etc/dovecot/conf.d/10-master.conf">  unix_listener /var/spool/postfix/private/auth {
+    mode = 0660
+    user = postfix
+    group = postfix
+  }
+</code></pre>
+
+<p>に変更しました。</p>
+
+<p>設定反映後に <code>sudo ls -al /var/spool/postfix/private</code> で <code>auth</code> が owner も group も postfix でパーミッションが <code>srw-rw----</code> になっているのを確認します。</p>
+
+<h2>設定反映</h2>
+
+<p><code>sudo service dovecot restart</code> で設定を反映しました。</p>
+
+<p><code>journalctl -u dovecot.service</code> や <code>sudo ss -lntp | grep dovecot</code> で問題なく起動していることを確認しました。</p>
+
+<h2>ufw でポート開放</h2>
+
+<p><code>ufw allow 993/tcp</code> と <code>ufw limit 993/tcp</code> でポートを開放して連続接続数制限をしました。</p>
+
+<h2>postfix 設定</h2>
+
+<h3>SSL 設定</h3>
+
+<p><code>smtpd_tls_cert_file</code> と <code>smtpd_tls_key_file</code> を設定します。
+<code>smtpd_tls_cert_file</code> は中間証明書も結合したファイルを指定します。</p>
+
+<p>その他の設定は以下のように設定しました。</p>
+
+<pre><code class="plain /etc/postfix/main.cf">smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3
+smtpd_tls_protocols = !SSLv2, !SSLv3
+smtp_tls_mandatory_protocols = !SSLv2, !SSLv3
+smtp_tls_protocols = !SSLv2, !SSLv3
+</code></pre>
+
+<p><code>smtpd_tls_security_level = may</code> は設定すると外部からのメール送信で問題が起きたことがあったので、メールの送信テストをしつつ、様子を見ながら設定するかどうか決めます。</p>
+
+<h3>SASL 設定</h3>
+
+<p><a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0387?page=4">Ubuntu Weekly Recipe</a> では <code>smtpd_sasl_auth_enable</code> は <code>/etc/postfix/main.cf</code> でも <code>yes</code> にしていますが、 <code>/etc/postfix/master.cf</code> で <code>smtps</code> と <code>submission</code> で個別に <code>yes</code> に設定されているので、 <code>/etc/postfix/main.cf</code> では <code>no</code> のままにしておきます。</p>
+
+<p>そうしておかないと 25 番ポートでも SMTP-Auth が有効になって、しかも <code>smtpd_tls_security_level = may</code> だとパスワードが平文で流れても良いということになるので、危険なことが起きる可能性があります。
+最近は OBP25B という対策が普及しているので、一般のクライアントが間違って平文で送信してしまう可能性は低いと思いますが、余計な危険は避けておくのが良いと思います。</p>
+
+<p>CRAM-MD5 が有効なら <code>smtpd_sasl_security_options = noanonymous,noplaintext</code> にして <code>master.cf</code> で <code>noanonymous</code> だけにしても良いかと思ったのですが、 plain 認証と login 認証しかない状態で <code>noplaintext</code> もつけてしまうと 25 番ポートで listen しているのに接続しても最初の <code>220 mail.example.org ESMTP Postfix (Debian/GNU)</code> が出てこなくてログに <code>fatal: no SASL authentication mechanisms</code> と記録されるという状態になってしまいました。
+<code>/etc/passwd</code> (<code>/etc/shadow</code>) による認証だとパスワードをハッシュ化された状態でしか保存していないため、 CRAM-MD5 は使えないので、これ以上の検証はできませんでした。</p>
+
+<p>以上を踏まえて以下のように設定しました。</p>
+
+<pre><code class="plain /etc/postfix/main.cf">smtpd_sasl_auth_enable = no
+smtpd_sasl_local_domain = $myhostname
+smtpd_sasl_security_options = noanonymous
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+broken_sasl_auth_clients = yes
+</code></pre>
+
+<p><code>smtpd_sasl_local_domain</code> や <code>broken_sasl_auth_clients</code> は不要かもしれません。</p>
+
+<h2>Thunderbird 用自動設定ファイル設置</h2>
+
+<p><a href="https://developer.mozilla.org/ja/docs/Mozilla/Thunderbird/Autoconfiguration">Thunderbird のアカウント情報自動設定機能</a>のために <code>mail/config-v1.1.xml</code> を設置します。</p>
+
+<p><code>@example.com</code> のメールアドレスに対して <code>http://autoconfig.example.com/mail/config-v1.1.xml</code> か <code>http://example.com/.well-known/autoconfig/mail/config-v1.1.xml</code> を用意します。</p>
+
+<p>内容は以下のような感じになります。
+<code>mozilla.org</code> の例との主な違いは <code>authentication</code> を <code>password-encrypted</code> ではなく <code>password-cleartext</code> にしているところと、 <code>username</code> を <code>%EMAILADDRESS%</code> ではなく <code>%EMAILLOCALPART%</code> にしているところです。</p>
+
+<pre><code class="xml mail/config-v1.1.xml">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;clientConfig version="1.1"&gt;
+  &lt;emailProvider id="example.com"&gt;
+    &lt;domain&gt;example.com&lt;/domain&gt;
+    &lt;displayName&gt;Example.com Mail&lt;/displayName&gt;
+    &lt;displayShortName&gt;example.com&lt;/displayShortName&gt;
+    &lt;incomingServer type="imap"&gt;
+      &lt;hostname&gt;mail.example.com&lt;/hostname&gt;
+      &lt;port&gt;993&lt;/port&gt;
+      &lt;socketType&gt;SSL&lt;/socketType&gt;
+      &lt;authentication&gt;password-cleartext&lt;/authentication&gt;
+      &lt;username&gt;%EMAILLOCALPART%&lt;/username&gt;
+    &lt;/incomingServer&gt;
+    &lt;outgoingServer type="smtp"&gt;
+      &lt;hostname&gt;mail.example.com&lt;/hostname&gt;
+      &lt;port&gt;587&lt;/port&gt;
+      &lt;socketType&gt;STARTTLS&lt;/socketType&gt;
+      &lt;authentication&gt;password-cleartext&lt;/authentication&gt;
+      &lt;username&gt;%EMAILLOCALPART%&lt;/username&gt;
+    &lt;/outgoingServer&gt;
+  &lt;/emailProvider&gt;
+&lt;/clientConfig&gt;
+</code></pre>
+
+<h2>まとめ</h2>
+
+<p><a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0387?page=4">Ubuntu Weekly Recipe</a></p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ngircd から inspircd に移行した]]></title>
@@ -755,92 +912,6 @@ Hint: Some lines were ellipsized, use -l to show in full.
 <h2>まとめ</h2>
 
 <p><code>systemd</code> になって <code>/etc/default/inspircd</code> がきかなくなるなど、 Debian 的にまだ過渡期な部分があるようですが、 inspircd としては問題なく動かすことができました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 108 回 関西 Debian 勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-03-27-kansai-debian-meeting.html"/>
-    <updated>2016-03-27T14:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
-    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20160327" title="第 108 回 関西 Debian 勉強会">第 108 回 関西 Debian 勉強会</a>に参加しました。</p>
-
-<!--more-->
-
-
-<p>以下メモです。</p>
-
-<h2>オープニングなど</h2>
-
-<ul>
-<li><a href="https://twitter.com/search?q=%23kansaidebian&amp;src=typd">ハッシュタグは #kansaidebian</a></li>
-<li><a href="https://wiki.debian.org/KansaiDebianMeeting/20160228">前回</a> の事前配布資料がまだアップロードされていなかった。</li>
-<li><a href="http://mozilla.debian.net/">http://mozilla.debian.net/</a> から jessie にも firefox がインストールできる。</li>
-<li><a href="http://abi-laboratory.pro/tracker/">Application Binary Interface (ABI) Tracker</a></li>
-<li>その他の話題</li>
-<li><a href="http://badlock.org/" title="Badlock Bug">Badlock Bug</a></li>
-<li><a href="http://security.srad.jp/story/16/03/25/2045223/" title="WindowsおよびSambaの重大なバグ「Badlock」、4月12日のパッチリリースが告知される">WindowsおよびSambaの重大なバグ「Badlock」、4月12日のパッチリリースが告知される</a></li>
-<li>Wheezy LTS</li>
-<li><a href="https://debian-handbook.info/browse/ja-JP/stable/" title="Debian 管理者ハンドブック">Debian 管理者ハンドブック</a> のペーパーバック版が発売されているという話</li>
-<li>jessie で tdiary が消えた理由などを聞いた。</li>
-<li><a href="https://packages.qa.debian.org/t/tdiary/news/20140624T163916Z.html" title="tdiary REMOVED from testing">tdiary REMOVED from testing</a> にあるように ruby-imagesize が壊れたのが原因で upstream で ruby-fastimage に依存が変わっていたので、新規パッケージで入れて tdiary の更新をしようとしたら freeze されて jessie に入らなかったという感じの話だった。</li>
-<li>doorkeeper の申し込みで事前課題の入力必須だったのがわかりにくいという話</li>
-<li>doorkeeper で管理者側でアンケート結果の一覧が表示できないので不便という話</li>
-<li>doorkeeper の方は事前課題として「systemd で起動する Jessie 環境を御用意下さい．幾つか設定を変更することがありますので，VM 環境の方が無難かもしれません．」というのが出ていたのに debian wiki の方には書いていなかった話</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>tdiary で org-mode</li>
-</ul>
-
-
-<h2>systemd に浸ってみた</h2>
-
-<ul>
-<li><code>systemctl</code></li>
-<li><code>systemctl status</code></li>
-<li><code>systemd-analyze</code></li>
-<li><code>systemd-analyze blame</code></li>
-<li><code>systemd-cgls</code></li>
-<li><code>timedatectl</code></li>
-<li><code>systemctl status systemd-timesyncd</code></li>
-<li><code>sudo timedatectl set-ntp true</code></li>
-<li><code>systemctl status -l systemd-timesyncd</code></li>
-<li><code>/etc/systemd/timesyncd.conf</code></li>
-<li><code>timesyncd.conf(5)</code> の man がない (jessie だと)</li>
-<li>sid だと設定が変わっているが jessie と同じ設定でも動いている</li>
-<li><code>/usr/lib/systemd/ntp-units.d/</code></li>
-<li><code>/usr/share/doc/systemd/changelog.Debian.gz</code> に <code>* Run timesyncd in virtual machines. (Closes: #762343)</code> という行があって仮想環境では upstream の timesyncd は動かないようになっている</li>
-<li><code>dmesg</code> と <code>dmesg -T</code></li>
-<li><a href="https://0xstubs.org/systemd-timesyncd-and-leap-seconds/" title="How systemd-timesyncd handles leap seconds">How systemd-timesyncd handles leap seconds</a></li>
-<li><code>systemctl status systemd-resolved</code></li>
-<li>使うには有効にした後、 <code>/etc/nsswitch.conf</code> の <code>dns</code> を <code>resolve</code> に変更、または <code>/run/systemd/resolve/resolv.conf</code> を <code>/etc/resolv.conf</code> にシンボリックリンク</li>
-<li><code>/etc/systemd/resolved.conf</code> に設定</li>
-<li><code>systemctl status systemd-networkd</code></li>
-<li><code>/etc/systemd/network/</code> 以下で設定</li>
-<li>debian では udev に設定が入っていて eth0 とかになる</li>
-<li><code>systemd.network(5)</code> の man を見る</li>
-<li><code>Driver=</code> が有効になるのは systemd 216 で jessie では使えない</li>
-<li><code>[DHCP]</code> セクションに <code>UseDNS=</code> という設定がある</li>
-<li><code>systemd.link(5)</code> や <code>systemd.netdev(5)</code> も参照</li>
-<li><code>ConditionHost=</code> などを使えば単一の設定ファイルを複数ホストで共有できる</li>
-<li>無線を使う場合には向かない</li>
-<li>NetworkManager とは排他</li>
-<li><code>sudo apt-get install systemd-cron</code></li>
-<li>cron, anacron とは conflict していて入れ替わる</li>
-<li><code>systemctl list-unit-files | grep cron</code></li>
-<li><code>cat /lib/systemd/system/cron-hourly.timer</code></li>
-<li><code>crontab -e</code> は動かなくなる</li>
-<li><code>~/.config/systemd/user/</code> 以下にユーザーごとの設定を置ける</li>
-<li><code>systemctl --user list-unit-files</code></li>
-<li>GNOME や KDE だと systemd を使うしかなさそう</li>
-<li>Xfce だと systemd はハイバネーションで失敗するのでやめた方が良い</li>
-<li>systemd の情報を見る時はバージョン番号を確認しましょう</li>
-</ul>
-
 ]]></content>
   </entry>
   
