@@ -14,6 +14,7 @@ categories: debian linux
 - Debian GNU/Linux 8.4 (jessie)
 - postfix 2.11.3-1
 - dovecot-imapd 1:2.2.13-12~deb8u1
+- Thunderbird 38.6.0
 
 ## インストール
 
