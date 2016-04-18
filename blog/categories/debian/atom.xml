@@ -4,7 +4,7 @@
   <title><![CDATA[Category: debian | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/debian/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-04-17T21:18:19+09:00</updated>
+  <updated>2016-04-18T22:37:53+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,118 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[公開鍵認証 + libpam-google-authenticator による二要素認証を特定のユーザーだけ対象に導入する]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-04-18-libpam-google-authenticator.html"/>
+    <updated>2016-04-18T21:26:42+09:00</updated>
+    <id>http://blog.n-z.jp/blog/libpam-google-authenticator</id>
+    <content type="html"><![CDATA[<p>普通に <code>libpam-google-authenticator</code> を PAM の設定に追加するだけだと公開鍵認証の時に使われなくて二要素認証として嬉しくなかったのと、
+<code>libpam-google-authenticator</code> による二要素認証をいきなり全ユーザーに導入してしまうと <code>google-authenticator</code> コマンドによるトークン作成をしていないユーザーが入れなくなってしまったり、リモートバックアップ処理の自動実行などで入れなくなったりして困るので、
+一部のユーザーだけ二要素認証が必須になる設定を考えてみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Debian GNU/Linux 8.4 (jessie)</li>
+<li>openssh-server 1:6.7p1-5+deb8u1</li>
+<li>libpam-google-authenticator 20130529-2</li>
+</ul>
+
+
+<h2>設定時の注意</h2>
+
+<p>PAM の設定変更は失敗するとログインできなくなって危険なので、設定を戻したりできるシェルを最低一個は残した状態で設定を変更することをおすすめします。</p>
+
+<h2>PAM の設定</h2>
+
+<p>PAM の設定では <code>@include common-auth</code> の代わりに <code>pam_unix.so</code> を <code>pam_google_authenticator.so</code> に置き換えた設定を <code>/etc/pam.d/sshd</code> に追加しました。</p>
+
+<p>これで <code>keyboard-interactive</code> 認証では unix password による認証は使えなくなって <code>libpam-google-authenticator</code> による認証だけになります。</p>
+
+<p>ワンタイムパスワードなので、入力している値を見られても困らないし、実際 GitHub などでの入力画面では隠されていないので、 <code>/usr/share/doc/libpam-google-authenticator/README.gz</code> にも書いてある <code>echo_verification_code</code> の設定も追加してエコーバックされるようにしてみました。</p>
+
+<pre><code class="plain /etc/pam.d/sshd">+auth [success=1 default=ignore] pam_google_authenticator.so echo_verification_code
++auth requisite pam_deny.so
++auth required pam_permit.so
+ # Standard Un*x authentication.
+-@include common-auth
++#@include common-auth
+</code></pre>
+
+<h2>sshd の設定</h2>
+
+<p>他の <code>pam_google_authenticator.so</code> 導入記事にも書いてあるように
+<code>ChallengeResponseAuthentication</code> を <code>yes</code> に変更します。
+この設定を変更しないと <code>Verification code:</code> の入力プロンプトが出てこなくて、
+認証コードの入力ができません。</p>
+
+<pre><code class="plain /etc/ssh/sshd_config">ChallengeResponseAuthentication yes
+</code></pre>
+
+<p>最後に適当なグループ (今回は <code>/var/log/</code> のログファイルのグループなどに利用されている <code>adm</code> グループを利用しましたが <code>sudo</code> グループなどでも良いかもしれません) を <code>Match</code> で指定して、そのグループに属するユーザーの時だけ <code>AuthenticationMethods</code> で公開鍵認証と <code>keyboard-interactive</code> 認証の両方を必須にしました。</p>
+
+<pre><code class="plain /etc/ssh/sshd_config">Match Group adm
+AuthenticationMethods publickey,keyboard-interactive
+</code></pre>
+
+<h2>トークンを生成しているユーザーだけ有効にする設定</h2>
+
+<p><code>google-authenticator</code> コマンドで <code>~/.google-authenticator</code> を生成しているユーザーだけ有効にすることができたので、その方法もメモしておきます。</p>
+
+<p>方法としては <code>pam_exec</code> を使ってファイルの存在チェックをすれば可能でした。
+<code>pam_exec.so</code> の引数部分では直接環境変数展開ができなかったので、別途外部に実行ファイルを用意する方法がデバッグもしやすくておすすめです。</p>
+
+<p>存在チェックが成功すればそのまま次の行に進んで、存在しなければ後続の 2 行を飛ばして <code>pam_permit.so</code> で許可するようにしました。</p>
+
+<p><code>pam_exec.so</code> に <code>quiet</code> をつけないと <code>~/.google-authenticator</code> がない場合に毎回 <code>/usr/local/bin/check_google_authenticator.sh failed: exit code 1</code> が出るので、 <code>quiet</code> をつけて抑制するようにしました。
+<code>Authenticated with partial success.</code> というメッセージは <code>ssh</code> が出しているので消せませんでした。</p>
+
+<p>PAM の設定の詳細については<a href="http://tokyodebian.alioth.debian.org/pdf/debianmeetingresume2012-natsu.pdf">大統一Debian勉強会 特大号 東京エリア/関西Debian勉強会のPDF</a> か、<a href="http://gum.debian.or.jp/2012/">大統一Debian勉強会</a> の「Linux-PAMの設定について」の発表資料を参考にしてください。</p>
+
+<pre><code class="plain /etc/pam.d/sshd">auth [success=ignore default=2] pam_exec.so quiet /usr/local/bin/check_google_authenticator.sh
+auth [success=1 default=ignore] pam_google_authenticator.so echo_verification_code
+auth requisite pam_deny.so
+auth required pam_permit.so
+</code></pre>
+
+<p>存在のチェック用スクリプトは <code>pam_exec</code> 経由で実行された時には <code>HOME</code> 環境変数が設定されていなくて、代わりに <code>PAM_USER</code> などが設定されているのを利用して <code>HOME</code> を設定されていなければ設定するようにしました。</p>
+
+<pre><code class="bash /usr/local/bin/check_google_authenticator.sh">#!/bin/sh
+: ${HOME:=$(getent passwd "$PAM_USER" | awk -F: '{print $6}')}
+test -f "$HOME/.google_authenticator"
+</code></pre>
+
+<h2>/etc/pam.d/sshd にまとめる書き方</h2>
+
+<p>発表資料の PDF を確認して気付いたのですが、 <code>[ ]</code> でくくれば空白の入った引数も渡せるので、シェルを経由するようにすれば変数展開付きのコマンドを含められました。</p>
+
+<pre><code class="plain /etc/pam.d/sshd">auth [success=ignore default=2] pam_exec.so quiet /bin/sh -c [: ${HOME:=$(getent passwd "$PAM_USER" | awk -F: '{print $6}')}; test -f "$HOME/.google_authenticator"]
+auth [success=1 default=ignore] pam_google_authenticator.so echo_verification_code
+auth requisite pam_deny.so
+auth required pam_permit.so
+</code></pre>
+
+<h2>google-authenticator コマンドによるトークンの作成</h2>
+
+<p>二要素認証を使うユーザーで <code>google-authenticator</code> コマンドを実行してトークンを作成して、 iOS なら Google Authenticator のアプリに、 Android なら Google 認証システムアプリに QR コードを読み込ませておきます。
+<code>google-authenticator</code> コマンドの質問は全部 <code>y</code> で良いと思います。</p>
+
+<p>設定は <code>~/.google_authenticator</code> に保存されています。</p>
+
+<p>テスト環境では QR コードは読み込ませずに <code>emergency scratch codes</code> を使っていたのですが、
+<code>emergency scratch codes</code> は使っていくと <code>~/.google_authenticator</code> からどんどん減っていくので、適当なタイミングで <code>google-authenticator</code> コマンドを使って再生成させないと入れなくなりそうでした。</p>
+
+<h2>失敗した設定例</h2>
+
+<p><code>Match</code> で <code>ChallengeResponseAuthentication</code> を設定しようとしましたが、 <code>Directive 'ChallengeResponseAuthentication' is not allowed within a Match block</code> というエラーで設定できませんでした。</p>
+
+<p>公開鍵ごとに二要素認証の設定ができないか、検討してみましたが、使えそうな設定項目が見つかりませんでした。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[jessie で dovecot-imapd と postfix の設定をして Thunderbird 用の autoconfig ファイルを用意した]]></title>
@@ -773,145 +885,6 @@ fi
 <p><code>rsync</code> によるバックアップなので、圧縮などもするバックアップツールと違い、バックアップの内容も元のディレクトリ構造そのままでわかりやすいので、一部だけ復元するなどの操作も素直に実行しやすくなっています。</p>
 
 <p>ハードリンクなので i-node は消費しますが、変化がないファイルについては容量を消費しないので、バックアップサイズも抑えられます。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[jessie で inspircd を設定した]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-03-29-inspircd.html"/>
-    <updated>2016-03-29T21:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/inspircd</id>
-    <content type="html"><![CDATA[<p><a href="/blog/2016-03-22-wheezy-to-jessie.html">先日 wheezy から jessie にあげた</a>マシンでサーバー管理にも使っている ircd として inspircd の設定をしたので、そのメモです。</p>
-
-<!--more-->
-
-
-<h2>確認バージョン</h2>
-
-<ul>
-<li>Debian GNU/Linux 8.3 (jessie)</li>
-<li>inspircd 2.0.17-1+deb8u1</li>
-</ul>
-
-
-<h2>インストールと起動確認</h2>
-
-<p><code>sudo aptitude install inspircd</code> でインストールしました。</p>
-
-<p>systemd 管理になって <code>/etc/default/inspircd</code> の <code>INSPIRCD_ENABLED=0</code> に関係なく起動するようになっていました。</p>
-
-<pre><code>% systemctl status inspircd
-● inspircd.service - IRC server
-   Loaded: loaded (/lib/systemd/system/inspircd.service; enabled)
-   Active: active (running) since 火 2016-03-29 17:37:37 JST; 3min 34s ago
- Main PID: 11613 (inspircd)
-   CGroup: /system.slice/inspircd.service
-           └─11613 /usr/sbin/inspircd --logfile /var/log/inspircd.log --config /etc/inspircd/insp...
-
- 3月 29 17:37:37 ns8 inspircd[11613]: Inspire Internet Relay Chat Server, compiled on Mar 23...1:24
- 3月 29 17:37:37 ns8 inspircd[11613]: (C) InspIRCd Development Team.
- 3月 29 17:37:37 ns8 inspircd[11613]: Developers:
- 3月 29 17:37:37 ns8 inspircd[11613]:         Brain, FrostyCoolSlug, w00t, Om, Special, peavey
- 3月 29 17:37:37 ns8 inspircd[11613]: aquanight, psychon, dz, danieldg, jackmcbarn
- 3月 29 17:37:37 ns8 inspircd[11613]: Attila
- 3月 29 17:37:37 ns8 inspircd[11613]: Others:                        See /INFO Output
- 3月 29 17:37:37 ns8 inspircd[11613]: Loading core commands........................................
- 3月 29 17:37:37 ns8 inspircd[11613]: InspIRCd is now running as 'irc.local'[811] with 1024 ...kets
-Hint: Some lines were ellipsized, use -l to show in full.
-</code></pre>
-
-<p><code>systemd-journal</code> グループに所属しているので、ログも出ています。</p>
-
-<h2>設定変更</h2>
-
-<p><code>sudoedit /etc/inspircd/inspircd.conf</code> で設定変更して、 <code>sudo service inspircd reload</code> で反映しました。</p>
-
-<pre><code>&lt;server name="irc.example.org"
-        description="Example.org IRC Server"
-        network="example.org"&gt;
-
-&lt;admin name="Kazuhiro Nishiyama"
-       nick="znz"
-       email="zn@mbf.nifty.com"&gt;
-</code></pre>
-
-<p>に変更しました。</p>
-
-<p>NAT の中のサーバー群からも接続するので connect の localmax と globalmax を 3 から 9 に変更しました。</p>
-
-<h3>tls 設定</h3>
-
-<p>推奨設定の gnutls を使って設定をしました。
-証明書は <a href="https://www.startssl.com/">https://www.startssl.com/</a> で無料で発行してもらったものを使いました。</p>
-
-<pre><code>&lt;bind address="" port="6697" ssl="gnutls"&gt;
-&lt;module name="m_ssl_gnutls.so"&gt;
-&lt;gnutls cafile="" crlfile="" certfile="/etc/ssl/certs/irc.example.org.2016.crt" keyfile="/etc/ssl/private/irc.example.org.2016.key" dh_bits="1024"&gt;
-</code></pre>
-
-<h3>auto join 設定</h3>
-
-<p>slack に似せて <code>#general</code> と <code>#random</code> に自動で join するように</p>
-
-<pre><code>&lt;module name="m_conn_join.so"&gt;
-&lt;autojoin channel="#general,#random"&gt;
-</code></pre>
-
-<p>を追加しました。</p>
-
-<h3>server password 設定</h3>
-
-<p>connect タグに password 属性を追加しました。</p>
-
-<h3>permchannels 設定</h3>
-
-<p><code>#general</code> と <code>#random</code> はトピックを自動設定、 <code>#servers</code> についてはパスワードを設定するために permchannels 設定を使いました。</p>
-
-<pre><code>&lt;module name="m_permchannels.so"&gt;
-&lt;permchannels channel="#general" modes="n" topic="General Talk"&gt;
-&lt;permchannels channel="#random" modes="n" topic="Random Talk"&gt;
-&lt;permchannels channel="#servers" modes="stnk PASSWORD" topic="Servers Status"&gt;
-</code></pre>
-
-<p>を追加しました。</p>
-
-<h2>チャンネル作成制限</h2>
-
-<p>permchannels であらかじめチャンネルを作成しておくことにしたので、 <code>restrictchans</code> でチャンネル作成を完全に禁止することにしました。</p>
-
-<pre><code>&lt;module name="m_restrictchans.so"&gt;
-</code></pre>
-
-<h2>ufw</h2>
-
-<pre><code>sudo ufw allow 6697/tcp
-</code></pre>
-
-<p>で 6697 番ポートへの接続を許可しました。</p>
-
-<h2>tls 関係ファイル設置</h2>
-
-<p>inspircd は irc ユーザー権限で動くので、そのユーザーが読めるように秘密鍵を設置しました。
-<code>/etc/ssl/private</code> ディレクトリを読めるようにするために <code>ssl-cert</code> グループへの追加も行いました。</p>
-
-<pre><code>%  sudoedit /etc/ssl/irc.example.org.2016.csr
-%  sudoedit /etc/ssl/certs/irc.example.org.2016.crt
-%  sudoedit /etc/ssl/private/irc.example.org.2016.key
-%  sudo chmod 640 /etc/ssl/private/irc.example.org.2016.key
-%  sudo chgrp irc /etc/ssl/private/irc.example.org.2016.key
-%  sudo adduser irc ssl-cert
-ユーザ `irc' をグループ `ssl-cert' に追加しています...
-ユーザ irc をグループ ssl-cert に追加
-完了。
-</code></pre>
-
-<h2>DNS 設定</h2>
-
-<p>今まで別のサーバーで動かしていたので、 DNS の A レコードを変更して、変更が反映されるのを待ち、新しいサーバーにクライアントが接続されるのを確認しました。</p>
-
-<h2>まとめ</h2>
-
-<p><code>systemd</code> になって <code>/etc/default/inspircd</code> がきかなくなるなど、 Debian 的にまだ過渡期な部分があるようですが、 inspircd としては問題なく動かすことができました。</p>
 ]]></content>
   </entry>
   
