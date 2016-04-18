@@ -65,10 +65,10 @@ AuthenticationMethods publickey,keyboard-interactive
 
 存在チェックが成功すればそのまま次の行に進んで、存在しなければ後続の 2 行を飛ばして `pam_permit.so` で許可するようにしました。
 
+PAM の設定の詳細については[大統一Debian勉強会 特大号 東京エリア/関西Debian勉強会のPDF](http://tokyodebian.alioth.debian.org/pdf/debianmeetingresume2012-natsu.pdf) か、[大統一Debian勉強会](http://gum.debian.or.jp/2012/) の「Linux-PAMの設定について」の発表資料を参考にしてください。
+
 `pam_exec.so` に `quiet` をつけないと `~/.google-authenticator` がない場合に毎回 `/usr/local/bin/check_google_authenticator.sh failed: exit code 1` が出るので、 `quiet` をつけて抑制するようにしました。
 `Authenticated with partial success.` というメッセージは `ssh` が出しているので消せませんでした。
-
-PAM の設定の詳細については[大統一Debian勉強会 特大号 東京エリア/関西Debian勉強会のPDF](http://tokyodebian.alioth.debian.org/pdf/debianmeetingresume2012-natsu.pdf) か、[大統一Debian勉強会](http://gum.debian.or.jp/2012/) の「Linux-PAMの設定について」の発表資料を参考にしてください。
 
 ```plain /etc/pam.d/sshd
 auth [success=ignore default=2] pam_exec.so quiet /usr/local/bin/check_google_authenticator.sh
