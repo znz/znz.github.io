@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-04-30T23:49:39+09:00</updated>
+  <updated>2016-05-01T00:16:02+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,184 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[wheezy から jessie にあげたら mailman でエラーが起きていた]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-04-30-mailman-error.html"/>
+    <updated>2016-04-30T23:52:04+09:00</updated>
+    <id>http://blog.n-z.jp/blog/mailman-error</id>
+    <content type="html"><![CDATA[<p>wheezy から jessie にあげた VPS の環境のうちの 1 個で mailman を使っていたのですが、ちゃんと確認していなかったらエラーが起きてちゃんとメールが配送されていなかったので、修正しました。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>Debian GNU/Linux amd64 の wheezy から jessie にあげた環境</li>
+<li><a href="http://packages.debian.org/mailman">mailman</a> 1:2.1.15-1+deb7u1 から 1:2.1.18-2</li>
+</ul>
+
+
+<h2>エラーの内容</h2>
+
+<p><code>/var/log/mailman/error</code> を見ると以下のようなエラーが出てメールの配送がされていませんでした。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Apr 30 17:02:36 2016 (17947) Uncaught runner exception: 'utf8' codec can't decode byte 0xcb in position 5: invalid conti
+</span><span class='line'>nuation byte
+</span><span class='line'>Apr 30 17:02:36 2016 (17947) Traceback (most recent call last):
+</span><span class='line'>  File "/var/lib/mailman/Mailman/Queue/Runner.py", line 119, in _oneloop
+</span><span class='line'>    self._onefile(msg, msgdata)
+</span><span class='line'>  File "/var/lib/mailman/Mailman/Queue/Runner.py", line 190, in _onefile
+</span><span class='line'>    keepqueued = self._dispose(mlist, msg, msgdata)
+</span><span class='line'>  File "/var/lib/mailman/Mailman/Queue/IncomingRunner.py", line 130, in _dispose
+</span><span class='line'>    more = self._dopipeline(mlist, msg, msgdata, pipeline)
+</span><span class='line'>  File "/var/lib/mailman/Mailman/Queue/IncomingRunner.py", line 153, in _dopipeline
+</span><span class='line'>    sys.modules[modname].process(mlist, msg, msgdata)
+</span><span class='line'>  File "/var/lib/mailman/Mailman/Handlers/CookHeaders.py", line 179, in process
+</span><span class='line'>    i18ndesc = uheader(mlist, mlist.description, 'Reply-To')
+</span><span class='line'>  File "/var/lib/mailman/Mailman/Handlers/CookHeaders.py", line 65, in uheader
+</span><span class='line'>    return Header(s, charset, maxlinelen, header_name, continuation_ws)
+</span><span class='line'>  File "/usr/lib/python2.7/email/header.py", line 183, in __init__
+</span><span class='line'>    self.append(s, charset, errors)
+</span><span class='line'>  File "/usr/lib/python2.7/email/header.py", line 267, in append
+</span><span class='line'>    ustr = unicode(s, incodec, errors)
+</span><span class='line'>UnicodeDecodeError: 'utf8' codec can't decode byte 0xcb in position 5: invalid continuation byte
+</span><span class='line'>
+</span><span class='line'>Apr 30 17:02:36 2016 (17947) SHUNTING: 1462003356.244866+ea73a2d0f0636f691f515c4b199b5e8c21436142</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>調査</h2>
+
+<p>エラーメッセージで適当に切り出していろいろ検索してみたところ、
+<a href="https://bugs.launchpad.net/mailman/+bug/1462755">qrunner crashes on invalid unicode sequence</a>
+と同じ現象だとわかりました。</p>
+
+<p>コメントにあるように調査してみたところ、確かに description に問題がありそうでした。
+Web の設定画面で見てみると info も化けていたので、元の設定を調査するために <code>withlist</code> の環境で表示しておきました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'># withlist lilo
+</span><span class='line'>lilo のリストを読み込中 (ロック解除)
+</span><span class='line'>変数 `m' が lilo の MailList インスタンスです
+</span><span class='line'>&gt;&gt;&gt; m.preferred_language
+</span><span class='line'>'ja'
+</span><span class='line'>&gt;&gt;&gt; m.description
+</span><span class='line'>'LILO \xcb\xdc\xc2\xceML'
+</span><span class='line'>&gt;&gt;&gt; m.info
+</span><span class='line'>'LILO ( \xa4\xea\xa4\xed : Linux Install Learning Osaka ) \xa4\xcf\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xb2\xf1\xa4\xc7\xa4\xb9\xa1\xa3 \xbc\xe7\xa4\xcb\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xa4\xce\xb8\xf2\xce\xae\xa1\xa2\xbe\xf0\xca\xf3\xb8\xf2\xb4\xb9\xa4\xce\xbe\xec\xa4\xf2\xc4\xf3\xb6\xa1\xa4\xb9\xa4\xeb\xa4\xbf\xa4\xe1\xa4\xcb\xb3\xe8\xc6\xb0\xa4\xb7\xa4\xc6\xa4\xa4\xa4\xde\xa4\xb9\xa1\xa3'
+</span><span class='line'>&gt;&gt;&gt;
+</span><span class='line'>最終処理中
+</span><span class='line'>#</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>変換</h2>
+
+<p>何でも良かったのですが、使い慣れているという理由で ruby の nkf で変換しました。
+変換した結果を Web の設定画面から設定し直しました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% rbenv exec irb -r irb/completion --simple-prompt
+</span><span class='line'>&gt;&gt; require 'nkf'
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; NKF.nkf('-w',"LILO \xcb\xdc\xc2\xceML")
+</span><span class='line'>=&gt; "LILO 本体ML"
+</span><span class='line'>&gt;&gt; NKF.nkf('-w',"'LILO ( \xa4\xea\xa4\xed : Linux Install Learning Osaka ) \xa4\xcf\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xb2\xf1\xa4\xc7\xa4\xb9\xa1\xa3 \xbc\xe7\xa4\xcb\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xa4\xce\xb8\xf2\xce\xae\xa1\xa2\xbe\xf0\xca\xf3\xb8\xf2\xb4\xb9\xa4\xce\xbe\xec\xa4\xf2\xc4\xf3\xb6\xa1\xa4\xb9\xa4\xeb\xa4\xbf\xa4\xe1\xa4\xcb\xb3\xe8\xc6\xb0\xa4\xb7\xa4\xc6\xa4\xa4\xa4\xde\xa4\xb9\xa1\xa3'")
+</span><span class='line'>=&gt; "'LILO ( りろ : Linux Install Learning Osaka ) は関西の Linux ユーザ会です。 主に関西の Linux ユーザの交流、情報交換 の場を提供するために活動しています。'"
+</span><span class='line'>&gt;&gt;</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>失敗したメールの再配送</h2>
+
+<p>設定し直した後、しばらく待ってみても再配送はされなかったので、メールキューの強制再実行が必要かと思って、 <code>/var/lib/mailman</code> 以下を調べてみたところ、 <code>/var/lib/mailman/qfiles/shunt/</code> の中にファイルが溜まっていることがわかりました。</p>
+
+<p>さらに調べていて見つけた
+<a href="http://docs.python.jp/contrib/mailman/siteadmin.html#unshunt">http://docs.python.jp/contrib/mailman/siteadmin.html#unshunt</a>
+によると qrunner が処理中にエラーを発生させて処理できなかったメールは <code>&lt;prefix&gt;/qfiles/shunt</code> に保存されていて、<code>unshunt</code> コマンドで処理できるらしいということなので、試してみたところ、ちゃんと溜まっていたメールが配送されました。</p>
+
+<h2>NEWS.Debian 確認</h2>
+
+<p>復旧を優先して、ちゃんと見るのを忘れていたのですが、 <code>/usr/share/doc/mailman/NEWS.Debian.gz</code> によると <code>mailman (1:2.1.16-1exp1)</code> で UTF-8 化したから description を webinterface などから設定しなおせと書いてありました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>mailman (1:2.1.16-1exp1) experimental; urgency=low
+</span><span class='line'>
+</span><span class='line'>  This version has changed the encoding of most strings, templates
+</span><span class='line'>  and pages to UTF-8 to meet the Debian release goal of full UTF-8
+</span><span class='line'>  support in all packages. It also no longer automatically converts
+</span><span class='line'>  mails to ISO-8859-1.
+</span><span class='line'>
+</span><span class='line'>  If you have been using any nōn-ASCII strings in places such as
+</span><span class='line'>  the mailing list description, these were be stored wrongly in the
+</span><span class='line'>  list configuration file (config.pck), so you will need to change
+</span><span class='line'>  those (e.g. via the webinterface) again in order to have them be
+</span><span class='line'>  displayed correctly.
+</span><span class='line'>
+</span><span class='line'> -- Thorsten Glaser &lt;tg@mirbsd.de&gt;  Sun, 29 Dec 2013 14:35:50 +0000</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p>mailman が UTF-8 対応で description や info などに日本語などの ASCII 以外の文字を使っているとエラーが起きるという話でした。</p>
+
+<p>実行例で気付いた人もいると思いますが、 lilo.linux.or.jp のサーバーでの話で、他にも管理用の ML などがあるのですが、それらは description や info が空だったので問題が起きていなかったようです。</p>
+
+<p>教訓としては、急いでいても apt-listchanges で最低限 NEWS だけはちゃんと読むようにした方が良いということでした。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[KOF勉強会(今回のテーマ：ネットワーク)に参加しました]]></title>
@@ -3640,99 +3818,6 @@ No renewals were attempted.
 <li>fix コンビネータの話</li>
 <li>C# にも async,await が入っているという話</li>
 <li>HTTP2 の話</li>
-</ul>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[LILO&東海道らぐオフラインミーティング 2016/01/16 に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-01-16-lilo-tokaidolug.html"/>
-    <updated>2016-01-16T13:00:34+09:00</updated>
-    <id>http://blog.n-z.jp/blog/lilo-tokaidolug</id>
-    <content type="html"><![CDATA[<p><a href="https://lilo.doorkeeper.jp/events/36903" title="LILO&amp;東海道らぐオフラインミーティング 2016/01/16 - LILO | Doorkeeper">LILO&amp;東海道らぐオフラインミーティング 2016/01/16 - LILO | Doorkeeper</a>
-に参加しました。</p>
-
-<p>今回もアンカンファレンス形式でした。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<p>今回のメモです。</p>
-
-<ul>
-<li>ハッシュタグ: <code>#lilo_jp</code> <code>#東海道らぐ</code></li>
-<li>登録参加者数 10名</li>
-<li>自己紹介から</li>
-<li>Chromecast を持ってきている人がいてプロジェクターにさしていた。</li>
-<li>Kapper さん : ARM Linux、Android、RaspberryPi で Windows とアプリをX86エミュで動かそう</li>
-<li>ARM は x86 に比べて浮動小数点演算が遅い</li>
-<li>ExaGear Desktop という商用のエミュレータもあるらしい</li>
-<li>qemu より速い</li>
-<li>DOSBox, Bochs は遅いが移植性が高い</li>
-<li>qemu-user-static と schroot で Wine などを動かしている話</li>
-<li>Debian は mutlilib をサポートしているが multi-binary はサポートしていないので <code>apt-get *:i386</code> で i386 のバイナリで上書きされてしまわないように schroot で環境を分けているという話</li>
-<li>プレゼンに使った環境は Ubuntu を追加で入れた Chromebook</li>
-<li><code>uname</code> は <code>armv7l</code></li>
-<li>Crouton</li>
-<li>派生して Windows 上で仮想環境の話</li>
-<li>Virtual PC, Hyper-V, VirtualBox, VMware Player</li>
-<li>山内さん : Raspberry Pi で遊んだ後は Piface を買ってホームエレクトロニクスとホームセキュリティで実用しよう</li>
-<li>Tocos 無線DIO</li>
-<li>TWE-Lite DIP (トワイライト・ディップ)</li>
-<li><a href="https://osdn.jp/projects/pepolinux/wiki/epicon">epicon</a> でシリアル通信</li>
-<li>休憩</li>
-<li>榎さん : LibreOffice の最近の動向と Debian での LibreOffice パッケージについて</li>
-<li>LibreOffice Online (LOOL)</li>
-<li>ownCloud の編集画面で LOOL を使うデモがある</li>
-<li>VirtualBox のイメージが用意されているので簡単に試せる</li>
-<li>LibreOffice Viewer for Android</li>
-<li>Advisory Board</li>
-<li>ヨーロッパでは行政中心に導入が進行中</li>
-<li>日本での活動</li>
-<li>UI の翻訳率は高い</li>
-<li>Help などは追いついていない</li>
-<li>イベント</li>
-<li>HackFest</li>
-<li>LibreOffice Conference 2015 への日本からの参加者は 3 名</li>
-<li>各言語のコミュニティ : LibreItalia (非営利団体), ベトナムコミュニティ</li>
-<li><a href="http://itpro.nikkeibp.co.jp/atcl/column/15/102800252/102800003/" title="ヨーロッパでのLibreOffice活用は移行期から安定期に、アジアも活発な動き">ヨーロッパでのLibreOffice活用は移行期から安定期に、アジアも活発な動き</a></li>
-<li>LibreOffice mini Conference 2016 in Japan</li>
-<li>現時点での参加者が 13 名に増えている話</li>
-<li>Debian での LibreOffice パッケージ</li>
-<li>遅れてきた人の自己紹介</li>
-<li>Shimada Hirofumi さん : opencocon</li>
-<li>新ビルドサーバ</li>
-<li>Allwinner タブレットの OS を作ってみる (途中)</li>
-<li>linux-sunxi コミュニティ</li>
-<li><a href="http://linux-sunxi.org/Identification_guide">http://linux-sunxi.org/Identification_guide</a></li>
-<li><a href="http://linux-sunxi.org/GPL_Violations">http://linux-sunxi.org/GPL_Violations</a></li>
-<li>Android 上だと型番などの情報がわからないので、バラしてプロセッサなどを確認</li>
-<li><a href="http://linux-sunxi.org/Format_Q8">http://linux-sunxi.org/Format_Q8</a></li>
-<li>OpenEmbedded + meta-sunxi</li>
-<li><a href="https://github.com/linux-sunxi/meta-sunxi">https://github.com/linux-sunxi/meta-sunxi</a></li>
-<li>Device Tree, FEX</li>
-<li>sunxi-tools</li>
-<li>microUSB で転送</li>
-<li>現状はカーネルが起動するところまで</li>
-<li>デモ</li>
-<li>まとめ</li>
-<li>上周りはどうするのかが問題</li>
-<li>選択肢のひとつ : <a href="http://plasma-mobile.org/technology/">http://plasma-mobile.org/technology/</a></li>
-<li>休憩</li>
-<li>矢吹さん : Sphinx + VOoM</li>
-<li><a href="http://www.vim.org/scripts/script.php?script_id=2657" title="VOoM : Vim two-pane outliner">VOoM : Vim two-pane outliner</a></li>
-<li><a href="http://vim-voom.github.io/" title="VOoM: two-pane text outliner">VOoM: two-pane text outliner</a></li>
-<li><a href="http://sphinx-users.jp/" title="Sphinx-Users.jp — Python製ドキュメンテーションビルダー、Sphinxの日本ユーザ会">Sphinx-Users.jp — Python製ドキュメンテーションビルダー、Sphinxの日本ユーザ会</a></li>
-<li><a rel="nofollow" href="http://www.amazon.co.jp/gp/product/4478490279/ref=as_li_ss_tl?ie=UTF8&amp;camp=247&amp;creative=7399&amp;creativeASIN=4478490279&amp;linkCode=as2&amp;tag=znz-22">考える技術・書く技術―問題解決力を伸ばすピラミッド原則</a><img src="http://ir-jp.amazon-adsystem.com/e/ir?t=znz-22&amp;l=as2&amp;o=9&amp;a=4478490279" width="1" height="1" border="0" alt="" style="border:none !important; margin:0px !important;" /></li>
-<li><a href="https://packages.debian.org/sid/vim-voom">https://packages.debian.org/sid/vim-voom</a></li>
-<li>すがさん : <a href="http://www.geocities.jp/sugachan1973/doc/funtouki.html" title="システム奮闘記">システム奮闘記</a> 進捗</li>
-<li>LAN の減衰、表皮効果</li>
-<li>さとうさん : Raspberry Pi と魚眼レンズのカメラなどの実演</li>
-<li>丸市 展之さん : OSM 3D マップの話</li>
-<li>榎さん : 最後にちょっとだけ ownCloud + LibreOffice Online のデモ</li>
 </ul>
 
 ]]></content>

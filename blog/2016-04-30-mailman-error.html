@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: zabbix - @znz blog</title>
+  <title>wheezy から jessie にあげたら mailman でエラーが起きていた - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Category: zabbix">
+  <meta name="description" content="wheezy から jessie にあげたら mailman でエラーが起きていた Apr 30th, 2016 11:52 pm | Comments wheezy から jessie にあげた VPS の環境のうちの 1 個で mailman を使っていたのですが、 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/categories/zabbix/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2016-04-30-mailman-error.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,54 +76,276 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: zabbix</h1>
+    
+      
+      <!-- zenback_title_begin -->
+      
+      <h1 class="entry-title">wheezy から jessie にあげたら mailman でエラーが起きていた</h1>
+      
+      <!-- zenback_title_end -->
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2016-04-30T23:52:04+09:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>30</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>11:52 pm</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
 
-  
-  <h2>2015</h2>
+<!-- zenback_body_begin -->
 
-<article>
-  
-<h1><a href="/blog/2015-03-13-zabbix-24-pgsql.html">Ubuntu 14.04 LTS に Zabbix 2.4 を PostgreSQL を使う設定で入れた</a></h1>
-<time datetime="2015-03-13T21:00:00+09:00" pubdate><span class='month'>Mar</span> <span class='day'>13</span> <span class='year'>2015</span></time>
+<div class="entry-content"><p>wheezy から jessie にあげた VPS の環境のうちの 1 個で mailman を使っていたのですが、ちゃんと確認していなかったらエラーが起きてちゃんとメールが配送されていなかったので、修正しました。</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/postgresql/'>postgresql</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>, <a class='category' href='/blog/categories/zabbix/'>zabbix</a></span>
-</footer>
+<!--more-->
 
 
-</article>
+<h2>環境</h2>
+
+<ul>
+<li>Debian GNU/Linux amd64 の wheezy から jessie にあげた環境</li>
+<li><a href="http://packages.debian.org/mailman">mailman</a> 1:2.1.15-1+deb7u1 から 1:2.1.18-2</li>
+</ul>
 
 
+<h2>エラーの内容</h2>
 
-  
-  <h2>2014</h2>
+<p><code>/var/log/mailman/error</code> を見ると以下のようなエラーが出てメールの配送がされていませんでした。</p>
 
-<article>
-  
-<h1><a href="/blog/2014-02-04-zabbix-memcached.html">zabbixでmemcachedのヒット率を記録する</a></h1>
-<time datetime="2014-02-04T19:14:01+09:00" pubdate><span class='month'>Feb</span> <span class='day'>04</span> <span class='year'>2014</span></time>
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Apr 30 17:02:36 2016 (17947) Uncaught runner exception: 'utf8' codec can't decode byte 0xcb in position 5: invalid conti
+</span><span class='line'>nuation byte
+</span><span class='line'>Apr 30 17:02:36 2016 (17947) Traceback (most recent call last):
+</span><span class='line'>  File "/var/lib/mailman/Mailman/Queue/Runner.py", line 119, in _oneloop
+</span><span class='line'>    self._onefile(msg, msgdata)
+</span><span class='line'>  File "/var/lib/mailman/Mailman/Queue/Runner.py", line 190, in _onefile
+</span><span class='line'>    keepqueued = self._dispose(mlist, msg, msgdata)
+</span><span class='line'>  File "/var/lib/mailman/Mailman/Queue/IncomingRunner.py", line 130, in _dispose
+</span><span class='line'>    more = self._dopipeline(mlist, msg, msgdata, pipeline)
+</span><span class='line'>  File "/var/lib/mailman/Mailman/Queue/IncomingRunner.py", line 153, in _dopipeline
+</span><span class='line'>    sys.modules[modname].process(mlist, msg, msgdata)
+</span><span class='line'>  File "/var/lib/mailman/Mailman/Handlers/CookHeaders.py", line 179, in process
+</span><span class='line'>    i18ndesc = uheader(mlist, mlist.description, 'Reply-To')
+</span><span class='line'>  File "/var/lib/mailman/Mailman/Handlers/CookHeaders.py", line 65, in uheader
+</span><span class='line'>    return Header(s, charset, maxlinelen, header_name, continuation_ws)
+</span><span class='line'>  File "/usr/lib/python2.7/email/header.py", line 183, in __init__
+</span><span class='line'>    self.append(s, charset, errors)
+</span><span class='line'>  File "/usr/lib/python2.7/email/header.py", line 267, in append
+</span><span class='line'>    ustr = unicode(s, incodec, errors)
+</span><span class='line'>UnicodeDecodeError: 'utf8' codec can't decode byte 0xcb in position 5: invalid continuation byte
+</span><span class='line'>
+</span><span class='line'>Apr 30 17:02:36 2016 (17947) SHUNTING: 1462003356.244866+ea73a2d0f0636f691f515c4b199b5e8c21436142</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/memcached/'>memcached</a>, <a class='category' href='/blog/categories/zabbix/'>zabbix</a></span>
-</footer>
+
+<h2>調査</h2>
+
+<p>エラーメッセージで適当に切り出していろいろ検索してみたところ、
+<a href="https://bugs.launchpad.net/mailman/+bug/1462755">qrunner crashes on invalid unicode sequence</a>
+と同じ現象だとわかりました。</p>
+
+<p>コメントにあるように調査してみたところ、確かに description に問題がありそうでした。
+Web の設定画面で見てみると info も化けていたので、元の設定を調査するために <code>withlist</code> の環境で表示しておきました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'># withlist lilo
+</span><span class='line'>lilo のリストを読み込中 (ロック解除)
+</span><span class='line'>変数 `m' が lilo の MailList インスタンスです
+</span><span class='line'>&gt;&gt;&gt; m.preferred_language
+</span><span class='line'>'ja'
+</span><span class='line'>&gt;&gt;&gt; m.description
+</span><span class='line'>'LILO \xcb\xdc\xc2\xceML'
+</span><span class='line'>&gt;&gt;&gt; m.info
+</span><span class='line'>'LILO ( \xa4\xea\xa4\xed : Linux Install Learning Osaka ) \xa4\xcf\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xb2\xf1\xa4\xc7\xa4\xb9\xa1\xa3 \xbc\xe7\xa4\xcb\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xa4\xce\xb8\xf2\xce\xae\xa1\xa2\xbe\xf0\xca\xf3\xb8\xf2\xb4\xb9\xa4\xce\xbe\xec\xa4\xf2\xc4\xf3\xb6\xa1\xa4\xb9\xa4\xeb\xa4\xbf\xa4\xe1\xa4\xcb\xb3\xe8\xc6\xb0\xa4\xb7\xa4\xc6\xa4\xa4\xa4\xde\xa4\xb9\xa1\xa3'
+</span><span class='line'>&gt;&gt;&gt;
+</span><span class='line'>最終処理中
+</span><span class='line'>#</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-</article>
+<h2>変換</h2>
 
+<p>何でも良かったのですが、使い慣れているという理由で ruby の nkf で変換しました。
+変換した結果を Web の設定画面から設定し直しました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% rbenv exec irb -r irb/completion --simple-prompt
+</span><span class='line'>&gt;&gt; require 'nkf'
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; NKF.nkf('-w',"LILO \xcb\xdc\xc2\xceML")
+</span><span class='line'>=&gt; "LILO 本体ML"
+</span><span class='line'>&gt;&gt; NKF.nkf('-w',"'LILO ( \xa4\xea\xa4\xed : Linux Install Learning Osaka ) \xa4\xcf\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xb2\xf1\xa4\xc7\xa4\xb9\xa1\xa3 \xbc\xe7\xa4\xcb\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xa4\xce\xb8\xf2\xce\xae\xa1\xa2\xbe\xf0\xca\xf3\xb8\xf2\xb4\xb9\xa4\xce\xbe\xec\xa4\xf2\xc4\xf3\xb6\xa1\xa4\xb9\xa4\xeb\xa4\xbf\xa4\xe1\xa4\xcb\xb3\xe8\xc6\xb0\xa4\xb7\xa4\xc6\xa4\xa4\xa4\xde\xa4\xb9\xa1\xa3'")
+</span><span class='line'>=&gt; "'LILO ( りろ : Linux Install Learning Osaka ) は関西の Linux ユーザ会です。 主に関西の Linux ユーザの交流、情報交換 の場を提供するために活動しています。'"
+</span><span class='line'>&gt;&gt;</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h2>失敗したメールの再配送</h2>
+
+<p>設定し直した後、しばらく待ってみても再配送はされなかったので、メールキューの強制再実行が必要かと思って、 <code>/var/lib/mailman</code> 以下を調べてみたところ、 <code>/var/lib/mailman/qfiles/shunt/</code> の中にファイルが溜まっていることがわかりました。</p>
+
+<p>さらに調べていて見つけた
+<a href="http://docs.python.jp/contrib/mailman/siteadmin.html#unshunt">http://docs.python.jp/contrib/mailman/siteadmin.html#unshunt</a>
+によると qrunner が処理中にエラーを発生させて処理できなかったメールは <code>&lt;prefix&gt;/qfiles/shunt</code> に保存されていて、<code>unshunt</code> コマンドで処理できるらしいということなので、試してみたところ、ちゃんと溜まっていたメールが配送されました。</p>
+
+<h2>NEWS.Debian 確認</h2>
+
+<p>復旧を優先して、ちゃんと見るのを忘れていたのですが、 <code>/usr/share/doc/mailman/NEWS.Debian.gz</code> によると <code>mailman (1:2.1.16-1exp1)</code> で UTF-8 化したから description を webinterface などから設定しなおせと書いてありました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>mailman (1:2.1.16-1exp1) experimental; urgency=low
+</span><span class='line'>
+</span><span class='line'>  This version has changed the encoding of most strings, templates
+</span><span class='line'>  and pages to UTF-8 to meet the Debian release goal of full UTF-8
+</span><span class='line'>  support in all packages. It also no longer automatically converts
+</span><span class='line'>  mails to ISO-8859-1.
+</span><span class='line'>
+</span><span class='line'>  If you have been using any nōn-ASCII strings in places such as
+</span><span class='line'>  the mailing list description, these were be stored wrongly in the
+</span><span class='line'>  list configuration file (config.pck), so you will need to change
+</span><span class='line'>  those (e.g. via the webinterface) again in order to have them be
+</span><span class='line'>  displayed correctly.
+</span><span class='line'>
+</span><span class='line'> -- Thorsten Glaser &lt;tg@mirbsd.de&gt;  Sun, 29 Dec 2013 14:35:50 +0000</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h2>まとめ</h2>
+
+<p>mailman が UTF-8 対応で description や info などに日本語などの ASCII 以外の文字を使っているとエラーが起きるという話でした。</p>
+
+<p>実行例で気付いた人もいると思いますが、 lilo.linux.or.jp のサーバーでの話で、他にも管理用の ML などがあるのですが、それらは description や info が空だったので問題が起きていなかったようです。</p>
+
+<p>教訓としては、急いでいても apt-listchanges で最低限 NEWS だけはちゃんと読むようにした方が良いということでした。</p>
 </div>
 
+<!-- zenback_body_end -->
+
+
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2016-04-30T23:52:04+09:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>30</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>11:52 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/linux/'>linux</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2016-04-30-kof.html" title="Previous Post: KOF勉強会(今回のテーマ：ネットワーク)に参加しました">&laquo; KOF勉強会(今回のテーマ：ネットワーク)に参加しました</a>
+      
+      
+    </p>
+  </footer>
 </article>
 
+<section>
+  <!-- X:S ZenBackWidget --><div id="zenback-widget-loader"></div><script type="text/javascript">!function(d,i){if(!d.getElementById(i)){var r=Math.ceil((new Date()*1)*Math.random());var j=d.createElement("script");j.id=i;j.async=true;j.src="//w.zenback.jp/v1/?base_uri=http%3A//blog.n-z.jp/&nsid=122901358100652638%3A%3A122901381991399941&rand="+r;d.body.appendChild(j);}}(document,"zenback-widget-js");</script><!-- X:E ZenBackWidget -->
+
+</section>
+
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -241,7 +463,10 @@ Hatena.BookmarkWidget.load();
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2016-04-30-mailman-error.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2016-04-30-mailman-error.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

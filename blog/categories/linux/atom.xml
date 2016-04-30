@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-04-30T23:49:39+09:00</updated>
+  <updated>2016-05-01T00:16:02+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,128 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[wheezy から jessie にあげたら mailman でエラーが起きていた]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-04-30-mailman-error.html"/>
+    <updated>2016-04-30T23:52:04+09:00</updated>
+    <id>http://blog.n-z.jp/blog/mailman-error</id>
+    <content type="html"><![CDATA[<p>wheezy から jessie にあげた VPS の環境のうちの 1 個で mailman を使っていたのですが、ちゃんと確認していなかったらエラーが起きてちゃんとメールが配送されていなかったので、修正しました。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>Debian GNU/Linux amd64 の wheezy から jessie にあげた環境</li>
+<li><a href="http://packages.debian.org/mailman">mailman</a> 1:2.1.15-1+deb7u1 から 1:2.1.18-2</li>
+</ul>
+
+
+<h2>エラーの内容</h2>
+
+<p><code>/var/log/mailman/error</code> を見ると以下のようなエラーが出てメールの配送がされていませんでした。</p>
+
+<pre><code>Apr 30 17:02:36 2016 (17947) Uncaught runner exception: 'utf8' codec can't decode byte 0xcb in position 5: invalid conti
+nuation byte
+Apr 30 17:02:36 2016 (17947) Traceback (most recent call last):
+  File "/var/lib/mailman/Mailman/Queue/Runner.py", line 119, in _oneloop
+    self._onefile(msg, msgdata)
+  File "/var/lib/mailman/Mailman/Queue/Runner.py", line 190, in _onefile
+    keepqueued = self._dispose(mlist, msg, msgdata)
+  File "/var/lib/mailman/Mailman/Queue/IncomingRunner.py", line 130, in _dispose
+    more = self._dopipeline(mlist, msg, msgdata, pipeline)
+  File "/var/lib/mailman/Mailman/Queue/IncomingRunner.py", line 153, in _dopipeline
+    sys.modules[modname].process(mlist, msg, msgdata)
+  File "/var/lib/mailman/Mailman/Handlers/CookHeaders.py", line 179, in process
+    i18ndesc = uheader(mlist, mlist.description, 'Reply-To')
+  File "/var/lib/mailman/Mailman/Handlers/CookHeaders.py", line 65, in uheader
+    return Header(s, charset, maxlinelen, header_name, continuation_ws)
+  File "/usr/lib/python2.7/email/header.py", line 183, in __init__
+    self.append(s, charset, errors)
+  File "/usr/lib/python2.7/email/header.py", line 267, in append
+    ustr = unicode(s, incodec, errors)
+UnicodeDecodeError: 'utf8' codec can't decode byte 0xcb in position 5: invalid continuation byte
+
+Apr 30 17:02:36 2016 (17947) SHUNTING: 1462003356.244866+ea73a2d0f0636f691f515c4b199b5e8c21436142
+</code></pre>
+
+<h2>調査</h2>
+
+<p>エラーメッセージで適当に切り出していろいろ検索してみたところ、
+<a href="https://bugs.launchpad.net/mailman/+bug/1462755">qrunner crashes on invalid unicode sequence</a>
+と同じ現象だとわかりました。</p>
+
+<p>コメントにあるように調査してみたところ、確かに description に問題がありそうでした。
+Web の設定画面で見てみると info も化けていたので、元の設定を調査するために <code>withlist</code> の環境で表示しておきました。</p>
+
+<pre><code># withlist lilo
+lilo のリストを読み込中 (ロック解除)
+変数 `m' が lilo の MailList インスタンスです
+&gt;&gt;&gt; m.preferred_language
+'ja'
+&gt;&gt;&gt; m.description
+'LILO \xcb\xdc\xc2\xceML'
+&gt;&gt;&gt; m.info
+'LILO ( \xa4\xea\xa4\xed : Linux Install Learning Osaka ) \xa4\xcf\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xb2\xf1\xa4\xc7\xa4\xb9\xa1\xa3 \xbc\xe7\xa4\xcb\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xa4\xce\xb8\xf2\xce\xae\xa1\xa2\xbe\xf0\xca\xf3\xb8\xf2\xb4\xb9\xa4\xce\xbe\xec\xa4\xf2\xc4\xf3\xb6\xa1\xa4\xb9\xa4\xeb\xa4\xbf\xa4\xe1\xa4\xcb\xb3\xe8\xc6\xb0\xa4\xb7\xa4\xc6\xa4\xa4\xa4\xde\xa4\xb9\xa1\xa3'
+&gt;&gt;&gt;
+最終処理中
+#
+</code></pre>
+
+<h2>変換</h2>
+
+<p>何でも良かったのですが、使い慣れているという理由で ruby の nkf で変換しました。
+変換した結果を Web の設定画面から設定し直しました。</p>
+
+<pre><code>% rbenv exec irb -r irb/completion --simple-prompt
+&gt;&gt; require 'nkf'
+=&gt; true
+&gt;&gt; NKF.nkf('-w',"LILO \xcb\xdc\xc2\xceML")
+=&gt; "LILO 本体ML"
+&gt;&gt; NKF.nkf('-w',"'LILO ( \xa4\xea\xa4\xed : Linux Install Learning Osaka ) \xa4\xcf\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xb2\xf1\xa4\xc7\xa4\xb9\xa1\xa3 \xbc\xe7\xa4\xcb\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xa4\xce\xb8\xf2\xce\xae\xa1\xa2\xbe\xf0\xca\xf3\xb8\xf2\xb4\xb9\xa4\xce\xbe\xec\xa4\xf2\xc4\xf3\xb6\xa1\xa4\xb9\xa4\xeb\xa4\xbf\xa4\xe1\xa4\xcb\xb3\xe8\xc6\xb0\xa4\xb7\xa4\xc6\xa4\xa4\xa4\xde\xa4\xb9\xa1\xa3'")
+=&gt; "'LILO ( りろ : Linux Install Learning Osaka ) は関西の Linux ユーザ会です。 主に関西の Linux ユーザの交流、情報交換 の場を提供するために活動しています。'"
+&gt;&gt;
+</code></pre>
+
+<h2>失敗したメールの再配送</h2>
+
+<p>設定し直した後、しばらく待ってみても再配送はされなかったので、メールキューの強制再実行が必要かと思って、 <code>/var/lib/mailman</code> 以下を調べてみたところ、 <code>/var/lib/mailman/qfiles/shunt/</code> の中にファイルが溜まっていることがわかりました。</p>
+
+<p>さらに調べていて見つけた
+<a href="http://docs.python.jp/contrib/mailman/siteadmin.html#unshunt">http://docs.python.jp/contrib/mailman/siteadmin.html#unshunt</a>
+によると qrunner が処理中にエラーを発生させて処理できなかったメールは <code>&lt;prefix&gt;/qfiles/shunt</code> に保存されていて、<code>unshunt</code> コマンドで処理できるらしいということなので、試してみたところ、ちゃんと溜まっていたメールが配送されました。</p>
+
+<h2>NEWS.Debian 確認</h2>
+
+<p>復旧を優先して、ちゃんと見るのを忘れていたのですが、 <code>/usr/share/doc/mailman/NEWS.Debian.gz</code> によると <code>mailman (1:2.1.16-1exp1)</code> で UTF-8 化したから description を webinterface などから設定しなおせと書いてありました。</p>
+
+<pre><code>mailman (1:2.1.16-1exp1) experimental; urgency=low
+
+  This version has changed the encoding of most strings, templates
+  and pages to UTF-8 to meet the Debian release goal of full UTF-8
+  support in all packages. It also no longer automatically converts
+  mails to ISO-8859-1.
+
+  If you have been using any nōn-ASCII strings in places such as
+  the mailing list description, these were be stored wrongly in the
+  list configuration file (config.pck), so you will need to change
+  those (e.g. via the webinterface) again in order to have them be
+  displayed correctly.
+
+ -- Thorsten Glaser &lt;tg@mirbsd.de&gt;  Sun, 29 Dec 2013 14:35:50 +0000
+</code></pre>
+
+<h2>まとめ</h2>
+
+<p>mailman が UTF-8 対応で description や info などに日本語などの ASCII 以外の文字を使っているとエラーが起きるという話でした。</p>
+
+<p>実行例で気付いた人もいると思いますが、 lilo.linux.or.jp のサーバーでの話で、他にも管理用の ML などがあるのですが、それらは description や info が空だったので問題が起きていなかったようです。</p>
+
+<p>教訓としては、急いでいても apt-listchanges で最低限 NEWS だけはちゃんと読むようにした方が良いということでした。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[公開鍵認証 + libpam-google-authenticator による二要素認証を特定のユーザーだけ対象に導入する]]></title>
@@ -636,239 +758,6 @@ More detailed help:
 
    all, automation, paths, security, testing, or any of the subcommands or
    plugins (certonly, install, nginx, apache, standalone, webroot, etc)
-</code></pre>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[dokku-letsencrypt を使ってみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-04-06-dokku-letsencrypt.html"/>
-    <updated>2016-04-06T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/dokku-letsencrypt</id>
-    <content type="html"><![CDATA[<p><a href="https://github.com/dokku/dokku-letsencrypt">dokku-letsencrypt</a> を試してみたのでそのメモです。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Ubuntu 14.04.4 LTS</li>
-<li>Docker 1.10.3</li>
-<li>Dokku 0.5.3</li>
-<li>dokku-letsencrypt v0.7.0-7-gb4950b8</li>
-</ul>
-
-
-<h2>インストール</h2>
-
-<p>README.md に書いてある手順の通りインストールして、 <code>git describe --tags</code> でバージョンを確認しておきました。</p>
-
-<pre><code>$ sudo dokku plugin:install https://github.com/dokku/dokku-letsencrypt.git
------&gt; Cloning plugin repo https://github.com/dokku/dokku-letsencrypt.git to /var/lib/dokku/plugins/available/letsencrypt
-Cloning into 'letsencrypt'...
-remote: Counting objects: 233, done.
-remote: Compressing objects: 100% (4/4), done.
-remote: Total 233 (delta 0), reused 0 (delta 0), pack-reused 229
-Receiving objects: 100% (233/233), 48.62 KiB | 0 bytes/s, done.
-Resolving deltas: 100% (136/136), done.
-Checking connectivity... done.
------&gt; Plugin letsencrypt enabled
------&gt; Migrating zero downtime env variables. The following variables have been deprecated
-=====&gt; DOKKU_SKIP_ALL_CHECKS DOKKU_SKIP_DEFAULT_CHECKS
-=====&gt; Please use dokku checks:[disable|enable] &lt;app&gt; to control zero downtime functionality
-=====&gt; Migration complete
-=====&gt;
-=====&gt; Migration complete
-=====&gt;
-=====&gt; Migration complete
-=====&gt;
-=====&gt; Migration complete
-=====&gt;
-=====&gt; Migration complete
-=====&gt;
-Adding user dokku to group adm
-$ cd /var/lib/dokku/plugins/available/letsencrypt/
-$ git describe --tags
-v0.7.0-7-gb4950b8
-$ cd
-</code></pre>
-
-<h2>アップグレード</h2>
-
-<p>README.md にアップグレードの手順も書いてあったので、試しておきました。</p>
-
-<pre><code>$ sudo dokku plugin:update letsencrypt
-Plugin (letsencrypt) updated
-</code></pre>
-
-<h2>対象アプリの確認</h2>
-
-<p><code>dokku apps</code> でアプリケーション一覧を表示して、対象とするアプリケーションの名前を確認しておきました。</p>
-
-<ul>
-<li><code>dokku help</code></li>
-<li><code>dokku apps:help</code></li>
-<li><code>dokku apps</code></li>
-</ul>
-
-
-<h2>メールアドレス設定</h2>
-
-<p>Let&rsquo;s Encrypt に登録するメールアドレスを設定しておきます。
-<a href="https://letsencrypt.jp/usage/" title="Let's Encrypt の使い方">Let&rsquo;s Encrypt の使い方</a>の説明によると「ここで入力したメールアドレスは、緊急の通知や鍵を紛失したときの復旧に使われます。」</p>
-
-<p>dokku-letsencrypt プラグインでは「利用規約への同意」に相当する手順がありませんが、念のため利用規約 (現在のバージョンは <a href="https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf">https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf</a> ) に目を通しておくと良いと思います。</p>
-
-<p>ちなみに今のところ letsencrypt に登録したメールアドレスに letsencrypt からメールが来たことはありません。</p>
-
-<pre><code>$ dokku config:set --no-restart staging.example.co.jp DOKKU_LETSENCRYPT_EMAIL=root@example.co.jp
------&gt; Setting config vars
-       DOKKU_LETSENCRYPT_EMAIL: root@example.co.jp
-</code></pre>
-
-<h2>メールアドレスをグローバルに設定するかアプリケーションごとに設定するか</h2>
-
-<p>グローバルに設定することも可能だと思いますが、メールアドレスを設定していなければ <code>dokku letsencrypt APP</code> の最初のチェックで止まって、既存の TLS 設定を上書きされる心配がないので、すべてのアプリケーションで letsencrypt を使うのでなければ、アプリケーションごとに設定することをおすすめします。</p>
-
-<p>メールアドレスを設定していなければ、以下のように失敗して止まってくれます。</p>
-
-<pre><code>$ dokku letsencrypt node-js-app
-=====&gt; Let's Encrypt node-js-app...
- !     ERROR: Cannot request a certificate without an e-mail address!
- !       please provide your e-mail address using
- !       dokku config:set --no-restart node-js-app DOKKU_LETSENCRYPT_EMAIL=&lt;e-mail&gt;
-</code></pre>
-
-<h2>証明書発行と設定</h2>
-
-<p><code>dokku letsencrypt APP</code> で証明書発行から設定まで自動で実行されます。</p>
-
-<p>すでに <code>tls/server.{crt,key}</code> が存在していても強制的にシンボリックリンクで上書きされるので、他で発行された証明書を使っている場合は注意が必要です。</p>
-
-<pre><code>$ dokku letsencrypt staging.example.co.jp
-=====&gt; Let's Encrypt staging.example.co.jp...
------&gt; Updating letsencrypt docker image...
-latest: Pulling from m3adow/letsencrypt-simp_le
-420890c9e918: Pull complete
-acbaf1e6012f: Pull complete
-5f71a1a2d3dc: Pull complete
-Digest: sha256:be1d7aca214d5277af18d7bf75a2bc78afa5a1eabf98aaa8a606c4ca2a7fdeb5
-Status: Downloaded newer image for m3adow/letsencrypt-simp_le:latest
-       done
------&gt; Enabling ACME proxy for staging.example.co.jp...
------&gt; Getting letsencrypt certificate for staging.example.co.jp...
-        - Domain 'staging.example.co.jp'
-darkhttpd/1.11, copyright (c) 2003-2015 Emil Mikulic.
-listening on: http://0.0.0.0:80/
-2016-04-04 03:26:42,946:INFO:__main__:1202: Generating new account key
-2016-04-04 03:26:43,831:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:44,110:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:44,302:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:44,841:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): letsencrypt.org
-2016-04-04 03:26:45,410:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:45,664:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:45,940:INFO:requests.packages.urllib3.connectionpool:207: Starting new HTTP connection (1): staging.example.co.jp
-2016-04-04 03:26:45,946:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): staging.example.co.jp
-2016-04-04 03:26:45,995:INFO:__main__:1294: staging.example.co.jp was successfully self-verified
-2016-04-04 03:26:46,022:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:46,272:INFO:__main__:1302: Generating new certificate private key
-2016-04-04 03:26:47,528:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:47,723:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:47,987:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:48,215:INFO:__main__:385: Saving account_key.json
-2016-04-04 03:26:48,216:INFO:__main__:385: Saving fullchain.pem
-2016-04-04 03:26:48,216:INFO:__main__:385: Saving chain.pem
-2016-04-04 03:26:48,216:INFO:__main__:385: Saving cert.pem
-2016-04-04 03:26:48,216:INFO:__main__:385: Saving key.pem
------&gt; Certificate retrieved successfully.
------&gt; Symlinking let's encrypt certificates
------&gt; Configuring staging.example.co.jp...(using built-in template)
------&gt; Creating https nginx.conf
------&gt; Running nginx-pre-reload
-       Reloading nginx
------&gt; Disabling ACME proxy for staging.example.co.jp...
-       done
-</code></pre>
-
-<h2>有効になっているアプリケーション一覧確認</h2>
-
-<p><code>dokku letsencrypt:ls</code> で有効になっているアプリケーションとその有効期限を確認します。</p>
-
-<pre><code>$ dokku letsencrypt:ls
------&gt; App name           Certificate Expiry        Time before expiry        Time before renewal
-staging.example.co.jp 2016-07-03 11:27:00       89d, 22h, 56m, 55s        59d, 22h, 56m, 55s
-</code></pre>
-
-<h2>自動更新</h2>
-
-<p>有効期限が 30 日 (<code>DOKKU_LETSENCRYPT_GRACEPERIOD</code> で変更可能) を切ると自動更新してくれる <code>dokku letsencrypt:auto-renew</code> も試しておきます。</p>
-
-<pre><code>$ dokku letsencrypt:auto-renew
-=====&gt; Auto-renewing all apps...
-       staging.example.co.jp still has 59d, 22h, 48m, 36s days left before renewal
-=====&gt; Finished auto-renewal
-</code></pre>
-
-<p>問題なさそうなので、<code>dokku</code> ユーザーの <code>crontab</code> で設定して自動実行するようにしておきます。
-リモートからのトリガーで実行されるように ssh で入れるユーザーの <code>crontab</code> で <code>ssh dokku letsencrypt:auto-renew</code> を設定しておくのでも良いと思います。</p>
-
-<h2>セキュリティ上の問題点</h2>
-
-<p><code>dokku-letsencrypt</code> が使用している <a href="https://github.com/kuba/simp_le" title="Simple Let's Encrypt Client">Simple Let&rsquo;s Encrypt Client</a> の issue の <a href="https://github.com/kuba/simp_le/issues/29" title="private key permissions">private key permissions</a> で指摘されているように、 <code>ls -al /home/dokku/staging.example.co.jp/letsencrypt/certs/current/</code> で確認してみると、他のユーザーからは読めなくするべき <code>account_key.json</code> や <code>key.pem</code> も誰でも読めるパーミッションになってしまっているので、 <code>sudo chmod 700 /home/dokku/staging.example.co.jp/letsencrypt</code> などでパーミッションを落としておく方が良さそうです。</p>
-
-<p>ファイル自体のパーミッションを落としても良さそうですが、更新された後のことも考えると <code>/home/dokku/APP/letsencrypt</code> ディレクトリ自体のパーミッションを落としておくのが良さそうです。</p>
-
-<h2>Rate Limit</h2>
-
-<p><a href="https://letsencrypt.jp/faq/#RateLimiting" title="Let's Encrypt の証明書に取得数制限はありますか？">Let&rsquo;s Encrypt の証明書に取得数制限はありますか？</a> のリンク先に書いてあるように、この記事執筆時点では「アカウント登録/IP アドレスごと」(3 時間で 10 個) と「証明書発行/ドメインごと」(1 週間で 5 個) の制限があるので、注意が必要です。</p>
-
-<p>特に dokku-letsencrypt では<a href="https://github.com/letsencrypt/letsencrypt">公式のクライアント</a>が <code>/etc/letsencrypt/accounts</code> でアカウントを共有するのと違って、 <code>account_key.json</code> をアプリケーションごとに作成しているので、注意が必要そうです。</p>
-
-<p>ただし、現状の制限だと証明書発行数の制限の方が引っかかりやすいので、アカウント登録の制限は問題にならないようにも思います。</p>
-
-<p>証明書発行数の制限については <code>dokku domains:add</code> や <code>dokku domains:remove</code> で適切にドメインの追加や削除をしてから <code>dokku letsencrypt</code> を実行するように README.md の <a href="https://github.com/dokku/dokku-letsencrypt/tree/b4950b8254f683e4af775bad44e390763a699de1#dealing-with-rate-limit" title="Dealing with rate limit">Dealing with rate limit</a> に書いてあります。</p>
-
-<h2>証明書の情報表示</h2>
-
-<p><code>dokku certs:info</code> で letsencrypt のものに限らず、証明書の情報を表示できます。</p>
-
-<pre><code>adminuser@tk2-213-16013:~$ dokku certs:info staging.example.co.jp
------&gt; Fetching SSL Endpoint info for staging.example.co.jp...
------&gt; Certificate details:
-=====&gt; Common Name(s):
-=====&gt;    staging.example.co.jp
-=====&gt;    staging.example.co.jp
-=====&gt; Expires At: Jul  3 02:27:00 2016 GMT
-=====&gt; Issuer: C=US, O=Lets Encrypt, CN=Lets Encrypt Authority X3
-=====&gt; Starts At: Apr  4 02:27:00 2016 GMT
-=====&gt; Subject: CN=staging.example.co.jp
-=====&gt; SSL certificate is self signed.
-adminuser@tk2-213-16013:~$ dokku certs:info production.example.co.jp
------&gt; Fetching SSL Endpoint info for production.example.co.jp...
------&gt; Certificate details:
-=====&gt; Common Name(s):
-=====&gt;    production.example.co.jp
-=====&gt;    production.example.co.jp
-=====&gt;    example.co.jp
-=====&gt; Expires At: Aug  4 00:05:31 2016 GMT
-=====&gt; Issuer: C=IL, O=StartCom Ltd., OU=Secure Digital Certificate Signing, CN=StartCom Class 1 Primary Intermediate Server CA
-=====&gt; Starts At: Aug  3 18:20:22 2015 GMT
-=====&gt; Subject: C=JP; CN=production.example.co.jp; emailAddress=hostmaster@example.co.jp
-=====&gt; SSL certificate is self signed.
-adminuser@tk2-213-16013:~$ dokku certs:info another.example.co.jp
------&gt; Fetching SSL Endpoint info for another.example.co.jp...
------&gt; Certificate details:
-=====&gt; Common Name(s):
-=====&gt;    another.example.co.jp
-=====&gt;    another.example.co.jp
-=====&gt;    example.co.jp
-=====&gt; Expires At: Apr 23 04:56:14 2016 GMT
-=====&gt; Issuer: C=IL, O=StartCom Ltd., OU=Secure Digital Certificate Signing, CN=StartCom Class 1 Primary Intermediate Server CA
-=====&gt; Starts At: Apr 22 23:55:13 2015 GMT
-=====&gt; Subject: C=JP; CN=another.example.co.jp; emailAddress=hostmaster@example.co.jp
-=====&gt; SSL certificate is self signed.
-adminuser@tk2-213-16013:~$
 </code></pre>
 ]]></content>
   </entry>
