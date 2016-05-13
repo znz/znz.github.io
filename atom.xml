@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-05-07T22:09:25+09:00</updated>
+  <updated>2016-05-14T00:00:43+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,136 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[letsencrypt-auto が certbot-auto になった]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-05-13-letsencrypt-certbot.html"/>
+    <updated>2016-05-13T23:40:09+09:00</updated>
+    <id>http://blog.n-z.jp/blog/letsencrypt-certbot</id>
+    <content type="html"><![CDATA[<p><a href="https://www.eff.org/deeplinks/2016/05/announcing-certbot-new-tls-robot">EFF の Let&rsquo;s Encrypt クライアントが Certbot になった</a>という話です。</p>
+
+<!--more-->
+
+
+<h2>経緯</h2>
+
+<p><a href="https://letsencrypt.jp/usage/">Let&rsquo;s Encrypt の使い方</a> から引用しつつまとめます。</p>
+
+<ul>
+<li>2016年4月12日 に、Let&rsquo;s Encrypt の公開ベータプログラム（Public Beta Program）が終了し、正式サービスが開始されました。</li>
+<li>この時点でベータがとれたのは Let&rsquo;s Encrypt のサービス側で <code>letsencrypt-auto</code> コマンドを含む github.com/letsencrypt/letsencrypt にあったクライアントはまだベータのままでした。</li>
+<li>クライアントの 0.6.0 のリリースにあたり github.com/letsencrypt/letsencrypt は github.com/certbot/certbot に移動して Certbot に改名されました。</li>
+<li><a href="https://www.eff.org/deeplinks/2016/05/announcing-certbot-new-tls-robot">Announcing Certbot: EFF&rsquo;s Client for Let&rsquo;s Encrypt</a> に書いてあるように Certbot もまだベータで、今年中に Certbot 1.0 のリリースが予定されているようです。</li>
+</ul>
+
+
+<p>改名されたのは EFF の Let&rsquo;s Encrypt クライアントだけでサービス自体は Let&rsquo;s Encrypt という名前のままです。</p>
+
+<h2>その他の変更点</h2>
+
+<p>インストール方法も <code>git clone</code> して <code>letsencrypt-auto</code> を実行する方法から、 <code>https://dl.eff.org/certbot-auto</code> をダウンロードして実行する方法に変わっています。</p>
+
+<h2>インストール済み環境への影響</h2>
+
+<p>インストール済み環境ではどうなるのかと思って、 <code>letsencrypt-auto --help</code> を実行してアップグレードさせてみたところ、以下のようになりました。</p>
+
+<p>出力をよく見ると <code>sudo</code> のところで <code>CERTBOT_AUTO</code> という環境変数の指定が増えていて、 <code>letsencrypt-auto</code> コマンド自体はそのまま使えるようです。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% ~/letsencrypt/letsencrypt-auto --help
+</span><span class='line'>Checking for new version...
+</span><span class='line'>Upgrading letsencrypt-auto 0.5.0 to 0.6.0...
+</span><span class='line'>Replacing letsencrypt-auto...
+</span><span class='line'>   sudo cp -p /home/vpsuser/letsencrypt/letsencrypt-auto /tmp/user/1000/tmp.AiqGtrjioJ/letsencrypt-auto.permission-clone
+</span><span class='line'>   sudo cp /tmp/user/1000/tmp.AiqGtrjioJ/letsencrypt-auto /tmp/user/1000/tmp.AiqGtrjioJ/letsencrypt-auto.permission-clone
+</span><span class='line'>   sudo mv -f /tmp/user/1000/tmp.AiqGtrjioJ/letsencrypt-auto.permission-clone /home/vpsuser/letsencrypt/letsencrypt-auto
+</span><span class='line'>Creating virtual environment...
+</span><span class='line'>Installing Python packages...
+</span><span class='line'>Installation succeeded.
+</span><span class='line'>Requesting root privileges to run certbot...
+</span><span class='line'>   sudo CERTBOT_AUTO=/home/vpsuser/letsencrypt/letsencrypt-auto /home/vpsuser/.local/share/letsencrypt/bin/letsencrypt --help
+</span><span class='line'>
+</span><span class='line'>  letsencrypt-auto [SUBCOMMAND] [options] [-d domain] [-d domain] ...
+</span><span class='line'>
+</span><span class='line'>Certbot can obtain and install HTTPS/TLS/SSL certificates.  By default,
+</span><span class='line'>it will attempt to use a webserver both for obtaining and installing the
+</span><span class='line'>cert. Major SUBCOMMANDS are:
+</span><span class='line'>
+</span><span class='line'>  (default) run        Obtain & install a cert in your current webserver
+</span><span class='line'>  certonly             Obtain cert, but do not install it (aka "auth")
+</span><span class='line'>  install              Install a previously obtained cert in a server
+</span><span class='line'>  renew                Renew previously obtained certs that are near expiry
+</span><span class='line'>  revoke               Revoke a previously obtained certificate
+</span><span class='line'>  rollback             Rollback server configuration changes made during install
+</span><span class='line'>  config_changes       Show changes made to server config during installation
+</span><span class='line'>  plugins              Display information about installed plugins
+</span><span class='line'>
+</span><span class='line'>Choice of server plugins for obtaining and installing cert:
+</span><span class='line'>
+</span><span class='line'>  --apache          Use the Apache plugin for authentication & installation
+</span><span class='line'>  --standalone      Run a standalone webserver for authentication
+</span><span class='line'>  (nginx support is experimental, buggy, and not installed by default)
+</span><span class='line'>  --webroot         Place files in a server's webroot folder for authentication
+</span><span class='line'>
+</span><span class='line'>OR use different plugins to obtain (authenticate) the cert and then install it:
+</span><span class='line'>
+</span><span class='line'>  --authenticator standalone --installer apache
+</span><span class='line'>
+</span><span class='line'>More detailed help:
+</span><span class='line'>
+</span><span class='line'>  -h, --help [topic]    print this message, or detailed help on a topic;
+</span><span class='line'>                        the available topics are:
+</span><span class='line'>
+</span><span class='line'>   all, automation, paths, security, testing, or any of the subcommands or
+</span><span class='line'>   plugins (certonly, install, nginx, apache, standalone, webroot, etc)</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第72回 Ruby関西 勉強会に参加しました]]></title>
@@ -3728,174 +3858,6 @@ No renewals were attempted.
 <p>letsencrypt の導入から証明書の自動更新の設定までしました。</p>
 
 <p>簡単に導入できて自動化もでき、しかも無料なので、まだベータ版であるという点が問題にならないところでは、積極的に使っていけば良さそうだと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第71回 Ruby関西 勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-03-05-rubykansai71.html"/>
-    <updated>2016-03-05T12:58:44+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubykansai71</id>
-    <content type="html"><![CDATA[<p><a href="https://rubykansai.doorkeeper.jp/events/37341" title="第71回 Ruby関西 勉強会">第71回 Ruby関西 勉強会</a>
-に参加しました。</p>
-
-<!--more-->
-
-
-<p>以下、そのメモです。</p>
-
-<h2>オープニング</h2>
-
-<ul>
-<li>開場が 10 分前にしかできなくて準備の時間の都合で受付は休憩の時に</li>
-<li>会場説明</li>
-<li>yasulab さんの資料作成の都合で順番を入れ替えて開始</li>
-</ul>
-
-
-<h2>中級者向け: 楽速開発 on Rails by @ogomr (前半)</h2>
-
-<ul>
-<li><a href="https://speakerdeck.com/ogom/enjoy-agile-development">https://speakerdeck.com/ogom/enjoy-agile-development</a></li>
-<li>前回のつじたさんのどんな gem を使っていますかという質問に対するアンサーセッションのような幹事でどんな gem を使って開発しているかという紹介</li>
-<li>デミングサイクル</li>
-<li>データベースのスキーマでデミングサイクル</li>
-<li>rspec や spring や guard などの 8 個の gem</li>
-<li>ridgepole gem というのは知らなかった</li>
-<li>rails-erd gem も使っているらしい</li>
-<li>guard shell で <code>db/migrate/*.rb</code> が変わったら処理をしている</li>
-<li>seed 関係の gem 3 個 (<code>seedbank</code>, <code>seed_dump</code>, <code>seed-fu</code>)</li>
-<li>seed 関係の guard shell 設定</li>
-<li><code>seed_dump</code> gem は SQL ではなく rb ファイルに dump してくれる</li>
-<li>rails console で試せるし seed ファイルにも再利用できる</li>
-<li>guard を使っている人をきいてみたら会場には少なかった</li>
-<li>rails で開発したことがある人は多かった</li>
-<li><code>factory_girl</code> は 1/3 程度</li>
-<li>デモの前に休憩</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>休憩の間に受付</li>
-</ul>
-
-
-<h2>中級者向け: 楽速開発 on Rails by @ogomr (後半)</h2>
-
-<ul>
-<li>質問</li>
-<li>guard とは grunt のようなものなのかという質問</li>
-<li>同じようなもの。時系列的には guard の方が古い</li>
-<li>guard の実行時間は 1,2 秒ぐらい</li>
-<li>デモ</li>
-<li>普段はサブディスプレイを使っている</li>
-<li><code>rails new</code> するところからライブコーディングによるデモ</li>
-<li><code>rails-erd</code> を使っている人は少しいた</li>
-<li><code>.erdconfig</code> ファイルで設定できる</li>
-<li>Guardfile の書き換え</li>
-<li>spring を使っているので bin/rspec を使うように書き換え</li>
-<li>その他 rspec 関係の追加とか</li>
-<li>factories も監視して rspec を動かしている</li>
-<li>generators で不要なものを false に設定</li>
-<li>scaffold で生成</li>
-<li>pdf の変化で open コマンドを呼んでいるのでサブディスプレイに最新の状態が自動表示される</li>
-<li>seed の guard shell 設定</li>
-<li>seedbank を使って seed の設定</li>
-<li>データベースのカラム追加のデモ</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>14:30-14:40</li>
-<li>休憩時間中に yasulab さんから質問</li>
-<li>rails で開発したことのない人もいる</li>
-<li>ruby を使ったことない人はいないみたいだった</li>
-<li>k-of.jp などのイベントなどの時にも配っている豆本をアナウンスしたら人気だった</li>
-</ul>
-
-
-<h2>初心者向け: Railsチュートリアルの変遷からみる今ドキのRails勉強法 by @yasulab</h2>
-
-<ul>
-<li>第2版から第3版の変更点を解説</li>
-<li>Rails 活用事例と学習曲線</li>
-<li>第2版 vs. 第3版</li>
-<li>第3版では画像アップロードが増えている</li>
-<li>第2版でよく見かけた例</li>
-<li>セットアップ (第1章) で挫折</li>
-<li>テストがうまく動かなくて挫折</li>
-<li>近くにいないと問題解決しづらい</li>
-<li>第2版から第3版での改善点</li>
-<li>Cloud9 を使ってブラウザで開発 (OS非依存)</li>
-<li>ログイン機構がモダンになっている</li>
-<li>RSpec から minitest になって学習コストが低くなっている</li>
-<li>ActionMailer を使ったメール送信を解説</li>
-<li>マイクロポストに画像投稿機能が追加</li>
-<li>他、独自バリデーションやメタプロの導入など</li>
-<li>今どきの Rails 学習法</li>
-<li><ol>
-<li>学習の優先度付け</li>
-</ol>
-</li>
-<li>第２版によくあった批判</li>
-<li>テスト技術が学びたいわけじゃない</li>
-<li>環境構築を学びたいわけじゃない</li>
-<li><ol>
-<li>まずは体験、あとで探求</li>
-</ol>
-</li>
-<li><ol>
-<li>クラウド IDE を最大限活用する</li>
-</ol>
-</li>
-<li>第2版と第3版の違い</li>
-<li>第1章における離脱率の激減</li>
-<li>解説セミナーの平均点数上昇</li>
-<li>ちょっと未来の話</li>
-<li>「まずは」の裾野を広げて「あとで」の探求先の拡大</li>
-<li>Learn Enough シリーズ (前提知識を 0 に)</li>
-<li>everyday Rails</li>
-<li>Rails ガイド</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>15:21-15:30</li>
-<li>k-of.jp や書籍の紹介</li>
-</ul>
-
-
-<h2>Ruby 初級者向けレッスン 57回 ─── テスト駆動開発 by @higaki</h2>
-
-<ul>
-<li><a href="http://slide.rabbit-shocker.org/authors/kou/rubykaigi-2015/" title="The history of testing framework in Ruby">The history of testing framework in Ruby</a></li>
-<li><a href="http://magazine.rubyist.net/?0021-Rspec">http://magazine.rubyist.net/?0021-Rspec</a></li>
-<li><a href="http://magazine.rubyist.net/?0042-FromCucumberToTurnip">http://magazine.rubyist.net/?0042-FromCucumberToTurnip</a></li>
-<li>レッスンでは test-unit gem を使用</li>
-<li><a href="http://goyoki.hatenablog.com/entry/20120301/1330608789" title="xUnit Test PatternsのTest Doubleパターン(Mock、Stub、Fake、Dummy等の定義)">xUnit Test PatternsのTest Doubleパターン(Mock、Stub、Fake、Dummy等の定義)</a></li>
-<li>kagemusha gem</li>
-<li>mocha gem</li>
-<li>rr gem</li>
-<li>レッスンには出てこなかったが、参考として、他に時刻専用の gem として timecop gem とか delorean gem とかもある</li>
-<li><a href="https://github.com/higaki/learn_ruby_kansai_71">https://github.com/higaki/learn_ruby_kansai_71</a></li>
-<li>参考: <a href="http://goyoki.hatenablog.com/entry/20110202/1296663870" title="XP祭り関西にてユニットテストの保守に関する発表">XP祭り関西にてユニットテストの保守に関する発表</a></li>
-</ul>
-
-
-<h2>クロージング</h2>
-
-<ul>
-<li><a href="https://ja-jp.facebook.com/RubyKansai">https://ja-jp.facebook.com/RubyKansai</a></li>
-<li><a href="https://ruby-maizuru.doorkeeper.jp/" title="Ruby舞鶴">Ruby舞鶴</a></li>
-<li><a href="https://dddrb.doorkeeper.jp/" title="DDD.rb">DDD.rb</a></li>
-</ul>
-
 ]]></content>
   </entry>
   
