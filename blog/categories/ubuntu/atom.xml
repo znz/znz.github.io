@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-05-14T00:00:43+09:00</updated>
+  <updated>2016-05-26T22:53:26+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,213 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ubuntuで「ハッシュサムが適合しません」で backports のパッケージが入ってしまって大変だった]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-05-26-ubuntu-hash-mismatch.html"/>
+    <updated>2016-05-26T22:23:35+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ubuntu-hash-mismatch</id>
+    <content type="html"><![CDATA[<p><code>jp.archive.ubuntu.com</code> のミラーが不完全だったのか、「ハッシュサムが適合しません」という警告が出て、そのまま <code>sudo aptitude full-upgrade -DV</code> をしたら backports のパッケージが入ってしまって大変な思いをしたという話です。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>Ubuntu 14.04.4 LTS</li>
+</ul>
+
+
+<h2>警告</h2>
+
+<p><code>sudo aptitude update</code> で以下のような警告とエラーが出ていました。</p>
+
+<pre><code>W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/main/source/Sources を取得できませんでした: ハッシュサムが適合しません
+W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/universe/source/Sources を取得できませんでした: ハッシュサムが適合しません
+W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/main/binary-amd64/Packages を取得できませんでした: ハッシュ サムが適合しません
+W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/universe/binary-amd64/Packages を取得できませんでした: ハッ シュサムが適合しません
+W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/main/binary-i386/Packages を取得できませんでした: ハッシュサムが適合しません
+W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/universe/binary-i386/Packages を取得できませんでした: ハッシュサムが適合しません
+E: 一部のインデックスファイルのダウンロードに失敗しました。無視されたか古いものを代わりに利用しています。
+E: パッケージキャッシュを再構築できませんでした
+</code></pre>
+
+<h2>不用意なアップグレード</h2>
+
+<p>あまり気にせず、セキュリティアップデートがあれば更新しておこうと思って、 <code>sudo aptitude full-upgrade -DV</code> を実行してみたところ、以下のパッケージが更新対象に上がりました。</p>
+
+<p>証明書の設定で <code>SSLCertificateChainFile</code> が必要なくなる 2.4.8 をまたぐので、ちょっと危険な気はしましたが、個人のサーバーなので多少の停止時間は構わないだろうと思ってアップグレードしてしまいました。</p>
+
+<pre><code>以下のパッケージが更新されます:
+  apache2 [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+  apache2-bin [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+  apache2-data [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+  apache2-dev [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+  apache2-mpm-prefork [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+  apache2-utils [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+  libcgmanager0 [0.24-0ubuntu7.5 -&gt; 0.39-2ubuntu2~ubuntu14.04.1]
+</code></pre>
+
+<h2>backports のパッケージだった</h2>
+
+<p>ダウンロード中の URL を見て backports のパッケージが入ってしまっている、と気づいたのですが、手遅れで止める間もなく上がってしまいました。</p>
+
+<pre><code>% apt-cache policy apache2
+apache2:
+  インストールされているバージョン: 2.4.7-1ubuntu4.9
+  候補:               2.4.10-1ubuntu1.1~ubuntu14.04.1
+  バージョンテーブル:
+     2.4.10-1ubuntu1.1~ubuntu14.04.1 0
+        100 http://jp.archive.ubuntu.com/ubuntu/ trusty-backports/main amd64 Packages
+ *** 2.4.7-1ubuntu4.9 0
+        100 /var/lib/dpkg/status
+     2.4.7-1ubuntu4.5 0
+        500 http://security.ubuntu.com/ubuntu/ trusty-security/main amd64 Packages
+     2.4.7-1ubuntu4 0
+        500 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+</code></pre>
+
+<h2>ダウングレード失敗</h2>
+
+<p><code>/etc/apt/preferences</code> を設定してダウングレードすることにしました。</p>
+
+<p>まず以下を試してみたところ、 <code>base-files</code> などを含む大量のパッケージがダウングレード対象になってしまったので中断しました。</p>
+
+<pre><code>Package: *
+Pin: release a=trusty
+Pin-Priority: 1001
+</code></pre>
+
+<p><code>apt-cache policy</code> で確認してみると、現在のバージョンのインストール候補がなくなっているのが原因の一つでした。</p>
+
+<pre><code>% apt-cache policy base-files
+base-files:
+  インストールされているバージョン: 7.2ubuntu5.4
+  候補:               7.2ubuntu5
+  バージョンテーブル:
+ *** 7.2ubuntu5.4 0
+        100 /var/lib/dpkg/status
+     7.2ubuntu5 0
+       1001 http://ubuntutym.u-toyama.ac.jp/ubuntu/ trusty/main amd64 Packages
+</code></pre>
+
+<p>そこで、 <code>/etc/apt/sources.list</code> の末尾に <code>archive.ubuntu.com</code> を一時的に追加することにしました。</p>
+
+<pre><code>deb http://archive.ubuntu.com/ubuntu/ trusty main restricted universe multiverse
+#deb-src http://archive.ubuntu.com/ubuntu/ trusty main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu/ trusty-updates main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu/ trusty-updates main restricted universe multiverse
+</code></pre>
+
+<p>すると <code>trusty-updates</code> も出てきたのですが、 priority が 500 になって期待した値になっていませんでした。</p>
+
+<pre><code>% apt-cache policy base-files
+base-files:
+  インストールされているバージョン: 7.2ubuntu5.4
+  候補:               7.2ubuntu5
+  バージョンテーブル:
+ *** 7.2ubuntu5.4 0
+        500 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
+        100 /var/lib/dpkg/status
+     7.2ubuntu5 0
+       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+</code></pre>
+
+<p>次に <code>n=trusty</code> を試してみたところ、 <code>backports</code> も priority が 1001 になってしまってダウングレードできませんでした。</p>
+
+<pre><code>Package: *
+Pin: release n=trusty
+Pin-Priority: 1001
+</code></pre>
+
+<pre><code>% apt-cache policy base-files
+base-files:
+  インストールされているバージョン: 7.2ubuntu5.4
+  候補:               7.2ubuntu5.4
+  バージョンテーブル:
+ *** 7.2ubuntu5.4 0
+       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
+        100 /var/lib/dpkg/status
+     7.2ubuntu5 0
+       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+% apt-cache policy apache2
+apache2:
+  インストールされているバージョン: 2.4.10-1ubuntu1.1~ubuntu14.04.1
+  候補:               2.4.10-1ubuntu1.1~ubuntu14.04.1
+  バージョンテーブル:
+ *** 2.4.10-1ubuntu1.1~ubuntu14.04.1 0
+       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty-backports/main amd64 Packages
+        100 /var/lib/dpkg/status
+     2.4.7-1ubuntu4.9 0
+       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
+     2.4.7-1ubuntu4.5 0
+       1001 http://security.ubuntu.com/ubuntu/ trusty-security/main amd64 Packages
+     2.4.7-1ubuntu4 0
+       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+</code></pre>
+
+<h2>ダウングレード成功</h2>
+
+<p>最終的に <code>a=trusty-updates</code> と <code>a=trusty-security</code> も追加することでダウングレードできました。</p>
+
+<pre><code>Package: *
+Pin: release a=trusty
+Pin-Priority: 1001
+
+Package: *
+Pin: release a=trusty-updates
+Pin-Priority: 1001
+
+Package: *
+Pin: release a=trusty-security
+Pin-Priority: 1001
+</code></pre>
+
+<pre><code>% apt-cache policy apache2
+apache2:
+  インストールされているバージョン: 2.4.10-1ubuntu1.1~ubuntu14.04.1
+  候補:               2.4.7-1ubuntu4.9
+  バージョンテーブル:
+ *** 2.4.10-1ubuntu1.1~ubuntu14.04.1 0
+        100 http://jp.archive.ubuntu.com/ubuntu/ trusty-backports/main amd64 Packages
+        100 /var/lib/dpkg/status
+     2.4.7-1ubuntu4.9 0
+       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
+     2.4.7-1ubuntu4.5 0
+       1001 http://security.ubuntu.com/ubuntu/ trusty-security/main amd64 Packages
+     2.4.7-1ubuntu4 0
+       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+% apt-cache policy base-files
+base-files:
+  インストールされているバージョン: 7.2ubuntu5.4
+  候補:               7.2ubuntu5.4
+  バージョンテーブル:
+ *** 7.2ubuntu5.4 0
+       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
+        100 /var/lib/dpkg/status
+     7.2ubuntu5 0
+       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+</code></pre>
+
+<h2>backports のコメントアウト</h2>
+
+<p>backports のパッケージは使っていなかったので、この後 backports の apt-line はコメントアウトしました。</p>
+
+<h2>まとめ</h2>
+
+<p><code>apt</code> の <code>update</code> に失敗した時はアップグレード対象のパッケージに注意しましょう。</p>
+
+<p>ダウングレードする時は <code>apt_preferences(5)</code> の <code>Pin</code> 設定をうまく工夫しましょう。</p>
+
+<p>backports のパッケージが不要なら backports の apt-line を追加するのは避けましょう。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[letsencrypt-auto の自動アップグレードを止めて手動でアップグレード]]></title>
@@ -994,319 +1201,6 @@ popd
 
 <p>vagrant を使って dokku をいろいろ試す環境を簡単に作ることができました。
 この環境を使ってテストやデバッグなどいろいろ試しやすくなると思います。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[letsencrypt をメールサーバーにも導入して自動化するまで]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-03-06-letsencrypt.html"/>
-    <updated>2016-03-06T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/letsencrypt</id>
-    <content type="html"><![CDATA[<p>Ubuntu 12.04.5 LTS で letsencrypt 0.4.2 を使って apache2 と postfix と dovecot の証明書の自動更新を設定してみました。</p>
-
-<!--more-->
-
-
-<h2>対象環境</h2>
-
-<ul>
-<li>Ubuntu 12.04.5 LTS (amd64)</li>
-<li>letsencrypt 0.4.2</li>
-<li>apache2-mpm-prefork 2.2.22-1ubuntu1.10</li>
-<li>postfix 2.9.6-1~12.04.3</li>
-<li>dovecot-imapd 1:2.0.19-0ubuntu2.2</li>
-<li>python 2.7.3-0ubuntu2.2</li>
-<li>git 1:1.7.9.5-1ubuntu0.2</li>
-</ul>
-
-
-<h2>事前知識</h2>
-
-<p><a href="https://letsencrypt.jp/">https://letsencrypt.jp/</a> や <a href="http://qiita.com/tags/letsencrypt">Qiita の記事</a> などを見て事前に予備知識を得た上で、
-<a href="https://letsencrypt.org/getting-started/" title="Getting Started">Getting Started</a> などで最新情報を確認しました。</p>
-
-<p><a href="http://qiita.com/hidekuro/items/482520f220a305dc147b" title="Let's Encrypt 証明書の自動発行とELB自動登録を行ったログ">Let&rsquo;s Encrypt 証明書の自動発行とELB自動登録を行ったログ</a>に書いてある</p>
-
-<ul>
-<li>letsencrypt-auto は virtualenv 上で動き、実行ユーザーの ~/.local に Python 環境を作ります。</li>
-<li>Let&rsquo;s Encrypt は、 5 renew / 7 days の制限があります。</li>
-</ul>
-
-
-<p>の 2 点は事前に知っておくと良いと思います。</p>
-
-<h2>初期設定 (インストール)</h2>
-
-<p>まず
-<a href="https://letsencrypt.org/getting-started/" title="Getting Started">Getting Started</a>
-に従って初期設定をしました。</p>
-
-<ul>
-<li>一般ユーザーのホームディレクトリで <code>git clone https://github.com/letsencrypt/letsencrypt</code> で最新版をとってきます。</li>
-<li><code>cd letsencrypt</code> で clone したディレクトリに入ります。</li>
-<li><code>letsencrypt-auto</code> スクリプトの中をある程度確認しておきます。
-
-<ul>
-<li>ここで precise (Ubuntu 12.04 LTS) や wheezy (Debian 7) だと backports の apt-line が設定されていない場合は自動で追加されるというのを知りました。 (apache プラグインが libaugeas0 の 1.0 以上に依存しているため)</li>
-</ul>
-</li>
-<li><code>./letsencrypt-auto --help</code> で依存関係の自動インストールが走ります。
-
-<ul>
-<li>sudo のパスワードがきかれるので入力します。</li>
-<li>apt で libaugeas0 などが勝手に入ります。</li>
-<li>その後、<code>Installing Python packages...</code> でしばらく時間がかかります。 (ここで <code>~/.local/share/letsencrypt</code> 以下にファイルがインストールされるので、何か不具合があった時には <code>~/.local</code> 以下を消して試すと良いらしいです。)</li>
-</ul>
-</li>
-</ul>
-
-
-<p>この時点では <code>/etc</code> 以下に変化はありませんでした。 (backports の apt-line は既に追加済みだったため)</p>
-
-<h2>ヘルプ表示</h2>
-
-<p><code>./letsencrypt-auto --help</code> や <code>./letsencrypt-auto --help all</code> でヘルプが確認できます。
-ヘルプの表示だけでも <code>sudo</code> を経由するようです。</p>
-
-<h2>テスト実行</h2>
-
-<p>1 週間に 5 回までの制限にひっかからないように、最初は staging サーバーで試そうと思ったため、 <code>--test-cert</code> を付けて
-<code>./letsencrypt-auto certonly --test-cert --webroot -w /srv/www/hoge.n-z.jp/htdocs -d hoge.n-z.jp</code>
-のように実行しました。</p>
-
-<p>初回実行のため、メールアドレスと ToS の Agree が必要でした。</p>
-
-<pre><code> ┌──────────────────────────────────────────────────────────────────────┐
- │ Enter email address (used for urgent notices and lost key recovery)  │
- │ ┌──────────────────────────────────────────────────────────────────┐ │
- │ │                                                                  │ │
- │ └──────────────────────────────────────────────────────────────────┘ │
- ├──────────────────────────────────────────────────────────────────────┤
- │                     &lt; 了解 &gt;           &lt; 取消 &gt;                      │
- └──────────────────────────────────────────────────────────────────────┘
-</code></pre>
-
-<p>でメールアドレスを入力しました。</p>
-
-<pre><code> ┌──────────────────────────────────────────────────────────────────────┐
- │ Please read the Terms of Service at                                  │
- │ https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf. You │
- │ must agree in order to register with the ACME server at              │
- │ https://acme-v01.api.letsencrypt.org/directory                       │
- │                                                                      │
- │                                                                      │
- │                                                                      │
- │                                                                      │
- │                                                                      │
- │                                                                      │
- │                                                                      │
- │                                                                      │
- │                                                                      │
- │                                                                      │
- │                                                                      │
- │                                                                      │
- ├──────────────────────────────────────────────────────────────────────┤
- │                     &lt;Agree &gt;           &lt;Cancel&gt;                      │
- └──────────────────────────────────────────────────────────────────────┘
-</code></pre>
-
-<p>で表示された URL の PDF の内容を確認して Agree しました。</p>
-
-<p>成功すると最後に以下のような注意事項が表示されました。
-メールアドレスや ToS への同意は <code>/etc/letsencrypt/accounts</code> 以下にアカウントの秘密鍵などと一緒に保存されるようです。</p>
-
-<pre><code>IMPORTANT NOTES:
- - If you lose your account credentials, you can recover through
-   e-mails sent to mail@example.jp.
- - Congratulations! Your certificate and chain have been saved at
-   /etc/letsencrypt/live/hoge.n-z.jp/fullchain.pem. Your cert will
-   expire on 2016-06-04. To obtain a new version of the certificate in
-   the future, simply run Let's Encrypt again.
- - Your account credentials have been saved in your Let's Encrypt
-   configuration directory at /etc/letsencrypt. You should make a
-   secure backup of this folder now. This configuration directory will
-   also contain certificates and private keys obtained by Let's
-   Encrypt so making regular backups of this folder is ideal.
- - If you like Let's Encrypt, please consider supporting our work by:
-
-   Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
-   Donating to EFF:                    https://eff.org/donate-le
-</code></pre>
-
-<h2>Apache 2.2 への設定反映</h2>
-
-<p>Apache 2.4.8 未満のため、 <code>fullchain.pem</code> ではなく <code>chain.pem</code> と <code>cert.pem</code> で設定します。</p>
-
-<pre><code>SSLCertificateKeyFile /etc/letsencrypt/live/hoge.n-z.jp/privkey.pem
-SSLCertificateChainFile /etc/letsencrypt/live/hoge.n-z.jp/chain.pem
-SSLCertificateFile /etc/letsencrypt/live/hoge.n-z.jp/cert.pem
-</code></pre>
-
-<p><code>sudo apache2ctl graceful</code> で反映し、 <code>https://hoge.n-z.jp</code> を開いて信頼していないルート証明書の問題による証明書エラーが出るのを確認しました。</p>
-
-<h2>本番実行</h2>
-
-<p><code>--test-cert</code> を外して、
-<code>./letsencrypt-auto certonly --webroot -w /srv/www/hoge.n-z.jp/htdocs -d hoge.n-z.jp</code>
-のように実行しました。</p>
-
-<p>staging サーバー (<code>acme-staging.api.letsencrypt.org</code>) ではなく、本番サーバー (<code>acme-v01.api.letsencrypt.org</code>) への接続になるため、メールアドレスの入力と ToS への同意が再度必要になりました。</p>
-
-<p>再作成扱いのためか、こんな確認ダイアログが出たので、 2 を選択して OK を押しました。</p>
-
-<pre><code>┌──────────────────────────────────────────────────────────────────────┐
-│ You have an existing certificate that contains exactly the same      │
-│ domains you requested and isn't close to expiry.                     │
-│ (ref: /etc/letsencrypt/renewal/hoge.n-z.jp.conf)                     │
-│                                                                      │
-│ What would you like to do?                                           │
-│ ┌──────────────────────────────────────────────────────────────────┐ │
-│ │        1  Keep the existing certificate for now                  │ │
-│ │        2  Renew &amp; replace the cert (limit ~5 per 7 days)         │ │
-│ │                                                                  │ │
-│ │                                                                  │ │
-│ │                                                                  │ │
-│ │                                                                  │ │
-│ │                                                                  │ │
-│ │                                                                  │ │
-│ │                                                                  │ │
-│ └──────────────────────────────────────────────────────────────────┘ │
-├──────────────────────────────────────────────────────────────────────┤
-│                     &lt;  OK  &gt;           &lt;Cancel&gt;                      │
-└──────────────────────────────────────────────────────────────────────┘
-</code></pre>
-
-<p><code>sudo apache2ctl graceful</code> で反映し、 <code>https://hoge.n-z.jp</code> を開いて証明書エラーが出ないのを確認しました。</p>
-
-<h2>renew</h2>
-
-<p>letsencrypt 0.4 で <code>letsencrypt renew</code> というサブコマンドが増えていて、有効期限が 30 日未満の証明書の更新が簡単にできるようになっています。</p>
-
-<p>これも最初は <code>--dry-run</code> を付けて staging サーバーで試してみました。
-cron で実行する時のことを考えて、最初から root 権限付きになるように <code>sudo</code> 付きで実行してみました。
-すると以下のようになって <code>/etc/letsencrypt/csr</code> と <code>/etc/letsencrypt/keys</code> 以下にはファイルが作成されてしまいました。
-<code>/etc</code> を汚したくない場合は <code>--dry-run</code> はあまり実行しない方が良さそうだと思いました。</p>
-
-<pre><code>% sudo /home/hoge/letsencrypt-auto renew --dry-run
-Checking for new version...
-Requesting root privileges to run letsencrypt...
-   /home/hoge/.local/share/letsencrypt/bin/letsencrypt renew --dry-run
-Processing /etc/letsencrypt/renewal/hoge.n-z.jp.conf
-** DRY RUN: simulating 'letsencrypt renew' close to cert expiry
-**          (The test certificates below have not been saved.)
-
-Congratulations, all renewals succeeded. The following certs have been renewed:
-  /etc/letsencrypt/live/hoge.n-z.jp/fullchain.pem (success)
-** DRY RUN: simulating 'letsencrypt renew' close to cert expiry
-**          (The test certificates above have not been saved.)
-</code></pre>
-
-<p>普通に実行したら skipped になって何も変化はありませんでした。</p>
-
-<pre><code>% sudo /home/hoge/letsencrypt/letsencrypt-auto renew
-Checking for new version...
-Requesting root privileges to run letsencrypt...
-   /home/hoge/.local/share/letsencrypt/bin/letsencrypt renew
-Processing /etc/letsencrypt/renewal/hoge.n-z.jp.conf
-
-The following certs are not due for renewal yet:
-  /etc/letsencrypt/live/hoge.n-z.jp/fullchain.pem (skipped)
-No renewals were attempted.
-</code></pre>
-
-<h2>メールサーバー用証明書作成</h2>
-
-<p>まず、ドメイン認証で必要になるため、 <code>mx6.n-z.jp</code> にも apache2 の VirtualHost 設定を追加しました。
-<code>https</code> は必要ないため、 <code>http</code> だけの設定をしました。</p>
-
-<p>今回は 2 度目なので、いきなり <code>--test-cert</code> なしで実行しました。</p>
-
-<pre><code>% /home/hoge/letsencrypt/letsencrypt-auto certonly --webroot -w /srv/www/mx6.n-z.jp/htdocs -d mx6.n-z.jp
-Checking for new version...
-Requesting root privileges to run letsencrypt...
-   sudo /home/hoge/.local/share/letsencrypt/bin/letsencrypt certonly --webroot -w /srv/www/mx6.n-z.jp/htdocs -d mx6.n-z.jp
-
-IMPORTANT NOTES:
- - Congratulations! Your certificate and chain have been saved at
-   /etc/letsencrypt/live/mx6.n-z.jp/fullchain.pem. Your cert will
-   expire on 2016-06-04. To obtain a new version of the certificate in
-   the future, simply run Let's Encrypt again.
- - If you like Let's Encrypt, please consider supporting our work by:
-
-   Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
-   Donating to EFF:                    https://eff.org/donate-le
-</code></pre>
-
-<h2>postfix の設定変更</h2>
-
-<p><code>/etc/postfix/main.cf</code> で以下の設定をしました。</p>
-
-<pre><code>smtpd_tls_cert_file = /etc/letsencrypt/live/mx6.n-z.jp/fullchain.pem
-smtpd_tls_key_file = /etc/letsencrypt/live/mx6.n-z.jp/privkey.pem
-smtpd_tls_mandatory_protocols = !SSLv2,!SSLv3
-</code></pre>
-
-<p>そして <code>sudo service postfix reload</code> で反映しました。</p>
-
-<p>postfix の reload は <code>apache2ctl graceful</code> などと違ってメッセージが出てくるのが後の自動化の時に邪魔だったので標準出力に捨てるようにしました (後述)。</p>
-
-<pre><code>% sudo service postfix reload
- * Reloading Postfix configuration...
-   ...done.
-</code></pre>
-
-<h2>dovecot の設定変更</h2>
-
-<p><code>/etc/dovecot/local.conf</code> で以下の設定をしました。</p>
-
-<pre><code>ssl_cert = &lt;/etc/letsencrypt/live/mx6.n-z.jp/fullchain.pem
-ssl_key = &lt;/etc/letsencrypt/live/mx6.n-z.jp/privkey.pem
-</code></pre>
-
-<p><code>sudo service dovecot reload</code> で反映しました。</p>
-
-<h2>自動更新</h2>
-
-<p><a href="https://letsencrypt.org/getting-started/#writing-your-own-renewal-script" title="Writing your own renewal script">Writing your own renewal script</a> を参考にして、以下のように <code>/etc/cron.daily/letsencrypt</code> を作成して毎日 <code>letsencrypt-auto renew</code> が実行されるようにしました。
-postfix と dovecot の reload を追加しています。
-前述したように、 postfix の reload は標準出力を捨てて、余計なメールが飛ばないようにしています。</p>
-
-<pre><code>% sudoedit /etc/cron.daily/letsencrypt
-% cat /etc/cron.daily/letsencrypt
-#!/bin/sh
-if ! /home/hoge/letsencrypt/letsencrypt-auto renew &gt; /var/log/letsencrypt/renew.log 2&gt;&amp;1 ; then
-    echo Automated renewal failed:
-    cat /var/log/letsencrypt/renew.log
-    exit 1
-fi
-apachectl graceful
-service postfix reload &gt;/dev/null
-service dovecot reload
-% sudo chmod +x /etc/cron.daily/letsencrypt
-</code></pre>
-
-<p>作成したファイルの動作確認をしておきます。</p>
-
-<pre><code>% sudo /etc/cron.daily/letsencrypt
-% sudo cat /var/log/letsencrypt/renew.log
-Checking for new version...
-Requesting root privileges to run letsencrypt...
-   /home/hoge/.local/share/letsencrypt/bin/letsencrypt renew
-Processing /etc/letsencrypt/renewal/mx6.n-z.jp.conf
-Processing /etc/letsencrypt/renewal/hoge.n-z.jp.conf
-
-The following certs are not due for renewal yet:
-  /etc/letsencrypt/live/mx6.n-z.jp/fullchain.pem (skipped)
-  /etc/letsencrypt/live/hoge.n-z.jp/fullchain.pem (skipped)
-No renewals were attempted.
-%
-</code></pre>
-
-<h2>まとめ</h2>
-
-<p>letsencrypt の導入から証明書の自動更新の設定までしました。</p>
-
-<p>簡単に導入できて自動化もでき、しかも無料なので、まだベータ版であるという点が問題にならないところでは、積極的に使っていけば良さそうだと思いました。</p>
 ]]></content>
   </entry>
   

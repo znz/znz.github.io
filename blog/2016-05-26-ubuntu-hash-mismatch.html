@@ -5,14 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>caffでキーサインした - @znz blog</title>
+  <title>ubuntuで「ハッシュサムが適合しません」で backports のパッケージが入ってしまって大変だった - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="caffでキーサインした Jun 22nd, 2014 7:07 pm | Comments 第 85 回 関西 Debian 勉強会
-で
-坂本さんとキーサインをしたので、そのメモです。 対象バージョン Ubuntu 12.04.4 LTS
-gnupg 1.4.11-3ubuntu2.5 &hellip;">
+  <meta name="description" content="ubuntuで「ハッシュサムが適合しません」で backports のパッケージが入ってしまって大変だった May 26th, 2016 10:23 pm | Comments jp.archive.ubuntu.com のミラーが不完全だったのか、「ハッシュサムが適合しません」という警告が出て &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -21,7 +18,7 @@ gnupg 1.4.11-3ubuntu2.5 &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-06-22-key-sign-caff.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2016-05-26-ubuntu-hash-mismatch.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -86,7 +83,7 @@ gnupg 1.4.11-3ubuntu2.5 &hellip;">
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">caffでキーサインした</h1>
+      <h1 class="entry-title">ubuntuで「ハッシュサムが適合しません」で backports のパッケージが入ってしまって大変だった</h1>
       
       <!-- zenback_title_end -->
       
@@ -98,7 +95,7 @@ gnupg 1.4.11-3ubuntu2.5 &hellip;">
 
 
 
-<time class='entry-date' datetime='2014-06-22T19:07:19+09:00'><span class='date'><span class='date-month'>Jun</span> <span class='date-day'>22</span><span class='date-suffix'>nd</span>, <span class='date-year'>2014</span></span> <span class='time'>7:07 pm</span></time>
+<time class='entry-date' datetime='2016-05-26T22:23:35+09:00'><span class='date'><span class='date-month'>May</span> <span class='date-day'>26</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>10:23 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -111,55 +108,183 @@ gnupg 1.4.11-3ubuntu2.5 &hellip;">
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><a href="https://wiki.debian.org/KansaiDebianMeeting/20140622" title="第 85 回 関西 Debian 勉強会">第 85 回 関西 Debian 勉強会</a>
-で
-<a href="https://launchpad.net/~mocchi">坂本さん</a>とキーサインをしたので、そのメモです。</p>
+<div class="entry-content"><p><code>jp.archive.ubuntu.com</code> のミラーが不完全だったのか、「ハッシュサムが適合しません」という警告が出て、そのまま <code>sudo aptitude full-upgrade -DV</code> をしたら backports のパッケージが入ってしまって大変な思いをしたという話です。</p>
 
 <!--more-->
 
 
-<h2>対象バージョン</h2>
+<h2>環境</h2>
 
 <ul>
-<li>Ubuntu 12.04.4 LTS</li>
-<li>gnupg 1.4.11-3ubuntu2.5</li>
-<li>signing-party 1.1.4-1</li>
+<li>Ubuntu 14.04.4 LTS</li>
 </ul>
 
 
-<h2>事前準備</h2>
+<h2>警告</h2>
 
-<p>事前にキーサインをするとわかっていれば <code>gpg-key2ps</code> コマンドで fingerprint の紙を用意しておくと良いと思います。
-今回は少人数だったので、
-fingerprint は画面上で見せて確認してもらいました。</p>
+<p><code>sudo aptitude update</code> で以下のような警告とエラーが出ていました。</p>
 
-<h2>本人確認</h2>
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/main/source/Sources を取得できませんでした: ハッシュサムが適合しません
+</span><span class='line'>W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/universe/source/Sources を取得できませんでした: ハッシュサムが適合しません
+</span><span class='line'>W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/main/binary-amd64/Packages を取得できませんでした: ハッシュ サムが適合しません
+</span><span class='line'>W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/universe/binary-amd64/Packages を取得できませんでした: ハッ シュサムが適合しません
+</span><span class='line'>W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/main/binary-i386/Packages を取得できませんでした: ハッシュサムが適合しません
+</span><span class='line'>W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/universe/binary-i386/Packages を取得できませんでした: ハッシュサムが適合しません
+</span><span class='line'>E: 一部のインデックスファイルのダウンロードに失敗しました。無視されたか古いものを代わりに利用しています。
+</span><span class='line'>E: パッケージキャッシュを再構築できませんでした</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<p>対面で運転免許証などの写真付きの身分証明書で名前を確認して、
-それと署名対象の鍵の uid に入っている名前が一致するのを確認しておきます。
-また、後で署名するために fingerprint の情報も入手しておきます。</p>
 
-<h2>caff の設定</h2>
+<h2>不用意なアップグレード</h2>
 
-<p>基本的には
-<a href="http://tokyodebian.alioth.debian.org/pdf/debianmeetingresume200910-presentation.pdf">Why GPG Key sign? 東京エリア Debian 勉強会 in OSC 2009 Tokyo/Fall</a>
-の PDF の内容のままです。</p>
+<p>あまり気にせず、セキュリティアップデートがあれば更新しておこうと思って、 <code>sudo aptitude full-upgrade -DV</code> を実行してみたところ、以下のパッケージが更新対象に上がりました。</p>
 
-<h3>.caffrc</h3>
+<p>証明書の設定で <code>SSLCertificateChainFile</code> が必要なくなる 2.4.8 をまたぐので、ちょっと危険な気はしましたが、個人のサーバーなので多少の停止時間は構わないだろうと思ってアップグレードしてしまいました。</p>
 
-<p>自分の鍵 ID を <code>gpg --list-secret-keys</code> で確認すると、
-<code>4096R/B4222F7A</code> とわかるので、
-<code>gpg --fingerprint B4222F7A</code>
-で fingerprint 全体を確認しておきます。
-(fingerprint の末尾が鍵 ID です。)</p>
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>以下のパッケージが更新されます:
+</span><span class='line'>  apache2 [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+</span><span class='line'>  apache2-bin [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+</span><span class='line'>  apache2-data [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+</span><span class='line'>  apache2-dev [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+</span><span class='line'>  apache2-mpm-prefork [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+</span><span class='line'>  apache2-utils [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+</span><span class='line'>  libcgmanager0 [0.24-0ubuntu7.5 -&gt; 0.39-2ubuntu2~ubuntu14.04.1]</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<p>spam よけのために email のところはちょっと改変していますが、
-<code>~/.caffrc</code> は以下のように設定しています。
-<code>keyid</code> は fingerprint の末尾のうち、
-設定例と同じ長さだけ普通の鍵 ID よりちょっと長めに取り出して設定しています。
-<code>owner</code> と <code>email</code> はメール送信の時に使われます。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>~/.caffrc</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<h2>backports のパッケージだった</h2>
+
+<p>ダウンロード中の URL を見て backports のパッケージが入ってしまっている、と気づいたのですが、手遅れで止める間もなく上がってしまいました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% apt-cache policy apache2
+</span><span class='line'>apache2:
+</span><span class='line'>  インストールされているバージョン: 2.4.7-1ubuntu4.9
+</span><span class='line'>  候補:               2.4.10-1ubuntu1.1~ubuntu14.04.1
+</span><span class='line'>  バージョンテーブル:
+</span><span class='line'>     2.4.10-1ubuntu1.1~ubuntu14.04.1 0
+</span><span class='line'>        100 http://jp.archive.ubuntu.com/ubuntu/ trusty-backports/main amd64 Packages
+</span><span class='line'> *** 2.4.7-1ubuntu4.9 0
+</span><span class='line'>        100 /var/lib/dpkg/status
+</span><span class='line'>     2.4.7-1ubuntu4.5 0
+</span><span class='line'>        500 http://security.ubuntu.com/ubuntu/ trusty-security/main amd64 Packages
+</span><span class='line'>     2.4.7-1ubuntu4 0
+</span><span class='line'>        500 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h2>ダウングレード失敗</h2>
+
+<p><code>/etc/apt/preferences</code> を設定してダウングレードすることにしました。</p>
+
+<p>まず以下を試してみたところ、 <code>base-files</code> などを含む大量のパッケージがダウングレード対象になってしまったので中断しました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Package: *
+</span><span class='line'>Pin: release a=trusty
+</span><span class='line'>Pin-Priority: 1001</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p><code>apt-cache policy</code> で確認してみると、現在のバージョンのインストール候補がなくなっているのが原因の一つでした。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% apt-cache policy base-files
+</span><span class='line'>base-files:
+</span><span class='line'>  インストールされているバージョン: 7.2ubuntu5.4
+</span><span class='line'>  候補:               7.2ubuntu5
+</span><span class='line'>  バージョンテーブル:
+</span><span class='line'> *** 7.2ubuntu5.4 0
+</span><span class='line'>        100 /var/lib/dpkg/status
+</span><span class='line'>     7.2ubuntu5 0
+</span><span class='line'>       1001 http://ubuntutym.u-toyama.ac.jp/ubuntu/ trusty/main amd64 Packages</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>そこで、 <code>/etc/apt/sources.list</code> の末尾に <code>archive.ubuntu.com</code> を一時的に追加することにしました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>deb http://archive.ubuntu.com/ubuntu/ trusty main restricted universe multiverse
+</span><span class='line'>#deb-src http://archive.ubuntu.com/ubuntu/ trusty main restricted universe multiverse
+</span><span class='line'>deb http://archive.ubuntu.com/ubuntu/ trusty-updates main restricted universe multiverse
+</span><span class='line'>deb-src http://archive.ubuntu.com/ubuntu/ trusty-updates main restricted universe multiverse</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>すると <code>trusty-updates</code> も出てきたのですが、 priority が 500 になって期待した値になっていませんでした。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% apt-cache policy base-files
+</span><span class='line'>base-files:
+</span><span class='line'>  インストールされているバージョン: 7.2ubuntu5.4
+</span><span class='line'>  候補:               7.2ubuntu5
+</span><span class='line'>  バージョンテーブル:
+</span><span class='line'> *** 7.2ubuntu5.4 0
+</span><span class='line'>        500 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
+</span><span class='line'>        100 /var/lib/dpkg/status
+</span><span class='line'>     7.2ubuntu5 0
+</span><span class='line'>       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+</span><span class='line'>       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>次に <code>n=trusty</code> を試してみたところ、 <code>backports</code> も priority が 1001 になってしまってダウングレードできませんでした。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Package: *
+</span><span class='line'>Pin: release n=trusty
+</span><span class='line'>Pin-Priority: 1001</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -185,116 +310,65 @@ fingerprint は画面上で見せて確認してもらいました。</p>
 <span class='line-number'>24</span>
 <span class='line-number'>25</span>
 <span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-</pre></td><td class='code'><pre><code class='perl'><span class='line'><span class="c1"># .caffrc -- vim:ft=perl:</span>
-</span><span class='line'><span class="c1"># This file is in perl(1) format - see caff(1) for details.</span>
-</span><span class='line'>
-</span><span class='line'><span class="nv">$CONFIG</span><span class="p">{</span><span class="s">&#39;owner&#39;</span><span class="p">}</span> <span class="o">=</span> <span class="s">&#39;Kazuhiro NISHIYAMA&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="nv">$CONFIG</span><span class="p">{</span><span class="s">&#39;email&#39;</span><span class="p">}</span> <span class="o">=</span> <span class="s">&#39;zn mbf.nifty.com&#39;</span><span class="p">;</span>
-</span><span class='line'><span class="c1">#$CONFIG{&#39;reply-to&#39;} = &#39;foo@bla.org&#39;;</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1"># You can get your long keyid from</span>
-</span><span class='line'><span class="c1">#   gpg --with-colons --list-key &lt;yourkeyid|name|emailaddress..&gt;</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="c1"># If you have a v4 key, it will simply be the last 16 digits of</span>
-</span><span class='line'><span class="c1"># your fingerprint.</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="c1"># Example:</span>
-</span><span class='line'><span class="c1">#   $CONFIG{&#39;keyid&#39;} = [ qw{FEDCBA9876543210} ];</span>
-</span><span class='line'><span class="c1">#  or, if you have more than one key:</span>
-</span><span class='line'><span class="c1">#   $CONFIG{&#39;keyid&#39;} = [ qw{0123456789ABCDEF 89ABCDEF76543210} ];</span>
-</span><span class='line'><span class="nv">$CONFIG</span><span class="p">{</span><span class="s">&#39;keyid&#39;</span><span class="p">}</span> <span class="o">=</span> <span class="p">[</span> <span class="sx">qw{262ED8DBB4222F7A}</span> <span class="p">];</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1"># Select this/these keys to sign with</span>
-</span><span class='line'><span class="c1">#$CONFIG{&#39;local-user&#39;} = [ qw{EE739B28C657086C 9B585538ED7E1B73 262ED8DBB4222F7A C9429DABCB28285B} ];</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1"># Additionally encrypt messages for these keyids</span>
-</span><span class='line'><span class="c1">#$CONFIG{&#39;also-encrypt-to&#39;} = [ qw{EE739B28C657086C 9B585538ED7E1B73 262ED8DBB4222F7A C9429DABCB28285B} ];</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1"># Mail template to use for the encrypted part</span>
-</span><span class='line'><span class="c1">#$CONFIG{&#39;mail-template&#39;} = &lt;&lt; &#39;EOM&#39;;</span>
-</span><span class='line'><span class="c1">#Hi,</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="c1">#please find attached the user id{(scalar @uids &gt;= 2 ? &#39;s&#39; : &#39;&#39;)}</span>
-</span><span class='line'><span class="c1">#{foreach $uid (@uids) {</span>
-</span><span class='line'><span class="c1">#    $OUT .= &quot;\t&quot;.$uid.&quot;\n&quot;;</span>
-</span><span class='line'><span class="c1">#};}of your key {$key} signed by me.</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="c1">#If you have multiple user ids, I sent the signature for each user id</span>
-</span><span class='line'><span class="c1">#separately to that user id&#39;s associated email address. You can import</span>
-</span><span class='line'><span class="c1">#the signatures by running each through `gpg --import`.</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="c1">#Note that I did not upload your key to any keyservers. If you want this</span>
-</span><span class='line'><span class="c1">#new signature to be available to others, please upload it yourself.</span>
-</span><span class='line'><span class="c1">#With GnuPG this can be done using</span>
-</span><span class='line'><span class="c1">#       gpg --keyserver pool.sks-keyservers.net --send-key {$key}</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="c1">#If you have any questions, don&#39;t hesitate to ask.</span>
-</span><span class='line'><span class="c1">#</span>
-</span><span class='line'><span class="c1">#Regards,</span>
-</span><span class='line'><span class="c1">#{$owner}</span>
-</span><span class='line'><span class="c1">#EOM</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% apt-cache policy base-files
+</span><span class='line'>base-files:
+</span><span class='line'>  インストールされているバージョン: 7.2ubuntu5.4
+</span><span class='line'>  候補:               7.2ubuntu5.4
+</span><span class='line'>  バージョンテーブル:
+</span><span class='line'> *** 7.2ubuntu5.4 0
+</span><span class='line'>       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
+</span><span class='line'>        100 /var/lib/dpkg/status
+</span><span class='line'>     7.2ubuntu5 0
+</span><span class='line'>       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+</span><span class='line'>       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+</span><span class='line'>% apt-cache policy apache2
+</span><span class='line'>apache2:
+</span><span class='line'>  インストールされているバージョン: 2.4.10-1ubuntu1.1~ubuntu14.04.1
+</span><span class='line'>  候補:               2.4.10-1ubuntu1.1~ubuntu14.04.1
+</span><span class='line'>  バージョンテーブル:
+</span><span class='line'> *** 2.4.10-1ubuntu1.1~ubuntu14.04.1 0
+</span><span class='line'>       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty-backports/main amd64 Packages
+</span><span class='line'>        100 /var/lib/dpkg/status
+</span><span class='line'>     2.4.7-1ubuntu4.9 0
+</span><span class='line'>       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
+</span><span class='line'>     2.4.7-1ubuntu4.5 0
+</span><span class='line'>       1001 http://security.ubuntu.com/ubuntu/ trusty-security/main amd64 Packages
+</span><span class='line'>     2.4.7-1ubuntu4 0
+</span><span class='line'>       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+</span><span class='line'>       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<h3>~/.caff/gnupghome/gpg.conf の設定</h3>
+<h2>ダウングレード成功</h2>
 
-<p>以前参考にした設定のまま</p>
+<p>最終的に <code>a=trusty-updates</code> と <code>a=trusty-security</code> も追加することでダウングレードできました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>~/.caff/gnupghome/gpg.conf</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>keyserver pgp.mit.edu
-</span><span class='line'>cert-digest-algo SHA256
-</span><span class='line'>personal-digest-preferences SHA256
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Package: *
+</span><span class='line'>Pin: release a=trusty
+</span><span class='line'>Pin-Priority: 1001
+</span><span class='line'>
+</span><span class='line'>Package: *
+</span><span class='line'>Pin: release a=trusty-updates
+</span><span class='line'>Pin-Priority: 1001
+</span><span class='line'>
+</span><span class='line'>Package: *
+</span><span class='line'>Pin: release a=trusty-security
+</span><span class='line'>Pin-Priority: 1001</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<p>となっていました。
-PDF では SHA512 になっていたので、
-SHA256 から SHA512 に変更しました。
-今日の caff での署名した時点では SHA256 のままだったので、
-次回から変わる予定です。</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>~/.caff/gnupghome/gpg.conf</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>keyserver pgp.mit.edu
-</span><span class='line'>cert-digest-algo SHA512
-</span><span class='line'>personal-digest-preferences SHA512
-</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<h2>caff -u で署名</h2>
-
-<p>spam よけのためメールアドレスの所は改変した状態のログは以下の通りです。
-「本当に署名しますか? (y/N)」のところで身分証明書と一緒に確認した fingerprint と合っているか確認します。</p>
-
-<p>最後にメールを送信して終了です。
-相手の鍵で暗号化されたメールが localhost の SMTP サーバー送信されます。</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -320,63 +394,45 @@ SHA256 から SHA512 に変更しました。
 <span class='line-number'>24</span>
 <span class='line-number'>25</span>
 <span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> caff -u B4222F7A D66FD341
-</span><span class='line'><span class="go">[INFO] Importing key 262ED8DBB4222F7A from your normal GnuPGHome.</span>
-</span><span class='line'><span class="go">[INFO] fetching keys, this will take a while...</span>
-</span><span class='line'><span class="go">[INFO] Sign the following keys according to your policy, then exit gpg with &#39;save&#39; after signing each key</span>
-</span><span class='line'><span class="go">gpg --local-user B4222F7A --homedir=/home/kazu/.caff/gnupghome --secret-keyring /home/kazu/.gnupg/secring.gpg --no-auto-check-trustdb --trust-model=always --edit 25DA5B9699F132DB74BD2270B5A586C7D66FD341 sign</span>
-</span><span class='line'><span class="go">gpg (GnuPG) 1.4.11; Copyright (C) 2010 Free Software Foundation, Inc.</span>
-</span><span class='line'><span class="go">This is free software: you are free to change and redistribute it.</span>
-</span><span class='line'><span class="go">There is NO WARRANTY, to the extent permitted by law.</span>
-</span><span class='line'>
-</span><span class='line'>
-</span><span class='line'><span class="go">pub  4096R/D66FD341  作成: 2014-06-22  満了: 無期限       利用法: SC</span>
-</span><span class='line'><span class="go">sub  4096R/5D3BA622  作成: 2014-06-22  満了: 無期限       利用法: E</span>
-</span><span class='line'><span class="go">[ unknown] (1). Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt;</span>
-</span><span class='line'>
-</span><span class='line'>
-</span><span class='line'><span class="go">pub  4096R/D66FD341  作成: 2014-06-22  満了: 無期限       利用法: SC</span>
-</span><span class='line'><span class="go"> 主鍵の指紋: 25DA 5B96 99F1 32DB 74BD  2270 B5A5 86C7 D66F D341</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">     Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">本当にこの鍵にあなたの鍵“Kazuhiro NISHIYAMA &lt;zn mbf.nifty.com&gt;”で署名してよいですか</span>
-</span><span class='line'><span class="go">(B4222F7A)</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">本当に署名しますか? (y/N) y</span>
-</span><span class='line'>
-</span><span class='line'><span class="go">次のユーザーの秘密鍵のロックを解除するには</span>
-</span><span class='line'><span class="go">パスフレーズがいります:“Kazuhiro NISHIYAMA &lt;zn mbf.nifty.com&gt;”</span>
-</span><span class='line'><span class="go">4096ビットRSA鍵, ID B4222F7A作成日付は2010-06-27</span>
-</span><span class='line'>
-</span><span class='line'>
-</span><span class='line'><span class="go">gpg&gt; save</span>
-</span><span class='line'><span class="go">[INFO] B5A586C7D66FD341 1 Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt; done.</span>
-</span><span class='line'><span class="go">[INFO] key 25DA5B9699F132DB74BD2270B5A586C7D66FD341 done.</span>
-</span><span class='line'><span class="go">Mail signature for Takashi Sakamoto &lt;o-takashi sakamocchi.jp&gt; to &#39;o-takashi sakamocchi.jp&#39;? [Y/n]</span>
-</span><span class='line'><span class="gp">%</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% apt-cache policy apache2
+</span><span class='line'>apache2:
+</span><span class='line'>  インストールされているバージョン: 2.4.10-1ubuntu1.1~ubuntu14.04.1
+</span><span class='line'>  候補:               2.4.7-1ubuntu4.9
+</span><span class='line'>  バージョンテーブル:
+</span><span class='line'> *** 2.4.10-1ubuntu1.1~ubuntu14.04.1 0
+</span><span class='line'>        100 http://jp.archive.ubuntu.com/ubuntu/ trusty-backports/main amd64 Packages
+</span><span class='line'>        100 /var/lib/dpkg/status
+</span><span class='line'>     2.4.7-1ubuntu4.9 0
+</span><span class='line'>       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
+</span><span class='line'>     2.4.7-1ubuntu4.5 0
+</span><span class='line'>       1001 http://security.ubuntu.com/ubuntu/ trusty-security/main amd64 Packages
+</span><span class='line'>     2.4.7-1ubuntu4 0
+</span><span class='line'>       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+</span><span class='line'>       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+</span><span class='line'>% apt-cache policy base-files
+</span><span class='line'>base-files:
+</span><span class='line'>  インストールされているバージョン: 7.2ubuntu5.4
+</span><span class='line'>  候補:               7.2ubuntu5.4
+</span><span class='line'>  バージョンテーブル:
+</span><span class='line'> *** 7.2ubuntu5.4 0
+</span><span class='line'>       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
+</span><span class='line'>        100 /var/lib/dpkg/status
+</span><span class='line'>     7.2ubuntu5 0
+</span><span class='line'>       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+</span><span class='line'>       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<h2>caff からのメールを受け取った相手のすべきこと</h2>
+<h2>backports のコメントアウト</h2>
 
-<p>暗号化されたメールが届くので、
-対応する秘密鍵を使って復号してメールを確認します。
-さらにその中にある署名を自分の鍵束にインポートしてキーサーバーに送信します。</p>
+<p>backports のパッケージは使っていなかったので、この後 backports の apt-line はコメントアウトしました。</p>
 
-<p>caff のやり方はここでメールアドレスの到達性もチェックしているようなので、
-署名した側はキーサーバーに送信する必要はなさそうです。
-むしろそういうことをしないようにするために
-<code>~/.caff/gnupghome</code> に独自の鍵束を用意しているように思いました。</p>
+<h2>まとめ</h2>
+
+<p><code>apt</code> の <code>update</code> に失敗した時はアップグレード対象のパッケージに注意しましょう。</p>
+
+<p>ダウングレードする時は <code>apt_preferences(5)</code> の <code>Pin</code> 設定をうまく工夫しましょう。</p>
+
+<p>backports のパッケージが不要なら backports の apt-line を追加するのは避けましょう。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -395,12 +451,12 @@ SHA256 から SHA512 に変更しました。
 
 
 
-<time class='entry-date' datetime='2014-06-22T19:07:19+09:00'><span class='date'><span class='date-month'>Jun</span> <span class='date-day'>22</span><span class='date-suffix'>nd</span>, <span class='date-year'>2014</span></span> <span class='time'>7:07 pm</span></time>
+<time class='entry-date' datetime='2016-05-26T22:23:35+09:00'><span class='date'><span class='date-month'>May</span> <span class='date-day'>26</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>10:23 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/event/'>event</a>, <a class='category' href='/blog/categories/gpg/'>gpg</a>
+    <a class='category' href='/blog/categories/linux/'>linux</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>
   
 </span>
 
@@ -427,10 +483,8 @@ SHA256 から SHA512 に変更しました。
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2014-06-22-kansai-debian-meeting.html" title="Previous Post: 第 85 回 関西 Debian 勉強会に参加した">&laquo; 第 85 回 関西 Debian 勉強会に参加した</a>
+        <a class="basic-alignment left" href="/blog/2016-05-13-letsencrypt-certbot.html" title="Previous Post: letsencrypt-auto が certbot-auto になった">&laquo; letsencrypt-auto が certbot-auto になった</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2014-06-25-env-array-hash.html" title="Next Post: 環境変数にハッシュの配列を入れてみた">環境変数にハッシュの配列を入れてみた &raquo;</a>
       
     </p>
   </footer>
@@ -565,8 +619,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-06-22-key-sign-caff.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2014-06-22-key-sign-caff.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2016-05-26-ubuntu-hash-mismatch.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2016-05-26-ubuntu-hash-mismatch.html';
         var disqus_script = 'embed.js';
       
     (function () {

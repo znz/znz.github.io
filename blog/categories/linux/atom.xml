@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-05-14T00:00:43+09:00</updated>
+  <updated>2016-05-26T22:53:26+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,213 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ubuntuで「ハッシュサムが適合しません」で backports のパッケージが入ってしまって大変だった]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-05-26-ubuntu-hash-mismatch.html"/>
+    <updated>2016-05-26T22:23:35+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ubuntu-hash-mismatch</id>
+    <content type="html"><![CDATA[<p><code>jp.archive.ubuntu.com</code> のミラーが不完全だったのか、「ハッシュサムが適合しません」という警告が出て、そのまま <code>sudo aptitude full-upgrade -DV</code> をしたら backports のパッケージが入ってしまって大変な思いをしたという話です。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>Ubuntu 14.04.4 LTS</li>
+</ul>
+
+
+<h2>警告</h2>
+
+<p><code>sudo aptitude update</code> で以下のような警告とエラーが出ていました。</p>
+
+<pre><code>W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/main/source/Sources を取得できませんでした: ハッシュサムが適合しません
+W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/universe/source/Sources を取得できませんでした: ハッシュサムが適合しません
+W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/main/binary-amd64/Packages を取得できませんでした: ハッシュ サムが適合しません
+W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/universe/binary-amd64/Packages を取得できませんでした: ハッ シュサムが適合しません
+W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/main/binary-i386/Packages を取得できませんでした: ハッシュサムが適合しません
+W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/universe/binary-i386/Packages を取得できませんでした: ハッシュサムが適合しません
+E: 一部のインデックスファイルのダウンロードに失敗しました。無視されたか古いものを代わりに利用しています。
+E: パッケージキャッシュを再構築できませんでした
+</code></pre>
+
+<h2>不用意なアップグレード</h2>
+
+<p>あまり気にせず、セキュリティアップデートがあれば更新しておこうと思って、 <code>sudo aptitude full-upgrade -DV</code> を実行してみたところ、以下のパッケージが更新対象に上がりました。</p>
+
+<p>証明書の設定で <code>SSLCertificateChainFile</code> が必要なくなる 2.4.8 をまたぐので、ちょっと危険な気はしましたが、個人のサーバーなので多少の停止時間は構わないだろうと思ってアップグレードしてしまいました。</p>
+
+<pre><code>以下のパッケージが更新されます:
+  apache2 [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+  apache2-bin [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+  apache2-data [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+  apache2-dev [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+  apache2-mpm-prefork [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+  apache2-utils [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
+  libcgmanager0 [0.24-0ubuntu7.5 -&gt; 0.39-2ubuntu2~ubuntu14.04.1]
+</code></pre>
+
+<h2>backports のパッケージだった</h2>
+
+<p>ダウンロード中の URL を見て backports のパッケージが入ってしまっている、と気づいたのですが、手遅れで止める間もなく上がってしまいました。</p>
+
+<pre><code>% apt-cache policy apache2
+apache2:
+  インストールされているバージョン: 2.4.7-1ubuntu4.9
+  候補:               2.4.10-1ubuntu1.1~ubuntu14.04.1
+  バージョンテーブル:
+     2.4.10-1ubuntu1.1~ubuntu14.04.1 0
+        100 http://jp.archive.ubuntu.com/ubuntu/ trusty-backports/main amd64 Packages
+ *** 2.4.7-1ubuntu4.9 0
+        100 /var/lib/dpkg/status
+     2.4.7-1ubuntu4.5 0
+        500 http://security.ubuntu.com/ubuntu/ trusty-security/main amd64 Packages
+     2.4.7-1ubuntu4 0
+        500 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+</code></pre>
+
+<h2>ダウングレード失敗</h2>
+
+<p><code>/etc/apt/preferences</code> を設定してダウングレードすることにしました。</p>
+
+<p>まず以下を試してみたところ、 <code>base-files</code> などを含む大量のパッケージがダウングレード対象になってしまったので中断しました。</p>
+
+<pre><code>Package: *
+Pin: release a=trusty
+Pin-Priority: 1001
+</code></pre>
+
+<p><code>apt-cache policy</code> で確認してみると、現在のバージョンのインストール候補がなくなっているのが原因の一つでした。</p>
+
+<pre><code>% apt-cache policy base-files
+base-files:
+  インストールされているバージョン: 7.2ubuntu5.4
+  候補:               7.2ubuntu5
+  バージョンテーブル:
+ *** 7.2ubuntu5.4 0
+        100 /var/lib/dpkg/status
+     7.2ubuntu5 0
+       1001 http://ubuntutym.u-toyama.ac.jp/ubuntu/ trusty/main amd64 Packages
+</code></pre>
+
+<p>そこで、 <code>/etc/apt/sources.list</code> の末尾に <code>archive.ubuntu.com</code> を一時的に追加することにしました。</p>
+
+<pre><code>deb http://archive.ubuntu.com/ubuntu/ trusty main restricted universe multiverse
+#deb-src http://archive.ubuntu.com/ubuntu/ trusty main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu/ trusty-updates main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu/ trusty-updates main restricted universe multiverse
+</code></pre>
+
+<p>すると <code>trusty-updates</code> も出てきたのですが、 priority が 500 になって期待した値になっていませんでした。</p>
+
+<pre><code>% apt-cache policy base-files
+base-files:
+  インストールされているバージョン: 7.2ubuntu5.4
+  候補:               7.2ubuntu5
+  バージョンテーブル:
+ *** 7.2ubuntu5.4 0
+        500 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
+        100 /var/lib/dpkg/status
+     7.2ubuntu5 0
+       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+</code></pre>
+
+<p>次に <code>n=trusty</code> を試してみたところ、 <code>backports</code> も priority が 1001 になってしまってダウングレードできませんでした。</p>
+
+<pre><code>Package: *
+Pin: release n=trusty
+Pin-Priority: 1001
+</code></pre>
+
+<pre><code>% apt-cache policy base-files
+base-files:
+  インストールされているバージョン: 7.2ubuntu5.4
+  候補:               7.2ubuntu5.4
+  バージョンテーブル:
+ *** 7.2ubuntu5.4 0
+       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
+        100 /var/lib/dpkg/status
+     7.2ubuntu5 0
+       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+% apt-cache policy apache2
+apache2:
+  インストールされているバージョン: 2.4.10-1ubuntu1.1~ubuntu14.04.1
+  候補:               2.4.10-1ubuntu1.1~ubuntu14.04.1
+  バージョンテーブル:
+ *** 2.4.10-1ubuntu1.1~ubuntu14.04.1 0
+       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty-backports/main amd64 Packages
+        100 /var/lib/dpkg/status
+     2.4.7-1ubuntu4.9 0
+       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
+     2.4.7-1ubuntu4.5 0
+       1001 http://security.ubuntu.com/ubuntu/ trusty-security/main amd64 Packages
+     2.4.7-1ubuntu4 0
+       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+</code></pre>
+
+<h2>ダウングレード成功</h2>
+
+<p>最終的に <code>a=trusty-updates</code> と <code>a=trusty-security</code> も追加することでダウングレードできました。</p>
+
+<pre><code>Package: *
+Pin: release a=trusty
+Pin-Priority: 1001
+
+Package: *
+Pin: release a=trusty-updates
+Pin-Priority: 1001
+
+Package: *
+Pin: release a=trusty-security
+Pin-Priority: 1001
+</code></pre>
+
+<pre><code>% apt-cache policy apache2
+apache2:
+  インストールされているバージョン: 2.4.10-1ubuntu1.1~ubuntu14.04.1
+  候補:               2.4.7-1ubuntu4.9
+  バージョンテーブル:
+ *** 2.4.10-1ubuntu1.1~ubuntu14.04.1 0
+        100 http://jp.archive.ubuntu.com/ubuntu/ trusty-backports/main amd64 Packages
+        100 /var/lib/dpkg/status
+     2.4.7-1ubuntu4.9 0
+       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
+     2.4.7-1ubuntu4.5 0
+       1001 http://security.ubuntu.com/ubuntu/ trusty-security/main amd64 Packages
+     2.4.7-1ubuntu4 0
+       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+% apt-cache policy base-files
+base-files:
+  インストールされているバージョン: 7.2ubuntu5.4
+  候補:               7.2ubuntu5.4
+  バージョンテーブル:
+ *** 7.2ubuntu5.4 0
+       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
+        100 /var/lib/dpkg/status
+     7.2ubuntu5 0
+       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
+</code></pre>
+
+<h2>backports のコメントアウト</h2>
+
+<p>backports のパッケージは使っていなかったので、この後 backports の apt-line はコメントアウトしました。</p>
+
+<h2>まとめ</h2>
+
+<p><code>apt</code> の <code>update</code> に失敗した時はアップグレード対象のパッケージに注意しましょう。</p>
+
+<p>ダウングレードする時は <code>apt_preferences(5)</code> の <code>Pin</code> 設定をうまく工夫しましょう。</p>
+
+<p>backports のパッケージが不要なら backports の apt-line を追加するのは避けましょう。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[letsencrypt-auto が certbot-auto になった]]></title>
@@ -437,163 +644,6 @@ auth required pam_permit.so
 <p><code>Match</code> で <code>ChallengeResponseAuthentication</code> を設定しようとしましたが、 <code>Directive 'ChallengeResponseAuthentication' is not allowed within a Match block</code> というエラーで設定できませんでした。</p>
 
 <p>公開鍵ごとに二要素認証の設定ができないか、検討してみましたが、使えそうな設定項目が見つかりませんでした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[jessie で dovecot-imapd と postfix の設定をして Thunderbird 用の autoconfig ファイルを用意した]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-04-17-jessie-dovecot.html"/>
-    <updated>2016-04-17T21:14:05+09:00</updated>
-    <id>http://blog.n-z.jp/blog/jessie-dovecot</id>
-    <content type="html"><![CDATA[<p><a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0387?page=4">Ubuntu Weekly Recipe 第387回　UbuntuでSSLを利用したサービスを構築する</a> を参考にして、 Debian jessie で dovecot-imapd で IMAP サーバーの設定をしました。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Debian GNU/Linux 8.4 (jessie)</li>
-<li>postfix 2.11.3-1</li>
-<li>dovecot-imapd 1:2.2.13-12~deb8u1</li>
-<li>Thunderbird 38.6.0</li>
-</ul>
-
-
-<h2>インストール</h2>
-
-<p><code>sudo aptitude install dovecot-imapd</code> でインストールしました。</p>
-
-<h2>認証設定</h2>
-
-<p>クライアントによっては plain 認証は使えず login 認証が必要なので <code>sudoedit /etc/dovecot/conf.d/10-auth.conf</code> で <code>auth_mechanisms = plain login</code> に設定を変更しました。</p>
-
-<h2>ssl 設定</h2>
-
-<p><code>sudoedit /etc/dovecot/conf.d/10-ssl.conf</code> で以下の設定を変更しました。</p>
-
-<ul>
-<li><code>ssl = no</code> を <code>ssl = required</code> に</li>
-<li><code>ssl_cert</code>, <code>ssl_key</code> を設定</li>
-<li><code>#ssl_protocols = !SSLv2</code> を <code>ssl_protocols = !SSLv2 !SSLv3</code> に</li>
-</ul>
-
-
-<p><a href="http://wiki.dovecot.org/SSL/DovecotConfiguration">http://wiki.dovecot.org/SSL/DovecotConfiguration</a> によると <code>ssl</code> の設定については <code>ssl=no</code>, <code>ssl=yes and disable_plaintext_auth=yes</code>, <code>ssl=yes and disable_plaintext_auth=yes</code>, <code>ssl=required</code> という設定の組み合わせがあるようです。</p>
-
-<h2>Maildir 設定</h2>
-
-<p>postfix の設定で <code>Maildir</code> への配送を使っているので、 <code>sudoedit /etc/dovecot/conf.d/10-mail.conf</code> で <code>mail_location = mbox:~/mail:INBOX=/var/mail/%u</code> を <code>mail_location = maildir:~/Maildir</code> に設定を変更しました。</p>
-
-<h2>postfix との認証連携</h2>
-
-<p>まず <code>sudo ls -al /var/spool/postfix/private</code> で <code>auth</code> がないのを確認しました。</p>
-
-<p><code>sudoedit /etc/dovecot/conf.d/10-master.conf</code> で</p>
-
-<pre><code class="plain /etc/dovecot/conf.d/10-master.conf">  #unix_listener /var/spool/postfix/private/auth {
-  #  mode = 0666
-  #}
-</code></pre>
-
-<p>を</p>
-
-<pre><code class="plain /etc/dovecot/conf.d/10-master.conf">  unix_listener /var/spool/postfix/private/auth {
-    mode = 0660
-    user = postfix
-    group = postfix
-  }
-</code></pre>
-
-<p>に変更しました。</p>
-
-<p>設定反映後に <code>sudo ls -al /var/spool/postfix/private</code> で <code>auth</code> が owner も group も postfix でパーミッションが <code>srw-rw----</code> になっているのを確認します。</p>
-
-<h2>設定反映</h2>
-
-<p><code>sudo service dovecot restart</code> で設定を反映しました。</p>
-
-<p><code>journalctl -u dovecot.service</code> や <code>sudo ss -lntp | grep dovecot</code> で問題なく起動していることを確認しました。</p>
-
-<h2>ufw でポート開放</h2>
-
-<p><code>ufw allow 993/tcp</code> と <code>ufw limit 993/tcp</code> でポートを開放して連続接続数制限をしました。</p>
-
-<h2>postfix 設定</h2>
-
-<h3>SSL 設定</h3>
-
-<p><code>smtpd_tls_cert_file</code> と <code>smtpd_tls_key_file</code> を設定します。
-<code>smtpd_tls_cert_file</code> は中間証明書も結合したファイルを指定します。</p>
-
-<p>その他の設定は以下のように設定しました。</p>
-
-<pre><code class="plain /etc/postfix/main.cf">smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3
-smtpd_tls_protocols = !SSLv2, !SSLv3
-smtp_tls_mandatory_protocols = !SSLv2, !SSLv3
-smtp_tls_protocols = !SSLv2, !SSLv3
-</code></pre>
-
-<p><code>smtpd_tls_security_level = may</code> は設定すると外部からのメール送信で問題が起きたことがあったので、メールの送信テストをしつつ、様子を見ながら設定するかどうか決めます。</p>
-
-<h3>SASL 設定</h3>
-
-<p><a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0387?page=4">Ubuntu Weekly Recipe</a> では <code>smtpd_sasl_auth_enable</code> は <code>/etc/postfix/main.cf</code> でも <code>yes</code> にしていますが、 <code>/etc/postfix/master.cf</code> で <code>smtps</code> と <code>submission</code> で個別に <code>yes</code> に設定されているので、 <code>/etc/postfix/main.cf</code> では <code>no</code> のままにしておきます。</p>
-
-<p>そうしておかないと 25 番ポートでも SMTP-Auth が有効になって、しかも <code>smtpd_tls_security_level = may</code> だとパスワードが平文で流れても良いということになるので、危険なことが起きる可能性があります。
-最近は OBP25B という対策が普及しているので、一般のクライアントが間違って平文で送信してしまう可能性は低いと思いますが、余計な危険は避けておくのが良いと思います。</p>
-
-<p>CRAM-MD5 が有効なら <code>smtpd_sasl_security_options = noanonymous,noplaintext</code> にして <code>master.cf</code> で <code>noanonymous</code> だけにしても良いかと思ったのですが、 plain 認証と login 認証しかない状態で <code>noplaintext</code> もつけてしまうと 25 番ポートで listen しているのに接続しても最初の <code>220 mail.example.org ESMTP Postfix (Debian/GNU)</code> が出てこなくてログに <code>fatal: no SASL authentication mechanisms</code> と記録されるという状態になってしまいました。
-<code>/etc/passwd</code> (<code>/etc/shadow</code>) による認証だとパスワードをハッシュ化された状態でしか保存していないため、 CRAM-MD5 は使えないので、これ以上の検証はできませんでした。</p>
-
-<p>以上を踏まえて以下のように設定しました。</p>
-
-<pre><code class="plain /etc/postfix/main.cf">smtpd_sasl_auth_enable = no
-smtpd_sasl_local_domain = $myhostname
-smtpd_sasl_security_options = noanonymous
-smtpd_sasl_type = dovecot
-smtpd_sasl_path = private/auth
-broken_sasl_auth_clients = yes
-</code></pre>
-
-<p><code>smtpd_sasl_local_domain</code> や <code>broken_sasl_auth_clients</code> は不要かもしれません。</p>
-
-<h2>Thunderbird 用自動設定ファイル設置</h2>
-
-<p><a href="https://developer.mozilla.org/ja/docs/Mozilla/Thunderbird/Autoconfiguration">Thunderbird のアカウント情報自動設定機能</a>のために <code>mail/config-v1.1.xml</code> を設置します。</p>
-
-<p><code>@example.com</code> のメールアドレスに対して <code>http://autoconfig.example.com/mail/config-v1.1.xml</code> か <code>http://example.com/.well-known/autoconfig/mail/config-v1.1.xml</code> を用意します。</p>
-
-<p>内容は以下のような感じになります。
-<code>mozilla.org</code> の例との主な違いは <code>authentication</code> を <code>password-encrypted</code> ではなく <code>password-cleartext</code> にしているところと、 <code>username</code> を <code>%EMAILADDRESS%</code> ではなく <code>%EMAILLOCALPART%</code> にしているところです。</p>
-
-<pre><code class="xml mail/config-v1.1.xml">&lt;?xml version="1.0" encoding="utf-8"?&gt;
-&lt;clientConfig version="1.1"&gt;
-  &lt;emailProvider id="example.com"&gt;
-    &lt;domain&gt;example.com&lt;/domain&gt;
-    &lt;displayName&gt;Example.com Mail&lt;/displayName&gt;
-    &lt;displayShortName&gt;example.com&lt;/displayShortName&gt;
-    &lt;incomingServer type="imap"&gt;
-      &lt;hostname&gt;mail.example.com&lt;/hostname&gt;
-      &lt;port&gt;993&lt;/port&gt;
-      &lt;socketType&gt;SSL&lt;/socketType&gt;
-      &lt;authentication&gt;password-cleartext&lt;/authentication&gt;
-      &lt;username&gt;%EMAILLOCALPART%&lt;/username&gt;
-    &lt;/incomingServer&gt;
-    &lt;outgoingServer type="smtp"&gt;
-      &lt;hostname&gt;mail.example.com&lt;/hostname&gt;
-      &lt;port&gt;587&lt;/port&gt;
-      &lt;socketType&gt;STARTTLS&lt;/socketType&gt;
-      &lt;authentication&gt;password-cleartext&lt;/authentication&gt;
-      &lt;username&gt;%EMAILLOCALPART%&lt;/username&gt;
-    &lt;/outgoingServer&gt;
-  &lt;/emailProvider&gt;
-&lt;/clientConfig&gt;
-</code></pre>
-
-<h2>まとめ</h2>
-
-<p><a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0387?page=4">Ubuntu Weekly Recipe</a></p>
 ]]></content>
   </entry>
   
