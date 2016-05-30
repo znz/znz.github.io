@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-05-26T22:53:26+09:00</updated>
+  <updated>2016-05-30T21:42:41+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,266 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[jessie の letsencrypt を certbot にあげてみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-05-30-letsencrypt-to-certbot-on-jessie.html"/>
+    <updated>2016-05-30T21:20:43+09:00</updated>
+    <id>http://blog.n-z.jp/blog/letsencrypt-to-certbot-on-jessie</id>
+    <content type="html"><![CDATA[<p>Debian で <a href="https://packages.debian.org/letsencrypt">letsencrypt パッケージ</a>が <a href="https://packages.debian.org/certbot">certbot パッケージ</a>に変わって、
+jessie-backports にも反映されたので、 certbot パッケージに入れ替えてみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Debian GNU/Linux 8.4 (jessie) (amd64)</li>
+<li>letsencrypt 0.5.0-1~bpo8+1 から certbot 0.6.0-2~bpo8+1</li>
+</ul>
+
+
+<h2>アップグレード失敗</h2>
+
+<p>普通に upgrade しようとすると以下のように失敗します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>%  sudo aptitude full-upgrade -DV
+</span><span class='line'>以下のパッケージが更新されます:
+</span><span class='line'>  python-acme{b} [0.5.0-1~bpo8+1 -&gt; 0.6.0-1~bpo8+1] (破: python-letsencrypt)
+</span><span class='line'>更新: 1 個、新規インストール: 0 個、削除: 0 個、保留: 0 個。
+</span><span class='line'>アーカイブ 54.6 k バイト中 0  バイトを取得する必要があります。展開後に 1,024  バイトのディスク領域が新たに消費されます。以下のパッケージには満たされていない依存関係があります:
+</span><span class='line'> python-acme : 破壊: python-letsencrypt (&lt; 0.6.0) [0.5.0-1~bpo8+1 が既にインストール済みです]
+</span><span class='line'>以下のアクションでこれらの依存関係の問題は解決されます:
+</span><span class='line'>
+</span><span class='line'>     以下のパッケージを削除する:
+</span><span class='line'>1)     letsencrypt
+</span><span class='line'>2)     python-letsencrypt
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>この解決方法を受け入れますか? [Y/n/q/?]q
+</span><span class='line'>これらの依存関係の問題を解決するための努力をすべて放棄します。
+</span><span class='line'>中断。
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>certbot パッケージで入れ替え</h2>
+
+<p>以下のように <code>certbot</code> パッケージをインストールすることで <code>letsencrypt</code> パッケージが削除されます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% sudo aptitude install certbot
+</span><span class='line'>以下の新規パッケージがインストールされます:
+</span><span class='line'>  certbot{b} python-certbot{ab}
+</span><span class='line'>以下のパッケージが更新されます:
+</span><span class='line'>  python-acme{b}
+</span><span class='line'>更新: 1 個、新規インストール: 2 個、削除: 0 個、保留: 0 個。
+</span><span class='line'>アーカイブ 204 k バイト中 149 k バイトを取得する必要があります。展開後に 816 k バイトのディスク領域が新たに消費されます 。
+</span><span class='line'>以下のパッケージには満たされていない依存関係があります:
+</span><span class='line'> python-acme : 破壊: python-letsencrypt (&lt; 0.6.0) [0.5.0-1~bpo8+1 が既にインストール済みです]
+</span><span class='line'> python-certbot : 破壊: python-letsencrypt [0.5.0-1~bpo8+1 が既にインストール済みです]
+</span><span class='line'> certbot : 破壊: letsencrypt [0.5.0-1~bpo8+1 が既にインストール済みです]
+</span><span class='line'>以下のアクションでこれらの依存関係の問題は解決されます:
+</span><span class='line'>
+</span><span class='line'>     以下のパッケージを削除する:
+</span><span class='line'>1)     letsencrypt
+</span><span class='line'>2)     python-letsencrypt
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>この解決方法を受け入れますか? [Y/n/q/?]
+</span><span class='line'>以下の新規パッケージがインストールされます:
+</span><span class='line'>  certbot python-certbot{a}
+</span><span class='line'>以下のパッケージが削除されます:
+</span><span class='line'>  letsencrypt{a} python-letsencrypt{a}
+</span><span class='line'>以下のパッケージが更新されます:
+</span><span class='line'>  python-acme
+</span><span class='line'>更新: 1 個、新規インストール: 2 個、削除: 2 個、保留: 0 個。
+</span><span class='line'>アーカイブ 204 k バイト中 149 k バイトを取得する必要があります。展開後に 14.3 k バイトのディスク領域が新たに消費されます。
+</span><span class='line'>先に進みますか? [Y/n/?]
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>自動更新設定確認</h2>
+
+<p>インストール後に <code>etckeeper</code> の <code>commit</code> が発生して差分があるようだったので、
+<code>sudo etckeeper vcs log -p --stat</code> で確認してみたところ、
+<code>/etc/cron.d/certbot</code> ができていました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gh">diff --git a/cron.d/certbot b/cron.d/certbot</span>
+</span><span class='line'>new file mode 100644
+</span><span class='line'><span class="gh">index 0000000..9c3dc35</span>
+</span><span class='line'><span class="gd">--- /dev/null</span>
+</span><span class='line'><span class="gi">+++ b/cron.d/certbot</span>
+</span><span class='line'><span class="gu">@@ -0,0 +1,6 @@</span>
+</span><span class='line'><span class="gi">+# Upstream recommends attempting renewal twice a day</span>
+</span><span class='line'><span class="gi">+#</span>
+</span><span class='line'><span class="gi">+# Eventually, this will be an opportunity to validate certificates</span>
+</span><span class='line'><span class="gi">+# haven&#39;t been revoked, etc.  Renewal will only occur if expiration</span>
+</span><span class='line'><span class="gi">+# is within 30 days.</span>
+</span><span class='line'><span class="gi">+* */12 * * * root perl -e &#39;sleep int(rand(3600))&#39;; certbot -q renew</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>自動更新設定変更</h2>
+
+<p>自動更新はログを残しつつ、 apache の reload も行う自前のスクリプトを用意していたので、
+そちらを引き続き使うことにして、 <code>/etc/cron.d/certbot</code> はコメントアウトして動かないようにしました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'>% sudo etckeeper vcs diff
+</span><span class='line'><span class="gh">diff --git a/cron.d/certbot b/cron.d/certbot</span>
+</span><span class='line'><span class="gh">index 9c3dc35..e81f9aa 100644</span>
+</span><span class='line'><span class="gd">--- a/cron.d/certbot</span>
+</span><span class='line'><span class="gi">+++ b/cron.d/certbot</span>
+</span><span class='line'><span class="gu">@@ -3,4 +3,4 @@</span>
+</span><span class='line'> # Eventually, this will be an opportunity to validate certificates
+</span><span class='line'> # haven&#39;t been revoked, etc.  Renewal will only occur if expiration
+</span><span class='line'> # is within 30 days.
+</span><span class='line'><span class="gd">-* */12 * * * root perl -e &#39;sleep int(rand(3600))&#39;; certbot -q renew</span>
+</span><span class='line'><span class="gi">+#* */12 * * * root perl -e &#39;sleep int(rand(3600))&#39;; certbot -q renew</span>
+</span><span class='line'><span class="gh">diff --git a/cron.daily/local-letsencrypt b/cron.daily/local-letsencrypt</span>
+</span><span class='line'><span class="gh">index 8b83e29..40a23ea 100755</span>
+</span><span class='line'><span class="gd">--- a/cron.daily/local-letsencrypt</span>
+</span><span class='line'><span class="gi">+++ b/cron.daily/local-letsencrypt</span>
+</span><span class='line'><span class="gu">@@ -3,7 +3,7 @@ LOGFILE=/var/log/letsencrypt/renew.log</span>
+</span><span class='line'> if [ -f &quot;$LOGFILE&quot; ]; then
+</span><span class='line'>     savelog -c 90 -q &quot;$LOGFILE&quot;
+</span><span class='line'> fi
+</span><span class='line'><span class="gd">-if ! letsencrypt renew &gt; &quot;$LOGFILE&quot; 2&gt;&amp;1 ; then</span>
+</span><span class='line'><span class="gi">+if ! certbot renew &gt; &quot;$LOGFILE&quot; 2&gt;&amp;1 ; then</span>
+</span><span class='line'>     echo Automated renewal failed:
+</span><span class='line'>     cat &quot;$LOGFILE&quot;
+</span><span class='line'>     exit 1
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>現状の自動更新スクリプト</h2>
+
+<p>現状の自動更新スクリプト <code>/etc/cron.daily/local-letsencrypt</code> は以下のようにしています。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#!/bin/sh</span>
+</span><span class='line'><span class="nv">LOGFILE</span><span class="o">=</span>/var/log/letsencrypt/renew.log
+</span><span class='line'><span class="k">if</span> <span class="o">[</span> -f <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>    savelog -c <span class="m">90</span> -q <span class="s2">&quot;$LOGFILE&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> ! certbot renew &gt; <span class="s2">&quot;$LOGFILE&quot;</span> 2&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>    <span class="nb">echo </span>Automated renewal failed:
+</span><span class='line'>    cat <span class="s2">&quot;$LOGFILE&quot;</span>
+</span><span class='line'>    <span class="nb">exit </span>1
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[</span> -f <span class="s2">&quot;$LOGFILE&quot;</span>.0 <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>    diff -u <span class="s2">&quot;$LOGFILE&quot;</span>.0 <span class="s2">&quot;$LOGFILE&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'>apachectl graceful
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>以下のようなシンボリックリンクがあるので、 <code>letsencrypt renew</code> のままでも大丈夫そうでしたが、念のため変更しました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% ls -alF /usr/bin/letsencrypt
+</span><span class='line'>lrwxrwxrwx 1 root root 7  5月 28 07:30 /usr/bin/letsencrypt -&gt; certbot*
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ubuntuで「ハッシュサムが適合しません」で backports のパッケージが入ってしまって大変だった]]></title>
@@ -3571,313 +3831,6 @@ heroku での削除と同じように、確認のため、アプリケーショ�
 <li>systemd の情報を見る時はバージョン番号を確認しましょう</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[さくらの VPS の Debian wheezy を jessie にあげた]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-03-22-wheezy-to-jessie.html"/>
-    <updated>2016-03-22T12:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/wheezy-to-jessie</id>
-    <content type="html"><![CDATA[<p>Debian 6 &ldquo;Squeeze&rdquo; の <a href="https://wiki.debian.org/LTS/Using">LTS</a> が終わって Debian 7 &ldquo;Wheezy&rdquo; もそろそろ Debian 8 &ldquo;Jessie&rdquo; にあげた方が良さそうな気がしてきたので、
-<a href="http://vps.sakura.ad.jp/">さくらの VPS</a> で使っている Debian 環境を Debian 7.9 から Debian 8.3 にあげてみました。</p>
-
-<!--more-->
-
-
-<h2>事前準備</h2>
-
-<p><a href="https://www.debian.org/releases/jessie/amd64/release-notes/ch-upgrading.ja.html" title="第4章 Debian 7 (wheezy) からのアップグレード">第4章 Debian 7 (wheezy) からのアップグレード</a> などを読んで事前に注意点を確認しておきました。</p>
-
-<h3>古いパッケージの削除</h3>
-
-<p>Squeeze から残っているパッケージを確認するため</p>
-
-<pre><code>aptitude search '~i!~Odebian'
-</code></pre>
-
-<p>で現在インストールできないパッケージを調べました。</p>
-
-<p><code>pg_upgradecluster</code> コマンドで移行したのに残したままだった postgresql-8.4 と postgresql-client-8.4 を purge しました。</p>
-
-<h3>scponly</h3>
-
-<p>scponly を設定しているユーザーがいたのですが、 wheezy で既にパッケージがなくなっていたことに気づいたので、
-「scponly wheezy」で検索して出てきた
-<a href="http://chxor.chxo.com/post/74647790171/how-to-restrict-linux-users-to-only-sftp-without">http://chxor.chxo.com/post/74647790171/how-to-restrict-linux-users-to-only-sftp-without</a>
-を参考にして設定を移行しました。</p>
-
-<p>まず <code>/home/hoge/</code> 以下の bin dev etc usr を削除しました。</p>
-
-<p>次に <code>sftponly</code> グループを追加して、そのグループに該当ユーザーを追加しました。</p>
-
-<pre><code>% sudo usermod -a -G sftponly hoge
-usermod: グループ 'sftponly' は存在しません
-zsh: exit 6     sudo usermod -a -G sftponly hoge
-% sudo addgroup sftponly
-グループ `sftponly' (グループ ID 1001) を追加しています...
-完了。
-% sudo usermod -a -G sftponly hoge
-</code></pre>
-
-<p><code>/etc/ssh/sshd_config</code> の設定を変更しました。
-関連するところだけ抜き出すと以下のような変更をしました。</p>
-
-<pre><code>-Subsystem sftp /usr/lib/openssh/sftp-server
-+#Subsystem sftp /usr/lib/openssh/sftp-server
-+Subsystem sftp internal-sftp
-
-+# sftponly users, chrooted
-+Match group sftponly
-+ChrootDirectory /home/%u
-+AllowTcpForwarding no
-+X11Forwarding no
-+ForceCommand internal-sftp
-</code></pre>
-
-<p><code>sudo service sshd restart</code> で設定を反映して、 sftp コマンドで接続して put や rm ができるのを確認しました。</p>
-
-<h3>その他古いパッケージの削除</h3>
-
-<p><code>sudo aptitude purge '~i!~Odebian'</code> で古いパッケージを削除しました。</p>
-
-<pre><code>%  sudo aptitude purge '~i!~Odebian'
-以下のパッケージが削除されます:
-  doc-linux-text{p} libbind9-60{p} libboost-iostreams1.42.0{p} libdb4.6{p} libdb4.7{p}
-  libdb4.8{p} libdns69{p} libevent-1.4-2{p} libisc62{p} libisccc60{p} libisccfg62{p}
-  libkadm5clnt-mit7{p} libkadm5srv-mit7{p} libkdb5-4{p} liblwres60{p} liblzma2{p}
-  libssl0.9.8{p} libtokyocabinet8{p}
-更新: 0 個、新規インストール: 0 個、削除: 18 個、保留: 0 個。
-0  バイトのアーカイブを取得する必要があります。展開後に 20.4 M バイトのディスク領域が解放されます。
-先に進みますか? [Y/n/?]
-</code></pre>
-
-<p><code>/etc/init.d</code> に余計なファイルが残っていると問題がおきるかもしれないので <code>sudo aptitude purge '~c'</code> で設定だけ残っているパッケージも purge しておきました。</p>
-
-<pre><code>%  sudo aptitude purge '~c'
-[sudo] password for adminuser:
-以下のパッケージが削除されます:
-  defoma{p} libept1{p} libexiv2-9{p} libgmp3c2{p} libgs8{p} libgsf-1-114{p} libgtk2.0-0{p}
-  libgtk2.0-common{p} libmagickcore3{p} libmagickwand3{p} libmysqlclient16{p} libnl1{p}
-  libopenipmi0{p} libpango1.0-common{p} libprotobuf6{p} libserf-0-0{p} libxcb-render-util0{p}
-  libxcomposite1{p} libxcursor1{p} libxdamage1{p} libxfixes3{p} libxi6{p} libxinerama1{p}
-  libxrandr2{p} mysql-server-5.1{p} odbcinst{p} odbcinst1debian2{p} php5-suhosin{p}
-  update-inetd{p} x-ttcidfont-conf{p}
-更新: 0 個、新規インストール: 0 個、削除: 30 個、保留: 0 個。
-0  バイトのアーカイブを取得する必要があります。展開後に 0  バイトのディスク領域が新たに消費されます
-。
-先に進みますか? [Y/n/?]
-</code></pre>
-
-<h3>sudo find /etc -name &lsquo;<em>.dpkg-</em>&rsquo;</h3>
-
-<p>移行時の設定マージ作業が途中で残っていたファイルがあったので、 <code>sudo find /etc -name '*.dpkg-*'</code> で探して必要に応じて設定をマージして <code>*.dpkg-old</code> や <code>*.dpkg-dist</code> は削除しておきました。</p>
-
-<h3>プロセス一覧の確認</h3>
-
-<p>pstree などでプロセス一覧をみて、アップグレード時に問題が起きそうなコマンドに目星をつけておきました。
-一番の大物は apache 2.2 系から apache 2.4 系だと思いました。
-slapd は 2.4.31-2+deb7u1 から 2.4.40+dfsg-1+deb8u2 でバージョン番号の変更も少なく互換性も高そうなので、問題はおきなさそうだと思いました。(実際大丈夫でした。)</p>
-
-<h2>apt-line の変更</h2>
-
-<p>コメントアウトされていない部分の wheezy を jessie に置き換えました。</p>
-
-<pre><code>--- a/apt/sources.list
-+++ b/apt/sources.list
-@@ -4,18 +4,18 @@
-
- #deb cdrom:[Debian GNU/Linux 6.0.1a _Squeeze_ - Official amd64 NETINST Binary-1 20110320-15:00]/ wheezy main
-
--deb http://ftp.jp.debian.org/debian wheezy main non-free contrib
--deb-src http://ftp.jp.debian.org/debian wheezy main non-free contrib
-+deb http://ftp.jp.debian.org/debian jessie main non-free contrib
-+deb-src http://ftp.jp.debian.org/debian jessie main non-free contrib
-
--deb http://security.debian.org/ wheezy/updates main contrib non-free
--deb-src http://security.debian.org/ wheezy/updates main contrib non-free
-+deb http://security.debian.org/ jessie/updates main contrib non-free
-+deb-src http://security.debian.org/ jessie/updates main contrib non-free
-
- # wheezy-updates, previously known as 'volatile'
--deb http://ftp.jp.debian.org/debian wheezy-updates main contrib non-free
--deb-src http://ftp.jp.debian.org/debian wheezy-updates main contrib non-free
-+deb http://ftp.jp.debian.org/debian jessie-updates main contrib non-free
-+deb-src http://ftp.jp.debian.org/debian jessie-updates main contrib non-free
-
--deb http://ftp.jp.debian.org/debian wheezy-backports main contrib non-free
--deb-src http://ftp.jp.debian.org/debian wheezy-backports main contrib non-free
-+deb http://ftp.jp.debian.org/debian jessie-backports main contrib non-free
-+deb-src http://ftp.jp.debian.org/debian jessie-backports main contrib non-free
-
- #deb http://ftp.jp.debian.org/debian wheezy-lts main non-free contrib
- #deb-src http://ftp.jp.debian.org/debian wheezy-lts main non-free contrib
-</code></pre>
-
-<h2>upgrade, dist-upgrade</h2>
-
-<p><a href="https://www.debian.org/releases/jessie/amd64/release-notes/ch-upgrading.ja.html#upgradingpackages" title="4.4. パッケージのアップグレード">4.4. パッケージのアップグレード</a> に以前は <code>aptitude</code> が推奨されていたこともあったが、今は <code>apt-get</code> がおすすめというようなことが書いてあったので、 <code>apt-get</code> で upgrade しました。</p>
-
-<p>postgresql はまた /usr/share/doc/postgresql-common/README.Debian.gz をみて <code>pg_upgradecluster</code> が必要だと思いました。</p>
-
-<p><code>Configuring libc6:amd64</code> のときに apache2 の restart に失敗しましたが、認証周りなどの設定の書き方が変わった影響だろうと思って、後で直せばいいということで気にせず進みました。</p>
-
-<p>その他は特に問題なく dist-upgrade 自体は終わりました。</p>
-
-<h2>apache2 の設定調整</h2>
-
-<p><code>/etc/apache2/sites-available/*</code>, <code>/etc/apache2/sites-enabled/*</code> の <code>.conf</code> 化などは upgrade 前に作業しておけば停止時間が短くて済ませられたのに、と後から気付きました。</p>
-
-<h3>認証・認可設定の変更</h3>
-
-<p><code>/</code> はアクセス不可で <code>DocumentRoot</code> を個別にアクセス許可していたので、</p>
-
-<pre><code>Order allow,deny
-Allow from all
-</code></pre>
-
-<p>を</p>
-
-<pre><code>Require all granted
-</code></pre>
-
-<p>に変更して回りました。</p>
-
-<h3>mod_python</h3>
-
-<p>apache の error.log を見ると</p>
-
-<pre><code>The mod_python module can not be used on conjunction with mod_wsgi 4.0+. Remove the mod_python module from the Apache configuration.
-</code></pre>
-
-<p>というエラーが出ていたので、 <code>libapache2-mod-python</code> を purge したら apache2 が起動しました。
-しかし後で <code>trac</code> で使っていたのに気付いたので、入れ直して代わりに <code>libapache2-mod-wsgi</code> の方を purge しました。</p>
-
-<h3>.conf 化</h3>
-
-<p>設定ファイルに <code>.conf</code> が必須化されていたので、 <code>site-available</code> のファイルを <code>hoge.example.com</code> から <code>hoge.example.com.conf</code> のようにに改名して <code>a2ensite</code> しなおしました。</p>
-
-<p><code>conf.d</code> も available と enabled に仕組みが変わっていたので、
-<code>/etc/apache2/conf.d/passenger.conf</code> も <code>conf-available</code> に移動して <code>a2enconf</code> しました。</p>
-
-<h3>passenger-install-apache2-module</h3>
-
-<p><code>sudo apache2ctl configtest</code> で起動しない原因を調べてみると、エラーメッセージを記録し忘れたのですが、<code>passenger</code> がリンクエラーで起動しないということになっていたので、 <code>passenger-install-apache2-module</code> を実行し直しました。</p>
-
-<p>初回は開発用パッケージが足りないということで出てきたメッセージに従い <code>sudo apt-get install apache2-threaded-dev</code> でインストールして再実行して解決しました。 <code>apache2-dev</code> パッケージが入りました。</p>
-
-<p>wheezy のときは <code>apache2-prefork-dev</code> パッケージを入れていたのですが、自動移行はされなかったようです。</p>
-
-<h3>SSL 関連</h3>
-
-<p><code>SSLCertificateChainFile</code> を指定していたところがあったので、 <code>SSLCertificateFile</code> に結合した証明書を指定するように移行しました。</p>
-
-<h3>NameVirtualHost</h3>
-
-<p><code>NameVirtualHost</code> を指定していたところを削除しました。</p>
-
-<h2>trac</h2>
-
-<p>trac のプロジェクトごとのページを開くと</p>
-
-<pre><code>Error
-
-TracError: The Trac Environment needs to be upgraded.
-
-Run "trac-admin /srv/trac/fprog.org/testproject upgrade"
-</code></pre>
-
-<p>というメッセージが出ていたので、その通りに実行しました。</p>
-
-<pre><code>% sudo trac-admin /srv/trac/fprog.org/testproject upgrade
-Warning: Detected setuptools version 5.5.1. The environment variable 'PKG_RESOURCES_CACHE_ZIP_MANIFE
-STS' must be set to avoid significant performance degradation.
-アップグレードが終了しました。
-
-次のコマンドを実行すると Trac のドキュメントをアップグレードできます:
-
-  trac-admin /srv/trac/fprog.org/testproject wiki upgrade
-</code></pre>
-
-<p>wiki upgrade も促されたので、実行しました。</p>
-
-<p>すると <a href="http://www.fprog.org/projects/testproject">http://www.fprog.org/projects/testproject</a> が</p>
-
-<pre><code>設定エラー
-None という名前の IRequestFilter インターフェイスの実装を見つけられません。コンポーネントが有効になっているかチェックするか、trac.ini の [trac] request_filters オプションを更新してください。
-</code></pre>
-
-<p>に変わったので、 <code>/srv/trac/fprog.org/testproject/conf/trac.ini</code> の</p>
-
-<pre><code>request_filters = None
-</code></pre>
-
-<p>を</p>
-
-<pre><code>request_filters =
-</code></pre>
-
-<p>に変更しました。
-キーワードが一般的すぎて検索しきれなかったので、バグ報告などはしていません。</p>
-
-<p><a href="http://www.fprog.org/projects">http://www.fprog.org/projects</a> の Available Projects を見て、他のプロジェクトも同様に upgrade と <code>request_filters</code> の修正をしました。</p>
-
-<h2>nadoka さん</h2>
-
-<p>iconv を使っていたところを kconv を使うように<a href="https://github.com/nadoka/nadoka/commit/328e01a5a2ae731ddc09f435dc4089eead3ba4ed">変更</a>しました。</p>
-
-<h2>w3ml</h2>
-
-<p>apache のエラーログに</p>
-
-<pre><code>AH01215: ./w3ml:8:in `load'
-AH01215: : /home/w3ml/etc/w3ml.conf:10: invalid multibyte char (UTF-8) (SyntaxError)
-AH01215: /home/w3ml/etc/w3ml.conf:10: invalid multibyte char (UTF-8)
-AH01215: \tfrom ./w3ml:8:in `&lt;main&gt;'
-End of script output before headers: w3ml.cgi
-</code></pre>
-
-<p>と出ていたので、 <code>/home/w3ml/etc/w3ml.conf</code> の先頭に</p>
-
-<pre><code># -*- coding: euc-jp -*-
-</code></pre>
-
-<p>を追加しました。
-これで表示は問題なく見えるようになりましたが、メールの取り込みなどがちゃんと動くかどうかはまだ様子見です。</p>
-
-<h2>tdiary</h2>
-
-<p>ホスティングしている tdiary を確認してみると</p>
-
-<pre><code>no such file to load -- redcarpet.so (LoadError)
-/usr/lib/ruby/vendor_ruby/redcarpet.rb:1:in `require'
-</code></pre>
-
-<p>とうエラーが出ていて、 <code>dpkg -L ruby-redcarpet</code> を確認してみると <code>redcarpet.so</code> は 2.1 用しかなかったので、
-wheezy にあげたときに <code>public_html/diary/index.rb</code> を <code>#!/usr/bin/ruby1.8</code> に変更していたのを
-<code>#!/usr/bin/ruby</code> に変更しました。</p>
-
-<p>すると次は <code>500 Internal Server Error</code> とだけ出るようになったので、 apache のエラーログを確認してみると</p>
-
-<pre><code>AH01215: /usr/lib/ruby/2.1.0/cgi/util.rb:37:in `gsub': invalid byte sequence in UTF-8 (ArgumentError)
-AH01215: \tfrom /usr/lib/ruby/2.1.0/cgi/util.rb:37:in `escapeHTML'
-AH01215: \tfrom /usr/share/tdiary/index.rb:50:in `rescue in &lt;top (required)&gt;'
-AH01215: \tfrom /usr/share/tdiary/index.rb:16:in `&lt;top (required)&gt;'
-AH01215: \tfrom /usr/lib/ruby/2.1.0/rubygems/core_ext/kernel_require.rb:55:in `require'
-AH01215: \tfrom /usr/lib/ruby/2.1.0/rubygems/core_ext/kernel_require.rb:55:in `require'
-AH01215: \tfrom index.rb:2:in `&lt;main&gt;'
-</code></pre>
-
-<p>というエラーが出ていました。
-そこで <code>/usr/share/tdiary/index.rb</code> を <code>coding: utf-8</code> から <code>coding: ascii-8bit</code> に変更したところ、
-<code>public_html/diary/filter/antirefspam.rb:240: invalid multibyte char (UTF-8)</code> というエラーが確認できたので、
-コメントが euc-jp で書かれていたのが確認できたので <code>antirefspam.rb</code> に <code>coding: euc-jp</code> を追加しました。
-<code>public_html/diary/filter/default.rb</code> でも同様のエラーが出たので <code>coding: ascii-8bit</code> を追加したところ、
-正常に表示できるようになりました。</p>
-
-<p>最初の <code>500 Internal Server Error</code> については <a href="https://github.com/tdiary/tdiary-core/issues/555">tdiary-core に報告</a>したところ、<a href="https://github.com/tdiary/tdiary-core/commit/59557302e2dfd0cfa86b04b5d05e74dfe917900e">直った</a> ようです。</p>
-
-<p>修正コミットでは update.rb も同様の修正がされていたので、 <code>/usr/share/tdiary/update.rb</code> も同様に <code>coding: ascii-8bit</code> にしておきました。</p>
 ]]></content>
   </entry>
   

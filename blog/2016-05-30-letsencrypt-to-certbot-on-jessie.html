@@ -5,12 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Ubuntu 14.04 LTS に Zabbix 2.4 を PostgreSQL を使う設定で入れた - @znz blog</title>
+  <title>jessie の letsencrypt を certbot にあげてみた - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Ubuntu 14.04 LTS に Zabbix 2.4 を PostgreSQL を使う設定で入れた Mar 13th, 2015 9:00 pm | Comments 3 Installation from packages [Zabbix Documentation 2.4]
-だと &hellip;">
+  <meta name="description" content="jessie の letsencrypt を certbot にあげてみた May 30th, 2016 9:20 pm | Comments Debian で letsencrypt パッケージが certbot パッケージに変わって、
+jessie-backports にも反映されたので、 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2015-03-13-zabbix-24-pgsql.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2016-05-30-letsencrypt-to-certbot-on-jessie.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -84,7 +84,7 @@
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">Ubuntu 14.04 LTS に Zabbix 2.4 を PostgreSQL を使う設定で入れた</h1>
+      <h1 class="entry-title">jessie の letsencrypt を certbot にあげてみた</h1>
       
       <!-- zenback_title_end -->
       
@@ -96,7 +96,7 @@
 
 
 
-<time class='entry-date' datetime='2015-03-13T21:00:00+09:00'><span class='date'><span class='date-month'>Mar</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>9:00 pm</span></time>
+<time class='entry-date' datetime='2016-05-30T21:20:43+09:00'><span class='date'><span class='date-month'>May</span> <span class='date-day'>30</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>9:20 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -109,131 +109,258 @@
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><a href="https://www.zabbix.com/documentation/2.4/manual/installation/install_from_packages" title="3 Installation from packages [Zabbix Documentation 2.4]">3 Installation from packages [Zabbix Documentation 2.4]</a>
-だと MySQL の例しかなく、
-PostgreSQL で入れるとちょっとひっかかったところがあったので、
-そのメモです。</p>
-
-<p>Debian や Ubuntu の公式パッケージの zabbix との違いも気づいた範囲で書いておきました。</p>
+<div class="entry-content"><p>Debian で <a href="https://packages.debian.org/letsencrypt">letsencrypt パッケージ</a>が <a href="https://packages.debian.org/certbot">certbot パッケージ</a>に変わって、
+jessie-backports にも反映されたので、 certbot パッケージに入れ替えてみました。</p>
 
 <!--more-->
 
 
-<h2>zabbix-release のインストール</h2>
-
-<p><code>zabbix-release</code> をインストールして apt-line を設定して
-<code>apt-get update</code> するところまでは公式マニュアルと同じです。</p>
-
-<pre><code>wget http://repo.zabbix.com/zabbix/2.4/ubuntu/pool/main/z/zabbix-release/zabbix-release_2.4-1+trusty_all.deb
-sudo dpkg -i zabbix-release_2.4-1+trusty_all.deb
-sudo apt-get update
-</code></pre>
-
-<h2>zabbix-server のインストール</h2>
-
-<p><code>zabbix-server-mysql</code> の代わりに <code>zabbix-server-pgsql</code> をインストールします。
-途中で入力するパスワードは後で必要になるのでメモするか覚えておきます。
-(Debian や Ubuntu の公式パッケージの zabbix と違って <code>dbconfig-common</code> を使うようになっています。)</p>
-
-<pre><code>sudo apt-get install zabbix-server-pgsql
-</code></pre>
-
-<p>ただし、先に postgresql を入れておかないとデータベースの作成のところでエラーになるようです。</p>
-
-<h2>zabbix-frontend-php のインストール</h2>
-
-<p><code>/usr/share/doc/zabbix-frontend-php/README.Debian</code> に書いてあるのですが、
-<code>php5-pgsql</code> を入れておくと初期設定の時のデータベースの選択肢に PostgreSQL が出てきます。</p>
-
-<pre><code>sudo apt-get install zabbix-frontend-php php5-pgsql
-</code></pre>
-
-<h2>PHP のタイムゾーンの設定</h2>
-
-<pre><code>sudoedit /etc/zabbix/apache.conf
-</code></pre>
-
-<p>で</p>
-
-<pre><code># php_value date.timezone Europe/Riga
-</code></pre>
-
-<p>を</p>
-
-<pre><code>php_value date.timezone Asia/Tokyo
-</code></pre>
-
-<p>に変更して</p>
-
-<pre><code>sudo service apache2 reload
-</code></pre>
-
-<p>で反映します。
-(Debian や Ubuntu の公式パッケージの zabbix と違って <code>apache2</code> のみ対応です。
-<code>php5-fpm</code>+<code>nginx</code> には対応していないので <code>nginx</code> で使うなら完全に独自設定が必要です。)</p>
-
-<h2>初期設定</h2>
-
-<p><code>http://localhost/zabbix/</code> を開いて初期設定を開始します。
-<code>Next</code> ボタンで進んでいってデータベースの設定のところは</p>
+<h2>対象バージョン</h2>
 
 <ul>
-<li>Database Type : PostgreSQL</li>
-<li>Database host : localhost のまま</li>
-<li>Database port : 0 のまま</li>
-<li>Database name : zabbix のまま</li>
-<li>User : root から zabbix に変更</li>
-<li>Password : <code>zabbix-server-pgsql</code> をインストールしたときに設定したパスワード</li>
+<li>Debian GNU/Linux 8.4 (jessie) (amd64)</li>
+<li>letsencrypt 0.5.0-1~bpo8+1 から certbot 0.6.0-2~bpo8+1</li>
 </ul>
 
 
-<p>と設定します。</p>
+<h2>アップグレード失敗</h2>
 
-<p>そして <code>Next</code> で進んでいって <code>Finish</code> まで行くと初期設定終了です。
-(Debian や Ubuntu の公式パッケージの zabbix と違って
-<code>/etc/zabbix/web/</code> が <code>www-data</code> から書き込み可能になっていて
-ダウンロードして自分で設置しなくても設定完了するようになっています。)</p>
+<p>普通に upgrade しようとすると以下のように失敗します。</p>
 
-<h2>ログイン</h2>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>%  sudo aptitude full-upgrade -DV
+</span><span class='line'>以下のパッケージが更新されます:
+</span><span class='line'>  python-acme{b} [0.5.0-1~bpo8+1 -&gt; 0.6.0-1~bpo8+1] (破: python-letsencrypt)
+</span><span class='line'>更新: 1 個、新規インストール: 0 個、削除: 0 個、保留: 0 個。
+</span><span class='line'>アーカイブ 54.6 k バイト中 0  バイトを取得する必要があります。展開後に 1,024  バイトのディスク領域が新たに消費されます。以下のパッケージには満たされていない依存関係があります:
+</span><span class='line'> python-acme : 破壊: python-letsencrypt (&lt; 0.6.0) [0.5.0-1~bpo8+1 が既にインストール済みです]
+</span><span class='line'>以下のアクションでこれらの依存関係の問題は解決されます:
+</span><span class='line'>
+</span><span class='line'>     以下のパッケージを削除する:
+</span><span class='line'>1)     letsencrypt
+</span><span class='line'>2)     python-letsencrypt
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>この解決方法を受け入れますか? [Y/n/q/?]q
+</span><span class='line'>これらの依存関係の問題を解決するための努力をすべて放棄します。
+</span><span class='line'>中断。
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<ul>
-<li>Username : Admin</li>
-<li>Password : zabbix</li>
-</ul>
+
+<h2>certbot パッケージで入れ替え</h2>
+
+<p>以下のように <code>certbot</code> パッケージをインストールすることで <code>letsencrypt</code> パッケージが削除されます。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% sudo aptitude install certbot
+</span><span class='line'>以下の新規パッケージがインストールされます:
+</span><span class='line'>  certbot{b} python-certbot{ab}
+</span><span class='line'>以下のパッケージが更新されます:
+</span><span class='line'>  python-acme{b}
+</span><span class='line'>更新: 1 個、新規インストール: 2 個、削除: 0 個、保留: 0 個。
+</span><span class='line'>アーカイブ 204 k バイト中 149 k バイトを取得する必要があります。展開後に 816 k バイトのディスク領域が新たに消費されます 。
+</span><span class='line'>以下のパッケージには満たされていない依存関係があります:
+</span><span class='line'> python-acme : 破壊: python-letsencrypt (&lt; 0.6.0) [0.5.0-1~bpo8+1 が既にインストール済みです]
+</span><span class='line'> python-certbot : 破壊: python-letsencrypt [0.5.0-1~bpo8+1 が既にインストール済みです]
+</span><span class='line'> certbot : 破壊: letsencrypt [0.5.0-1~bpo8+1 が既にインストール済みです]
+</span><span class='line'>以下のアクションでこれらの依存関係の問題は解決されます:
+</span><span class='line'>
+</span><span class='line'>     以下のパッケージを削除する:
+</span><span class='line'>1)     letsencrypt
+</span><span class='line'>2)     python-letsencrypt
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>この解決方法を受け入れますか? [Y/n/q/?]
+</span><span class='line'>以下の新規パッケージがインストールされます:
+</span><span class='line'>  certbot python-certbot{a}
+</span><span class='line'>以下のパッケージが削除されます:
+</span><span class='line'>  letsencrypt{a} python-letsencrypt{a}
+</span><span class='line'>以下のパッケージが更新されます:
+</span><span class='line'>  python-acme
+</span><span class='line'>更新: 1 個、新規インストール: 2 個、削除: 2 個、保留: 0 個。
+</span><span class='line'>アーカイブ 204 k バイト中 149 k バイトを取得する必要があります。展開後に 14.3 k バイトのディスク領域が新たに消費されます。
+</span><span class='line'>先に進みますか? [Y/n/?]
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<p>でログインします。</p>
+<h2>自動更新設定確認</h2>
 
-<p>右上の Profile から Language を Japanese (ja_JP) に変更して Update すると
-日本語で使えるようになります。
-パスワードもここで変更できます。</p>
+<p>インストール後に <code>etckeeper</code> の <code>commit</code> が発生して差分があるようだったので、
+<code>sudo etckeeper vcs log -p --stat</code> で確認してみたところ、
+<code>/etc/cron.d/certbot</code> ができていました。</p>
 
-<p>ログイン前の画面は guest ユーザーの言語が反映されているので、
-「管理」-「ユーザー」からメンバーの「guest」を開いて言語を変更して更新します。</p>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gh">diff --git a/cron.d/certbot b/cron.d/certbot</span>
+</span><span class='line'>new file mode 100644
+</span><span class='line'><span class="gh">index 0000000..9c3dc35</span>
+</span><span class='line'><span class="gd">--- /dev/null</span>
+</span><span class='line'><span class="gi">+++ b/cron.d/certbot</span>
+</span><span class='line'><span class="gu">@@ -0,0 +1,6 @@</span>
+</span><span class='line'><span class="gi">+# Upstream recommends attempting renewal twice a day</span>
+</span><span class='line'><span class="gi">+#</span>
+</span><span class='line'><span class="gi">+# Eventually, this will be an opportunity to validate certificates</span>
+</span><span class='line'><span class="gi">+# haven&#39;t been revoked, etc.  Renewal will only occur if expiration</span>
+</span><span class='line'><span class="gi">+# is within 30 days.</span>
+</span><span class='line'><span class="gi">+* */12 * * * root perl -e &#39;sleep int(rand(3600))&#39;; certbot -q renew</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<h2>zabbix-agent のインストール</h2>
 
-<pre><code>sudo apt-get install zabbix-agent
-</code></pre>
+<h2>自動更新設定変更</h2>
 
-<p>でインストールできます。</p>
+<p>自動更新はログを残しつつ、 apache の reload も行う自前のスクリプトを用意していたので、
+そちらを引き続き使うことにして、 <code>/etc/cron.d/certbot</code> はコメントアウトして動かないようにしました。</p>
 
-<h2>Zabbix server の監視</h2>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'>% sudo etckeeper vcs diff
+</span><span class='line'><span class="gh">diff --git a/cron.d/certbot b/cron.d/certbot</span>
+</span><span class='line'><span class="gh">index 9c3dc35..e81f9aa 100644</span>
+</span><span class='line'><span class="gd">--- a/cron.d/certbot</span>
+</span><span class='line'><span class="gi">+++ b/cron.d/certbot</span>
+</span><span class='line'><span class="gu">@@ -3,4 +3,4 @@</span>
+</span><span class='line'> # Eventually, this will be an opportunity to validate certificates
+</span><span class='line'> # haven&#39;t been revoked, etc.  Renewal will only occur if expiration
+</span><span class='line'> # is within 30 days.
+</span><span class='line'><span class="gd">-* */12 * * * root perl -e &#39;sleep int(rand(3600))&#39;; certbot -q renew</span>
+</span><span class='line'><span class="gi">+#* */12 * * * root perl -e &#39;sleep int(rand(3600))&#39;; certbot -q renew</span>
+</span><span class='line'><span class="gh">diff --git a/cron.daily/local-letsencrypt b/cron.daily/local-letsencrypt</span>
+</span><span class='line'><span class="gh">index 8b83e29..40a23ea 100755</span>
+</span><span class='line'><span class="gd">--- a/cron.daily/local-letsencrypt</span>
+</span><span class='line'><span class="gi">+++ b/cron.daily/local-letsencrypt</span>
+</span><span class='line'><span class="gu">@@ -3,7 +3,7 @@ LOGFILE=/var/log/letsencrypt/renew.log</span>
+</span><span class='line'> if [ -f &quot;$LOGFILE&quot; ]; then
+</span><span class='line'>     savelog -c 90 -q &quot;$LOGFILE&quot;
+</span><span class='line'> fi
+</span><span class='line'><span class="gd">-if ! letsencrypt renew &gt; &quot;$LOGFILE&quot; 2&gt;&amp;1 ; then</span>
+</span><span class='line'><span class="gi">+if ! certbot renew &gt; &quot;$LOGFILE&quot; 2&gt;&amp;1 ; then</span>
+</span><span class='line'>     echo Automated renewal failed:
+</span><span class='line'>     cat &quot;$LOGFILE&quot;
+</span><span class='line'>     exit 1
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<p><code>zabbix-agent</code> をインストールした後、
-「設定」-「ホスト」でステータスを「無効」から「有効」に切り替えます。</p>
 
-<p>しばらくするとエージェントの状態の「Z」が緑色になって監視できていることがわかります。</p>
+<h2>現状の自動更新スクリプト</h2>
 
-<h2>グラフの日本語の文字化け対策</h2>
+<p>現状の自動更新スクリプト <code>/etc/cron.daily/local-letsencrypt</code> は以下のようにしています。</p>
 
-<p>グラフなどの図の中の日本語が文字化けするときは
-適当な日本語フォントを入れて
-<code>zabbix-frontend-php</code> の設定をし直せば直ります。</p>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#!/bin/sh</span>
+</span><span class='line'><span class="nv">LOGFILE</span><span class="o">=</span>/var/log/letsencrypt/renew.log
+</span><span class='line'><span class="k">if</span> <span class="o">[</span> -f <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>    savelog -c <span class="m">90</span> -q <span class="s2">&quot;$LOGFILE&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> ! certbot renew &gt; <span class="s2">&quot;$LOGFILE&quot;</span> 2&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>    <span class="nb">echo </span>Automated renewal failed:
+</span><span class='line'>    cat <span class="s2">&quot;$LOGFILE&quot;</span>
+</span><span class='line'>    <span class="nb">exit </span>1
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[</span> -f <span class="s2">&quot;$LOGFILE&quot;</span>.0 <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>    diff -u <span class="s2">&quot;$LOGFILE&quot;</span>.0 <span class="s2">&quot;$LOGFILE&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'>apachectl graceful
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<pre><code>sudo apt-get install fonts-vlgothic
-sudo dpkg-reconfigure zabbix-frontend-php
-</code></pre>
+
+<p>以下のようなシンボリックリンクがあるので、 <code>letsencrypt renew</code> のままでも大丈夫そうでしたが、念のため変更しました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>% ls -alF /usr/bin/letsencrypt
+</span><span class='line'>lrwxrwxrwx 1 root root 7  5月 28 07:30 /usr/bin/letsencrypt -&gt; certbot*
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
 </div>
 
 <!-- zenback_body_end -->
@@ -252,12 +379,12 @@ sudo dpkg-reconfigure zabbix-frontend-php
 
 
 
-<time class='entry-date' datetime='2015-03-13T21:00:00+09:00'><span class='date'><span class='date-month'>Mar</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>9:00 pm</span></time>
+<time class='entry-date' datetime='2016-05-30T21:20:43+09:00'><span class='date'><span class='date-month'>May</span> <span class='date-day'>30</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>9:20 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/postgresql/'>postgresql</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>, <a class='category' href='/blog/categories/zabbix/'>zabbix</a>
+    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/letsencrypt/'>letsencrypt</a>, <a class='category' href='/blog/categories/linux/'>linux</a>
   
 </span>
 
@@ -284,10 +411,8 @@ sudo dpkg-reconfigure zabbix-frontend-php
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2015-02-28-amagasakirb.html" title="Previous Post: アンダースタンディング コンピュテーション読書会　第1回(兵庫県)に参加しました">&laquo; アンダースタンディング コンピュテーション読書会　第1回(兵庫県)に参加しました</a>
+        <a class="basic-alignment left" href="/blog/2016-05-26-ubuntu-hash-mismatch.html" title="Previous Post: ubuntuで「ハッシュサムが適合しません」で backports のパッケージが入ってしまって大変だった">&laquo; ubuntuで「ハッシュサムが適合しません」で backports のパッケージが入ってしまって大変だった</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2015-04-04-amagasakirb.html" title="Next Post: 4月4日 アンダースタンディング コンピュテーション読書会 第2回 (大阪府)に参加しました">4月4日 アンダースタンディング コンピュテーション読書会 第2回 (大阪府)に参加しました &raquo;</a>
       
     </p>
   </footer>
@@ -422,8 +547,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2015-03-13-zabbix-24-pgsql.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2015-03-13-zabbix-24-pgsql.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2016-05-30-letsencrypt-to-certbot-on-jessie.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2016-05-30-letsencrypt-to-certbot-on-jessie.html';
         var disqus_script = 'embed.js';
       
     (function () {
