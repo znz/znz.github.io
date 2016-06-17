@@ -4,7 +4,7 @@
   <title><![CDATA[Category: letsencrypt | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/letsencrypt/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-06-12T17:51:21+09:00</updated>
+  <updated>2016-06-17T16:10:52+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,78 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[letsencrypt の Rate Limit について]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-06-17-letsencrypt.html"/>
+    <updated>2016-06-17T15:44:18+09:00</updated>
+    <id>http://blog.n-z.jp/blog/letsencrypt</id>
+    <content type="html"><![CDATA[<p><a href="http://www.clear-code.com/blog/2016/6/16.html" title="Let’s Encryptをcloudapp.azure.comで使おうとするときのハマりどころ">Let’s Encryptをcloudapp.azure.comで使おうとするときのハマりどころ</a>
+という記事で Rate Limit の制限解除方法について誤解があるようなので、解説してみたいと思います。</p>
+
+<!--more-->
+
+
+<h2>Rate Limit について</h2>
+
+<p><code>細かな制限はいろいろありますが、どうやら特定ドメインに対しては、週に20個のSSL/TLSサーバー証明書しか発行しないようです。そのため*.cloudapp.azure.comなどのように、皆がこぞってSSL/TLSサーバー証明書を取得しに行くような場合、見事に制限にひっかかってしまいます。</code>
+と書いてありますが、これはその通りだと思います。</p>
+
+<p><code>これを回避するには別途独自にドメインをとるなどしなければなりません。</code>
+とありますが、 Dynamic DNS や IaaS などを利用している場合はプロバイダーに対応してもらうという方法があります。
+また、その方が Cookie Monster と呼ばれる問題にも対処出来て望ましいと思います。</p>
+
+<h2>適用例外について</h2>
+
+<p><a href="https://github.com/certbot/certbot/issues/1607" title="DDNS Rate Limited">DDNS Rate Limited</a>
+や
+<a href="https://github.com/certbot/certbot/issues/2186" title="Too many certificates already issued for dynamic dns provider sub domain">Too many certificates already issued for dynamic dns provider sub domain</a>
+のやりとりをみてもらえば詳細はわかるのですが、簡単に言うと</p>
+
+<ul>
+<li>プロバイダーに <a href="https://publicsuffix.org/">Public Suffix List</a> に登録してもらう</li>
+<li><a href="https://github.com/letsencrypt/boulder">Let&rsquo;s Encrypt のサーバー</a> に反映してもらう</li>
+</ul>
+
+
+<p>ということになります。</p>
+
+<h2>「正式版じゃなくてもいいから試してみたい」について</h2>
+
+<p><code>certbot --help all</code> で出てくるヘルプにあるように <code>--test-cert</code> オプションか <code>--staging</code> オプションを使えば <code>/usr/lib/python2.7/dist-packages/certbot/constants.py</code> を書き換えるなどという方法をとらなくてもステージング環境の ACME サーバーを使えるようになります。</p>
+
+<pre><code>% certbot --help all
+(中略)
+testing:
+  The following flags are meant for testing purposes only! Do NOT change
+  them, unless you really know what you're doing!
+
+  --debug               Show tracebacks in case of errors, and allow
+                        letsencrypt-auto execution on experimental platforms
+                        (default: False)
+  --no-verify-ssl       Disable SSL certificate verification. (default: False)
+  --tls-sni-01-port TLS_SNI_01_PORT
+                        Port number to perform tls-sni-01 challenge. Boulder
+                        in testing mode defaults to 5001. (default: 443)
+  --http-01-port HTTP01_PORT
+                        Port used in the SimpleHttp challenge. (default: 80)
+  --break-my-certs      Be willing to replace or renew valid certs with
+                        invalid (testing/staging) certs (default: False)
+  --test-cert, --staging
+                        Use the staging server to obtain test (invalid) certs;
+                        equivalent to --server https://acme-
+                        staging.api.letsencrypt.org/directory (default: False)
+(後略)
+</code></pre>
+
+<h2>まとめ</h2>
+
+<p>Dynamic DNS や IaaS などを使っていて Rate Limit に引っかかった時の対処方法について説明しました。
+また Cookie Monster と呼ばれる問題の影響についても少し触れました。</p>
+
+<p>また、ステージング環境の ACME サーバーを使うのにソースを書き換えなくてもオプション指定で済むということを説明しました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[jessie の letsencrypt を certbot にあげてみた]]></title>
@@ -607,239 +679,6 @@ More detailed help:
 
    all, automation, paths, security, testing, or any of the subcommands or
    plugins (certonly, install, nginx, apache, standalone, webroot, etc)
-</code></pre>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[dokku-letsencrypt を使ってみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-04-06-dokku-letsencrypt.html"/>
-    <updated>2016-04-06T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/dokku-letsencrypt</id>
-    <content type="html"><![CDATA[<p><a href="https://github.com/dokku/dokku-letsencrypt">dokku-letsencrypt</a> を試してみたのでそのメモです。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Ubuntu 14.04.4 LTS</li>
-<li>Docker 1.10.3</li>
-<li>Dokku 0.5.3</li>
-<li>dokku-letsencrypt v0.7.0-7-gb4950b8</li>
-</ul>
-
-
-<h2>インストール</h2>
-
-<p>README.md に書いてある手順の通りインストールして、 <code>git describe --tags</code> でバージョンを確認しておきました。</p>
-
-<pre><code>$ sudo dokku plugin:install https://github.com/dokku/dokku-letsencrypt.git
------&gt; Cloning plugin repo https://github.com/dokku/dokku-letsencrypt.git to /var/lib/dokku/plugins/available/letsencrypt
-Cloning into 'letsencrypt'...
-remote: Counting objects: 233, done.
-remote: Compressing objects: 100% (4/4), done.
-remote: Total 233 (delta 0), reused 0 (delta 0), pack-reused 229
-Receiving objects: 100% (233/233), 48.62 KiB | 0 bytes/s, done.
-Resolving deltas: 100% (136/136), done.
-Checking connectivity... done.
------&gt; Plugin letsencrypt enabled
------&gt; Migrating zero downtime env variables. The following variables have been deprecated
-=====&gt; DOKKU_SKIP_ALL_CHECKS DOKKU_SKIP_DEFAULT_CHECKS
-=====&gt; Please use dokku checks:[disable|enable] &lt;app&gt; to control zero downtime functionality
-=====&gt; Migration complete
-=====&gt;
-=====&gt; Migration complete
-=====&gt;
-=====&gt; Migration complete
-=====&gt;
-=====&gt; Migration complete
-=====&gt;
-=====&gt; Migration complete
-=====&gt;
-Adding user dokku to group adm
-$ cd /var/lib/dokku/plugins/available/letsencrypt/
-$ git describe --tags
-v0.7.0-7-gb4950b8
-$ cd
-</code></pre>
-
-<h2>アップグレード</h2>
-
-<p>README.md にアップグレードの手順も書いてあったので、試しておきました。</p>
-
-<pre><code>$ sudo dokku plugin:update letsencrypt
-Plugin (letsencrypt) updated
-</code></pre>
-
-<h2>対象アプリの確認</h2>
-
-<p><code>dokku apps</code> でアプリケーション一覧を表示して、対象とするアプリケーションの名前を確認しておきました。</p>
-
-<ul>
-<li><code>dokku help</code></li>
-<li><code>dokku apps:help</code></li>
-<li><code>dokku apps</code></li>
-</ul>
-
-
-<h2>メールアドレス設定</h2>
-
-<p>Let&rsquo;s Encrypt に登録するメールアドレスを設定しておきます。
-<a href="https://letsencrypt.jp/usage/" title="Let's Encrypt の使い方">Let&rsquo;s Encrypt の使い方</a>の説明によると「ここで入力したメールアドレスは、緊急の通知や鍵を紛失したときの復旧に使われます。」</p>
-
-<p>dokku-letsencrypt プラグインでは「利用規約への同意」に相当する手順がありませんが、念のため利用規約 (現在のバージョンは <a href="https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf">https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf</a> ) に目を通しておくと良いと思います。</p>
-
-<p>ちなみに今のところ letsencrypt に登録したメールアドレスに letsencrypt からメールが来たことはありません。</p>
-
-<pre><code>$ dokku config:set --no-restart staging.example.co.jp DOKKU_LETSENCRYPT_EMAIL=root@example.co.jp
------&gt; Setting config vars
-       DOKKU_LETSENCRYPT_EMAIL: root@example.co.jp
-</code></pre>
-
-<h2>メールアドレスをグローバルに設定するかアプリケーションごとに設定するか</h2>
-
-<p>グローバルに設定することも可能だと思いますが、メールアドレスを設定していなければ <code>dokku letsencrypt APP</code> の最初のチェックで止まって、既存の TLS 設定を上書きされる心配がないので、すべてのアプリケーションで letsencrypt を使うのでなければ、アプリケーションごとに設定することをおすすめします。</p>
-
-<p>メールアドレスを設定していなければ、以下のように失敗して止まってくれます。</p>
-
-<pre><code>$ dokku letsencrypt node-js-app
-=====&gt; Let's Encrypt node-js-app...
- !     ERROR: Cannot request a certificate without an e-mail address!
- !       please provide your e-mail address using
- !       dokku config:set --no-restart node-js-app DOKKU_LETSENCRYPT_EMAIL=&lt;e-mail&gt;
-</code></pre>
-
-<h2>証明書発行と設定</h2>
-
-<p><code>dokku letsencrypt APP</code> で証明書発行から設定まで自動で実行されます。</p>
-
-<p>すでに <code>tls/server.{crt,key}</code> が存在していても強制的にシンボリックリンクで上書きされるので、他で発行された証明書を使っている場合は注意が必要です。</p>
-
-<pre><code>$ dokku letsencrypt staging.example.co.jp
-=====&gt; Let's Encrypt staging.example.co.jp...
------&gt; Updating letsencrypt docker image...
-latest: Pulling from m3adow/letsencrypt-simp_le
-420890c9e918: Pull complete
-acbaf1e6012f: Pull complete
-5f71a1a2d3dc: Pull complete
-Digest: sha256:be1d7aca214d5277af18d7bf75a2bc78afa5a1eabf98aaa8a606c4ca2a7fdeb5
-Status: Downloaded newer image for m3adow/letsencrypt-simp_le:latest
-       done
------&gt; Enabling ACME proxy for staging.example.co.jp...
------&gt; Getting letsencrypt certificate for staging.example.co.jp...
-        - Domain 'staging.example.co.jp'
-darkhttpd/1.11, copyright (c) 2003-2015 Emil Mikulic.
-listening on: http://0.0.0.0:80/
-2016-04-04 03:26:42,946:INFO:__main__:1202: Generating new account key
-2016-04-04 03:26:43,831:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:44,110:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:44,302:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:44,841:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): letsencrypt.org
-2016-04-04 03:26:45,410:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:45,664:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:45,940:INFO:requests.packages.urllib3.connectionpool:207: Starting new HTTP connection (1): staging.example.co.jp
-2016-04-04 03:26:45,946:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): staging.example.co.jp
-2016-04-04 03:26:45,995:INFO:__main__:1294: staging.example.co.jp was successfully self-verified
-2016-04-04 03:26:46,022:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:46,272:INFO:__main__:1302: Generating new certificate private key
-2016-04-04 03:26:47,528:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:47,723:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:47,987:INFO:requests.packages.urllib3.connectionpool:758: Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org
-2016-04-04 03:26:48,215:INFO:__main__:385: Saving account_key.json
-2016-04-04 03:26:48,216:INFO:__main__:385: Saving fullchain.pem
-2016-04-04 03:26:48,216:INFO:__main__:385: Saving chain.pem
-2016-04-04 03:26:48,216:INFO:__main__:385: Saving cert.pem
-2016-04-04 03:26:48,216:INFO:__main__:385: Saving key.pem
------&gt; Certificate retrieved successfully.
------&gt; Symlinking let's encrypt certificates
------&gt; Configuring staging.example.co.jp...(using built-in template)
------&gt; Creating https nginx.conf
------&gt; Running nginx-pre-reload
-       Reloading nginx
------&gt; Disabling ACME proxy for staging.example.co.jp...
-       done
-</code></pre>
-
-<h2>有効になっているアプリケーション一覧確認</h2>
-
-<p><code>dokku letsencrypt:ls</code> で有効になっているアプリケーションとその有効期限を確認します。</p>
-
-<pre><code>$ dokku letsencrypt:ls
------&gt; App name           Certificate Expiry        Time before expiry        Time before renewal
-staging.example.co.jp 2016-07-03 11:27:00       89d, 22h, 56m, 55s        59d, 22h, 56m, 55s
-</code></pre>
-
-<h2>自動更新</h2>
-
-<p>有効期限が 30 日 (<code>DOKKU_LETSENCRYPT_GRACEPERIOD</code> で変更可能) を切ると自動更新してくれる <code>dokku letsencrypt:auto-renew</code> も試しておきます。</p>
-
-<pre><code>$ dokku letsencrypt:auto-renew
-=====&gt; Auto-renewing all apps...
-       staging.example.co.jp still has 59d, 22h, 48m, 36s days left before renewal
-=====&gt; Finished auto-renewal
-</code></pre>
-
-<p>問題なさそうなので、<code>dokku</code> ユーザーの <code>crontab</code> で設定して自動実行するようにしておきます。
-リモートからのトリガーで実行されるように ssh で入れるユーザーの <code>crontab</code> で <code>ssh dokku letsencrypt:auto-renew</code> を設定しておくのでも良いと思います。</p>
-
-<h2>セキュリティ上の問題点</h2>
-
-<p><code>dokku-letsencrypt</code> が使用している <a href="https://github.com/kuba/simp_le" title="Simple Let's Encrypt Client">Simple Let&rsquo;s Encrypt Client</a> の issue の <a href="https://github.com/kuba/simp_le/issues/29" title="private key permissions">private key permissions</a> で指摘されているように、 <code>ls -al /home/dokku/staging.example.co.jp/letsencrypt/certs/current/</code> で確認してみると、他のユーザーからは読めなくするべき <code>account_key.json</code> や <code>key.pem</code> も誰でも読めるパーミッションになってしまっているので、 <code>sudo chmod 700 /home/dokku/staging.example.co.jp/letsencrypt</code> などでパーミッションを落としておく方が良さそうです。</p>
-
-<p>ファイル自体のパーミッションを落としても良さそうですが、更新された後のことも考えると <code>/home/dokku/APP/letsencrypt</code> ディレクトリ自体のパーミッションを落としておくのが良さそうです。</p>
-
-<h2>Rate Limit</h2>
-
-<p><a href="https://letsencrypt.jp/faq/#RateLimiting" title="Let's Encrypt の証明書に取得数制限はありますか？">Let&rsquo;s Encrypt の証明書に取得数制限はありますか？</a> のリンク先に書いてあるように、この記事執筆時点では「アカウント登録/IP アドレスごと」(3 時間で 10 個) と「証明書発行/ドメインごと」(1 週間で 5 個) の制限があるので、注意が必要です。</p>
-
-<p>特に dokku-letsencrypt では<a href="https://github.com/letsencrypt/letsencrypt">公式のクライアント</a>が <code>/etc/letsencrypt/accounts</code> でアカウントを共有するのと違って、 <code>account_key.json</code> をアプリケーションごとに作成しているので、注意が必要そうです。</p>
-
-<p>ただし、現状の制限だと証明書発行数の制限の方が引っかかりやすいので、アカウント登録の制限は問題にならないようにも思います。</p>
-
-<p>証明書発行数の制限については <code>dokku domains:add</code> や <code>dokku domains:remove</code> で適切にドメインの追加や削除をしてから <code>dokku letsencrypt</code> を実行するように README.md の <a href="https://github.com/dokku/dokku-letsencrypt/tree/b4950b8254f683e4af775bad44e390763a699de1#dealing-with-rate-limit" title="Dealing with rate limit">Dealing with rate limit</a> に書いてあります。</p>
-
-<h2>証明書の情報表示</h2>
-
-<p><code>dokku certs:info</code> で letsencrypt のものに限らず、証明書の情報を表示できます。</p>
-
-<pre><code>adminuser@tk2-213-16013:~$ dokku certs:info staging.example.co.jp
------&gt; Fetching SSL Endpoint info for staging.example.co.jp...
------&gt; Certificate details:
-=====&gt; Common Name(s):
-=====&gt;    staging.example.co.jp
-=====&gt;    staging.example.co.jp
-=====&gt; Expires At: Jul  3 02:27:00 2016 GMT
-=====&gt; Issuer: C=US, O=Lets Encrypt, CN=Lets Encrypt Authority X3
-=====&gt; Starts At: Apr  4 02:27:00 2016 GMT
-=====&gt; Subject: CN=staging.example.co.jp
-=====&gt; SSL certificate is self signed.
-adminuser@tk2-213-16013:~$ dokku certs:info production.example.co.jp
------&gt; Fetching SSL Endpoint info for production.example.co.jp...
------&gt; Certificate details:
-=====&gt; Common Name(s):
-=====&gt;    production.example.co.jp
-=====&gt;    production.example.co.jp
-=====&gt;    example.co.jp
-=====&gt; Expires At: Aug  4 00:05:31 2016 GMT
-=====&gt; Issuer: C=IL, O=StartCom Ltd., OU=Secure Digital Certificate Signing, CN=StartCom Class 1 Primary Intermediate Server CA
-=====&gt; Starts At: Aug  3 18:20:22 2015 GMT
-=====&gt; Subject: C=JP; CN=production.example.co.jp; emailAddress=hostmaster@example.co.jp
-=====&gt; SSL certificate is self signed.
-adminuser@tk2-213-16013:~$ dokku certs:info another.example.co.jp
------&gt; Fetching SSL Endpoint info for another.example.co.jp...
------&gt; Certificate details:
-=====&gt; Common Name(s):
-=====&gt;    another.example.co.jp
-=====&gt;    another.example.co.jp
-=====&gt;    example.co.jp
-=====&gt; Expires At: Apr 23 04:56:14 2016 GMT
-=====&gt; Issuer: C=IL, O=StartCom Ltd., OU=Secure Digital Certificate Signing, CN=StartCom Class 1 Primary Intermediate Server CA
-=====&gt; Starts At: Apr 22 23:55:13 2015 GMT
-=====&gt; Subject: C=JP; CN=another.example.co.jp; emailAddress=hostmaster@example.co.jp
-=====&gt; SSL certificate is self signed.
-adminuser@tk2-213-16013:~$
 </code></pre>
 ]]></content>
   </entry>

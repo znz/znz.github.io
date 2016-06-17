@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-06-12T17:51:21+09:00</updated>
+  <updated>2016-06-17T16:10:52+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,78 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[letsencrypt の Rate Limit について]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-06-17-letsencrypt.html"/>
+    <updated>2016-06-17T15:44:18+09:00</updated>
+    <id>http://blog.n-z.jp/blog/letsencrypt</id>
+    <content type="html"><![CDATA[<p><a href="http://www.clear-code.com/blog/2016/6/16.html" title="Let’s Encryptをcloudapp.azure.comで使おうとするときのハマりどころ">Let’s Encryptをcloudapp.azure.comで使おうとするときのハマりどころ</a>
+という記事で Rate Limit の制限解除方法について誤解があるようなので、解説してみたいと思います。</p>
+
+<!--more-->
+
+
+<h2>Rate Limit について</h2>
+
+<p><code>細かな制限はいろいろありますが、どうやら特定ドメインに対しては、週に20個のSSL/TLSサーバー証明書しか発行しないようです。そのため*.cloudapp.azure.comなどのように、皆がこぞってSSL/TLSサーバー証明書を取得しに行くような場合、見事に制限にひっかかってしまいます。</code>
+と書いてありますが、これはその通りだと思います。</p>
+
+<p><code>これを回避するには別途独自にドメインをとるなどしなければなりません。</code>
+とありますが、 Dynamic DNS や IaaS などを利用している場合はプロバイダーに対応してもらうという方法があります。
+また、その方が Cookie Monster と呼ばれる問題にも対処出来て望ましいと思います。</p>
+
+<h2>適用例外について</h2>
+
+<p><a href="https://github.com/certbot/certbot/issues/1607" title="DDNS Rate Limited">DDNS Rate Limited</a>
+や
+<a href="https://github.com/certbot/certbot/issues/2186" title="Too many certificates already issued for dynamic dns provider sub domain">Too many certificates already issued for dynamic dns provider sub domain</a>
+のやりとりをみてもらえば詳細はわかるのですが、簡単に言うと</p>
+
+<ul>
+<li>プロバイダーに <a href="https://publicsuffix.org/">Public Suffix List</a> に登録してもらう</li>
+<li><a href="https://github.com/letsencrypt/boulder">Let&rsquo;s Encrypt のサーバー</a> に反映してもらう</li>
+</ul>
+
+
+<p>ということになります。</p>
+
+<h2>「正式版じゃなくてもいいから試してみたい」について</h2>
+
+<p><code>certbot --help all</code> で出てくるヘルプにあるように <code>--test-cert</code> オプションか <code>--staging</code> オプションを使えば <code>/usr/lib/python2.7/dist-packages/certbot/constants.py</code> を書き換えるなどという方法をとらなくてもステージング環境の ACME サーバーを使えるようになります。</p>
+
+<pre><code>% certbot --help all
+(中略)
+testing:
+  The following flags are meant for testing purposes only! Do NOT change
+  them, unless you really know what you're doing!
+
+  --debug               Show tracebacks in case of errors, and allow
+                        letsencrypt-auto execution on experimental platforms
+                        (default: False)
+  --no-verify-ssl       Disable SSL certificate verification. (default: False)
+  --tls-sni-01-port TLS_SNI_01_PORT
+                        Port number to perform tls-sni-01 challenge. Boulder
+                        in testing mode defaults to 5001. (default: 443)
+  --http-01-port HTTP01_PORT
+                        Port used in the SimpleHttp challenge. (default: 80)
+  --break-my-certs      Be willing to replace or renew valid certs with
+                        invalid (testing/staging) certs (default: False)
+  --test-cert, --staging
+                        Use the staging server to obtain test (invalid) certs;
+                        equivalent to --server https://acme-
+                        staging.api.letsencrypt.org/directory (default: False)
+(後略)
+</code></pre>
+
+<h2>まとめ</h2>
+
+<p>Dynamic DNS や IaaS などを使っていて Rate Limit に引っかかった時の対処方法について説明しました。
+また Cookie Monster と呼ばれる問題の影響についても少し触れました。</p>
+
+<p>また、ステージング環境の ACME サーバーを使うのにソースを書き換えなくてもオプション指定で済むということを説明しました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[jessie の letsencrypt を certbot にあげてみた]]></title>
@@ -566,128 +638,6 @@ More detailed help:
   <a href="http://slide.rabbit-shocker.org/authors/znz/lilo-20160501/" title="lilo.linux.or.jp を wheezy から jessie にあげた話">lilo.linux.or.jp を wheezy から jessie にあげた話</a>
 </div>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[wheezy から jessie にあげたら mailman でエラーが起きていた]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-04-30-mailman-error.html"/>
-    <updated>2016-04-30T23:52:04+09:00</updated>
-    <id>http://blog.n-z.jp/blog/mailman-error</id>
-    <content type="html"><![CDATA[<p>wheezy から jessie にあげた VPS の環境のうちの 1 個で mailman を使っていたのですが、ちゃんと確認していなかったらエラーが起きてちゃんとメールが配送されていなかったので、修正しました。</p>
-
-<!--more-->
-
-
-<h2>環境</h2>
-
-<ul>
-<li>Debian GNU/Linux amd64 の wheezy から jessie にあげた環境</li>
-<li><a href="http://packages.debian.org/mailman">mailman</a> 1:2.1.15-1+deb7u1 から 1:2.1.18-2</li>
-</ul>
-
-
-<h2>エラーの内容</h2>
-
-<p><code>/var/log/mailman/error</code> を見ると以下のようなエラーが出てメールの配送がされていませんでした。</p>
-
-<pre><code>Apr 30 17:02:36 2016 (17947) Uncaught runner exception: 'utf8' codec can't decode byte 0xcb in position 5: invalid conti
-nuation byte
-Apr 30 17:02:36 2016 (17947) Traceback (most recent call last):
-  File "/var/lib/mailman/Mailman/Queue/Runner.py", line 119, in _oneloop
-    self._onefile(msg, msgdata)
-  File "/var/lib/mailman/Mailman/Queue/Runner.py", line 190, in _onefile
-    keepqueued = self._dispose(mlist, msg, msgdata)
-  File "/var/lib/mailman/Mailman/Queue/IncomingRunner.py", line 130, in _dispose
-    more = self._dopipeline(mlist, msg, msgdata, pipeline)
-  File "/var/lib/mailman/Mailman/Queue/IncomingRunner.py", line 153, in _dopipeline
-    sys.modules[modname].process(mlist, msg, msgdata)
-  File "/var/lib/mailman/Mailman/Handlers/CookHeaders.py", line 179, in process
-    i18ndesc = uheader(mlist, mlist.description, 'Reply-To')
-  File "/var/lib/mailman/Mailman/Handlers/CookHeaders.py", line 65, in uheader
-    return Header(s, charset, maxlinelen, header_name, continuation_ws)
-  File "/usr/lib/python2.7/email/header.py", line 183, in __init__
-    self.append(s, charset, errors)
-  File "/usr/lib/python2.7/email/header.py", line 267, in append
-    ustr = unicode(s, incodec, errors)
-UnicodeDecodeError: 'utf8' codec can't decode byte 0xcb in position 5: invalid continuation byte
-
-Apr 30 17:02:36 2016 (17947) SHUNTING: 1462003356.244866+ea73a2d0f0636f691f515c4b199b5e8c21436142
-</code></pre>
-
-<h2>調査</h2>
-
-<p>エラーメッセージで適当に切り出していろいろ検索してみたところ、
-<a href="https://bugs.launchpad.net/mailman/+bug/1462755">qrunner crashes on invalid unicode sequence</a>
-と同じ現象だとわかりました。</p>
-
-<p>コメントにあるように調査してみたところ、確かに description に問題がありそうでした。
-Web の設定画面で見てみると info も化けていたので、元の設定を調査するために <code>withlist</code> の環境で表示しておきました。</p>
-
-<pre><code># withlist lilo
-lilo のリストを読み込中 (ロック解除)
-変数 `m' が lilo の MailList インスタンスです
-&gt;&gt;&gt; m.preferred_language
-'ja'
-&gt;&gt;&gt; m.description
-'LILO \xcb\xdc\xc2\xceML'
-&gt;&gt;&gt; m.info
-'LILO ( \xa4\xea\xa4\xed : Linux Install Learning Osaka ) \xa4\xcf\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xb2\xf1\xa4\xc7\xa4\xb9\xa1\xa3 \xbc\xe7\xa4\xcb\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xa4\xce\xb8\xf2\xce\xae\xa1\xa2\xbe\xf0\xca\xf3\xb8\xf2\xb4\xb9\xa4\xce\xbe\xec\xa4\xf2\xc4\xf3\xb6\xa1\xa4\xb9\xa4\xeb\xa4\xbf\xa4\xe1\xa4\xcb\xb3\xe8\xc6\xb0\xa4\xb7\xa4\xc6\xa4\xa4\xa4\xde\xa4\xb9\xa1\xa3'
-&gt;&gt;&gt;
-最終処理中
-#
-</code></pre>
-
-<h2>変換</h2>
-
-<p>何でも良かったのですが、使い慣れているという理由で ruby の nkf で変換しました。
-変換した結果を Web の設定画面から設定し直しました。</p>
-
-<pre><code>% rbenv exec irb -r irb/completion --simple-prompt
-&gt;&gt; require 'nkf'
-=&gt; true
-&gt;&gt; NKF.nkf('-w',"LILO \xcb\xdc\xc2\xceML")
-=&gt; "LILO 本体ML"
-&gt;&gt; NKF.nkf('-w',"'LILO ( \xa4\xea\xa4\xed : Linux Install Learning Osaka ) \xa4\xcf\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xb2\xf1\xa4\xc7\xa4\xb9\xa1\xa3 \xbc\xe7\xa4\xcb\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xa4\xce\xb8\xf2\xce\xae\xa1\xa2\xbe\xf0\xca\xf3\xb8\xf2\xb4\xb9\xa4\xce\xbe\xec\xa4\xf2\xc4\xf3\xb6\xa1\xa4\xb9\xa4\xeb\xa4\xbf\xa4\xe1\xa4\xcb\xb3\xe8\xc6\xb0\xa4\xb7\xa4\xc6\xa4\xa4\xa4\xde\xa4\xb9\xa1\xa3'")
-=&gt; "'LILO ( りろ : Linux Install Learning Osaka ) は関西の Linux ユーザ会です。 主に関西の Linux ユーザの交流、情報交換 の場を提供するために活動しています。'"
-&gt;&gt;
-</code></pre>
-
-<h2>失敗したメールの再配送</h2>
-
-<p>設定し直した後、しばらく待ってみても再配送はされなかったので、メールキューの強制再実行が必要かと思って、 <code>/var/lib/mailman</code> 以下を調べてみたところ、 <code>/var/lib/mailman/qfiles/shunt/</code> の中にファイルが溜まっていることがわかりました。</p>
-
-<p>さらに調べていて見つけた
-<a href="http://docs.python.jp/contrib/mailman/siteadmin.html#unshunt">http://docs.python.jp/contrib/mailman/siteadmin.html#unshunt</a>
-によると qrunner が処理中にエラーを発生させて処理できなかったメールは <code>&lt;prefix&gt;/qfiles/shunt</code> に保存されていて、<code>unshunt</code> コマンドで処理できるらしいということなので、試してみたところ、ちゃんと溜まっていたメールが配送されました。</p>
-
-<h2>NEWS.Debian 確認</h2>
-
-<p>復旧を優先して、ちゃんと見るのを忘れていたのですが、 <code>/usr/share/doc/mailman/NEWS.Debian.gz</code> によると <code>mailman (1:2.1.16-1exp1)</code> で UTF-8 化したから description を webinterface などから設定しなおせと書いてありました。</p>
-
-<pre><code>mailman (1:2.1.16-1exp1) experimental; urgency=low
-
-  This version has changed the encoding of most strings, templates
-  and pages to UTF-8 to meet the Debian release goal of full UTF-8
-  support in all packages. It also no longer automatically converts
-  mails to ISO-8859-1.
-
-  If you have been using any nōn-ASCII strings in places such as
-  the mailing list description, these were be stored wrongly in the
-  list configuration file (config.pck), so you will need to change
-  those (e.g. via the webinterface) again in order to have them be
-  displayed correctly.
-
- -- Thorsten Glaser &lt;tg@mirbsd.de&gt;  Sun, 29 Dec 2013 14:35:50 +0000
-</code></pre>
-
-<h2>まとめ</h2>
-
-<p>mailman が UTF-8 対応で description や info などに日本語などの ASCII 以外の文字を使っているとエラーが起きるという話でした。</p>
-
-<p>実行例で気付いた人もいると思いますが、 lilo.linux.or.jp のサーバーでの話で、他にも管理用の ML などがあるのですが、それらは description や info が空だったので問題が起きていなかったようです。</p>
-
-<p>教訓としては、急いでいても apt-listchanges で最低限 NEWS だけはちゃんと読むようにした方が良いということでした。</p>
 ]]></content>
   </entry>
   

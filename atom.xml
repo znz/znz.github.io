@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-06-12T17:51:21+09:00</updated>
+  <updated>2016-06-17T16:10:52+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,100 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[letsencrypt の Rate Limit について]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-06-17-letsencrypt.html"/>
+    <updated>2016-06-17T15:44:18+09:00</updated>
+    <id>http://blog.n-z.jp/blog/letsencrypt</id>
+    <content type="html"><![CDATA[<p><a href="http://www.clear-code.com/blog/2016/6/16.html" title="Let’s Encryptをcloudapp.azure.comで使おうとするときのハマりどころ">Let’s Encryptをcloudapp.azure.comで使おうとするときのハマりどころ</a>
+という記事で Rate Limit の制限解除方法について誤解があるようなので、解説してみたいと思います。</p>
+
+<!--more-->
+
+
+<h2>Rate Limit について</h2>
+
+<p><code>細かな制限はいろいろありますが、どうやら特定ドメインに対しては、週に20個のSSL/TLSサーバー証明書しか発行しないようです。そのため*.cloudapp.azure.comなどのように、皆がこぞってSSL/TLSサーバー証明書を取得しに行くような場合、見事に制限にひっかかってしまいます。</code>
+と書いてありますが、これはその通りだと思います。</p>
+
+<p><code>これを回避するには別途独自にドメインをとるなどしなければなりません。</code>
+とありますが、 Dynamic DNS や IaaS などを利用している場合はプロバイダーに対応してもらうという方法があります。
+また、その方が Cookie Monster と呼ばれる問題にも対処出来て望ましいと思います。</p>
+
+<h2>適用例外について</h2>
+
+<p><a href="https://github.com/certbot/certbot/issues/1607" title="DDNS Rate Limited">DDNS Rate Limited</a>
+や
+<a href="https://github.com/certbot/certbot/issues/2186" title="Too many certificates already issued for dynamic dns provider sub domain">Too many certificates already issued for dynamic dns provider sub domain</a>
+のやりとりをみてもらえば詳細はわかるのですが、簡単に言うと</p>
+
+<ul>
+<li>プロバイダーに <a href="https://publicsuffix.org/">Public Suffix List</a> に登録してもらう</li>
+<li><a href="https://github.com/letsencrypt/boulder">Let&rsquo;s Encrypt のサーバー</a> に反映してもらう</li>
+</ul>
+
+
+<p>ということになります。</p>
+
+<h2>「正式版じゃなくてもいいから試してみたい」について</h2>
+
+<p><code>certbot --help all</code> で出てくるヘルプにあるように <code>--test-cert</code> オプションか <code>--staging</code> オプションを使えば <code>/usr/lib/python2.7/dist-packages/certbot/constants.py</code> を書き換えるなどという方法をとらなくてもステージング環境の ACME サーバーを使えるようになります。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% certbot --help all
+</span><span class='line'>(中略)
+</span><span class='line'>testing:
+</span><span class='line'>  The following flags are meant for testing purposes only! Do NOT change
+</span><span class='line'>  them, unless you really know what you're doing!
+</span><span class='line'>
+</span><span class='line'>  --debug               Show tracebacks in case of errors, and allow
+</span><span class='line'>                        letsencrypt-auto execution on experimental platforms
+</span><span class='line'>                        (default: False)
+</span><span class='line'>  --no-verify-ssl       Disable SSL certificate verification. (default: False)
+</span><span class='line'>  --tls-sni-01-port TLS_SNI_01_PORT
+</span><span class='line'>                        Port number to perform tls-sni-01 challenge. Boulder
+</span><span class='line'>                        in testing mode defaults to 5001. (default: 443)
+</span><span class='line'>  --http-01-port HTTP01_PORT
+</span><span class='line'>                        Port used in the SimpleHttp challenge. (default: 80)
+</span><span class='line'>  --break-my-certs      Be willing to replace or renew valid certs with
+</span><span class='line'>                        invalid (testing/staging) certs (default: False)
+</span><span class='line'>  --test-cert, --staging
+</span><span class='line'>                        Use the staging server to obtain test (invalid) certs;
+</span><span class='line'>                        equivalent to --server https://acme-
+</span><span class='line'>                        staging.api.letsencrypt.org/directory (default: False)
+</span><span class='line'>(後略)</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p>Dynamic DNS や IaaS などを使っていて Rate Limit に引っかかった時の対処方法について説明しました。
+また Cookie Monster と呼ばれる問題の影響についても少し触れました。</p>
+
+<p>また、ステージング環境の ACME サーバーを使うのにソースを書き換えなくてもオプション指定で済むということを説明しました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[6月12日 APIデザインケーススタディ読書会 第1回に参加しました]]></title>
@@ -3634,163 +3728,6 @@ heroku での削除と同じように、確認のため、アプリケーショ�
 
 <p>vagrant を使って dokku をいろいろ試す環境を簡単に作ることができました。
 この環境を使ってテストやデバッグなどいろいろ試しやすくなると思います。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[jessie で inspircd を設定した]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-03-29-inspircd.html"/>
-    <updated>2016-03-29T21:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/inspircd</id>
-    <content type="html"><![CDATA[<p><a href="http://blog.n-z.jp/blog/2016-03-22-wheezy-to-jessie.html">先日 wheezy から jessie にあげた</a>マシンでサーバー管理にも使っている ircd として inspircd の設定をしたので、そのメモです。</p>
-
-<!--more-->
-
-
-<h2>確認バージョン</h2>
-
-<ul>
-<li>Debian GNU/Linux 8.3 (jessie)</li>
-<li>inspircd 2.0.17-1+deb8u1</li>
-</ul>
-
-
-<h2>インストールと起動確認</h2>
-
-<p><code>sudo aptitude install inspircd</code> でインストールしました。</p>
-
-<p>systemd 管理になって <code>/etc/default/inspircd</code> の <code>INSPIRCD_ENABLED=0</code> に関係なく起動するようになっていました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% systemctl status inspircd
-</span><span class='line'>● inspircd.service - IRC server
-</span><span class='line'>   Loaded: loaded (/lib/systemd/system/inspircd.service; enabled)
-</span><span class='line'>   Active: active (running) since 火 2016-03-29 17:37:37 JST; 3min 34s ago
-</span><span class='line'> Main PID: 11613 (inspircd)
-</span><span class='line'>   CGroup: /system.slice/inspircd.service
-</span><span class='line'>           └─11613 /usr/sbin/inspircd --logfile /var/log/inspircd.log --config /etc/inspircd/insp...
-</span><span class='line'>
-</span><span class='line'> 3月 29 17:37:37 ns8 inspircd[11613]: Inspire Internet Relay Chat Server, compiled on Mar 23...1:24
-</span><span class='line'> 3月 29 17:37:37 ns8 inspircd[11613]: (C) InspIRCd Development Team.
-</span><span class='line'> 3月 29 17:37:37 ns8 inspircd[11613]: Developers:
-</span><span class='line'> 3月 29 17:37:37 ns8 inspircd[11613]:         Brain, FrostyCoolSlug, w00t, Om, Special, peavey
-</span><span class='line'> 3月 29 17:37:37 ns8 inspircd[11613]: aquanight, psychon, dz, danieldg, jackmcbarn
-</span><span class='line'> 3月 29 17:37:37 ns8 inspircd[11613]: Attila
-</span><span class='line'> 3月 29 17:37:37 ns8 inspircd[11613]: Others:                        See /INFO Output
-</span><span class='line'> 3月 29 17:37:37 ns8 inspircd[11613]: Loading core commands........................................
-</span><span class='line'> 3月 29 17:37:37 ns8 inspircd[11613]: InspIRCd is now running as 'irc.local'[811] with 1024 ...kets
-</span><span class='line'>Hint: Some lines were ellipsized, use -l to show in full.</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>systemd-journal</code> グループに所属しているので、ログも出ています。</p>
-
-<h2>設定変更</h2>
-
-<p><code>sudoedit /etc/inspircd/inspircd.conf</code> で設定変更して、 <code>sudo service inspircd reload</code> で反映しました。</p>
-
-<pre><code>&lt;server name="irc.example.org"
-        description="Example.org IRC Server"
-        network="example.org"&gt;
-
-&lt;admin name="Kazuhiro Nishiyama"
-       nick="znz"
-       email="zn@mbf.nifty.com"&gt;
-</code></pre>
-
-<p>に変更しました。</p>
-
-<p>NAT の中のサーバー群からも接続するので connect の localmax と globalmax を 3 から 9 に変更しました。</p>
-
-<h3>tls 設定</h3>
-
-<p>推奨設定の gnutls を使って設定をしました。
-証明書は <a href="https://www.startssl.com/">https://www.startssl.com/</a> で無料で発行してもらったものを使いました。</p>
-
-<pre><code>&lt;bind address="" port="6697" ssl="gnutls"&gt;
-&lt;module name="m_ssl_gnutls.so"&gt;
-&lt;gnutls cafile="" crlfile="" certfile="/etc/ssl/certs/irc.example.org.2016.crt" keyfile="/etc/ssl/private/irc.example.org.2016.key" dh_bits="1024"&gt;
-</code></pre>
-
-<h3>auto join 設定</h3>
-
-<p>slack に似せて <code>#general</code> と <code>#random</code> に自動で join するように</p>
-
-<pre><code>&lt;module name="m_conn_join.so"&gt;
-&lt;autojoin channel="#general,#random"&gt;
-</code></pre>
-
-<p>を追加しました。</p>
-
-<h3>server password 設定</h3>
-
-<p>connect タグに password 属性を追加しました。</p>
-
-<h3>permchannels 設定</h3>
-
-<p><code>#general</code> と <code>#random</code> はトピックを自動設定、 <code>#servers</code> についてはパスワードを設定するために permchannels 設定を使いました。</p>
-
-<pre><code>&lt;module name="m_permchannels.so"&gt;
-&lt;permchannels channel="#general" modes="n" topic="General Talk"&gt;
-&lt;permchannels channel="#random" modes="n" topic="Random Talk"&gt;
-&lt;permchannels channel="#servers" modes="stnk PASSWORD" topic="Servers Status"&gt;
-</code></pre>
-
-<p>を追加しました。</p>
-
-<h2>チャンネル作成制限</h2>
-
-<p>permchannels であらかじめチャンネルを作成しておくことにしたので、 <code>restrictchans</code> でチャンネル作成を完全に禁止することにしました。</p>
-
-<pre><code>&lt;module name="m_restrictchans.so"&gt;
-</code></pre>
-
-<h2>ufw</h2>
-
-<pre><code>sudo ufw allow 6697/tcp
-</code></pre>
-
-<p>で 6697 番ポートへの接続を許可しました。</p>
-
-<h2>tls 関係ファイル設置</h2>
-
-<p>inspircd は irc ユーザー権限で動くので、そのユーザーが読めるように秘密鍵を設置しました。
-<code>/etc/ssl/private</code> ディレクトリを読めるようにするために <code>ssl-cert</code> グループへの追加も行いました。</p>
-
-<pre><code>%  sudoedit /etc/ssl/irc.example.org.2016.csr
-%  sudoedit /etc/ssl/certs/irc.example.org.2016.crt
-%  sudoedit /etc/ssl/private/irc.example.org.2016.key
-%  sudo chmod 640 /etc/ssl/private/irc.example.org.2016.key
-%  sudo chgrp irc /etc/ssl/private/irc.example.org.2016.key
-%  sudo adduser irc ssl-cert
-ユーザ `irc' をグループ `ssl-cert' に追加しています...
-ユーザ irc をグループ ssl-cert に追加
-完了。
-</code></pre>
-
-<h2>DNS 設定</h2>
-
-<p>今まで別のサーバーで動かしていたので、 DNS の A レコードを変更して、変更が反映されるのを待ち、新しいサーバーにクライアントが接続されるのを確認しました。</p>
-
-<h2>まとめ</h2>
-
-<p><code>systemd</code> になって <code>/etc/default/inspircd</code> がきかなくなるなど、 Debian 的にまだ過渡期な部分があるようですが、 inspircd としては問題なく動かすことができました。</p>
 ]]></content>
   </entry>
   
