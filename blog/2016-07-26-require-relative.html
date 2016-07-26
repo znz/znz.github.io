@@ -5,16 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>@znz blog</title>
+  <title>require './file'とrequire_relative 'file'の違い - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="rubylive-builder
-で
-RubyLive
-という Debian wheezy ベースの Live イメージを作成するときに
-apt-get update などで何度も無駄にダウンロードしてしまうので、
-apt-cacher-ng で Live &hellip;">
+  <meta name="description" content="require './file'とrequire_relative 'file'の違い Jul 26th, 2016 9:16 pm | Comments 最近 Debian の Perl が CVE-2016-1238 (#588017) で更新されました。
+似たような変更は Ruby だと &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -23,7 +19,7 @@ apt-cacher-ng で Live &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/posts/11/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2016-07-26-require-relative.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -80,15 +76,18 @@ apt-cacher-ng で Live &hellip;">
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2014-07-14-apt-cacher-ng.html">apt-cacher-ngでliveイメージ作成を繰り返す時の無駄なダウンロードを減らす</a></h1>
+      
+      <!-- zenback_title_begin -->
+      
+      <h1 class="entry-title">require './file'とrequire_relative 'file'の違い</h1>
+      
+      <!-- zenback_title_end -->
+      
     
     
       <p class="meta">
@@ -97,405 +96,132 @@ apt-cacher-ng で Live &hellip;">
 
 
 
-<time class='entry-date' datetime='2014-07-14T23:53:14+09:00'><span class='date'><span class='date-month'>Jul</span> <span class='date-day'>14</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>11:53 pm</span></time>
+<time class='entry-date' datetime='2016-07-26T21:16:07+09:00'><span class='date'><span class='date-month'>Jul</span> <span class='date-day'>26</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>9:16 pm</span></time>
         
-           | <a href="/blog/2014-07-14-apt-cacher-ng.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2014-07-14-apt-cacher-ng.html">Comments</a>
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p><a href="https://github.com/znz/rubylive-builder" title="rubylive-builder">rubylive-builder</a>
-で
-<a href="https://github.com/znz/rubylive" title="RubyLive">RubyLive</a>
-という Debian wheezy ベースの Live イメージを作成するときに
-<code>apt-get update</code> などで何度も無駄にダウンロードしてしまうので、
-<code>apt-cacher-ng</code> で Live イメージ作成を繰り返す時の無駄なダウンロードを減らすことにしました。</p>
+
+<!-- zenback_body_begin -->
+
+<div class="entry-content"><p>最近 Debian の Perl が <code>CVE-2016-1238</code> (<a href="https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=588017" title="#588017">#588017</a>) で更新されました。
+似たような変更は Ruby だと <a href="https://www.ruby-lang.org/ja/news/2010/08/18/ruby-1-9-2-is-released/">1.9.2 から <code>.</code> が <code>$:</code> (<code>$LOAD_PATH</code>) から削除された</a>ということがありました。
+そして、明記はされていませんが <code>require_relative</code> が推奨されるようになったようです。</p>
+
+<!--more-->
+
+
+<h2><code>require './file'</code> と <code>require_relative 'file'</code> の違い</h2>
+
+<p><code>/var/tmp</code> と <code>/tmp</code> に確認用のファイルを以下のように準備して実行してみました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ head main.rb require.rb require_relative.rb /tmp/require.rb /tmp/require_relative.rb
+</span><span class='line'>==&gt; main.rb &lt;==
+</span><span class='line'>require './require'
+</span><span class='line'>require_relative 'require_relative'
+</span><span class='line'>
+</span><span class='line'>==&gt; require.rb &lt;==
+</span><span class='line'>p __FILE__
+</span><span class='line'>
+</span><span class='line'>==&gt; require_relative.rb &lt;==
+</span><span class='line'>p __FILE__
+</span><span class='line'>
+</span><span class='line'>==&gt; /tmp/require.rb &lt;==
+</span><span class='line'>p __FILE__
+</span><span class='line'>
+</span><span class='line'>==&gt; /tmp/require_relative.rb &lt;==
+</span><span class='line'>p __FILE__
+</span><span class='line'>$ ruby main.rb
+</span><span class='line'>"/var/tmp/require.rb"
+</span><span class='line'>"/var/tmp/require_relative.rb"
+</span><span class='line'>$ cd /tmp
+</span><span class='line'>$ ruby /var/tmp/main.rb
+</span><span class='line'>"/tmp/require.rb"
+</span><span class='line'>"/var/tmp/require_relative.rb"</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>結果を見ればわかるように <code>require './file'</code> はカレントディレクトリがどこなのかの影響を受けます。</p>
+
+<p>このような書き方を使っていると <code>$LOAD_PATH</code> から <code>.</code> が取り除かれていても (Windows の) DLL hijacking vulnerability のような脆弱性の原因になるため、
+<code>require_relative</code> を使う方が望ましいということになります。</p>
+
+<h2>require_relative の歴史</h2>
+
+<p>いつから使えるようになったのか調べたので、ついでにメモしておきます。</p>
+
+<ul>
+<li>ruby 1.9.0-1 で <code>lib/require_relative.rb</code> が追加され、 <code>require 'require_relative'</code> すれば <code>require_relative</code> が使えるようになる。</li>
+<li>ruby 1.9.0-2 で <code>lib/require_relative.rb</code> から <code>prelude.rb</code> (ruby 本体に組み込まれて実行開始時に自動実行されるファイル) に移動して <code>require 'require_relative'</code> なしで <code>require_relative</code> が使えるようになる。</li>
+<li>ruby 1.9.2 で <code>doc/NEWS</code> に <code>Kernel#require_relative</code> が載る。 <code>require_relative</code> が <code>prelude.rb</code> から C 実装に置き換えられる。</li>
+</ul>
 
 </div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014-07-14-apt-cacher-ng.html">続きを読む &rarr;</a>
-    </footer>
-  
+
+<!-- zenback_body_end -->
 
 
-    </article>
-  
-  
-    <article>
+
+  <footer>
+    <p class="meta">
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014-07-13-build-rubylive-on-vm.html">RubyLiveを仮想環境で作成</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-07-13T09:35:02+09:00'><span class='date'><span class='date-month'>Jul</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>9:35 am</span></time>
-        
-           | <a href="/blog/2014-07-13-build-rubylive-on-vm.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2014-07-13-build-rubylive-on-vm.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>最近流行りの仮想環境を使ってクリーンな wheezy 環境で RubyLive を作成できるようにしました。</p>
-
-<p>VirtualBox + Vagrant は特殊な制限のない仮想環境なので Live イメージが作成できたのですが、
-docker は後述の制限のために作成できませんでした。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014-07-13-build-rubylive-on-vm.html">続きを読む &rarr;</a>
-    </footer>
   
 
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
 
-    </article>
-  
-  
-    <article>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014-07-12-debian-ruby-live.html">Debian 7 (wheezy) の RubyLive をカスタマイズ中</a></h1>
-    
-    
-      <p class="meta">
-        
 
 
 
 
-<time class='entry-date' datetime='2014-07-12T10:08:26+09:00'><span class='date'><span class='date-month'>Jul</span> <span class='date-day'>12</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>10:08 am</span></time>
-        
-           | <a href="/blog/2014-07-12-debian-ruby-live.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2014-07-12-debian-ruby-live.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>今年の
-<a href="https://k-of.jp/2014/" title="KOF 2014：関西オープンフォーラム2014">KOF 2014：関西オープンフォーラム2014</a>
-に向けて
-<a href="https://github.com/znz/rubylive" title="RubyLive">RubyLive</a>
-を作成しています。
-fork 元の <a href="https://github.com/no6v/rubylive">no6v 版</a> との違いをまとめていきます。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014-07-12-debian-ruby-live.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
+<time class='entry-date' datetime='2016-07-26T21:16:07+09:00'><span class='date'><span class='date-month'>Jul</span> <span class='date-day'>26</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>9:16 pm</span></time>
       
-  <header>
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ruby/'>ruby</a>
+  
+</span>
+
+
+    </p>
     
-      <h1 class="entry-title"><a href="/blog/2014-07-11-doorkeeper-provider-example-app.html">Rails 4.1 で Doorkeeper を使った OAuth2 Provider のサンプルを実装した</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-07-11T23:30:00+09:00'><span class='date'><span class='date-month'>Jul</span> <span class='date-day'>11</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>11:30 pm</span></time>
-        
-           | <a href="/blog/2014-07-11-doorkeeper-provider-example-app.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2014-07-11-doorkeeper-provider-example-app.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>ソースは github の
-<a href="https://github.com/znz/doorkeeper-provider-app" title="znz/doorkeeper-provider-app">znz/doorkeeper-provider-app</a>
-で公開しています。</p>
-
-<p>基本的にはソースをみて参考にしてもらうと良いと思いますが、
-説明が必要な部分を続きに書いてみました。</p>
-
+      <div class="sharing">
+  
+  
+  
+  
 </div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014-07-11-doorkeeper-provider-example-app.html">続きを読む &rarr;</a>
-    </footer>
-  
 
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
     
-      <h1 class="entry-title"><a href="/blog/2014-07-08-devise-omniauth.html">devise で通常ログイン出来るユーザーが他の複数サービス連携でログインできるようにした</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-07-08T08:30:00+09:00'><span class='date'><span class='date-month'>Jul</span> <span class='date-day'>8</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>8:30 am</span></time>
-        
-           | <a href="/blog/2014-07-08-devise-omniauth.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2014-07-08-devise-omniauth.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><code>devise</code> でデータベース認証を実装している Rails アプリに Twitter などでもログインできるように
-実装を追加してみました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014-07-08-devise-omniauth.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014-07-05-jawsug-santo.html">JAWS-UG三都物語2014に参加した</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-07-05T13:07:03+09:00'><span class='date'><span class='date-month'>Jul</span> <span class='date-day'>5</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>1:07 pm</span></time>
-        
-           | <a href="/blog/2014-07-05-jawsug-santo.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2014-07-05-jawsug-santo.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="http://santo2014.jaws-ug.jp/" title="夏のJAWS-UG 三都物語 2014">夏のJAWS-UG 三都物語 2014</a>
-に午後から参加して、
-主に Vagrant の話を聞いたのと、
-CDP道場（初中級）に参加していました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014-07-05-jawsug-santo.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014-07-05-ghq-gitconfig.html">GOPATHとghqの設定を変更した話とgitconfigのコマンドでの設定の話</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-07-05T09:55:07+09:00'><span class='date'><span class='date-month'>Jul</span> <span class='date-day'>5</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>9:55 am</span></time>
-        
-           | <a href="/blog/2014-07-05-ghq-gitconfig.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2014-07-05-ghq-gitconfig.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="http://blog.kentarok.org/entry/2014/06/03/135300" title="ghqを使ったローカルリポジトリの統一的・効率的な管理について - delirious thoughts">ghqを使ったローカルリポジトリの統一的・効率的な管理について - delirious thoughts</a>
-を参考にして、
-go と ghq で同じディレクトリを使っていたのですが、
-go で自動で追加ダウンロードされたものと
-自分でダウンロードしたものが混ざるとわかりにくいと思ったので、
-分けることにしました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014-07-05-ghq-gitconfig.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014-06-28-amagasakirb.html">Amagasakirb特別編 須藤さん関連プロダクツ勉強会に参加した</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-06-28T13:16:24+09:00'><span class='date'><span class='date-month'>Jun</span> <span class='date-day'>28</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>1:16 pm</span></time>
-        
-           | <a href="/blog/2014-06-28-amagasakirb.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2014-06-28-amagasakirb.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="http://kokucheese.com/event/index/186111/" title="6月28日 Amagasakirb特別編 須藤さん関連プロダクツ勉強会(兵庫県)">6月28日 Amagasakirb特別編 須藤さん関連プロダクツ勉強会(兵庫県)</a>
-に参加しました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014-06-28-amagasakirb.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014-06-25-env-array-hash.html">環境変数にハッシュの配列を入れてみた</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-06-25T21:37:22+09:00'><span class='date'><span class='date-month'>Jun</span> <span class='date-day'>25</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>9:37 pm</span></time>
-        
-           | <a href="/blog/2014-06-25-env-array-hash.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2014-06-25-env-array-hash.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="https://twitter.com/znz/status/481691675136245760">環境変数にハッシュを入れたいと思って、ちょっと考えてみたら LTSV を使えば良いということに気づいた</a>ので、
-実装してみました。
-実際には単独のハッシュではなくハッシュの配列がほしかったので、
-連続する数値を末尾に付けて複数受け取れるようにしています。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014-06-25-env-array-hash.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014-06-22-key-sign-caff.html">caffでキーサインした</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-06-22T19:07:19+09:00'><span class='date'><span class='date-month'>Jun</span> <span class='date-day'>22</span><span class='date-suffix'>nd</span>, <span class='date-year'>2014</span></span> <span class='time'>7:07 pm</span></time>
-        
-           | <a href="/blog/2014-06-22-key-sign-caff.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2014-06-22-key-sign-caff.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="https://wiki.debian.org/KansaiDebianMeeting/20140622" title="第 85 回 関西 Debian 勉強会">第 85 回 関西 Debian 勉強会</a>
-で
-<a href="https://launchpad.net/~mocchi">坂本さん</a>とキーサインをしたので、そのメモです。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014-06-22-key-sign-caff.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  <div class="pagination">
-    
-      <a class="prev" href="/posts/12">&larr; Older</a>
-    
-    <a href="/blog/archives">Blog Archives</a>
-    
-    <a class="next" href="/posts/10">Newer &rarr;</a>
-    
-  </div>
-  <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
 <!-- footer -->
 <ins class="adsbygoogle"
      style="display:inline-block;width:728px;height:90px"
@@ -505,7 +231,29 @@ go で自動で追加ダウンロードされたものと
 (adsbygoogle = window.adsbygoogle || []).push({});
 </script>
 
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2016-06-17-letsencrypt.html" title="Previous Post: letsencrypt の Rate Limit について">&laquo; letsencrypt の Rate Limit について</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+<section>
+  <!-- X:S ZenBackWidget --><div id="zenback-widget-loader"></div><script type="text/javascript">!function(d,i){if(!d.getElementById(i)){var r=Math.ceil((new Date()*1)*Math.random());var j=d.createElement("script");j.id=i;j.async=true;j.src="//w.zenback.jp/v1/?base_uri=http%3A//blog.n-z.jp/&nsid=122901358100652638%3A%3A122901381991399941&rand="+r;d.body.appendChild(j);}}(document,"zenback-widget-js");</script><!-- X:E ZenBackWidget -->
+
+</section>
+
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+  </section>
+
+</div>
+
 <aside class="sidebar">
   
     <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
@@ -605,6 +353,7 @@ Hatena.BookmarkWidget.load();
   
 </aside>
 
+
     </div>
   </div>
   <footer role="contentinfo"><p>
@@ -619,7 +368,10 @@ Hatena.BookmarkWidget.load();
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2016-07-26-require-relative.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2016-07-26-require-relative.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

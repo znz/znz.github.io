@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-06-17T16:10:52+09:00</updated>
+  <updated>2016-07-26T23:41:03+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,65 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[require './file'とrequire_relative 'file'の違い]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-07-26-require-relative.html"/>
+    <updated>2016-07-26T21:16:07+09:00</updated>
+    <id>http://blog.n-z.jp/blog/require-relative</id>
+    <content type="html"><![CDATA[<p>最近 Debian の Perl が <code>CVE-2016-1238</code> (<a href="https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=588017" title="#588017">#588017</a>) で更新されました。
+似たような変更は Ruby だと <a href="https://www.ruby-lang.org/ja/news/2010/08/18/ruby-1-9-2-is-released/">1.9.2 から <code>.</code> が <code>$:</code> (<code>$LOAD_PATH</code>) から削除された</a>ということがありました。
+そして、明記はされていませんが <code>require_relative</code> が推奨されるようになったようです。</p>
+
+<!--more-->
+
+
+<h2><code>require './file'</code> と <code>require_relative 'file'</code> の違い</h2>
+
+<p><code>/var/tmp</code> と <code>/tmp</code> に確認用のファイルを以下のように準備して実行してみました。</p>
+
+<pre><code>$ head main.rb require.rb require_relative.rb /tmp/require.rb /tmp/require_relative.rb
+==&gt; main.rb &lt;==
+require './require'
+require_relative 'require_relative'
+
+==&gt; require.rb &lt;==
+p __FILE__
+
+==&gt; require_relative.rb &lt;==
+p __FILE__
+
+==&gt; /tmp/require.rb &lt;==
+p __FILE__
+
+==&gt; /tmp/require_relative.rb &lt;==
+p __FILE__
+$ ruby main.rb
+"/var/tmp/require.rb"
+"/var/tmp/require_relative.rb"
+$ cd /tmp
+$ ruby /var/tmp/main.rb
+"/tmp/require.rb"
+"/var/tmp/require_relative.rb"
+</code></pre>
+
+<p>結果を見ればわかるように <code>require './file'</code> はカレントディレクトリがどこなのかの影響を受けます。</p>
+
+<p>このような書き方を使っていると <code>$LOAD_PATH</code> から <code>.</code> が取り除かれていても (Windows の) DLL hijacking vulnerability のような脆弱性の原因になるため、
+<code>require_relative</code> を使う方が望ましいということになります。</p>
+
+<h2>require_relative の歴史</h2>
+
+<p>いつから使えるようになったのか調べたので、ついでにメモしておきます。</p>
+
+<ul>
+<li>ruby 1.9.0-1 で <code>lib/require_relative.rb</code> が追加され、 <code>require 'require_relative'</code> すれば <code>require_relative</code> が使えるようになる。</li>
+<li>ruby 1.9.0-2 で <code>lib/require_relative.rb</code> から <code>prelude.rb</code> (ruby 本体に組み込まれて実行開始時に自動実行されるファイル) に移動して <code>require 'require_relative'</code> なしで <code>require_relative</code> が使えるようになる。</li>
+<li>ruby 1.9.2 で <code>doc/NEWS</code> に <code>Kernel#require_relative</code> が載る。 <code>require_relative</code> が <code>prelude.rb</code> から C 実装に置き換えられる。</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第72回 Ruby関西 勉強会に参加しました]]></title>
@@ -601,174 +660,6 @@ AH01215: \tfrom index.rb:2:in `&lt;main&gt;'
 <p>最初の <code>500 Internal Server Error</code> については <a href="https://github.com/tdiary/tdiary-core/issues/555">tdiary-core に報告</a>したところ、<a href="https://github.com/tdiary/tdiary-core/commit/59557302e2dfd0cfa86b04b5d05e74dfe917900e">直った</a> ようです。</p>
 
 <p>修正コミットでは update.rb も同様の修正がされていたので、 <code>/usr/share/tdiary/update.rb</code> も同様に <code>coding: ascii-8bit</code> にしておきました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第71回 Ruby関西 勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-03-05-rubykansai71.html"/>
-    <updated>2016-03-05T12:58:44+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubykansai71</id>
-    <content type="html"><![CDATA[<p><a href="https://rubykansai.doorkeeper.jp/events/37341" title="第71回 Ruby関西 勉強会">第71回 Ruby関西 勉強会</a>
-に参加しました。</p>
-
-<!--more-->
-
-
-<p>以下、そのメモです。</p>
-
-<h2>オープニング</h2>
-
-<ul>
-<li>開場が 10 分前にしかできなくて準備の時間の都合で受付は休憩の時に</li>
-<li>会場説明</li>
-<li>yasulab さんの資料作成の都合で順番を入れ替えて開始</li>
-</ul>
-
-
-<h2>中級者向け: 楽速開発 on Rails by @ogomr (前半)</h2>
-
-<ul>
-<li><a href="https://speakerdeck.com/ogom/enjoy-agile-development">https://speakerdeck.com/ogom/enjoy-agile-development</a></li>
-<li>前回のつじたさんのどんな gem を使っていますかという質問に対するアンサーセッションのような幹事でどんな gem を使って開発しているかという紹介</li>
-<li>デミングサイクル</li>
-<li>データベースのスキーマでデミングサイクル</li>
-<li>rspec や spring や guard などの 8 個の gem</li>
-<li>ridgepole gem というのは知らなかった</li>
-<li>rails-erd gem も使っているらしい</li>
-<li>guard shell で <code>db/migrate/*.rb</code> が変わったら処理をしている</li>
-<li>seed 関係の gem 3 個 (<code>seedbank</code>, <code>seed_dump</code>, <code>seed-fu</code>)</li>
-<li>seed 関係の guard shell 設定</li>
-<li><code>seed_dump</code> gem は SQL ではなく rb ファイルに dump してくれる</li>
-<li>rails console で試せるし seed ファイルにも再利用できる</li>
-<li>guard を使っている人をきいてみたら会場には少なかった</li>
-<li>rails で開発したことがある人は多かった</li>
-<li><code>factory_girl</code> は 1/3 程度</li>
-<li>デモの前に休憩</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>休憩の間に受付</li>
-</ul>
-
-
-<h2>中級者向け: 楽速開発 on Rails by @ogomr (後半)</h2>
-
-<ul>
-<li>質問</li>
-<li>guard とは grunt のようなものなのかという質問</li>
-<li>同じようなもの。時系列的には guard の方が古い</li>
-<li>guard の実行時間は 1,2 秒ぐらい</li>
-<li>デモ</li>
-<li>普段はサブディスプレイを使っている</li>
-<li><code>rails new</code> するところからライブコーディングによるデモ</li>
-<li><code>rails-erd</code> を使っている人は少しいた</li>
-<li><code>.erdconfig</code> ファイルで設定できる</li>
-<li>Guardfile の書き換え</li>
-<li>spring を使っているので bin/rspec を使うように書き換え</li>
-<li>その他 rspec 関係の追加とか</li>
-<li>factories も監視して rspec を動かしている</li>
-<li>generators で不要なものを false に設定</li>
-<li>scaffold で生成</li>
-<li>pdf の変化で open コマンドを呼んでいるのでサブディスプレイに最新の状態が自動表示される</li>
-<li>seed の guard shell 設定</li>
-<li>seedbank を使って seed の設定</li>
-<li>データベースのカラム追加のデモ</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>14:30-14:40</li>
-<li>休憩時間中に yasulab さんから質問</li>
-<li>rails で開発したことのない人もいる</li>
-<li>ruby を使ったことない人はいないみたいだった</li>
-<li>k-of.jp などのイベントなどの時にも配っている豆本をアナウンスしたら人気だった</li>
-</ul>
-
-
-<h2>初心者向け: Railsチュートリアルの変遷からみる今ドキのRails勉強法 by @yasulab</h2>
-
-<ul>
-<li>第2版から第3版の変更点を解説</li>
-<li>Rails 活用事例と学習曲線</li>
-<li>第2版 vs. 第3版</li>
-<li>第3版では画像アップロードが増えている</li>
-<li>第2版でよく見かけた例</li>
-<li>セットアップ (第1章) で挫折</li>
-<li>テストがうまく動かなくて挫折</li>
-<li>近くにいないと問題解決しづらい</li>
-<li>第2版から第3版での改善点</li>
-<li>Cloud9 を使ってブラウザで開発 (OS非依存)</li>
-<li>ログイン機構がモダンになっている</li>
-<li>RSpec から minitest になって学習コストが低くなっている</li>
-<li>ActionMailer を使ったメール送信を解説</li>
-<li>マイクロポストに画像投稿機能が追加</li>
-<li>他、独自バリデーションやメタプロの導入など</li>
-<li>今どきの Rails 学習法</li>
-<li><ol>
-<li>学習の優先度付け</li>
-</ol>
-</li>
-<li>第２版によくあった批判</li>
-<li>テスト技術が学びたいわけじゃない</li>
-<li>環境構築を学びたいわけじゃない</li>
-<li><ol>
-<li>まずは体験、あとで探求</li>
-</ol>
-</li>
-<li><ol>
-<li>クラウド IDE を最大限活用する</li>
-</ol>
-</li>
-<li>第2版と第3版の違い</li>
-<li>第1章における離脱率の激減</li>
-<li>解説セミナーの平均点数上昇</li>
-<li>ちょっと未来の話</li>
-<li>「まずは」の裾野を広げて「あとで」の探求先の拡大</li>
-<li>Learn Enough シリーズ (前提知識を 0 に)</li>
-<li>everyday Rails</li>
-<li>Rails ガイド</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>15:21-15:30</li>
-<li>k-of.jp や書籍の紹介</li>
-</ul>
-
-
-<h2>Ruby 初級者向けレッスン 57回 ─── テスト駆動開発 by @higaki</h2>
-
-<ul>
-<li><a href="http://slide.rabbit-shocker.org/authors/kou/rubykaigi-2015/" title="The history of testing framework in Ruby">The history of testing framework in Ruby</a></li>
-<li><a href="http://magazine.rubyist.net/?0021-Rspec">http://magazine.rubyist.net/?0021-Rspec</a></li>
-<li><a href="http://magazine.rubyist.net/?0042-FromCucumberToTurnip">http://magazine.rubyist.net/?0042-FromCucumberToTurnip</a></li>
-<li>レッスンでは test-unit gem を使用</li>
-<li><a href="http://goyoki.hatenablog.com/entry/20120301/1330608789" title="xUnit Test PatternsのTest Doubleパターン(Mock、Stub、Fake、Dummy等の定義)">xUnit Test PatternsのTest Doubleパターン(Mock、Stub、Fake、Dummy等の定義)</a></li>
-<li>kagemusha gem</li>
-<li>mocha gem</li>
-<li>rr gem</li>
-<li>レッスンには出てこなかったが、参考として、他に時刻専用の gem として timecop gem とか delorean gem とかもある</li>
-<li><a href="https://github.com/higaki/learn_ruby_kansai_71">https://github.com/higaki/learn_ruby_kansai_71</a></li>
-<li>参考: <a href="http://goyoki.hatenablog.com/entry/20110202/1296663870" title="XP祭り関西にてユニットテストの保守に関する発表">XP祭り関西にてユニットテストの保守に関する発表</a></li>
-</ul>
-
-
-<h2>クロージング</h2>
-
-<ul>
-<li><a href="https://ja-jp.facebook.com/RubyKansai">https://ja-jp.facebook.com/RubyKansai</a></li>
-<li><a href="https://ruby-maizuru.doorkeeper.jp/" title="Ruby舞鶴">Ruby舞鶴</a></li>
-<li><a href="https://dddrb.doorkeeper.jp/" title="DDD.rb">DDD.rb</a></li>
-</ul>
-
 ]]></content>
   </entry>
   
