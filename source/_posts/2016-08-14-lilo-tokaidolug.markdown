@@ -5,7 +5,7 @@ date: 2016-08-14 13:00:00 +0900
 comments: true
 categories: lilo event linux
 ---
-[LILO&amp;東海道らぐオフラインミーティング 2016/08/14 ブックマークする](http://lilo.connpass.com/event/37410/ "LILO&amp;東海道らぐオフラインミーティング 2016/08/14 ブックマークする") に参加しました。
+[LILO&amp;東海道らぐオフラインミーティング 2016/08/14](http://lilo.connpass.com/event/37410/ "LILO&amp;東海道らぐオフラインミーティング 2016/08/14") に参加しました。
 
 今回もアンカンファレンス形式でした。
 
