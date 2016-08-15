@@ -93,9 +93,9 @@ lilo.linux.or.jp のサーバーの前回の発表以降の話をしました。
 内容は大きく分けると 二要素認証は進捗なし、 letsencrypt の証明書は certbot に変わっても順調に使えている話、 ufw でアタックが多いポートをログに残さないようにした話でした。
 
 スライドはいつも通り [Rabbit Slide Show](http://slide.rabbit-shocker.org/authors/znz/lilo-20160814/) ([RubyGems](https://rubygems.org/gems/rabbit-slide-znz-lilo-20160814)), [SlideShare](http://www.slideshare.net/znzjp/lilo-20160814), [Speaker Deck](https://speakerdeck.com/znz/lilo-dot-linux-dot-or-dot-jp-falsehua) にあげています。(ソースは [github](https://github.com/znz/lilo-20160814) にあげています。)
-しかし、2016-08-14現在 slide.rabbit-shocker.org (Rabbit Slide Show) には反映されていないようなので、 SlideShare か Speaker Deck でみてください。
+(しかし、2016-08-14現在 slide.rabbit-shocker.org (Rabbit Slide Show) には反映されていないようなので、 SlideShare か Speaker Deck でみてください。)
+(2016-08-16現在、反映されたので Rabbit Slide Show でも見えるようになりました。)
 
-<!--
 <iframe src="http://slide.rabbit-shocker.org/authors/znz/lilo-20160814/viewer.html"
         width="640" height="524"
         frameborder="0"
@@ -107,4 +107,3 @@ lilo.linux.or.jp のサーバーの前回の発表以降の話をしました。
 <div style="margin-bottom: 5px">
   <a href="http://slide.rabbit-shocker.org/authors/znz/lilo-20160814/" title="lilo.linux.or.jp の話">lilo.linux.or.jp の話</a>
 </div>
--->
