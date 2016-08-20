@@ -5,13 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>postfixとmilter-managerの設定をした - @znz blog</title>
+  <title>OS X の Emacs で EasyPG が gpg2 で Opening input file: Decryption failed, になったので対処した - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="postfixとmilter-managerの設定をした Nov 23rd, 2013 9:25 pm | Comments Debian 7.2 (amd64) のサーバーにメールサーバーの設定をしたところ、
-milter-manager
-関連と gmail への IPv6 &hellip;">
+  <meta name="description" content="OS X の Emacs で EasyPG が gpg2 で Opening input file: Decryption failed, になったので対処した Aug 20th, 2016 1:23 pm | Comments OS X の Homebrew で入れている gnupg &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -20,7 +18,7 @@ milter-manager
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-11-23-postfix-and-milter-manager.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2016-08-20-mac-easypg-gpg2.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -85,7 +83,7 @@ milter-manager
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">postfixとmilter-managerの設定をした</h1>
+      <h1 class="entry-title">OS X の Emacs で EasyPG が gpg2 で Opening input file: Decryption failed, になったので対処した</h1>
       
       <!-- zenback_title_end -->
       
@@ -97,7 +95,7 @@ milter-manager
 
 
 
-<time class='entry-date' datetime='2013-11-23T21:25:00+09:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>23</span><span class='date-suffix'>rd</span>, <span class='date-year'>2013</span></span> <span class='time'>9:25 pm</span></time>
+<time class='entry-date' datetime='2016-08-20T13:23:22+09:00'><span class='date'><span class='date-month'>Aug</span> <span class='date-day'>20</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>1:23 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -110,65 +108,41 @@ milter-manager
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p>Debian 7.2 (amd64) のサーバーにメールサーバーの設定をしたところ、
-<a href="http://milter-manager.sourceforge.net/">milter-manager</a>
-関連と gmail への IPv6 経由でのメール送信関連でちょっとひっかかりましたが、
-すぐに解決できました。</p>
+<div class="entry-content"><p>OS X の Homebrew で入れている gnupg が更新されて gpg コマンドではなく gpg1 コマンドしか入らなくなって、 gpg コマンドは gnupg2 で入れるようになった影響で、 Emacs 上の EasyPG で <code>*.gpg</code> ファイルを開くときに <code>Opening input file: Decryption failed,</code> で開けなくなったので、その対処をしました。</p>
 
 <!--more-->
 
 
-<h2>milter-manager の話</h2>
+<h2>対象バージョン</h2>
 
-<p>まず <code>milter-manager</code> は
-<a href="http://milter-manager.sourceforge.net/reference/ja/install-to-debian.html">Debianへインストール - milter manager</a>
-の手順通りに設定してみたのですが、確認のところで、</p>
+<p>OS 自体以外は Homebrew で入れたバージョンです。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'> $ sudo -u postfix milter-test-server -s unix:/var/spool/postfix/milter-manager/milter-manager.sock
-</span><span class='line'> status: temporary-failure
-</span><span class='line'> elapsed-time: 0.007781 seconds</span></code></pre></td></tr></table></div></figure></notextile></div>
+<ul>
+<li>OS X : Yosemite (10.10.5)</li>
+<li>Emacs.app : 24.5.1</li>
+<li>gnupg : 1.4.21</li>
+<li>gnupg2 : 2.0.30_2</li>
+<li>gpg-agent : 2.0.30_1</li>
+<li>pinentry-mac : 0.9.4</li>
+</ul>
 
 
-<p>のように <code>temporary-failure</code> になりました。
-そこで依存しているデーモンを調べてみたところ、
-<code>clamd</code> が起動していなかったので、</p>
+<h2>現象</h2>
 
-<pre><code>sudo service clamav-daemon start
-</code></pre>
+<p><code>*.gpg</code> ファイルを開くと今までは minibuffer でパスフレーズをきいてきていたのに、 gpg コマンドが gnupg 1 系から gnupg 2 系に変わったら、 <code>Opening input file: Decryption failed,</code> というエラー (<code>*Messages*</code> バッファには <code>epa-file--find-file-not-found-function: Opening input file: Decryption failed,</code> と出ていた) で開けなくなりました。</p>
 
-<p>で起動した後、</p>
+<h2>対処方法案</h2>
 
-<pre><code>sudo service clamav-milter restart
-</code></pre>
+<p><code>(setq epg-gpg-program "gpg1")</code> で古い gnupg を使い続けるという案も考えましたが、今後のことを考えると新しいバージョンを使った方が良いだろうと思ってやめました。</p>
 
-<p>で clamav-milter も再起動したら</p>
+<p><a href="http://www.bookshelf.jp/cgi-bin/goto.cgi?file=auth-ja&amp;node=GnuPG+and+EasyPG+Assistant+Configuration">A. GnuPG および EasyPG アシスタントの設定</a> によると gpg2 は gpg-agent との組み合わせが必須のようだったので、 gpg-agent を使うことにしました。</p>
 
-<pre><code>status: accept
-</code></pre>
+<h2>対処方法</h2>
 
-<p>になりました。</p>
+<p>端末上で <code>gpg -c hoge.txt</code> や <code>gpg -c hoge.txt.gpg</code> を試してみると <code>pinentry-curses</code> が使われているとわかったので、 <code>brew install pinentry-mac</code> で pinentry-mac をインストールして、 <code>Caveats</code> に出てきたように <code>~/.gnupg/gpg-agent.conf</code> を作成して <code>pinentry-program /usr/local/bin/pinentry-mac</code> という設定を入れたところ、 Emacs 上でも <code>*.gpg</code> ファイルを開くときに pinentry-mac でパスフレーズをきかれるようになって、開けるようになりました。</p>
 
-<p>後で気付いたので、最初のインストール時のメッセージを
-ちゃんと確認できていないのですが、
-<code>/etc/init.d/clamav-daemon</code> の <code>start</code>
-の処理に cvd ファイルなどの存在をチェックして起動を止める処理があるので、
-<code>freshclam</code> の処理を待ってから起動しないとダメだったようです。</p>
-
-<h2>gmail と IPv6 の話</h2>
-
-<p><a href="http://ya.maya.st/d/201308c.html#s20130822_1">gmail の逆引き制限</a>
-の人と同じように IPv6 で逆引き必須にするのは否定的なのですが、
-それはおいといて、現実問題として送信できないのは困るので、
-<code>smtp_address_preference = ipv4</code> の設定を追加しました。</p>
-
-<p>その設定をする前にテストメールを送ったら、
-以下のようなエラーメールが返ってきて、
-エラーメッセージの中の URL が
-<a href="http://www.postfix-jp.info/ML/arc-2.5/msg00237.html">以前ひっかかったとき</a>
-とは変わっているということに気付きました。</p>
+<p>パスフレーズを入力できるようにするだけなら pinentry の設定だけで gpg-agent の起動は必要ありませんでした。
+パスフレーズを毎回入力する必要があるというのは今までと同じ使い勝手なので、 gpg-agent の起動までは追求しませんでした。</p>
 
 <div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -178,23 +152,19 @@ milter-manager
 <span class='line-number'>6</span>
 <span class='line-number'>7</span>
 <span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>&lt;自分のアドレス@gmail.com&gt; (expanded from &lt;自分@あるサーバー&gt;): host
-</span><span class='line'>    gmail-smtp-in.l.google.com[2607:f8b0:4002:c01::1a] said: 550-5.7.1
-</span><span class='line'>    [2401:xxxx:xxx:xxxx:xxx:xxx:xxx:xxx      16] Our system has detected
-</span><span class='line'>    550-5.7.1 that this message does not meet IPv6 sending guidelines regarding
-</span><span class='line'>    PTR 550-5.7.1 records and authentication. Please review 550-5.7.1
-</span><span class='line'>    https://support.google.com/mail/?p=ipv6_authentication_error for more 550
-</span><span class='line'>    5.7.1 information. e2si14078426yhm.125 - gsmtp (in reply to end of DATA
-</span><span class='line'>    command)</span></code></pre></td></tr></table></div></figure></notextile></div>
+</pre></td><td class='code'><pre><code class=''><span class='line'>==&gt; Caveats
+</span><span class='line'>You can now set this as your pinentry program like
+</span><span class='line'>
+</span><span class='line'>~/.gnupg/gpg-agent.conf
+</span><span class='line'>    pinentry-program /usr/local/bin/pinentry-mac
+</span><span class='line'>
+</span><span class='line'>.app bundles were installed.
+</span><span class='line'>Run `brew linkapps pinentry-mac` to symlink these to /Applications.</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<h2>余談</h2>
+<h2>将来の対処方法案</h2>
 
-<p>以前はメールサーバーの spam 対策の設定は秘伝のたれ状態で
-だんだんメンテナンスが難しくなってしまっていましたが、
-spam 対策は milter-manager だったり、
-firewall は <a href="packages.debian.org/ufw">ufw</a> だったり、
-いろいろと共通で使えるものが増えてきて楽になってきたように思います。</p>
+<p>gpg-agent は 2.1.5 から <code>--allow-emacs-pinentry</code> というオプションが追加されていて、 <a href="http://unix.stackexchange.com/questions/55638/can-emacs-use-gpg-agent-in-a-terminal-at-all">http://unix.stackexchange.com/questions/55638/can-emacs-use-gpg-agent-in-a-terminal-at-all</a> に書かれているように <a href="https://elpa.gnu.org/packages/pinentry.html">https://elpa.gnu.org/packages/pinentry.html</a> を使って、 Emacs 上でパスフレーズを入力できるようになるようなので、またそのように設定を変更するかもしれません。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -213,12 +183,12 @@ firewall は <a href="packages.debian.org/ufw">ufw</a> だったり、
 
 
 
-<time class='entry-date' datetime='2013-11-23T21:25:00+09:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>23</span><span class='date-suffix'>rd</span>, <span class='date-year'>2013</span></span> <span class='time'>9:25 pm</span></time>
+<time class='entry-date' datetime='2016-08-20T13:23:22+09:00'><span class='date'><span class='date-month'>Aug</span> <span class='date-day'>20</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>1:23 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/linux/'>linux</a>, <a class='category' href='/blog/categories/milter-manager/'>milter-manager</a>, <a class='category' href='/blog/categories/postfix/'>postfix</a>
+    <a class='category' href='/blog/categories/emacs/'>emacs</a>, <a class='category' href='/blog/categories/gpg/'>gpg</a>
   
 </span>
 
@@ -245,10 +215,8 @@ firewall は <a href="packages.debian.org/ufw">ufw</a> だったり、
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-11-21-anyenv-rbenv-plugins.html" title="Previous Post: anyenvやrbenvのpluginsの更新などをしやすくするプラグインを作った">&laquo; anyenvやrbenvのpluginsの更新などをしやすくするプラグインを作った</a>
+        <a class="basic-alignment left" href="/blog/2016-08-14-lilo-tokaidolug.html" title="Previous Post: LILO&東海道らぐオフラインミーティング 2016/08/14">&laquo; LILO&東海道らぐオフラインミーティング 2016/08/14</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-11-24-debian-postfix-mailman.html" title="Next Post: debianでpostfixと連携するvirtual hostではないmailmanの設定をした">debianでpostfixと連携するvirtual hostではないmailmanの設定をした &raquo;</a>
       
     </p>
   </footer>
@@ -383,8 +351,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-11-23-postfix-and-milter-manager.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-11-23-postfix-and-milter-manager.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2016-08-20-mac-easypg-gpg2.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2016-08-20-mac-easypg-gpg2.html';
         var disqus_script = 'embed.js';
       
     (function () {

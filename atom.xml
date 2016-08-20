@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-08-16T01:23:45+09:00</updated>
+  <updated>2016-08-20T14:08:22+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,71 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[OS X の Emacs で EasyPG が gpg2 で Opening input file: Decryption failed, になったので対処した]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-08-20-mac-easypg-gpg2.html"/>
+    <updated>2016-08-20T13:23:22+09:00</updated>
+    <id>http://blog.n-z.jp/blog/mac-easypg-gpg2</id>
+    <content type="html"><![CDATA[<p>OS X の Homebrew で入れている gnupg が更新されて gpg コマンドではなく gpg1 コマンドしか入らなくなって、 gpg コマンドは gnupg2 で入れるようになった影響で、 Emacs 上の EasyPG で <code>*.gpg</code> ファイルを開くときに <code>Opening input file: Decryption failed,</code> で開けなくなったので、その対処をしました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<p>OS 自体以外は Homebrew で入れたバージョンです。</p>
+
+<ul>
+<li>OS X : Yosemite (10.10.5)</li>
+<li>Emacs.app : 24.5.1</li>
+<li>gnupg : 1.4.21</li>
+<li>gnupg2 : 2.0.30_2</li>
+<li>gpg-agent : 2.0.30_1</li>
+<li>pinentry-mac : 0.9.4</li>
+</ul>
+
+
+<h2>現象</h2>
+
+<p><code>*.gpg</code> ファイルを開くと今までは minibuffer でパスフレーズをきいてきていたのに、 gpg コマンドが gnupg 1 系から gnupg 2 系に変わったら、 <code>Opening input file: Decryption failed,</code> というエラー (<code>*Messages*</code> バッファには <code>epa-file--find-file-not-found-function: Opening input file: Decryption failed,</code> と出ていた) で開けなくなりました。</p>
+
+<h2>対処方法案</h2>
+
+<p><code>(setq epg-gpg-program "gpg1")</code> で古い gnupg を使い続けるという案も考えましたが、今後のことを考えると新しいバージョンを使った方が良いだろうと思ってやめました。</p>
+
+<p><a href="http://www.bookshelf.jp/cgi-bin/goto.cgi?file=auth-ja&amp;node=GnuPG+and+EasyPG+Assistant+Configuration">A. GnuPG および EasyPG アシスタントの設定</a> によると gpg2 は gpg-agent との組み合わせが必須のようだったので、 gpg-agent を使うことにしました。</p>
+
+<h2>対処方法</h2>
+
+<p>端末上で <code>gpg -c hoge.txt</code> や <code>gpg -c hoge.txt.gpg</code> を試してみると <code>pinentry-curses</code> が使われているとわかったので、 <code>brew install pinentry-mac</code> で pinentry-mac をインストールして、 <code>Caveats</code> に出てきたように <code>~/.gnupg/gpg-agent.conf</code> を作成して <code>pinentry-program /usr/local/bin/pinentry-mac</code> という設定を入れたところ、 Emacs 上でも <code>*.gpg</code> ファイルを開くときに pinentry-mac でパスフレーズをきかれるようになって、開けるようになりました。</p>
+
+<p>パスフレーズを入力できるようにするだけなら pinentry の設定だけで gpg-agent の起動は必要ありませんでした。
+パスフレーズを毎回入力する必要があるというのは今までと同じ使い勝手なので、 gpg-agent の起動までは追求しませんでした。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>==&gt; Caveats
+</span><span class='line'>You can now set this as your pinentry program like
+</span><span class='line'>
+</span><span class='line'>~/.gnupg/gpg-agent.conf
+</span><span class='line'>    pinentry-program /usr/local/bin/pinentry-mac
+</span><span class='line'>
+</span><span class='line'>.app bundles were installed.
+</span><span class='line'>Run `brew linkapps pinentry-mac` to symlink these to /Applications.</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>将来の対処方法案</h2>
+
+<p>gpg-agent は 2.1.5 から <code>--allow-emacs-pinentry</code> というオプションが追加されていて、 <a href="http://unix.stackexchange.com/questions/55638/can-emacs-use-gpg-agent-in-a-terminal-at-all">http://unix.stackexchange.com/questions/55638/can-emacs-use-gpg-agent-in-a-terminal-at-all</a> に書かれているように <a href="https://elpa.gnu.org/packages/pinentry.html">https://elpa.gnu.org/packages/pinentry.html</a> を使って、 Emacs 上でパスフレーズを入力できるようになるようなので、またそのように設定を変更するかもしれません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[LILO&東海道らぐオフラインミーティング 2016/08/14]]></title>
@@ -3280,232 +3345,6 @@ Web の設定画面で見てみると info も化けていたので、元の設�
 </span><span class='line'>    <span class="nb">exit </span>1
 </span><span class='line'><span class="k">fi</span>
 </span><span class='line'>apachectl graceful
-</span></code></pre></td></tr></table></div></figure>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[letsencrypt-auto の自動アップグレードを止めて手動でアップグレード]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-04-07-letsencrypt.html"/>
-    <updated>2016-04-07T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/letsencrypt</id>
-    <content type="html"><![CDATA[<p><code>/etc/cron.daily/letsencrypt</code> は <code>root</code> 権限で実行されるため、そこで自動アップグレードがかかるとファイルのオーナーが <code>root</code> になってしまうかもしれないと思ったので、自動更新を止めて手動でアップグレードするようにしました。</p>
-
-<!--more-->
-
-
-<h2>自動アップグレードを止めた <code>/etc/cron.daily/local-letsencrypt</code></h2>
-
-<p><a href="http://blog.n-z.jp/blog/2016-03-06-letsencrypt.html">前回の記事</a> からの差分としては <a href="http://packages.debian.org/debianutils">debianutils</a> の <code>savelog</code> でログをローテートして、証明書の有効期限の 90 日分残すようにしたのと、 <code>--no-self-upgrade</code> をつけて自動アップグレードを止めたことです。
-それから、パッケージで入れたものではないということを明示するために <code>local</code> という文字列を入れたファイル名に変更しました。</p>
-
-<figure class='code'><figcaption><span>/etc/cron.daily/local-letsencrypt</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#!/bin/sh</span>
-</span><span class='line'><span class="nv">LOGFILE</span><span class="o">=</span>/var/log/letsencrypt/renew.log
-</span><span class='line'><span class="k">if</span> <span class="o">[</span> -f <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-</span><span class='line'>    /usr/bin/savelog -c <span class="m">90</span> -q <span class="s2">&quot;$LOGFILE&quot;</span>
-</span><span class='line'><span class="k">fi</span>
-</span><span class='line'><span class="k">if</span> ! /home/hoge/letsencrypt/letsencrypt-auto renew --no-self-upgrade &gt; <span class="s2">&quot;$LOGFILE&quot;</span> 2&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">;</span> <span class="k">then</span>
-</span><span class='line'>    <span class="nb">echo </span>Automated renewal failed:
-</span><span class='line'>    cat <span class="s2">&quot;$LOGFILE&quot;</span>
-</span><span class='line'>    <span class="nb">exit </span>1
-</span><span class='line'><span class="k">fi</span>
-</span><span class='line'>apachectl graceful
-</span><span class='line'>service postfix reload &gt;/dev/null
-</span><span class='line'>service dovecot reload
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>手動アップグレードしたログ</h2>
-
-<p>手動実行したところ、ちょうど 0.4.2 から 0.5.0 へのアップグレードが実行されました。</p>
-
-<figure class='code'><figcaption><span>/etc/cron.daily/local-letsencrypt</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>% ~/letsencrypt/letsencrypt-auto --help
-</span><span class='line'>Checking <span class="k">for</span> new version...
-</span><span class='line'>Upgrading letsencrypt-auto 0.4.2 to 0.5.0...
-</span><span class='line'>Replacing letsencrypt-auto...
-</span><span class='line'>   sudo cp -p /home/hoge/letsencrypt/letsencrypt-auto /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto.permission-clone
-</span><span class='line'>   sudo cp /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto.permission-clone
-</span><span class='line'>   sudo mv -f /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto.permission-clone /home/hoge/letsencrypt/letsencrypt-auto
-</span><span class='line'>Creating virtual environment...
-</span><span class='line'>Installing Python packages...
-</span><span class='line'>Installation succeeded.
-</span><span class='line'>Requesting root privileges to run letsencrypt...
-</span><span class='line'>   sudo /home/hoge/.local/share/letsencrypt/bin/letsencrypt --help
-</span><span class='line'>
-</span><span class='line'>  letsencrypt-auto <span class="o">[</span>SUBCOMMAND<span class="o">]</span> <span class="o">[</span>options<span class="o">]</span> <span class="o">[</span>-d domain<span class="o">]</span> <span class="o">[</span>-d domain<span class="o">]</span> ...
-</span><span class='line'>
-</span><span class='line'>The Let<span class="s1">&#39;s Encrypt agent can obtain and install HTTPS/TLS/SSL certificates.  By</span>
-</span><span class='line'><span class="s1">default, it will attempt to use a webserver both for obtaining and installing</span>
-</span><span class='line'><span class="s1">the cert. Major SUBCOMMANDS are:</span>
-</span><span class='line'>
-</span><span class='line'><span class="s1">  (default) run        Obtain &amp; install a cert in your current webserver</span>
-</span><span class='line'><span class="s1">  certonly             Obtain cert, but do not install it (aka &quot;auth&quot;)</span>
-</span><span class='line'><span class="s1">  install              Install a previously obtained cert in a server</span>
-</span><span class='line'><span class="s1">  renew                Renew previously obtained certs that are near expiry</span>
-</span><span class='line'><span class="s1">  revoke               Revoke a previously obtained certificate</span>
-</span><span class='line'><span class="s1">  rollback             Rollback server configuration changes made during install</span>
-</span><span class='line'><span class="s1">  config_changes       Show changes made to server config during installation</span>
-</span><span class='line'><span class="s1">  plugins              Display information about installed plugins</span>
-</span><span class='line'>
-</span><span class='line'><span class="s1">Choice of server plugins for obtaining and installing cert:</span>
-</span><span class='line'>
-</span><span class='line'><span class="s1">  --apache          Use the Apache plugin for authentication &amp; installation</span>
-</span><span class='line'><span class="s1">  --standalone      Run a standalone webserver for authentication</span>
-</span><span class='line'><span class="s1">  (nginx support is experimental, buggy, and not installed by default)</span>
-</span><span class='line'><span class="s1">  --webroot         Place files in a server&#39;</span>s webroot folder <span class="k">for</span> authentication
-</span><span class='line'>
-</span><span class='line'>OR use different plugins to obtain <span class="o">(</span>authenticate<span class="o">)</span> the cert and <span class="k">then</span> install it:
-</span><span class='line'>
-</span><span class='line'>  --authenticator standalone --installer apache
-</span><span class='line'>
-</span><span class='line'>More detailed <span class="nb">help</span>:
-</span><span class='line'>
-</span><span class='line'>  -h, --help <span class="o">[</span>topic<span class="o">]</span>    print this message, or detailed <span class="nb">help </span>on a topic<span class="p">;</span>
-</span><span class='line'>                        the available topics are:
-</span><span class='line'>
-</span><span class='line'>   all, automation, paths, security, testing, or any of the subcommands or
-</span><span class='line'>   plugins <span class="o">(</span>certonly, install, nginx, apache, standalone, webroot, etc<span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>アップグレードがないときのログ</h2>
-
-<figure class='code'><figcaption><span>/etc/cron.daily/local-letsencrypt</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'>% ~/letsencrypt/letsencrypt-auto --help
-</span><span class='line'>Checking <span class="k">for</span> new version...
-</span><span class='line'>Requesting root privileges to run letsencrypt...
-</span><span class='line'>   sudo /home/hoge/.local/share/letsencrypt/bin/letsencrypt --help
-</span><span class='line'>
-</span><span class='line'>  letsencrypt-auto <span class="o">[</span>SUBCOMMAND<span class="o">]</span> <span class="o">[</span>options<span class="o">]</span> <span class="o">[</span>-d domain<span class="o">]</span> <span class="o">[</span>-d domain<span class="o">]</span> ...
-</span><span class='line'>
-</span><span class='line'>The Let<span class="s1">&#39;s Encrypt agent can obtain and install HTTPS/TLS/SSL certificates.  By</span>
-</span><span class='line'><span class="s1">default, it will attempt to use a webserver both for obtaining and installing</span>
-</span><span class='line'><span class="s1">the cert. Major SUBCOMMANDS are:</span>
-</span><span class='line'>
-</span><span class='line'><span class="s1">  (default) run        Obtain &amp; install a cert in your current webserver</span>
-</span><span class='line'><span class="s1">  certonly             Obtain cert, but do not install it (aka &quot;auth&quot;)</span>
-</span><span class='line'><span class="s1">  install              Install a previously obtained cert in a server</span>
-</span><span class='line'><span class="s1">  renew                Renew previously obtained certs that are near expiry</span>
-</span><span class='line'><span class="s1">  revoke               Revoke a previously obtained certificate</span>
-</span><span class='line'><span class="s1">  rollback             Rollback server configuration changes made during install</span>
-</span><span class='line'><span class="s1">  config_changes       Show changes made to server config during installation</span>
-</span><span class='line'><span class="s1">  plugins              Display information about installed plugins</span>
-</span><span class='line'>
-</span><span class='line'><span class="s1">Choice of server plugins for obtaining and installing cert:</span>
-</span><span class='line'>
-</span><span class='line'><span class="s1">  --apache          Use the Apache plugin for authentication &amp; installation</span>
-</span><span class='line'><span class="s1">  --standalone      Run a standalone webserver for authentication</span>
-</span><span class='line'><span class="s1">  (nginx support is experimental, buggy, and not installed by default)</span>
-</span><span class='line'><span class="s1">  --webroot         Place files in a server&#39;</span>s webroot folder <span class="k">for</span> authentication
-</span><span class='line'>
-</span><span class='line'>OR use different plugins to obtain <span class="o">(</span>authenticate<span class="o">)</span> the cert and <span class="k">then</span> install it:
-</span><span class='line'>
-</span><span class='line'>  --authenticator standalone --installer apache
-</span><span class='line'>
-</span><span class='line'>More detailed <span class="nb">help</span>:
-</span><span class='line'>
-</span><span class='line'>  -h, --help <span class="o">[</span>topic<span class="o">]</span>    print this message, or detailed <span class="nb">help </span>on a topic<span class="p">;</span>
-</span><span class='line'>                        the available topics are:
-</span><span class='line'>
-</span><span class='line'>   all, automation, paths, security, testing, or any of the subcommands or
-</span><span class='line'>   plugins <span class="o">(</span>certonly, install, nginx, apache, standalone, webroot, etc<span class="o">)</span>
 </span></code></pre></td></tr></table></div></figure>
 
 ]]></content>

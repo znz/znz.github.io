@@ -4,7 +4,7 @@
   <title><![CDATA[Category: gpg | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/gpg/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-08-16T01:23:45+09:00</updated>
+  <updated>2016-08-20T14:08:22+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,63 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[OS X の Emacs で EasyPG が gpg2 で Opening input file: Decryption failed, になったので対処した]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-08-20-mac-easypg-gpg2.html"/>
+    <updated>2016-08-20T13:23:22+09:00</updated>
+    <id>http://blog.n-z.jp/blog/mac-easypg-gpg2</id>
+    <content type="html"><![CDATA[<p>OS X の Homebrew で入れている gnupg が更新されて gpg コマンドではなく gpg1 コマンドしか入らなくなって、 gpg コマンドは gnupg2 で入れるようになった影響で、 Emacs 上の EasyPG で <code>*.gpg</code> ファイルを開くときに <code>Opening input file: Decryption failed,</code> で開けなくなったので、その対処をしました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<p>OS 自体以外は Homebrew で入れたバージョンです。</p>
+
+<ul>
+<li>OS X : Yosemite (10.10.5)</li>
+<li>Emacs.app : 24.5.1</li>
+<li>gnupg : 1.4.21</li>
+<li>gnupg2 : 2.0.30_2</li>
+<li>gpg-agent : 2.0.30_1</li>
+<li>pinentry-mac : 0.9.4</li>
+</ul>
+
+
+<h2>現象</h2>
+
+<p><code>*.gpg</code> ファイルを開くと今までは minibuffer でパスフレーズをきいてきていたのに、 gpg コマンドが gnupg 1 系から gnupg 2 系に変わったら、 <code>Opening input file: Decryption failed,</code> というエラー (<code>*Messages*</code> バッファには <code>epa-file--find-file-not-found-function: Opening input file: Decryption failed,</code> と出ていた) で開けなくなりました。</p>
+
+<h2>対処方法案</h2>
+
+<p><code>(setq epg-gpg-program "gpg1")</code> で古い gnupg を使い続けるという案も考えましたが、今後のことを考えると新しいバージョンを使った方が良いだろうと思ってやめました。</p>
+
+<p><a href="http://www.bookshelf.jp/cgi-bin/goto.cgi?file=auth-ja&amp;node=GnuPG+and+EasyPG+Assistant+Configuration">A. GnuPG および EasyPG アシスタントの設定</a> によると gpg2 は gpg-agent との組み合わせが必須のようだったので、 gpg-agent を使うことにしました。</p>
+
+<h2>対処方法</h2>
+
+<p>端末上で <code>gpg -c hoge.txt</code> や <code>gpg -c hoge.txt.gpg</code> を試してみると <code>pinentry-curses</code> が使われているとわかったので、 <code>brew install pinentry-mac</code> で pinentry-mac をインストールして、 <code>Caveats</code> に出てきたように <code>~/.gnupg/gpg-agent.conf</code> を作成して <code>pinentry-program /usr/local/bin/pinentry-mac</code> という設定を入れたところ、 Emacs 上でも <code>*.gpg</code> ファイルを開くときに pinentry-mac でパスフレーズをきかれるようになって、開けるようになりました。</p>
+
+<p>パスフレーズを入力できるようにするだけなら pinentry の設定だけで gpg-agent の起動は必要ありませんでした。
+パスフレーズを毎回入力する必要があるというのは今までと同じ使い勝手なので、 gpg-agent の起動までは追求しませんでした。</p>
+
+<pre><code>==&gt; Caveats
+You can now set this as your pinentry program like
+
+~/.gnupg/gpg-agent.conf
+    pinentry-program /usr/local/bin/pinentry-mac
+
+.app bundles were installed.
+Run `brew linkapps pinentry-mac` to symlink these to /Applications.
+</code></pre>
+
+<h2>将来の対処方法案</h2>
+
+<p>gpg-agent は 2.1.5 から <code>--allow-emacs-pinentry</code> というオプションが追加されていて、 <a href="http://unix.stackexchange.com/questions/55638/can-emacs-use-gpg-agent-in-a-terminal-at-all">http://unix.stackexchange.com/questions/55638/can-emacs-use-gpg-agent-in-a-terminal-at-all</a> に書かれているように <a href="https://elpa.gnu.org/packages/pinentry.html">https://elpa.gnu.org/packages/pinentry.html</a> を使って、 Emacs 上でパスフレーズを入力できるようになるようなので、またそのように設定を変更するかもしれません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[caffでキーサインした]]></title>
