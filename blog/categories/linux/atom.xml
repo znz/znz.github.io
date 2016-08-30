@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-08-27T22:16:36+09:00</updated>
+  <updated>2016-08-30T23:34:20+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,251 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[lsで丸数字で始まるファイル名の順番が変だった]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-08-30-lc-collate-again.html"/>
+    <updated>2016-08-30T22:58:34+09:00</updated>
+    <id>http://blog.n-z.jp/blog/lc-collate-again</id>
+    <content type="html"><![CDATA[<p>OS X で丸数字から始まるファイル名のファイルが入ったフォルダーを Finder で開くと丸数字の数字順に並んでいたのに、 <code>ls</code> で表示すると別の順番になっていたので原因を調べてみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認環境</h2>
+
+<ul>
+<li>OS X Yosemite (10.10.5)</li>
+<li>ls, uniq バージョン不明</li>
+<li>sort (GNU coreutils) 5.93</li>
+</ul>
+
+
+<h2>動作確認</h2>
+
+<p>Unicode 的に連続している 丸1 から 丸20 までのファイル名のファイルと、それに適当な ASCII の数字をつけたファイル名のファイルを作成して <code>ls</code> で表示してみました。</p>
+
+<pre><code>%  touch $(ruby -e 'puts ("\u{2460}".."\u{2473}").to_a')
+%  touch $(ruby -e 'puts ("\u{2460}".."\u{2473}").to_a.shuffle.map.with_index{|e,i|"#{e}#{i}"}')
+%  ls
+①      ⑤      ⑨      ⑬      ⑰      ⑧0     ⑲12    ⑮16    ⑥2     ⑬6
+②      ⑥      ⑩      ⑭      ⑱      ⑤1     ⑱13    ⑳17    ④3     ⑫7
+③      ⑦      ⑪      ⑮      ⑲      ⑨10    ②14    ⑪18    ⑭4     ⑦8
+④      ⑧      ⑫      ⑯      ⑳      ⑯11    ⑩15    ③19    ⑰5     ①9
+</code></pre>
+
+<p>丸数字のみだと数字順に並んでいるのに、後ろに ASCII の数字をつけた部分は ASCII の数字順に並んでいます。
+(numeric sort じゃないので 1,10,2 という順番になっているのがちょっとわかりにくいかもしれませんが。)</p>
+
+<h2>Jessie での動作確認</h2>
+
+<p>比較のために Debian GNU/Linux 8.5 (jessie) でも同様のファイルを作成して <code>ls</code> してみると丸数字のみのところもバラバラの順番でした。
+何度か実行しても同じ結果なので、ランダムというわけではなくなんらかの基準がありそうですが、どういう順番なのかはわかりませんでした。</p>
+
+<pre><code>% ls
+⑧  ⑯  ⑥  ⑬  ⑫  ⑦  ①  ③  ⑮  ⑰  ④0  ⑨10  ⑳12  ⑫14  ⑭16  ①18  ⑩2  ⑥4  ⑯6  ⑱8
+⑱  ⑩  ⑨  ⑪  ⑲  ⑤  ②  ④  ⑭  ⑳  ⑪1  ⑦11  ⑲13  ⑬15  ⑮17  ⑧19  ⑤3  ②5  ⑰7  ③9
+</code></pre>
+
+<h2>LC_COLLATE</h2>
+
+<p><a href="http://blog.n-z.jp/blog/2013-10-31-lc-collate-uniq.html" title="LC_COLLATEの問題でuniqで丸数字が同一視されてしまう">LC_COLLATEの問題でuniqで丸数字が同一視されてしまう</a>のと同じ話かと思って、 <code>sort</code> や <code>uniq</code> も試してみたところ、同じ話のように見えました。
+OS X では locale data が GNU/Linux とは違うようで <code>uniq</code> で同一視されるということは起きませんでした。</p>
+
+<pre><code>% rbenv exec irb -r irb/completion --simple-prompt
+&gt;&gt; IO.popen("uniq", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a; io.close_write; puts io.read }
+①
+②
+③
+④
+⑤
+⑥
+⑦
+⑧
+⑨
+⑩
+⑪
+⑫
+⑬
+⑭
+⑮
+⑯
+⑰
+⑱
+⑲
+⑳
+=&gt; nil
+&gt;&gt; IO.popen("sort", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a.shuffle; io.close_write; puts io.read }
+①
+②
+③
+④
+⑤
+⑥
+⑦
+⑧
+⑨
+⑩
+⑪
+⑫
+⑬
+⑭
+⑮
+⑯
+⑰
+⑱
+⑲
+⑳
+=&gt; nil
+&gt;&gt; IO.popen("sort", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a.shuffle.map.with_index{|e,i|"#{e}#{i}"}; io.close_write; puts io.read }
+⑬0
+⑥1
+⑰10
+⑱11
+⑤12
+⑮13
+⑦14
+④15
+③16
+⑪17
+⑩18
+①19
+⑧2
+⑲3
+⑫4
+⑳5
+⑭6
+②7
+⑯8
+⑨9
+=&gt; nil
+&gt;&gt; IO.popen({"LC_COLLATE"=&gt;"C"}, "sort", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a.shuffle.map.with_index{|e,i|"#{e}#{i}"}; io.close_write; puts io.read }
+①6
+②5
+③0
+④16
+⑤19
+⑥18
+⑦7
+⑧2
+⑨8
+⑩3
+⑪12
+⑫15
+⑬4
+⑭9
+⑮14
+⑯10
+⑰1
+⑱17
+⑲13
+⑳11
+=&gt; nil
+</code></pre>
+
+<h2>一番自然に感じる並び順</h2>
+
+<p>ruby の sort での結果は <code>LC_COLLATE=C</code> と同じように文字コード順になり、意味自然な並び順に感じました。
+<code>LC_COLLATE=C ls</code> も同じ並び順でした。</p>
+
+<pre><code>&gt;&gt; puts Dir['*'].sort
+①
+①9
+②
+②14
+③
+③19
+④
+④3
+⑤
+⑤1
+⑥
+⑥2
+⑦
+⑦8
+⑧
+⑧0
+⑨
+⑨10
+⑩
+⑩15
+⑪
+⑪18
+⑫
+⑫7
+⑬
+⑬6
+⑭
+⑭4
+⑮
+⑮16
+⑯
+⑯11
+⑰
+⑰5
+⑱
+⑱13
+⑲
+⑲12
+⑳
+⑳17
+=&gt; nil
+</code></pre>
+
+<pre><code>% LC_COLLATE=C ls
+①      ③      ⑤      ⑦      ⑨      ⑪      ⑬      ⑮      ⑰      ⑲
+①9     ③19    ⑤1     ⑦8     ⑨10    ⑪18    ⑬6     ⑮16    ⑰5     ⑲12
+②      ④      ⑥      ⑧      ⑩      ⑫      ⑭      ⑯      ⑱      ⑳
+②14    ④3     ⑥2     ⑧0     ⑩15    ⑫7     ⑭4     ⑯11    ⑱13    ⑳17
+</code></pre>
+
+<h2>Finder での並び順</h2>
+
+<p>Finder での並び順は <code>LC_COLLATE=C</code> での結果と同じかと思いきや、丸1 の後に 丸10 がきて、丸19, 丸2, 丸20, 丸3 のように並んでいたので、独特な感じでした。</p>
+
+<pre><code>①
+①9
+⑩
+⑩15
+⑪
+⑪18
+⑫
+⑫7
+⑬
+⑬6
+⑭
+⑭4
+⑮
+⑮16
+⑯
+⑯11
+⑰
+⑰5
+⑱
+⑱13
+⑲
+⑲12
+②
+②14
+⑳
+⑳17
+③
+③19
+④
+④3
+⑤
+⑤1
+⑥
+⑥2
+⑦
+⑦8
+⑧
+⑧0
+⑨
+⑨10
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[LILO&東海道らぐオフラインミーティング 2016/08/14]]></title>
@@ -562,90 +807,6 @@ base-files:
 <p>ダウングレードする時は <code>apt_preferences(5)</code> の <code>Pin</code> 設定をうまく工夫しましょう。</p>
 
 <p>backports のパッケージが不要なら backports の apt-line を追加するのは避けましょう。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[letsencrypt-auto が certbot-auto になった]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-05-13-letsencrypt-certbot.html"/>
-    <updated>2016-05-13T23:40:09+09:00</updated>
-    <id>http://blog.n-z.jp/blog/letsencrypt-certbot</id>
-    <content type="html"><![CDATA[<p><a href="https://www.eff.org/deeplinks/2016/05/announcing-certbot-new-tls-robot">EFF の Let&rsquo;s Encrypt クライアントが Certbot になった</a>という話です。</p>
-
-<!--more-->
-
-
-<h2>経緯</h2>
-
-<p><a href="https://letsencrypt.jp/usage/">Let&rsquo;s Encrypt の使い方</a> から引用しつつまとめます。</p>
-
-<ul>
-<li>2016年4月12日 に、Let&rsquo;s Encrypt の公開ベータプログラム（Public Beta Program）が終了し、正式サービスが開始されました。</li>
-<li>この時点でベータがとれたのは Let&rsquo;s Encrypt のサービス側で <code>letsencrypt-auto</code> コマンドを含む github.com/letsencrypt/letsencrypt にあったクライアントはまだベータのままでした。</li>
-<li>クライアントの 0.6.0 のリリースにあたり github.com/letsencrypt/letsencrypt は github.com/certbot/certbot に移動して Certbot に改名されました。</li>
-<li><a href="https://www.eff.org/deeplinks/2016/05/announcing-certbot-new-tls-robot">Announcing Certbot: EFF&rsquo;s Client for Let&rsquo;s Encrypt</a> に書いてあるように Certbot もまだベータで、今年中に Certbot 1.0 のリリースが予定されているようです。</li>
-</ul>
-
-
-<p>改名されたのは EFF の Let&rsquo;s Encrypt クライアントだけでサービス自体は Let&rsquo;s Encrypt という名前のままです。</p>
-
-<h2>その他の変更点</h2>
-
-<p>インストール方法も <code>git clone</code> して <code>letsencrypt-auto</code> を実行する方法から、 <code>https://dl.eff.org/certbot-auto</code> をダウンロードして実行する方法に変わっています。</p>
-
-<h2>インストール済み環境への影響</h2>
-
-<p>インストール済み環境ではどうなるのかと思って、 <code>letsencrypt-auto --help</code> を実行してアップグレードさせてみたところ、以下のようになりました。</p>
-
-<p>出力をよく見ると <code>sudo</code> のところで <code>CERTBOT_AUTO</code> という環境変数の指定が増えていて、 <code>letsencrypt-auto</code> コマンド自体はそのまま使えるようです。</p>
-
-<pre><code>% ~/letsencrypt/letsencrypt-auto --help
-Checking for new version...
-Upgrading letsencrypt-auto 0.5.0 to 0.6.0...
-Replacing letsencrypt-auto...
-   sudo cp -p /home/vpsuser/letsencrypt/letsencrypt-auto /tmp/user/1000/tmp.AiqGtrjioJ/letsencrypt-auto.permission-clone
-   sudo cp /tmp/user/1000/tmp.AiqGtrjioJ/letsencrypt-auto /tmp/user/1000/tmp.AiqGtrjioJ/letsencrypt-auto.permission-clone
-   sudo mv -f /tmp/user/1000/tmp.AiqGtrjioJ/letsencrypt-auto.permission-clone /home/vpsuser/letsencrypt/letsencrypt-auto
-Creating virtual environment...
-Installing Python packages...
-Installation succeeded.
-Requesting root privileges to run certbot...
-   sudo CERTBOT_AUTO=/home/vpsuser/letsencrypt/letsencrypt-auto /home/vpsuser/.local/share/letsencrypt/bin/letsencrypt --help
-
-  letsencrypt-auto [SUBCOMMAND] [options] [-d domain] [-d domain] ...
-
-Certbot can obtain and install HTTPS/TLS/SSL certificates.  By default,
-it will attempt to use a webserver both for obtaining and installing the
-cert. Major SUBCOMMANDS are:
-
-  (default) run        Obtain &amp; install a cert in your current webserver
-  certonly             Obtain cert, but do not install it (aka "auth")
-  install              Install a previously obtained cert in a server
-  renew                Renew previously obtained certs that are near expiry
-  revoke               Revoke a previously obtained certificate
-  rollback             Rollback server configuration changes made during install
-  config_changes       Show changes made to server config during installation
-  plugins              Display information about installed plugins
-
-Choice of server plugins for obtaining and installing cert:
-
-  --apache          Use the Apache plugin for authentication &amp; installation
-  --standalone      Run a standalone webserver for authentication
-  (nginx support is experimental, buggy, and not installed by default)
-  --webroot         Place files in a server's webroot folder for authentication
-
-OR use different plugins to obtain (authenticate) the cert and then install it:
-
-  --authenticator standalone --installer apache
-
-More detailed help:
-
-  -h, --help [topic]    print this message, or detailed help on a topic;
-                        the available topics are:
-
-   all, automation, paths, security, testing, or any of the subcommands or
-   plugins (certonly, install, nginx, apache, standalone, webroot, etc)
-</code></pre>
 ]]></content>
   </entry>
   

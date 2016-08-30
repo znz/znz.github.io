@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-08-27T22:16:36+09:00</updated>
+  <updated>2016-08-30T23:34:20+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,251 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[lsで丸数字で始まるファイル名の順番が変だった]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-08-30-lc-collate-again.html"/>
+    <updated>2016-08-30T22:58:34+09:00</updated>
+    <id>http://blog.n-z.jp/blog/lc-collate-again</id>
+    <content type="html"><![CDATA[<p>OS X で丸数字から始まるファイル名のファイルが入ったフォルダーを Finder で開くと丸数字の数字順に並んでいたのに、 <code>ls</code> で表示すると別の順番になっていたので原因を調べてみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認環境</h2>
+
+<ul>
+<li>OS X Yosemite (10.10.5)</li>
+<li>ls, uniq バージョン不明</li>
+<li>sort (GNU coreutils) 5.93</li>
+</ul>
+
+
+<h2>動作確認</h2>
+
+<p>Unicode 的に連続している 丸1 から 丸20 までのファイル名のファイルと、それに適当な ASCII の数字をつけたファイル名のファイルを作成して <code>ls</code> で表示してみました。</p>
+
+<pre><code>%  touch $(ruby -e 'puts ("\u{2460}".."\u{2473}").to_a')
+%  touch $(ruby -e 'puts ("\u{2460}".."\u{2473}").to_a.shuffle.map.with_index{|e,i|"#{e}#{i}"}')
+%  ls
+①      ⑤      ⑨      ⑬      ⑰      ⑧0     ⑲12    ⑮16    ⑥2     ⑬6
+②      ⑥      ⑩      ⑭      ⑱      ⑤1     ⑱13    ⑳17    ④3     ⑫7
+③      ⑦      ⑪      ⑮      ⑲      ⑨10    ②14    ⑪18    ⑭4     ⑦8
+④      ⑧      ⑫      ⑯      ⑳      ⑯11    ⑩15    ③19    ⑰5     ①9
+</code></pre>
+
+<p>丸数字のみだと数字順に並んでいるのに、後ろに ASCII の数字をつけた部分は ASCII の数字順に並んでいます。
+(numeric sort じゃないので 1,10,2 という順番になっているのがちょっとわかりにくいかもしれませんが。)</p>
+
+<h2>Jessie での動作確認</h2>
+
+<p>比較のために Debian GNU/Linux 8.5 (jessie) でも同様のファイルを作成して <code>ls</code> してみると丸数字のみのところもバラバラの順番でした。
+何度か実行しても同じ結果なので、ランダムというわけではなくなんらかの基準がありそうですが、どういう順番なのかはわかりませんでした。</p>
+
+<pre><code>% ls
+⑧  ⑯  ⑥  ⑬  ⑫  ⑦  ①  ③  ⑮  ⑰  ④0  ⑨10  ⑳12  ⑫14  ⑭16  ①18  ⑩2  ⑥4  ⑯6  ⑱8
+⑱  ⑩  ⑨  ⑪  ⑲  ⑤  ②  ④  ⑭  ⑳  ⑪1  ⑦11  ⑲13  ⑬15  ⑮17  ⑧19  ⑤3  ②5  ⑰7  ③9
+</code></pre>
+
+<h2>LC_COLLATE</h2>
+
+<p><a href="http://blog.n-z.jp/blog/2013-10-31-lc-collate-uniq.html" title="LC_COLLATEの問題でuniqで丸数字が同一視されてしまう">LC_COLLATEの問題でuniqで丸数字が同一視されてしまう</a>のと同じ話かと思って、 <code>sort</code> や <code>uniq</code> も試してみたところ、同じ話のように見えました。
+OS X では locale data が GNU/Linux とは違うようで <code>uniq</code> で同一視されるということは起きませんでした。</p>
+
+<pre><code>% rbenv exec irb -r irb/completion --simple-prompt
+&gt;&gt; IO.popen("uniq", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a; io.close_write; puts io.read }
+①
+②
+③
+④
+⑤
+⑥
+⑦
+⑧
+⑨
+⑩
+⑪
+⑫
+⑬
+⑭
+⑮
+⑯
+⑰
+⑱
+⑲
+⑳
+=&gt; nil
+&gt;&gt; IO.popen("sort", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a.shuffle; io.close_write; puts io.read }
+①
+②
+③
+④
+⑤
+⑥
+⑦
+⑧
+⑨
+⑩
+⑪
+⑫
+⑬
+⑭
+⑮
+⑯
+⑰
+⑱
+⑲
+⑳
+=&gt; nil
+&gt;&gt; IO.popen("sort", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a.shuffle.map.with_index{|e,i|"#{e}#{i}"}; io.close_write; puts io.read }
+⑬0
+⑥1
+⑰10
+⑱11
+⑤12
+⑮13
+⑦14
+④15
+③16
+⑪17
+⑩18
+①19
+⑧2
+⑲3
+⑫4
+⑳5
+⑭6
+②7
+⑯8
+⑨9
+=&gt; nil
+&gt;&gt; IO.popen({"LC_COLLATE"=&gt;"C"}, "sort", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a.shuffle.map.with_index{|e,i|"#{e}#{i}"}; io.close_write; puts io.read }
+①6
+②5
+③0
+④16
+⑤19
+⑥18
+⑦7
+⑧2
+⑨8
+⑩3
+⑪12
+⑫15
+⑬4
+⑭9
+⑮14
+⑯10
+⑰1
+⑱17
+⑲13
+⑳11
+=&gt; nil
+</code></pre>
+
+<h2>一番自然に感じる並び順</h2>
+
+<p>ruby の sort での結果は <code>LC_COLLATE=C</code> と同じように文字コード順になり、意味自然な並び順に感じました。
+<code>LC_COLLATE=C ls</code> も同じ並び順でした。</p>
+
+<pre><code>&gt;&gt; puts Dir['*'].sort
+①
+①9
+②
+②14
+③
+③19
+④
+④3
+⑤
+⑤1
+⑥
+⑥2
+⑦
+⑦8
+⑧
+⑧0
+⑨
+⑨10
+⑩
+⑩15
+⑪
+⑪18
+⑫
+⑫7
+⑬
+⑬6
+⑭
+⑭4
+⑮
+⑮16
+⑯
+⑯11
+⑰
+⑰5
+⑱
+⑱13
+⑲
+⑲12
+⑳
+⑳17
+=&gt; nil
+</code></pre>
+
+<pre><code>% LC_COLLATE=C ls
+①      ③      ⑤      ⑦      ⑨      ⑪      ⑬      ⑮      ⑰      ⑲
+①9     ③19    ⑤1     ⑦8     ⑨10    ⑪18    ⑬6     ⑮16    ⑰5     ⑲12
+②      ④      ⑥      ⑧      ⑩      ⑫      ⑭      ⑯      ⑱      ⑳
+②14    ④3     ⑥2     ⑧0     ⑩15    ⑫7     ⑭4     ⑯11    ⑱13    ⑳17
+</code></pre>
+
+<h2>Finder での並び順</h2>
+
+<p>Finder での並び順は <code>LC_COLLATE=C</code> での結果と同じかと思いきや、丸1 の後に 丸10 がきて、丸19, 丸2, 丸20, 丸3 のように並んでいたので、独特な感じでした。</p>
+
+<pre><code>①
+①9
+⑩
+⑩15
+⑪
+⑪18
+⑫
+⑫7
+⑬
+⑬6
+⑭
+⑭4
+⑮
+⑮16
+⑯
+⑯11
+⑰
+⑰5
+⑱
+⑱13
+⑲
+⑲12
+②
+②14
+⑳
+⑳17
+③
+③19
+④
+④3
+⑤
+⑤1
+⑥
+⑥2
+⑦
+⑦8
+⑧
+⑧0
+⑨
+⑨10
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ubuntuで「ハッシュサムが適合しません」で backports のパッケージが入ってしまって大変だった]]></title>
@@ -909,298 +1154,6 @@ fi
 <p><code>rsync</code> によるバックアップなので、圧縮などもするバックアップツールと違い、バックアップの内容も元のディレクトリ構造そのままでわかりやすいので、一部だけ復元するなどの操作も素直に実行しやすくなっています。</p>
 
 <p>ハードリンクなので i-node は消費しますが、変化がないファイルについては容量を消費しないので、バックアップサイズも抑えられます。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[dokku 0.5.3 を vagrant 環境で試してみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-03-30-dokku-053.html"/>
-    <updated>2016-03-30T22:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/dokku-053</id>
-    <content type="html"><![CDATA[<p>社内向けアプリで本番環境でも使っている dokku のバージョン 0.5.3 をいろいろ試しやすくするために vagrant 環境で試してみました。</p>
-
-<!--more-->
-
-
-<h2>確認バージョン</h2>
-
-<ul>
-<li>VirtualBox 5.0.16</li>
-<li>Vagrant 1.8.1</li>
-<li>dokku 0.5.3</li>
-</ul>
-
-
-<h2>dokku v0.5.0 での主な変更点</h2>
-
-<p><a href="https://github.com/dokku/dokku/releases/tag/v0.5.0">v0.5.0</a> での主な変更点は以下の通りです。</p>
-
-<ul>
-<li>docker 1.10/1.11 のサポートと、 docker 1.9.1 以上の必須化</li>
-<li>ドキュメント改善</li>
-<li><a href="http://dokku.viewdocs.io/dokku/deployment/deployment-tasks/" title="Deployment Tasks">Deployment Tasks</a> (<code>app.json</code> での <code>scripts.dokku.predeploy</code> と <code>scripts.dokku.postdeploy</code> のサポート)</li>
-<li><a href="http://dokku.viewdocs.io/dokku/deployment/dockerfiles/" title="Dockerfile Deployment">Dockerfile Deployment</a> で <code>Procfile</code> サポート、<code>EXPOSE</code> の扱いの変更</li>
-<li><a href="http://dokku.viewdocs.io/dokku/dokku-storage/">persistent storage plugin</a> のオフィシャル化</li>
-</ul>
-
-
-<h2>初期設定</h2>
-
-<p><code>git clone https://github.com/dokku/dokku</code> で clone してきたディレクトリの中に入って <code>vagrant up</code> します。
-最初は box のダウンロードもあるので時間がかかります。</p>
-
-<p><a href="http://xip.io/">xip.io</a> を使ってサブドメインを使ったデプロイを試します。</p>
-
-<p><code>http://10.0.0.2.xip.io/</code> を開き、 <code>Hostname</code> を <code>10.0.0.2.xip.io</code> にして <code>Use virtualhost naming for apps</code> にチェックを入れて、 <code>Finish Setup</code> を押します。</p>
-
-<p><a href="http://dokku.viewdocs.io/dokku/application-deployment/">http://dokku.viewdocs.io/dokku/application-deployment/</a> にリダイレクトされるので、そのチュートリアルを試します。</p>
-
-<h2>チュートリアル前の準備</h2>
-
-<p><code>vagrant ssh</code> で入って操作します。</p>
-
-<p><code>docker</code> コマンドや <code>dokku</code> コマンドで <code>sudo</code> を不要にするためにグループに追加します。</p>
-
-<ul>
-<li><code>sudo usermod -aG docker vagrant</code></li>
-<li><code>sudo usermod -aG dokku vagrant</code></li>
-</ul>
-
-
-<p>ビルド中のダウンロードでタイムアウトしにくくするためにタイムアウト時間をのばします。</p>
-
-<ul>
-<li><code>dokku config:set --global CURL_TIMEOUT=120</code></li>
-</ul>
-
-
-<p><code>dokku run</code> などで実行して終了したコンテナが溜まっていかないようにするために、デフォルトで <code>--rm</code> をつけるようにします。(この設定をしなくても <code>git push</code> したときに自動で実行される <code>dokku cleanup</code> で削除されます。)</p>
-
-<ul>
-<li><code>dokku config:set --global DOKKU_RM_CONTAINER=1</code></li>
-</ul>
-
-
-<h2>チュートリアル</h2>
-
-<p>チュートリアルも <code>vagrant ssh</code> で入った環境で試します。
-<code>sudo dokku plugin:install</code> 以外はホスト側からでも実行できます。</p>
-
-<ul>
-<li><code>git clone git@github.com:heroku/ruby-rails-sample.git</code> で rails のサンプルを clone しておきます。</li>
-<li><code>dokku apps:create ruby-rails-sample</code> でアプリケーションを作成します。データベースとのリンクに必要なので、事前に作成していますが、 <a href="https://github.com/heroku/node-js-sample">https://github.com/heroku/node-js-sample</a> のように単独で動くアプリケーションでは事前に <code>apps:create</code> しなくても構いません。</li>
-<li><code>sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git</code> で postgres プラグインをインストールします。インストールの後処理で <code>postgres:9.5.0</code>, <code>svendowideit/ambassador:latest</code>, <code>dokkupaas/wait:latest</code> が docker pull されるので、ダウンロードに少し時間がかかります。</li>
-<li><code>docker images</code> で確認するとわかるのですが、なぜか <code>gliderlabs/herokuish</code> が 0 バイトのイメージになってしまっているので <code>docker pull gliderlabs/herokuish</code> でダウンロードしておきます。ここもダウンロードに時間がかかります。この手順は普通にインストールした場合は不要なはずです。</li>
-<li><code>dokku postgres:create rails-database</code> でデータベースのコンテナを作成して <code>dokku postgres:link rails-database ruby-rails-sample</code> でリンクします。</li>
-<li><code>git remote add dokku dokku@10.0.0.2:ruby-rails-sample</code> で remote に dokku を登録して <code>git push dokku master</code> でデプロイします。</li>
-<li><code>curl</code> コマンドでエラーになった場合、 <code>CURL_TIMEOUT</code> をのばして、再度 <code>git push dokku master</code> します。</li>
-<li><code>http://ruby-rails-sample.10.0.0.2.xip.io/</code> を開いて <code>Hello World</code> と現在時刻が UTC (+0000) で表示されていたら成功です。</li>
-</ul>
-
-
-<h2>チュートリアル後の変更例</h2>
-
-<p>現在時刻が UTC で表示されていたので JST に変更してみます。</p>
-
-<ul>
-<li><code>dokku config:set ruby-rails-sample TZ=Asia/Tokyo</code></li>
-</ul>
-
-
-<p><code>http://ruby-rails-sample.10.0.0.2.xip.io/</code> を開いて <code>Hello World</code> と現在時刻が JST (+0900) で表示されていたら成功です。</p>
-
-<h2><code>rake db:migrate</code> を実行する</h2>
-
-<p><code>dokku run ruby-rails-sample bundle exec rake db:migrate</code> で実行できます。</p>
-
-<h2><code>scripts.dokku.predeploy</code> で <code>rake db:migrate</code> を自動実行する</h2>
-
-<p><a href="http://dokku.viewdocs.io/dokku~v0.5.3/deployment/deployment-tasks/">Deployment Tasks</a> に書いてあるように v0.5.0 から <code>app.json</code> に <code>scripts.dokku.predeploy</code> を設定できるようになっているので、そこで <code>rake db:migrate</code> を自動実行するように設定してみます。</p>
-
-<p>heroku が対応している <code>scripts.postdeploy</code> は初回の deploy 時にしか実行されないのに対して、 <code>scripts.dokku.predeploy</code> と <code>scripts.dokku.postdeploy</code> は毎回実行されるという違いがあります。</p>
-
-<pre><code class="diff">diff --git a/app.json b/app.json
-index 452cef1..4c828fa 100644
---- a/app.json
-+++ b/app.json
-@@ -5,6 +5,9 @@
-   "repository": "https://github.com/heroku/ruby-rails-sample",
-   "logo": "https://upload.wikimedia.org/wikipedia/commons/c/c3/Ruby_on_Rails_logo.svg",
-   "scripts": {
-+    "dokku": {
-+      "predeploy": "bundle exec rake db:migrate"
-+    },
-     "postdeploy": "bundle exec rake db:migrate"
-   },
-   "env": {
-</code></pre>
-
-<p>という変更を commit して push して動作確認します。</p>
-
-<p>さらに <code>rails g model</code> などで migration ファイルを作成してさらに動作確認できます。</p>
-
-<h2>pre-flight checks</h2>
-
-<p><a href="http://dokku.viewdocs.io/dokku~v0.5.3/checks-examples/">Zero Downtime Deploys</a> に書いてあるようにゼロダウンタイムデプロイを実現するために <code>CHECKS</code> ファイルを作成します。
-(デプロイ後のメッセージに <code>Shutting down old containers in 60 seconds</code> とあるように、デプロイして新しいコンテナに切り替わった直後の 1 分間は古いコンテナも動いています。)</p>
-
-<p>以下の内容の <code>CHECKS</code> ファイルを作成して、デプロイ時の起動確認をデフォルトの 10 秒待つだけの動作から、 http で特定の URL にアクセスして指定した内容が含まれるかどうかのチェックに変更します。</p>
-
-<pre><code>/ Hello World
-</code></pre>
-
-<p>デフォルトでは 5 秒ごとに 5 回までのチェックですが、以下の内容にすると 10 秒ごとに 20 回までのチェックになります。
-起動に時間がかかるアプリケーションの場合に、回数を増やしたり時間をのばしたりすると良いと思います。</p>
-
-<pre><code>WAIT=10
-ATTEMPTS=20
-/ Hello World
-</code></pre>
-
-<h2>アプリケーションを削除する</h2>
-
-<p><code>dokku apps:destroy ruby-rails-sample</code> で削除できます。
-heroku での削除と同じように、確認のため、アプリケーション名を再度入力しないと消えないようになっています。</p>
-
-<p>データベースも作成していたので、同様に <code>dokku postgres:destroy rails-database</code> で削除します。</p>
-
-<h2>node-js-sample を試す</h2>
-
-<p>Dokku の昔のバージョンのチュートリアルは node-js-sample を使っていたので、 node-js-sample も試してみます。</p>
-
-<ul>
-<li><code>git clone git@github.com:heroku/node-js-sample.git</code></li>
-<li><code>cd node-js-sample</code></li>
-<li><code>git remote add dokku dokku@10.0.0.2:node-js-sample</code></li>
-<li><code>git push dokku master</code></li>
-</ul>
-
-
-<p><code>http://node-js-sample.10.0.0.2.xip.io/</code> を開いて <code>Hello World!</code> が表示されたら成功です。</p>
-
-<h2>動作確認用シェルスクリプト</h2>
-
-<p><code>rails g model</code> 用に <a href="https://github.com/riywo/anyenv">anyenv</a> と <a href="https://github.com/rbenv/rbenv">rbenv</a> を使って ruby と rails のインストールまでしています。</p>
-
-<p>実行前に <code>http://10.0.0.2.xip.io/</code> を開いて設定をしないと途中で失敗して止まります。</p>
-
-<pre><code class="bash">#!/bin/bash
-set -euo pipefail
-set -x
-cd /home/vagrant
-sudo usermod -aG docker vagrant
-sudo usermod -aG dokku vagrant
-dokku config:set --global CURL_TIMEOUT=120
-dokku config:set --global DOKKU_RM_CONTAINER=1
-if [[ ! -d ruby-rails-sample ]]; then
-  git clone https://github.com/heroku/ruby-rails-sample.git
-fi
-if [[ ! -d /home/dokku/ruby-rails-sample ]]; then
-  dokku apps:create ruby-rails-sample
-fi
-if [[ ! -d /var/lib/dokku/plugins/available/postgres ]]; then
-  sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git || :
-  sudo docker pull gliderlabs/herokuish
-fi
-if [[ ! -f /home/dokku/ruby-rails-sample/DOCKER_OPTIONS_RUN ]]; then
-  dokku postgres:create rails-database || :
-  dokku postgres:link rails-database ruby-rails-sample
-fi
-pushd ~/ruby-rails-sample
-if ! git remote | grep -q dokku; then
-  git remote add dokku dokku@10.0.0.2:ruby-rails-sample
-fi
-git push dokku master
-if ! dokku config ruby-rails-sample | grep -q '^TZ'; then
-  dokku config:set ruby-rails-sample TZ=Asia/Tokyo
-fi
-popd
-if [[ ! -d node-js-sample ]]; then
-  git clone https://github.com/heroku/node-js-sample.git
-fi
-pushd ~/node-js-sample
-if ! git remote | grep -q dokku; then
-  git remote add dokku dokku@10.0.0.2:node-js-sample
-fi
-git push dokku master
-popd
-if [[ -z "$(dpkg -l | grep nodejs)" ]]; then
-  sudo sed -i~ -e 's/us\.archive/jp.archive/' /etc/apt/sources.list
-  sudo apt-get update
-  sudo apt-get -y install autoconf bison build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm3 libgdbm-dev
-  sudo apt-get -y install libpq-dev
-  sudo apt-get -y install nodejs
-fi
-if [[ ! -d ~/.anyenv ]]; then
-  git clone https://github.com/riywo/anyenv.git ~/.anyenv
-  echo 'export PATH="$HOME/.anyenv/bin:$PATH"' &gt;&gt; ~/.bashrc
-  echo 'eval "$(anyenv init -)"' &gt;&gt; ~/.bashrc
-fi
-if [[ -z "$(command -v anyenv)" ]]; then
-  export PATH="$HOME/.anyenv/bin:$PATH"
-  set +x
-  eval "$(anyenv init - --no-rehash)"
-  set -x
-fi
-if [[ ! -d ~/.anyenv/envs/rbenv ]]; then
-  anyenv install rbenv
-fi
-if [[ -z "$(command -v rbenv)" ]]; then
-  set +x
-  eval "$(anyenv init - --no-rehash)"
-  set -x
-fi
-ruby_version=$(awk '/^ruby/{print $2}' ~/ruby-rails-sample/Gemfile | tr -d "'")
-if ! rbenv versions | grep -q "$ruby_version"; then
-  rbenv install "$ruby_version"
-fi
-if [[ ! -f ~/.gemrc ]]; then
-  cat &lt;&lt;EOF &gt;~/.gemrc
-install: --no-rdoc --no-ri --format-executable
-update: --no-rdoc --no-ri --format-executable
-EOF
-fi
-export RBENV_VERSION="$ruby_version"
-if ! gem list | grep -q bundler; then
-  gem install bundler
-fi
-pushd ~/ruby-rails-sample
-bundle
-cat &lt;&lt;EOF &gt;CHECKS
-WAIT=10
-ATTEMPTS=20
-/ Hello World
-EOF
-git add CHECKS
-git commit -m "Add pre-flight checks file" || :
-git push dokku master
-cat &lt;&lt;EOF &gt;app.json
-{
-  "scripts": {
-    "dokku": {
-      "predeploy": "bundle exec rake db:migrate"
-    }
-  }
-}
-EOF
-git add app.json
-git commit -m "Set script.dokku.predeploy to app.json" || :
-git push dokku master
-popd
-pushd ~/node-js-sample
-cat &lt;&lt;EOF &gt;CHECKS
-/ Hello World!
-EOF
-git add CHECKS
-git commit -m "Add pre-flight checks file" || :
-git push dokku master
-popd
-</code></pre>
-
-<h2>まとめ</h2>
-
-<p>vagrant を使って dokku をいろいろ試す環境を簡単に作ることができました。
-この環境を使ってテストやデバッグなどいろいろ試しやすくなると思います。</p>
 ]]></content>
   </entry>
   

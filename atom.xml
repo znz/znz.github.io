@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-08-27T22:16:36+09:00</updated>
+  <updated>2016-08-30T23:34:20+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,439 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[lsで丸数字で始まるファイル名の順番が変だった]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-08-30-lc-collate-again.html"/>
+    <updated>2016-08-30T22:58:34+09:00</updated>
+    <id>http://blog.n-z.jp/blog/lc-collate-again</id>
+    <content type="html"><![CDATA[<p>OS X で丸数字から始まるファイル名のファイルが入ったフォルダーを Finder で開くと丸数字の数字順に並んでいたのに、 <code>ls</code> で表示すると別の順番になっていたので原因を調べてみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認環境</h2>
+
+<ul>
+<li>OS X Yosemite (10.10.5)</li>
+<li>ls, uniq バージョン不明</li>
+<li>sort (GNU coreutils) 5.93</li>
+</ul>
+
+
+<h2>動作確認</h2>
+
+<p>Unicode 的に連続している 丸1 から 丸20 までのファイル名のファイルと、それに適当な ASCII の数字をつけたファイル名のファイルを作成して <code>ls</code> で表示してみました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>%  touch $(ruby -e 'puts ("\u{2460}".."\u{2473}").to_a')
+</span><span class='line'>%  touch $(ruby -e 'puts ("\u{2460}".."\u{2473}").to_a.shuffle.map.with_index{|e,i|"#{e}#{i}"}')
+</span><span class='line'>%  ls
+</span><span class='line'>①      ⑤      ⑨      ⑬      ⑰      ⑧0     ⑲12    ⑮16    ⑥2     ⑬6
+</span><span class='line'>②      ⑥      ⑩      ⑭      ⑱      ⑤1     ⑱13    ⑳17    ④3     ⑫7
+</span><span class='line'>③      ⑦      ⑪      ⑮      ⑲      ⑨10    ②14    ⑪18    ⑭4     ⑦8
+</span><span class='line'>④      ⑧      ⑫      ⑯      ⑳      ⑯11    ⑩15    ③19    ⑰5     ①9</span></code></pre></td></tr></table></div></figure>
+
+
+<p>丸数字のみだと数字順に並んでいるのに、後ろに ASCII の数字をつけた部分は ASCII の数字順に並んでいます。
+(numeric sort じゃないので 1,10,2 という順番になっているのがちょっとわかりにくいかもしれませんが。)</p>
+
+<h2>Jessie での動作確認</h2>
+
+<p>比較のために Debian GNU/Linux 8.5 (jessie) でも同様のファイルを作成して <code>ls</code> してみると丸数字のみのところもバラバラの順番でした。
+何度か実行しても同じ結果なので、ランダムというわけではなくなんらかの基準がありそうですが、どういう順番なのかはわかりませんでした。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% ls
+</span><span class='line'>⑧  ⑯  ⑥  ⑬  ⑫  ⑦  ①  ③  ⑮  ⑰  ④0  ⑨10  ⑳12  ⑫14  ⑭16  ①18  ⑩2  ⑥4  ⑯6  ⑱8
+</span><span class='line'>⑱  ⑩  ⑨  ⑪  ⑲  ⑤  ②  ④  ⑭  ⑳  ⑪1  ⑦11  ⑲13  ⑬15  ⑮17  ⑧19  ⑤3  ②5  ⑰7  ③9</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>LC_COLLATE</h2>
+
+<p><a href="http://blog.n-z.jp/blog/2013-10-31-lc-collate-uniq.html" title="LC_COLLATEの問題でuniqで丸数字が同一視されてしまう">LC_COLLATEの問題でuniqで丸数字が同一視されてしまう</a>のと同じ話かと思って、 <code>sort</code> や <code>uniq</code> も試してみたところ、同じ話のように見えました。
+OS X では locale data が GNU/Linux とは違うようで <code>uniq</code> で同一視されるということは起きませんでした。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+<span class='line-number'>70</span>
+<span class='line-number'>71</span>
+<span class='line-number'>72</span>
+<span class='line-number'>73</span>
+<span class='line-number'>74</span>
+<span class='line-number'>75</span>
+<span class='line-number'>76</span>
+<span class='line-number'>77</span>
+<span class='line-number'>78</span>
+<span class='line-number'>79</span>
+<span class='line-number'>80</span>
+<span class='line-number'>81</span>
+<span class='line-number'>82</span>
+<span class='line-number'>83</span>
+<span class='line-number'>84</span>
+<span class='line-number'>85</span>
+<span class='line-number'>86</span>
+<span class='line-number'>87</span>
+<span class='line-number'>88</span>
+<span class='line-number'>89</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% rbenv exec irb -r irb/completion --simple-prompt
+</span><span class='line'>&gt;&gt; IO.popen("uniq", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a; io.close_write; puts io.read }
+</span><span class='line'>①
+</span><span class='line'>②
+</span><span class='line'>③
+</span><span class='line'>④
+</span><span class='line'>⑤
+</span><span class='line'>⑥
+</span><span class='line'>⑦
+</span><span class='line'>⑧
+</span><span class='line'>⑨
+</span><span class='line'>⑩
+</span><span class='line'>⑪
+</span><span class='line'>⑫
+</span><span class='line'>⑬
+</span><span class='line'>⑭
+</span><span class='line'>⑮
+</span><span class='line'>⑯
+</span><span class='line'>⑰
+</span><span class='line'>⑱
+</span><span class='line'>⑲
+</span><span class='line'>⑳
+</span><span class='line'>=&gt; nil
+</span><span class='line'>&gt;&gt; IO.popen("sort", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a.shuffle; io.close_write; puts io.read }
+</span><span class='line'>①
+</span><span class='line'>②
+</span><span class='line'>③
+</span><span class='line'>④
+</span><span class='line'>⑤
+</span><span class='line'>⑥
+</span><span class='line'>⑦
+</span><span class='line'>⑧
+</span><span class='line'>⑨
+</span><span class='line'>⑩
+</span><span class='line'>⑪
+</span><span class='line'>⑫
+</span><span class='line'>⑬
+</span><span class='line'>⑭
+</span><span class='line'>⑮
+</span><span class='line'>⑯
+</span><span class='line'>⑰
+</span><span class='line'>⑱
+</span><span class='line'>⑲
+</span><span class='line'>⑳
+</span><span class='line'>=&gt; nil
+</span><span class='line'>&gt;&gt; IO.popen("sort", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a.shuffle.map.with_index{|e,i|"#{e}#{i}"}; io.close_write; puts io.read }
+</span><span class='line'>⑬0
+</span><span class='line'>⑥1
+</span><span class='line'>⑰10
+</span><span class='line'>⑱11
+</span><span class='line'>⑤12
+</span><span class='line'>⑮13
+</span><span class='line'>⑦14
+</span><span class='line'>④15
+</span><span class='line'>③16
+</span><span class='line'>⑪17
+</span><span class='line'>⑩18
+</span><span class='line'>①19
+</span><span class='line'>⑧2
+</span><span class='line'>⑲3
+</span><span class='line'>⑫4
+</span><span class='line'>⑳5
+</span><span class='line'>⑭6
+</span><span class='line'>②7
+</span><span class='line'>⑯8
+</span><span class='line'>⑨9
+</span><span class='line'>=&gt; nil
+</span><span class='line'>&gt;&gt; IO.popen({"LC_COLLATE"=&gt;"C"}, "sort", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a.shuffle.map.with_index{|e,i|"#{e}#{i}"}; io.close_write; puts io.read }
+</span><span class='line'>①6
+</span><span class='line'>②5
+</span><span class='line'>③0
+</span><span class='line'>④16
+</span><span class='line'>⑤19
+</span><span class='line'>⑥18
+</span><span class='line'>⑦7
+</span><span class='line'>⑧2
+</span><span class='line'>⑨8
+</span><span class='line'>⑩3
+</span><span class='line'>⑪12
+</span><span class='line'>⑫15
+</span><span class='line'>⑬4
+</span><span class='line'>⑭9
+</span><span class='line'>⑮14
+</span><span class='line'>⑯10
+</span><span class='line'>⑰1
+</span><span class='line'>⑱17
+</span><span class='line'>⑲13
+</span><span class='line'>⑳11
+</span><span class='line'>=&gt; nil</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>一番自然に感じる並び順</h2>
+
+<p>ruby の sort での結果は <code>LC_COLLATE=C</code> と同じように文字コード順になり、意味自然な並び順に感じました。
+<code>LC_COLLATE=C ls</code> も同じ並び順でした。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>&gt;&gt; puts Dir['*'].sort
+</span><span class='line'>①
+</span><span class='line'>①9
+</span><span class='line'>②
+</span><span class='line'>②14
+</span><span class='line'>③
+</span><span class='line'>③19
+</span><span class='line'>④
+</span><span class='line'>④3
+</span><span class='line'>⑤
+</span><span class='line'>⑤1
+</span><span class='line'>⑥
+</span><span class='line'>⑥2
+</span><span class='line'>⑦
+</span><span class='line'>⑦8
+</span><span class='line'>⑧
+</span><span class='line'>⑧0
+</span><span class='line'>⑨
+</span><span class='line'>⑨10
+</span><span class='line'>⑩
+</span><span class='line'>⑩15
+</span><span class='line'>⑪
+</span><span class='line'>⑪18
+</span><span class='line'>⑫
+</span><span class='line'>⑫7
+</span><span class='line'>⑬
+</span><span class='line'>⑬6
+</span><span class='line'>⑭
+</span><span class='line'>⑭4
+</span><span class='line'>⑮
+</span><span class='line'>⑮16
+</span><span class='line'>⑯
+</span><span class='line'>⑯11
+</span><span class='line'>⑰
+</span><span class='line'>⑰5
+</span><span class='line'>⑱
+</span><span class='line'>⑱13
+</span><span class='line'>⑲
+</span><span class='line'>⑲12
+</span><span class='line'>⑳
+</span><span class='line'>⑳17
+</span><span class='line'>=&gt; nil</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% LC_COLLATE=C ls
+</span><span class='line'>①      ③      ⑤      ⑦      ⑨      ⑪      ⑬      ⑮      ⑰      ⑲
+</span><span class='line'>①9     ③19    ⑤1     ⑦8     ⑨10    ⑪18    ⑬6     ⑮16    ⑰5     ⑲12
+</span><span class='line'>②      ④      ⑥      ⑧      ⑩      ⑫      ⑭      ⑯      ⑱      ⑳
+</span><span class='line'>②14    ④3     ⑥2     ⑧0     ⑩15    ⑫7     ⑭4     ⑯11    ⑱13    ⑳17</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Finder での並び順</h2>
+
+<p>Finder での並び順は <code>LC_COLLATE=C</code> での結果と同じかと思いきや、丸1 の後に 丸10 がきて、丸19, 丸2, 丸20, 丸3 のように並んでいたので、独特な感じでした。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>①
+</span><span class='line'>①9
+</span><span class='line'>⑩
+</span><span class='line'>⑩15
+</span><span class='line'>⑪
+</span><span class='line'>⑪18
+</span><span class='line'>⑫
+</span><span class='line'>⑫7
+</span><span class='line'>⑬
+</span><span class='line'>⑬6
+</span><span class='line'>⑭
+</span><span class='line'>⑭4
+</span><span class='line'>⑮
+</span><span class='line'>⑮16
+</span><span class='line'>⑯
+</span><span class='line'>⑯11
+</span><span class='line'>⑰
+</span><span class='line'>⑰5
+</span><span class='line'>⑱
+</span><span class='line'>⑱13
+</span><span class='line'>⑲
+</span><span class='line'>⑲12
+</span><span class='line'>②
+</span><span class='line'>②14
+</span><span class='line'>⑳
+</span><span class='line'>⑳17
+</span><span class='line'>③
+</span><span class='line'>③19
+</span><span class='line'>④
+</span><span class='line'>④3
+</span><span class='line'>⑤
+</span><span class='line'>⑤1
+</span><span class='line'>⑥
+</span><span class='line'>⑥2
+</span><span class='line'>⑦
+</span><span class='line'>⑦8
+</span><span class='line'>⑧
+</span><span class='line'>⑧0
+</span><span class='line'>⑨
+</span><span class='line'>⑨10</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[LLoTに参加した]]></title>
@@ -3566,50 +3999,6 @@ Web の設定画面で見てみると info も化けていたので、元の設�
 <h2>今後の予定</h2>
 
 <p>将来のバージョンでどう挙動が変わるのかわからないので、バージョン番号決め打ちで monkey patch をあてていて、バージョンアップで問題が再発するようならバージョン番号を更新、解決するようなら monkey patch を削除しようと思っています。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[4月9日 型システム入門読書会 第4回(兵庫県)に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-04-09-amagasakirb.html"/>
-    <updated>2016-04-09T13:19:38+09:00</updated>
-    <id>http://blog.n-z.jp/blog/amagasakirb</id>
-    <content type="html"><![CDATA[<p><a href="http://kokucheese.com/event/index/388328/" title="4月9日 型システム入門読書会 第4回(兵庫県)">4月9日 型システム入門読書会 第4回(兵庫県)</a>
-に参加しました。
-今回は第 20 章からでした。</p>
-
-<!--more-->
-
-
-
-
-<div style="float:right">
-<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&amp;bc1=000000&amp;IS2=1&amp;bg1=FFFFFF&amp;fc1=000000&amp;lc1=0000FF&amp;t=znz-22&amp;o=9&amp;p=8&amp;l=as4&amp;m=amazon&amp;f=ifr&amp;ref=ss_til&amp;asins=4274069117" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>
-</div>
-
-
-<p>以下、今回のメモです。</p>
-
-<ul>
-<li>今回は深江駅前でした。</li>
-<li>Kotlin</li>
-<li>第 20 章は難しい</li>
-<li>数学の基礎の本のオススメは? 数学ガールの秘密のノートシリーズ?</li>
-<li>誰も OCaml のコードは試していないという話</li>
-<li>Visual Studio Code</li>
-<li>Visual Studio Community</li>
-<li>Xamarin</li>
-<li><a href="https://code.visualstudio.com/docs/languages/overview">https://code.visualstudio.com/docs/languages/overview</a></li>
-<li>NetBook の話</li>
-<li>ARM などの CPU の話</li>
-<li>深江駅には初めて来たという話</li>
-<li><code>⊂</code> と <code>⊆</code> の違いについて</li>
-<li><a href="https://ja.wikipedia.org/wiki/%E9%BB%92%E6%9D%BF%E5%A4%AA%E5%AD%97">黒板書体</a></li>
-<li><a href="https://ja.wikipedia.org/wiki/%E4%B8%B8%E6%95%B0%E5%AD%97">丸数字</a></li>
-<li>OS X で画面外にはみ出すサイズに window をリサイズした後、移動すると勝手に画面内に収まるサイズにリサイズされてしまって困るという話 (縦いっぱいの window を下げる、上に伸ばして画面サイズ以上の高さにする、ちょっと移動させる、という操作で再現可能)</li>
-<li>Windows のアップデート通知の話</li>
-</ul>
-
 ]]></content>
   </entry>
   

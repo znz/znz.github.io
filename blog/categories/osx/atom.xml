@@ -4,7 +4,7 @@
   <title><![CDATA[Category: osx | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/osx/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-08-27T22:16:36+09:00</updated>
+  <updated>2016-08-30T23:34:20+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,251 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[lsで丸数字で始まるファイル名の順番が変だった]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-08-30-lc-collate-again.html"/>
+    <updated>2016-08-30T22:58:34+09:00</updated>
+    <id>http://blog.n-z.jp/blog/lc-collate-again</id>
+    <content type="html"><![CDATA[<p>OS X で丸数字から始まるファイル名のファイルが入ったフォルダーを Finder で開くと丸数字の数字順に並んでいたのに、 <code>ls</code> で表示すると別の順番になっていたので原因を調べてみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認環境</h2>
+
+<ul>
+<li>OS X Yosemite (10.10.5)</li>
+<li>ls, uniq バージョン不明</li>
+<li>sort (GNU coreutils) 5.93</li>
+</ul>
+
+
+<h2>動作確認</h2>
+
+<p>Unicode 的に連続している 丸1 から 丸20 までのファイル名のファイルと、それに適当な ASCII の数字をつけたファイル名のファイルを作成して <code>ls</code> で表示してみました。</p>
+
+<pre><code>%  touch $(ruby -e 'puts ("\u{2460}".."\u{2473}").to_a')
+%  touch $(ruby -e 'puts ("\u{2460}".."\u{2473}").to_a.shuffle.map.with_index{|e,i|"#{e}#{i}"}')
+%  ls
+①      ⑤      ⑨      ⑬      ⑰      ⑧0     ⑲12    ⑮16    ⑥2     ⑬6
+②      ⑥      ⑩      ⑭      ⑱      ⑤1     ⑱13    ⑳17    ④3     ⑫7
+③      ⑦      ⑪      ⑮      ⑲      ⑨10    ②14    ⑪18    ⑭4     ⑦8
+④      ⑧      ⑫      ⑯      ⑳      ⑯11    ⑩15    ③19    ⑰5     ①9
+</code></pre>
+
+<p>丸数字のみだと数字順に並んでいるのに、後ろに ASCII の数字をつけた部分は ASCII の数字順に並んでいます。
+(numeric sort じゃないので 1,10,2 という順番になっているのがちょっとわかりにくいかもしれませんが。)</p>
+
+<h2>Jessie での動作確認</h2>
+
+<p>比較のために Debian GNU/Linux 8.5 (jessie) でも同様のファイルを作成して <code>ls</code> してみると丸数字のみのところもバラバラの順番でした。
+何度か実行しても同じ結果なので、ランダムというわけではなくなんらかの基準がありそうですが、どういう順番なのかはわかりませんでした。</p>
+
+<pre><code>% ls
+⑧  ⑯  ⑥  ⑬  ⑫  ⑦  ①  ③  ⑮  ⑰  ④0  ⑨10  ⑳12  ⑫14  ⑭16  ①18  ⑩2  ⑥4  ⑯6  ⑱8
+⑱  ⑩  ⑨  ⑪  ⑲  ⑤  ②  ④  ⑭  ⑳  ⑪1  ⑦11  ⑲13  ⑬15  ⑮17  ⑧19  ⑤3  ②5  ⑰7  ③9
+</code></pre>
+
+<h2>LC_COLLATE</h2>
+
+<p><a href="http://blog.n-z.jp/blog/2013-10-31-lc-collate-uniq.html" title="LC_COLLATEの問題でuniqで丸数字が同一視されてしまう">LC_COLLATEの問題でuniqで丸数字が同一視されてしまう</a>のと同じ話かと思って、 <code>sort</code> や <code>uniq</code> も試してみたところ、同じ話のように見えました。
+OS X では locale data が GNU/Linux とは違うようで <code>uniq</code> で同一視されるということは起きませんでした。</p>
+
+<pre><code>% rbenv exec irb -r irb/completion --simple-prompt
+&gt;&gt; IO.popen("uniq", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a; io.close_write; puts io.read }
+①
+②
+③
+④
+⑤
+⑥
+⑦
+⑧
+⑨
+⑩
+⑪
+⑫
+⑬
+⑭
+⑮
+⑯
+⑰
+⑱
+⑲
+⑳
+=&gt; nil
+&gt;&gt; IO.popen("sort", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a.shuffle; io.close_write; puts io.read }
+①
+②
+③
+④
+⑤
+⑥
+⑦
+⑧
+⑨
+⑩
+⑪
+⑫
+⑬
+⑭
+⑮
+⑯
+⑰
+⑱
+⑲
+⑳
+=&gt; nil
+&gt;&gt; IO.popen("sort", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a.shuffle.map.with_index{|e,i|"#{e}#{i}"}; io.close_write; puts io.read }
+⑬0
+⑥1
+⑰10
+⑱11
+⑤12
+⑮13
+⑦14
+④15
+③16
+⑪17
+⑩18
+①19
+⑧2
+⑲3
+⑫4
+⑳5
+⑭6
+②7
+⑯8
+⑨9
+=&gt; nil
+&gt;&gt; IO.popen({"LC_COLLATE"=&gt;"C"}, "sort", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a.shuffle.map.with_index{|e,i|"#{e}#{i}"}; io.close_write; puts io.read }
+①6
+②5
+③0
+④16
+⑤19
+⑥18
+⑦7
+⑧2
+⑨8
+⑩3
+⑪12
+⑫15
+⑬4
+⑭9
+⑮14
+⑯10
+⑰1
+⑱17
+⑲13
+⑳11
+=&gt; nil
+</code></pre>
+
+<h2>一番自然に感じる並び順</h2>
+
+<p>ruby の sort での結果は <code>LC_COLLATE=C</code> と同じように文字コード順になり、意味自然な並び順に感じました。
+<code>LC_COLLATE=C ls</code> も同じ並び順でした。</p>
+
+<pre><code>&gt;&gt; puts Dir['*'].sort
+①
+①9
+②
+②14
+③
+③19
+④
+④3
+⑤
+⑤1
+⑥
+⑥2
+⑦
+⑦8
+⑧
+⑧0
+⑨
+⑨10
+⑩
+⑩15
+⑪
+⑪18
+⑫
+⑫7
+⑬
+⑬6
+⑭
+⑭4
+⑮
+⑮16
+⑯
+⑯11
+⑰
+⑰5
+⑱
+⑱13
+⑲
+⑲12
+⑳
+⑳17
+=&gt; nil
+</code></pre>
+
+<pre><code>% LC_COLLATE=C ls
+①      ③      ⑤      ⑦      ⑨      ⑪      ⑬      ⑮      ⑰      ⑲
+①9     ③19    ⑤1     ⑦8     ⑨10    ⑪18    ⑬6     ⑮16    ⑰5     ⑲12
+②      ④      ⑥      ⑧      ⑩      ⑫      ⑭      ⑯      ⑱      ⑳
+②14    ④3     ⑥2     ⑧0     ⑩15    ⑫7     ⑭4     ⑯11    ⑱13    ⑳17
+</code></pre>
+
+<h2>Finder での並び順</h2>
+
+<p>Finder での並び順は <code>LC_COLLATE=C</code> での結果と同じかと思いきや、丸1 の後に 丸10 がきて、丸19, 丸2, 丸20, 丸3 のように並んでいたので、独特な感じでした。</p>
+
+<pre><code>①
+①9
+⑩
+⑩15
+⑪
+⑪18
+⑫
+⑫7
+⑬
+⑬6
+⑭
+⑭4
+⑮
+⑮16
+⑯
+⑯11
+⑰
+⑰5
+⑱
+⑱13
+⑲
+⑲12
+②
+②14
+⑳
+⑳17
+③
+③19
+④
+④3
+⑤
+⑤1
+⑥
+⑥2
+⑦
+⑦8
+⑧
+⑧0
+⑨
+⑨10
+</code></pre>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 17 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
@@ -201,60 +446,6 @@ WebSocket や WebRTC の最近の話題まで載っています。</p>
 で既存の起動の関連付けを削除して、
 ib 版で <code>Set Default Browser</code> をやり直したところ、
 まだ問題があったので、それも直して以前のものと同様に使えるところまでは出来ました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 12 回 RubyMotion もくもく会 in Osaka に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-06-20-rubymotion-mokumoku-osaka.html"/>
-    <updated>2014-06-20T19:27:13+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubymotion-mokumoku-osaka</id>
-    <content type="html"><![CDATA[<p>第 1 回から第 11 回にも参加した RubyMotion もくもく会 in Osaka の
-<a href="http://rubymotionjp.connpass.com/event/6666/">第 12 回 RubyMotion もくもく会 in Osaka</a>
-に参加してきました。</p>
-
-<p>次回の
-<a href="http://rubymotionjp.connpass.com/event/7079/">第 13 回 RubyMotion もくもく会 in Osaka</a>
-は 07/16(水) になりました。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<ul>
-<li>一周年記念</li>
-<li>RubyMotion は Android にも対応予定</li>
-<li>RubyMotion のライセンスが expired して更新しても <code>rake</code> のときの <code>Your maintenance plan is expired. Run 'motion account' to renew it.</code> というメッセージはキャッシュの影響で 24 時間ぐらい待たないと消えないらしいという話</li>
-<li>バージョンは 2.29 が最新</li>
-<li>Swift が話題</li>
-<li><a href="http://tools.msng.info/">割り勘電卓</a></li>
-<li><a href="https://github.com/shin1x1/vagrantx">https://github.com/shin1x1/vagrantx</a> のソース公開</li>
-<li><a href="https://github.com/MacFace/MacFace/tree/v2.0">MacFace v2</a> が Swift で作り直し中</li>
-</ul>
-
-
-<h2>やったこと</h2>
-
-<p>Interface Builder と <code>gem 'ib'</code> で GUI を作り直そうとしていました。</p>
-
-<p>GUI 作成は細かいサイズを気にしなくて良い Tcl/Tk の pack 方式や
-Web での bootstrap のようなやり方の方が慣れていて、
-GUI ツールで作成するのは GTK+2 の glade ぐらいしかまともに使ったことがなかったので、
-使い方や良い感じに配置する方法で結構悩んでいました。
-悩んでいた部分は最後の成果発表の時にいろいろ教えてもらったりしました。</p>
-
-<p>コードとの組み合わせは、検索で見つけた</p>
-
-<pre><code>@mainWindowController = MainWindow.alloc.initWithWindowNibName('MainWindow')
-@mainWindowController.window.makeKeyAndOrderFront(self)
-</code></pre>
-
-<p>という方法で window は表示できたものの、
-<code>@mainWindowController.window</code> が <code>nil</code> になっていて、
-<code>makeKeyAndOrderFront</code> の呼び出しは失敗していました。</p>
-
-<p>ひとまず現状は <a href="https://github.com/znz/urltrapper/tree/ib">ib ブランチ</a> に公開しています。</p>
 ]]></content>
   </entry>
   
