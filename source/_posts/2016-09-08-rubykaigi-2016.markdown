@@ -1,0 +1,546 @@
+---
+layout: post
+title: "RubyKaigi 2016 の 1 日目に参加しました"
+date: 2016-09-08 09:49:29 +0900
+comments: true
+categories: ruby event
+---
+[RubyKaigi 2016](http://rubykaigi.org/2016 "RubyKaigi 2016") の 1 日目に参加したので、そのメモです。
+
+<!--more-->
+
+## 会場
+
+「[スピーカーのキャンセルが出たため、初日の朝のキーノートの開始時間が50分遅くなります。](https://twitter.com/a_matsuda/status/772749215000764417)」という話があったため、時間に余裕を持って到着できました。
+
+家を出た時は雨は降っていなかったのですが、京都では大雨でした。
+(参考: https://twitter.com/kakutani/status/773680281689530368 )
+駅から会場までは天井のある通路で繋がっているので、傘なしでも濡れずにたどり着けました。
+
+会場は広くて、メインホールのテーブル席は全席電源つきという非常に便利な感じでした。
+メインホールの座席は座ると前にずれて、立ち上がると後ろに下がる椅子でした。
+
+## Opening
+
+- スタッフのうち、つじたさん、 aaron さん、デカ外人さんの紹介
+- 電源が各席にある
+- メインホールはテーブル席の後ろに椅子だけの席もあるけど、そこも後ろに電源があるらしい
+- スポンサーブースにコーヒーとお菓子
+- 懇親会のチケットが残り数十枚でラストチャンス
+
+## Ruby3 Typing
+
+- [Ruby3 Typing - RubyKaigi 2016](http://rubykaigi.org/2016/presentations/yukihiro_matz.html "Ruby3 Typing - RubyKaigi 2016")
+- 日本語のキーノート
+- Ruby3
+- Performance, Concurrency, Typing
+- それぞれ Shyouhei, Ko1, Matz が話をする
+- 2010s に出てきた言語は静的型言語が多い
+- 静的型がないので Ruby は死んだなどと言われてしまうこともある
+- TypeScript, Flow, Go, Swift
+- Microsoft, Facebook, Google, Apple など大企業の言語
+- テクノロジー (動的型と静的型のような) は振り子のように行ったり来たりしている
+- Smalltalk → Java → Ruby・JavaScript → Swift・Go → ?
+- 揺り戻しが起きた時に置いて行かれないように (静的型を目指すのではなく) 未来の動的型言語について考える
+- 型とは何か?
+- 学術的には型システム入門 (TAPL) とかあるけど
+- Duck typing
+- 動けばいい
+- `log(dst IO, mesg String)` のように静的型指定してしまうと例えば `StringIO` を渡せない
+- (スライドのトラブルが発生して、 rabbit 作者によるサポートを受けつつ rabbit を再起動してしまったので、亀がリセットされてしまった。)
+- Duck typing は内部構造を気にしなくて良い
+- Lower mental cost in development
+- Duck typing は未来に対して開かれている
+- Duck typing は柔軟性が高い
+- "Duck" (Ruby の型) は nominal type ではない
+- "Duck" は class ではない
+- "Duck" は何か
+- "Duck" は *expected* behavior (期待される振る舞い)
+- 期待は私たちの頭の中にある
+- class による型はあくまでも近似 (approximation) であり足かせになる
+- Go の interface はかなり良い
+- Structual Subtyping vs Nominal Subtyping
+- Duck typing is awesome!
+- DRY (Don't Repeat Yourself) 原則
+- 冗長性を削ろう
+- プログラムを書く時にかかなくていいものは削りたい
+- 型指定がなくても ruby のプログラムは動いているので必要ない
+- むしろ積極的に外すべき
+- しかし、動的型言語には欠点 (drawback) がある
+- 実行してみないとエラーがわからない
+- エラーメッセージが親切ではない
+- Coverage
+- テストし忘れた部分はいつまでも気づかれない
+- Less Documentation
+- 書く人は嬉しいが、読む人は困る
+- コメント (rdoc とか) に結局 (型を) かいている
+- 型は絶対に書きたくない
+- 柔軟性が減るから
+- ユーザーのためにドキュメントは欲しい
+- コメントに書く
+- 型アノテーションを書ける言語もある
+- 型チェックを含まない型アノテーションはダメなアイデアだと思う
+- Mixed/Gradual Typing (一部だけ型指定ができる) is a bad idea
+- 少なくとも Ruby にとっては。
+- ドキュメントは欲しい
+- 型のある部分とない部分を混ぜたくない
+- 課題があるということは改善の余地がある
+- 未来の Ruby はこれをなんとかしたい
+- 我々はエンジニアなので技術でなんとかしたい
+- 静的型に型推論を足す
+- 型推論は素晴らしい
+- 静的型の柔軟性のなさは型推論とは無関係
+- 静的型の柔軟性がないという問題が解決しないので別のものが必要
+- Static Typing with Duck-Typing として Go の Structual Subtyping は良い線をいっているが、 interface を書きたくない
+- そこで型推論をさせてみよう
+- `dst should have rite()` を `dst should have write()` に修正 (また亀が戻った)
+- interface を振る舞いから自動生成 : Soft Typing
+- 型推論された型には名前が付いていない
+- 名前をつけるのは結構なコスト
+- ぼんやりとしたアイデアがぼんやりとしたアイデアのまま実現できるので、具体化する脳の労力が減る
+- 100% のチェックはできないかもしれない
+- 80% 程度のコンパイル時チェックでも 0% よりは良い
+- dynamic typing に fallback できる
+- ad-hoc な型情報も使えるのではないか
+- gsub, slice, map を期待した a があったとき、そんなクラスはないのでエラーにできる
+- 実行時の情報も使えるのではないか
+- タイプエラーが起きるようなテストは書かないと思うので、テスト実行時の型情報をとっておいて Type Database としてとっておいて gem として一緒に配布して実行時に使えるのではないか
+- Type Database がコード補完などにも使えるのではないか
+- まだ構想段階で動いていない
+- コンセプト段階
+- Ruby3 プロジェクトの一部
+- 重要なメッセージ : We Care about YOU
+- テストがあれば大丈夫という話もあるが
+- 言語の方でもプログラミング体験を改善したい
+- Ruby3 はいつか? わからない
+- オープンソースソフトウェア (少なくとも Ruby) にはロードマップや締め切りはない
+- 目標を作る必要が有る
+- ケネディ大統領が月に行くという少し難しい未来を宣言して、のちに実現された
+- Soft typing, Ruby3x3, Concurrency
+- 心の中の目標としては次の東京オリンピックの頃には Ruby3 が出てると良いな
+- みなさんからのアイデアや貢献は大歓迎
+- 前に進み続けたいから (To Keep Moving Forward)
+- 前に進み続けるためにできることはなんでもしたい
+- Happy Hacking!
+- 質疑応答前に 3 分ほど CM (スポンサーセッション)
+
+## Speee さん
+
+- 会場アンケート 知っている人 : 6割ぐらい
+- http://speee.jp/
+- 現在はほぼ Ruby になった
+- OSS への貢献へも増えた
+- OSS Gate workshop がよかった
+- いろいろなイベントもやっているので興味がある方は http://speee.connpass.com/ の「めんばーになる」
+
+## Ruby3 Typing (質疑応答)
+
+- まさかの質問なし?
+- joker1007 さん?: 型情報を全く書かずに型推論だけでできる見込みはあるのか?
+- 伝統的な方法では無理
+- ad-hoc なものや実行時の型情報でそこそこ実用的なものになる可能性はある
+- まだ実際に動いているコードはないので、実際には無理でしたということで Ruby3 に入らない可能性はある
+- 誰?: IDE の仕様を参考にできるか?とかいう感じの質問
+- 現在は完全なものはないので参考にしづらい
+- IDE があるので言語仕様はどうでもいいんだということはしたくない
+- IDE ありきの言語に Ruby がなることはない
+- 誰?: (質問はよく聞き取れず)
+- リリースマネージャーもしていない
+- 言語デザイナーをしている
+- 田中哲さん: 今回の話での Soft Typing という言葉の使い方は既存のアカデミックでの用語とは違うので、新しい言葉を考える必要が有るのではないか
+- Diamondback Ruby というものが昔あった (後で聞いた話によると Diamondback Ruby は速度を目的としたもので、OCaml で実装されたものだったらしい)
+- Soft Typing という用語はふさわしくないかも
+- 新しい言葉を考えておきます
+- [&quot;型は絶対書きたくない&quot; &quot;Ruby3は東京オリンピックまでに&quot; Rubyの父Matzによる、「楽しいプログラミング体験を届けるために」 #rubykaigi 2016 Keynote - Togetterまとめ](http://togetter.com/li/1021897 "&quot;型は絶対書きたくない&quot; &quot;Ruby3は東京オリンピックまでに&quot; Rubyの父Matzによる、「楽しいプログラミング体験を届けるために」 #rubykaigi 2016 Keynote - Togetterまとめ")
+
+## アナウンスと Intermission
+
+- 昼は弁当があるという話
+- ベジタリアン用の弁当もあるという話
+- 英語で翻訳レシーバーの返却についてアナウンス?
+- dRuby の slide sponsors が流れていた
+
+## dRuby in the last century.
+
+- [dRuby in the last century. - RubyKaigi 2016](http://rubykaigi.org/2016/presentations/m_seki.html "dRuby in the last century. - RubyKaigi 2016")
+- 自己紹介
+- 前座が Matz
+- dRuby の生い立ち, dRuby の紹介, これから
+- 1999 [ruby-list:15406] 1st dRuby http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-list/15406
+- 2005 最初の本
+- 2012 (-2014 絶版) 英語の本
+- 2000 Perl/Ruby Conference (Kyoto) この会場
+- 同じ会場で同じ話を
+- dRuby はオーパーツ (OOPARTS) https://twitter.com/yugui/status/439412852013551616
+- Before dRuby (BD)
+- BD8: プロセスをわける必然性のある組み込みシステムからの情報を集めるデーモンと情報を可視化するアプリケーション
+- BD5: CGI (マイクロサービス的) 時代
+- BD1: Ruby & shttpsrv に出会う
+- HTTP を小さなアプリに埋め込んでつないで楽しんでいた
+- Ruby と Web の世界の翻訳作業が必要な点などが、なんか気に入らない
+- Ruby ぽく話したい
+- Ruby のように振舞う分散オブジェクト
+- RPC ではなく RMI
+- Ruby のメソッド呼び出しを socket で拡張
+- 簡単通信ライブラリではなく、もっと情緒的な (Ruby 的な) ものをめざした
+- dRuby ってなに?
+- 分散オブジェクトシステム, プロセス腰にメソッドが呼べる, プロセス間でオブジェクトが送れる
+- デモ
+
+端末1 (oso-matz) で irb を起動:
+
+```
+require 'drb'
+DRb.start_service('druby://localhost:54321', {})
+DRb.uri
+DRb.front
+```
+
+端末2 (jushi-matz) で irb を起動:
+
+```
+require 'drb'
+kvs = DRbObject.new_with_uri('druby://localhost:54321')
+kvs['greeting'] = 'Hellow, World.'
+```
+
+端末1に戻って `DRb.front` を確認すると `{"greeting"=>"Hellow, World."}` になっている。
+
+Demo2: 端末2で:
+
+```
+kvs['outlet'] = $stdout
+```
+
+(`DRb.start_service('druby://localhost:54322')` のようにこちら側でも `DRb.start_service` しておかないと `DRb::DRbConnError: DRb::DRbServerNotFound` になってうまくいかなかった)
+
+端末1で:
+
+```
+DRb.front['outlet'].class
+DRb.front['outlet'].puts('Hello, Again.')
+```
+
+- なにがおきた?
+- `$stdout` は `Marshal.dump` 不可能なので自動的に proxy に取り替えた
+- 永遠に proxy だと値が手に入らないので境界として `Marshal.dump` を使った
+- OOP っぽさ
+- オブジェクトが相互に呼びあえること
+- block (イテレータ) も同じ仕組みで動く
+
+Demo3: Queue:
+
+端末1で:
+(`Queue` は最近の Ruby では本名は `Thread::Queue` に変わっていた)
+
+```
+queue = Queue.new
+DRb.front['queue'] = queue
+queue.pop
+queue.pop
+```
+
+端末2で:
+
+```
+queue = kvs['queue']
+queue.push(1.0)
+queue.push(2.0)
+```
+
+- 意図したわけではないが Thread 同期メカニズムがそのまま使えた
+- dRuby が向いている用途がある
+- Prototyping Twitter
+- 初期は dRuby/Rinda だったらしい : いまは使っていない
+- 自分のサービスも dRuby ではじめて最後には使わなくなることがある : 利用されて効率あげる必要がでてくるから
+- 紹介のまとめ
+- これから
+- 初期の実装に戻したいところがいくつか
+- セキュリティっぽいの消したい
+- ACL, insecure_method ...
+- dRuby は RMI でメソッド呼び出しの拡張
+- メソッド呼び出しなので穴だらけで良い
+- 危ないものは危なく見えるべき
+- UnitTest : API のメソッド単位に書くものなのに、テストケースをストーリーレベルで書くべきだと勘違いしていた
+- 啓蒙する
+- まずおもしろがってもらう
+- 並行処理の勘所に気づいてもらう
+- すとうさん
+- 啓蒙活動に興味を持ったというのは、何か心境の変化があったのか?
+- 昨年のライブラリを作れば解決するという話にいらっとした
+- miyohide さん
+- 啓蒙活動には、るびまに寄稿をするのが良いという話
+- [突然のライブハンズオン！ 20世紀生まれの分散Ruby実装 dRuby #RubyKaigi #RubyKaigiA - Togetterまとめ](http://togetter.com/li/1021932 "突然のライブハンズオン！ 20世紀生まれの分散Ruby実装 dRuby #RubyKaigi #RubyKaigiA - Togetterまとめ")
+
+## Lunch Break
+
+- 11:55頃から
+- 弁当の写真を撮り忘れてしまった
+- 食べ終わった後は会場の散策
+- 懇親会のチェックインもしておいた
+
+## Who reordered my code?!
+
+- 次の発表で部屋を移動するのが面倒だったのでメインホールにいた
+- 英語だったのとあまりちゃんと聞けていなかったのでメモなし
+- [Who reordered my code?! - RubyKaigi 2016](http://rubykaigi.org/2016/presentations/pitr_ch.html "Who reordered my code?! - RubyKaigi 2016")
+- 質疑応答: 質問なし
+- [concurrent-rubyのコアコミッターが語る JRuby + Truffle 並列実行による高速化の試み #RubyKaigi #RubyKaigiA - Togetterまとめ](http://togetter.com/li/1021946 "concurrent-rubyのコアコミッターが語る JRuby + Truffle 並列実行による高速化の試み #RubyKaigi #RubyKaigiA - Togetterまとめ")
+
+## 休憩
+
+- プロジェクターのテストとして[プログラミングElixir](http://amzn.to/2bUWNxg)の宣伝を表示
+
+## A proposal of new concurrency model for Ruby 3
+
+- [A proposal of new concurrency model for Ruby 3 - RubyKaigi 2016](http://rubykaigi.org/2016/presentations/ko1.html "A proposal of new concurrency model for Ruby 3 - RubyKaigi 2016")
+- 英語で発表
+- [Presentation slide](http://www.atdot.net/~ko1/activities/2016_rubykaigi.pdf)
+- [日本語 Script](http://www.atdot.net/~ko1/diary/201609.html#d6)
+- Concurrent の発表が多い
+- Concurrent RubyKaigi
+- なぜみんな Concurrency 好きか?
+- なぜマルチスレッドプログラムが難しいのかと Guild という新しいアイデアの発表
+- Ruby は安全・簡単な方を選んでいる
+- data race と race condition の話
+- `Array#concat` とマルチスレッドの挙動
+- マルチスレッドは難しいという話
+- ロックが不十分だとバグるし、多すぎるとパフォーマンスに悪影響
+- 他の言語での知見
+- "Guild"
+- 1個の Guild の中で同時に動く Thread は1個だけ
+- オブジェクトの共有方法などの話
+- Immutable なオブジェクトは共有可能
+- 数値, Symbol, nil/true/false が徐々に frozen になっていた
+- doc/NEWS-2.0.0:  Fixnums, Bignums and Floats are frozen.
+- doc/NEWS-2.1.0:  * All symbols are now frozen.
+- doc/NEWS-2.2.0:  * nil/true/false objects are frozen. [Feature #8923]
+- "こんなこともあろうかと"
+- Guild の説明続き
+- パフォーマンスの話とか
+- 質疑応答
+- 質問1: 聞き取れず
+- 質問2: Thread との違い?
+- 質問3: sekiさん: `Array#concat` の問題は解決するのか? (ちゃんと聞き取れなかったので、違うかも)
+- 解決しない
+- そもそもできないんだから他の方法を考えるんじゃないか
+- 間違った使い方ができないような方法を考えましたという話
+- 質問4: move operation がなんとか (聞き取れず)
+- move 操作はパフォーマンスのため
+- 他にこういうことをやっている人がいるのでは?
+- 知らない
+- 質問5: たぶんグローバルデータの話
+- Ruby global data のスライドで説明
+- [Rubyコアコミッター笹田耕一さん解説 Ruby3のための新しい並列実行モデル Guild #RubyKaigi #RubyKaigiA - Togetterまとめ](http://togetter.com/li/1021975 "Rubyコアコミッター笹田耕一さん解説 Ruby3のための新しい並列実行モデル Guild #RubyKaigi #RubyKaigiA - Togetterまとめ")
+
+ささださんのプレゼンは事前に日本語 Script も公開されていたし、スライドも事前にチェックできたのでよかった。
+
+セッション後の質問を受けていたのを横で聞いていたら、できるだけ 1 Guild 1 Thread で Thread の代わりに Guild を使うようになってほしいという感じらしかった。
+
+スライドでは frozen になったものに Numeric と書いてあったが実際には Rational は frozen ではないのでちょっと違う。
+
+## おやつ休憩
+
+- アナウンス
+- スポンサーブースにおやつがデプロイされている
+- 弁当が少し残っているのでまだお腹が空いているという人はどうぞ
+- 懇親会受付
+
+## Isomorphic web programming in Ruby
+
+- 英語はつらいので日本語のセッションということで Room D にきました
+- Room D には電源も無線もありませんでした
+- [Isomorphic web programming in Ruby - RubyKaigi 2016](http://rubykaigi.org/2016/presentations/youchan.html "Isomorphic web programming in Ruby - RubyKaigi 2016")
+- 昨年の RubyKaigi 2015 では https://github.com/youchan/hyalite (React のようなものを Ruby で書ける) の話をした
+- Menilite というのを作っている
+- モデルをサーバーとクライアントで共有する
+- (内容とは関係ないけど、亀がうさぎに比べてかなり進んでいるのは、プレゼン開始時に亀の位置がすでに進んでいたからのように見えた)
+- デモ
+- silica というラッパーコマンド
+- まだ new しかサブコマンドがない
+- Sinatra と Opal を使ったコードが自動生成
+- ネットワークがつらいようなので Gemfile の github を参照しているところを path に書き換えてローカルのを参照するようにして bundle install
+- ライブコーディングは時間がなさそうだったので、あらかじめ git の branch を用意しておいた
+- しかしライブコーディングをしている
+- sinatra-activerecord を使っている
+- migration を毎回書くのは面倒なので silica でサポートしたい
+- `git stash -u` でライブコーディングした変更を捨ててあらかじめ用意していたものを checkout
+- ユーザー追加、サインアップ
+- パスワードは BCrypt で暗号化
+- `RUBY_ENGINE` による分岐でサーバーサイドだけの処理にする
+- signup 部分をライブコーディング
+- youchan, topsecret で signup しようとする
+- `BCrypt` を typo していて error になったので `git stash -u` で捨てて、あらかじめ用意していた変更を checkout
+- 時間がなくなってきたので、この後の変更もどんどん checkout しながら紹介
+- ログインしていなかったらログイン画面に飛ばす処理
+- ログイン処理
+- ユーザーごとにアクセス権を設定
+- セッションをクリアしていないので、ログインに失敗した時に前のユーザーのままだった
+- デモ終了
+- なぜ独自のモデルか
+- GUID : データベースで自動生成されるシーケンス番号の ID はクライアントから使いにくい
+- access control : すべてのデータがクライアントから見えてしまうとまずい
+- [このライブコーディングがすごい！ RubyでIsomorphic Webプログラミングを実現する Menilite 紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ](http://togetter.com/li/1021990 "このライブコーディングがすごい！ RubyでIsomorphic Webプログラミングを実現する Menilite 紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ")
+
+ライブコーディングがあったので、 vim を使ってるとか SKK (AquaSKK?) を使ってるとかそういうところも気になりました。
+
+## Intermission
+
+- メインホールに移動した
+
+## Unifying Fixnum and Bignum into Integer
+
+- [Unifying Fixnum and Bignum into Integer - RubyKaigi 2016](http://rubykaigi.org/2016/presentations/tanaka_akr.html "Unifying Fixnum and Bignum into Integer - RubyKaigi 2016")
+- [Unify Fixnum and Bignum into Integer](https://bugs.ruby-lang.org/issues/12005 "Unify Fixnum and Bignum into Integer") で提案された
+- `Fixnum` や `Bignum` という定数は `Integer` を指すようになる
+- `Fixnum` や `Bignum` という定数を参照しているコードでも `NameError` は起きない
+- C コードで `rb_cFixnum` や `rb_cBignum` を参照しているコードはコンパイルエラーになる
+- 両対応するには `RUBY_INTEGER_UNIFICATION` マクロで分岐する
+- 前提として `Fixnum` と `Bignum` とは何か
+- `Integer` という抽象クラスとそれを継承した `Fixnum`　と `Bignum` というクラスがあった
+- `1.class` と `(2**100).class`
+- Ruby 2.4 では `Integer` だけになる
+- `Fixnum` の範囲は ILP32, LLP64 (Windows など), LP64, JRuby で違った
+- portable ではないので基本的には使ってはいけない
+- Ruby には仕様がある: [ISO/IEC 30170:2012](http://www.iso.org/iso/iso_catalogue/catalogue_tc/catalogue_detail.htm?csnumber=59579), [JIS X 3017:2011](http://www.jisc.go.jp/app/pager?%23jps.JPSH0090D:JPSO0020:/JPS/JPSO0090.jsp=&RKKNP_vJISJISNO=X3017)
+- Integer の範囲は unbounded
+- `Fixnum` と `Bignum` の定義はしても良い
+- Ruby 2.3 も Ruby 2.4 も仕様に準拠
+- 仕様の記述者は `Fixnum` と `Bignum` は実装の詳細と考えて仕様に入れなかったのではないか
+- 利点
+- `Fixnum` と `Bignum` を間違って使うことがなくなる
+- Ruby を勉強するのが簡単になる
+- ドキュメントもシンプルになる
+- シンプルに簡単にもっと数学的になる
+- 欠点: 非互換性
+- `Fixnum` の間違った使い方の例: `lib/rubygems/specification.rb`: `specification_version.is_a?(Fixnum)`
+- Ruby 2.4 では間違った使い方ができなくなる
+- `obj.is_a?(Fixnum)` は `obj.is_a?(Integer)` の意味になる
+- REPL で `1.class` を実行すると `Fixnum` になっていたのが `Integer` になる
+- Ruby を学ぶのが簡単になる
+- 1 が integer というのは誰でも知っている
+- 1 が `Fixnum` というのはほとんどの人は知らない (Lisp プログラマーを除く)
+- 教える側にとっても楽になる
+- 教科書がシンプルになる
+- ドキュメントもシンプルになる
+- `Fixnum#foo` と `Bignum#foo` のドキュメントが重複していた
+- `ri foo` も重複して出ていた
+- シンプルに簡単にもっと数学的になる
+- Ruby レベルの非互換
+- `Fixnum` と `Bignum` が `Integer` を参照するようになる
+- `NameError` は起きない
+- `Fixnum == Bignum` が `true` になる
+- `1.is_a?(Bignum)` が `true` になる
+- `(2**100).is_a?(Fixnum)` が `true` になる
+- `Fixnum` と `Bignum` は少なくとも Ruby 2.3 が EOL になるまで削除しない方が良いと思っている
+- `Fixnum` の範囲が隠れる
+- `test/ruby/test_integer_comb.rb`: `max = 1; max *= 2 while (max-1).class == Fixnum; FIXNUM_MAX = max/2-1` が Ruby 2.4 では無限ループに
+- 推奨される解決策: `Fixnum` の範囲に依存しない
+- CRuby のみの推奨しない解決策: `require 'rbconfig/sizeof'; FIXNUM_MIN = -(1 << (8 * RbConfig::SIZEOF['long'] - 2)); FIXNUM_MAX = (1 << (8 * RbConfig::SIZEOF['long'] -2)) - 1` (`rbconfig/sizeof` は Ruby 2.1 から)
+- JRuby は知らない
+- 使わない方が良いがどうしても必要ならこういう方法もあるという話
+- メタプログラミングや DSL が壊れる
+- メタプログラミング
+- `mathn.rb` が `Fixnum` と `Bignum` に定義
+- `Integer` だけに変更
+- activesupport `NumericWithFormat` を prepend
+- `Integer` だけに変更
+- DSL
+- Sequel
+- `add_column :column, Bignum`
+- `:Bignum` というシンボルを使うようになった
+- C レベル
+- 利点: なし
+- 欠点: 非互換
+- Ruby 2.3 での `Integer` の実装詳細
+- Ruby 2.4 での `Integer` の実装詳細
+- クラス階層が変わっただけ
+- 拡張ライブラリの更新 : `rb_class_of(obj) == rb_cFixnum` → `FIXNUM_P(obj)` などの簡単な置き換え
+- 影響のあった拡張ライブラリ : オブジェクトをダンプ/ロードするようなものがほとんどだった
+- ext/json, msgpack, syck, yajl, oj, ox, ruby-gnome2, etc.
+- Version Dependencies
+- Minor version up (1.3.2 to 1.3.3) が better
+- Major version version up (1.3.2 to 2.0.0) は pessimistic (悲観的な) version dependency `(~> 1.3)` で問題が起きる
+- 詳細: https://www.hsbt.org/diary/20160829.html
+- 利点のほとんどは初心者向け
+- 経験を積んだ Ruby プログラマーには大きな問題ではない
+- バージョンの非互換の問題
+- コミッターは具体的にどう支持していたのかという話
+- [Rubyコミッターが語る Ruby2.4にてFixnumとBignumをIntergerに統合する話 #RubyKaigi #RubyKaigiA - Togetterまとめ](http://togetter.com/li/1022003 "Rubyコミッターが語る Ruby2.4にてFixnumとBignumをIntergerに統合する話 #RubyKaigi #RubyKaigiA - Togetterまとめ")
+- 発表資料: http://www.a-k-r.org/d/2016-09.html#a2016_09_08_1
+
+### gem の Ruby 本体のバージョン依存関連
+
+Togetterまとめ によると [gemspecにRUBY_VERSIONによるif文書くのは意味がないので今すぐやめるべき](http://sue445.hatenablog.com/entry/2016/09/02/121047 "gemspecにRUBY_VERSIONによるif文書くのは意味がないので今すぐやめるべき") という話もあるみたいです。
+
+watch している gem だと [MailCatcher](https://github.com/sj26/mailcatcher "MailCatcher") が間接的に依存している `mime-types` が 3 になったときに Ruby 2.0 以上が必須になって問題が起きていたということがありました。
+
+## Intermission
+
+- そのままメインホールにいた
+
+## Ups and Downs of Ruby Internationalization
+
+- [Ups and Downs of Ruby Internationalization - RubyKaigi 2016](http://rubykaigi.org/2016/presentations/duerst.html "Ups and Downs of Ruby Internationalization - RubyKaigi 2016")
+- 会場アンケート
+- A-Z 以外の文字を使っている人
+- US-ASCII 以外を使っている人
+- UTF-8 以外を使っている人
+- Ruby のバージョンと Unicode のバージョン
+- 2014: 2.2 7.0.0
+- 2015: 2.3 8.0.0
+- 2016: 2.4 9.0.0
+- `upcase`, `downcase`, `capitalize`, `swapcase`
+- Ruby 2.3 では US-ASCII 以外の範囲は変換しなかった
+- Ruby 2.4 では他の文字も変換する
+- 使用例
+- 互換性がない変更が入っているので preview で早めにチェックしてほしいという話
+- US-ASCII の範囲に限定したい時は `upcase :ascii` など
+- 変換用データは Unicode から
+- 文字数は保存されない
+- 不可逆
+- コンテキスト依存
+- 特殊な場合: `upcase :turkic` の話
+- 特殊な場合: `upcase :lithuanian` の話
+- 特殊な場合: Case folding (大小畳込み) `downcase :fold`
+- 特殊な場合: Titlecase `capitalize`
+- 実装詳細の話
+- 簡単だがとても大きな `tr` のようなもの
+- `string.c:sym_upcase`: `String#upcase` 相当を呼んでいる
+- `string.c:rb_string_upcase`: `dup.upcase!` 相当
+- `string.c:rb_string_upcase_bang`: 実際の変換をしているのはここ
+- `OnigCaseFoldType` で変換の種類が決まっている
+- `string.c:rb_str_casemap`
+- UTF-8 以外の encoding に対応する primitive の話
+- `Shift_JIS` などの対応は不要?
+- Oniguruma/Onigmo は folding のデータを持っているので再利用(?)
+- `enc/unicode/data/9.0.0/casefold.h` の話
+- `swapcase` は誰も使っていない?
+- 会場に聞いてみると誰も使っていない感じだった。
+- 大文字小文字の合成文字で問題がある
+- Test-Driven Development
+- Data-Driven Testing
+- Character Properties
+- `Regexp` でほとんど可能
+- ある文字の script を得るのは不可能
+- Unicode Normalization
+- Ruby 2.2 から `'string'.unicode_normalize :nfkc` がある
+- http://www.sw.it.aoyama.ac.jp/2016/pub/RubyKaigi/ と最後に出ていたようだけどまだ公開されていない?
+- [&quot;Who has used swapcase?&quot; Rubyにおける国際化機能のかなしみ #RubyKaigi #RubyKaigiA - Togetterまとめ](http://togetter.com/li/1022019 "&quot;Who has used swapcase?&quot; Rubyにおける国際化機能のかなしみ #RubyKaigi #RubyKaigiA - Togetterまとめ")
+
+具体例に出てくる文字が入力できないし、英語も聞き取れないしで、あんまりメモが取れなかったです。
+
+## 見ていなかったセッションの Togetter まとめ
+
+- [Ruby on Erlang！！！ errubyの紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ](http://togetter.com/li/1021901 "Ruby on Erlang！！！ errubyの紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ")
+- [DSLで記述できるmRuby製コンテナ haconiwa ！ その開発動機とは #RubyKaigi #RubyKaigiB - Togetterまとめ](http://togetter.com/li/1021953 "DSLで記述できるmRuby製コンテナ haconiwa ！ その開発動機とは #RubyKaigi #RubyKaigiB - Togetterまとめ")
+- [【Unityちゃん】らくらくシェーダコーディング！ mrubyで実装するGLSLジェネレータ #RubyKaigi #RubyKaigiB - Togetterまとめ](http://togetter.com/li/1021974 "【Unityちゃん】らくらくシェーダコーディング！ mrubyで実装するGLSLジェネレータ #RubyKaigi #RubyKaigiB - Togetterまとめ")
+- [JRubyにおけるString実装高速化 Rope 紹介 #RubyKaigi #RubyKaigiA - Togetterまとめ](http://togetter.com/li/1021993 "JRubyにおけるString実装高速化 Rope 紹介 #RubyKaigi #RubyKaigiA - Togetterまとめ")
+- [Windows環境にて如何にしてマルチプロセスサーバを実現するか fluentd・ServerEngine実装の紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ](http://togetter.com/li/1022009 "Windows環境にて如何にしてマルチプロセスサーバを実現するか fluentd・ServerEngine実装の紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ")
+- [【超満員】クックパッド導入事例 Dockerでスケールするジョブキューシステム【登壇者混乱】 #RubyKaigi #RubyKaigiB - Togetterまとめ](http://togetter.com/li/1022022 "【超満員】クックパッド導入事例 Dockerでスケールするジョブキューシステム【登壇者混乱】 #RubyKaigi #RubyKaigiB - Togetterまとめ")
+
+## 懇親会
+
+同じ国立京都国際会館の中のさくらフロアで RubyKaigi 2016 Official Party がありました。
+
+ほとんど[るりま](https://github.com/rurema)関連の話をしていただけで終わってしまった感じでした。
