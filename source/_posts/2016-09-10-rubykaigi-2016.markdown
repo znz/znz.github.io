@@ -1,0 +1,426 @@
+---
+layout: post
+title: "RubyKaigi 2016 の 3 日目に参加しました"
+date: 2016-09-10 09:20:00 +0900
+comments: true
+categories: ruby event
+---
+[RubyKaigi 2016](http://rubykaigi.org/2016 "RubyKaigi 2016") の 3 日目に参加したので、そのメモです。
+
+<!--more-->
+
+## Ruby Committers vs the World 前
+
+- コミッターは 9:10 までにコミッター T シャツをきてくるようにという話だったので、ちゃんと間に合うように着きました。
+- 壇上に上がらないと名指しされて逆に目立つ自体発生
+
+## Money Forward
+
+- urabe さんを雇用している
+- RubyKaigi 2015/2016 のスポンサー
+- 壇上だと近すぎてスライドが見にくい状態
+- 普通の Rails アプリを普通に作っている
+
+## Ruby Committers vs the World
+
+- 会場から質問受付するので考えておいてください
+- 謝辞
+- 新規コミッター
+- [rhe さん](https://rhe.jp/) (不在, openssl)
+- tadd さん ([Feature #12484 Optimizing Rational](https://bugs.ruby-lang.org/issues/12484))
+- 2.4 に入れたい
+- MVP (P = Patch)
+- [r54737 Support MSVC14 and 15](https://github.com/ruby/ruby/commit/9afc312b4fef21da91fde083f85533ffd5a9d95f)
+- Windows は C ランタイムが開発環境についている
+- 隠されてしまった構造体の中身を見ている
+- [r55656 undef ISeq.translate](https://github.com/ruby/ruby/commit/d8c3672b012ec6eb55e097162c6c638e8d932471)
+- 昨年 12 月に追加された translate が定義されていれば呼ぶという機能が、意図せずトップレベルに定義されてしまっていても呼んでしまっていた。
+- リリース後、半年気づかれなかった。
+- asakusa.rb の [irb を起動する、action_view を require する、ActionView::Helpers を include する、exit って打つ、楽しい](https://twitter.com/takkanm/status/752864847319007236) で発見
+- 質問受付
+- 同時通訳が入っているので、同時に二人以上喋らないように注意
+- Ruby の標準ライブラリを gem に切り出す話の進捗は?
+- hsbt さん: tk, xmlrpc が gem にして standard library から外れた
+- ruby コミッター以外でもメンテナンスできるようになった
+- tarball がちょっと小さくなった
+- ビルド時間もちょっと減った
+- 2.5 に向けて 2,3 個外したい
+- 質問 (urabe さん): よく使われている gem の話があったが bundler は標準添付になるのか?
+- drbrain さん: 聞き取れず
+- 質問 (ささださん): Ruby 3 の話はあるが、Ruby 2 で変えたいことはあるか?
+- matz: 小さい性能改善とかはどんどん入れたい
+- Integer Unification のようなものは影響範囲をみながら
+- ささださん : Ruby 3 でなら大きな変更は OK ?
+- matz: 多くのコードを書き換えないといけないような変更は入れたくない
+- naruse さん : Windows の external encoding を utf-8 にしたい
+- 西島さん : frozen string literal のデフォルト化?
+- matz: 2.3 でプラグマを入れたが frozen string literal がデフォルトになると Python 3 の二の舞になりそう
+- matz: Python 3 を見習いたいところはあるので Python 3 を dis っているつもりはない
+- akr さん: 会場アンケート
+- プラグマをちゃんと書いている人 : ぱらぱらといる程度
+- みんな書いて面倒と思われたらデフォルトになるのでは
+- 今の感じだとまだ無理そう
+- 質問: 聞き取れず
+- naruse さん : github に移るのは難しい (理由は聞き取れず)
+- svn から git に移行する時にツールを直さないといけないが、そのリストアップがされていない
+- matz: 中央の repository が github になったとしても github issues を使う予定はない
+- すでに redmine を使っているので
+- github の社員の aaron さん : 聞き取れす
+- naruse さん : 聞き取れず
+- Yugui さん : ML 連携を書いた責任を感じているので何かしたい
+- urabe さん : 全容把握が必要
+- matz : git に移行するとしても年単位でかかりそう
+- すでに github で pull request も受け付けているし、 git svn を使っている人も多いので、中央レポジトリを移行する嬉しさがあまりない
+- 会場: Ruby3 で変えていきたいとか入れたいとかあるか? こういう人がコミッターになったら嬉しいとかある?
+- ko1 さん: 並行性に対するサポートを入れたいし accept して欲しい
+- 実装がめちゃくちゃ大変なので手伝ってくれる人が欲しい
+- matz: やりたいことの 3 つの柱の 1 つなので何かしらのものは入れたい
+- takano32 さん (IA64メンテナ): bundler
+- matz: Python 3 で見習わないのは大きな非互換を入れたところだけ
+- takano32 さん: rbenv?
+- nobu さん: rbenv は ruby の外側なので ruby に入っても嬉しくないのではないか
+- a_matsuda さん: その通りだと思う
+- urabe さん: Python のように C にうまく translate するものがあれば良いのではないか
+- mrkn さん: 速度向けではなく、拡張ライブラリを楽に書きたい人向けではないか
+- 標準に入るかどうかはわからない
+- `rb_define_method` や typed data を毎回書くのが面倒
+- nobu さん: そういうパターンで書くところはテンプレートで支援しても良いかも
+- ko1 さん: 以前に似たものを提案したことがある
+- C 言語以外に中間言語を新しく勉強するのが大変という反対意見があった
+- 実際のものを評価して判断したい
+- kou さん: 拡張ライブラリをよくかく
+- 普通の関数だけで書かれるのがわかりやすくて良いので変なマクロが増える方向だと反対
+- Yugui さん: 会場アンケート
+- 拡張ライブラリを書いたことがある人 : それなりにいる
+- 辛い人 : そんなにいない
+- 会場: 拡張ライブラリを書いているが、慣れれば普通の C (CRuby 用) と Java (JRuby 用) なので便利
+- extension.rdoc がわかるようになるころには、ソースを直接読むほうがはやい
+- Yugui さん: doxygen コメントを入れる機能があるので活用してください
+- どんなコミッターが欲しいかという話に戻った
+- ko1 さん: 平均年齢が上がっていっているので、若い人が欲しい
+- 気軽に聞いてください
+- hsbt さん: GSoC など、サポートをうまく活用してください
+- mrkn さん: 会場アンケート: Ruby のコミッターになっていじりたいところがある人: 数人いる
+- 会場 (joker1007 さん): キーワード引数の扱いの話
+- `**` だけではなく名前をつけたものも一緒になった `Hash` が欲しい
+- (twitter によると [[小ネタ] Rubyのキーワード引数で受け取った値をHashとしてまとめて取得するgem](http://qiita.com/joker1007/items/708af8eb5c217bf23e09 "[小ネタ] Rubyのキーワード引数で受け取った値をHashとしてまとめて取得するgem") のことではないかという話)
+- a_matsuda さん: feature request を再プッシュ
+- naruse さん: 見つからなければ重複とマークされるだけなので再作成でも良い
+- 会場: 英語なのでよくわからず
+- drbrain さん: 英語なのでよくわからず
+- aaron さん: 英語なのでよくわからず
+- 時間がないので後で
+- 会場: 英語なのでよくわからず
+- matz: 英語なのでよくわからず (CoC の話?)
+- naruse さん: 最後に: 壇上で Ruby 2.4.0-preview2 がリリースされたことをアナウンス
+
+## Web Clients for Ruby and What they should be in the future
+
+- [Web Clients for Ruby and What they should be in the future - RubyKaigi 2016](http://rubykaigi.org/2016/presentations/tkawa.html "Web Clients for Ruby and What they should be in the future - RubyKaigi 2016")
+- 最初のセッションが伸びたので残りの午前のセッションは 5 分遅れ (昼休みで調整するのは昨日と同じらしい)
+- 自己紹介など
+- [RESTful Web APIs](http://amzn.to/2cMkz1U) → [Restful Web Clients](http://amzn.to/2bYPjYC)
+- ユーザーが操作する Web API
+- こんなクライアントは嫌だ: 密結合
+- こんなクライアントが好き: 疎結合
+- 例: FizzBuzzaaS : FizzBuzz as a Service
+- パラメーターをつけた URL 直指定は密結合
+- link next で疎結合
+- Ruby の HTTP クライアント: net/http, open-uri
+- gem はたくさん: 大江戸HTTPクライアント絵巻 http://regional.rubykaigi.org/oedo01/
+- Web API は使うのが簡単なので普及した
+- Web API ごとの gem もたくさんある
+- RPC でいいんじゃないか?
+- なぜ個別の gem がたくさんできるのか?
+- API呼び出し (1回) と機能の呼び出しにはギャップがある
+- HTTP クライアントは状態を持たないが、アプリは状態を持つ
+- 私が欲しいクライアントは状態管理ができるクライアント
+- ここでは状態管理ができるクライアントを Web クライアントと呼ぶ
+- クライアントとサーバーのレイヤーの話
+- Rack, Rack Middleware : 玉ねぎ
+- Faraday: Rack Middleware のように Faraday Middleware がある
+- gem を丸ごと作るのではなく Faraday Middleware として作る
+- https://github.com/tkawa/faraday-hypermedia
+- faraday-navigation
+- Link Header: RFC 5988
+- Link-Template Header: Internet Draft (expired)
+- faraday-link-extractor
+- `navigation:` を拡張
+- デモ動画: 文字が小さくてよく見えないので雰囲気で見ていた
+
+Faraday は名前は見たことがあって、よく使われているのかなという印象はあり、具体的にどういうものかは知らなかったのですが、便利そうでした。
+
+## High Tech Seat in mruby
+
+- [High Tech Seat in mruby - RubyKaigi 2016](http://rubykaigi.org/2016/presentations/yuri_at_earth.html "High Tech Seat in mruby - RubyKaigi 2016")
+- Sessalet (せされっと) : SESSAME (コミュニティ名) + Washlet
+- SESSAME: 組込みソフトウェア管理者・技術者育成研究会
+- 組込みソフトウェア技術者・管理者向けセミナー ～ソフトウェアに変換可能な仕様書がきちんと書けるようになろう～
+- なぜ Sessalet? : 状態が入れ子になっている、直交状態をもつ
+- 翻訳の揺れ: State Machine Diagram, entry, trigger
+- 遷移が正しくない図、開始状態がない図はよくない
+- Sessalet Analysis Model
+- RTOS : EV3RT
+- TOPPERS Project
+- mruby をどう使っているかという話
+
+他の作業をしながら聞いていたのであまりメモをとれませんでした。
+
+## Lunch Break
+
+## Recent Advances in HTTP and Controlling them using ruby
+
+- [Recent Advances in HTTP and Controlling them using ruby - RubyKaigi 2016](http://rubykaigi.org/2016/presentations/kazuho.html "Recent Advances in HTTP and Controlling them using ruby - RubyKaigi 2016")
+- いっぱいだったので通路に座っていました。
+- 自己紹介
+- h2o は fastly でも使われている
+- (プレゼンにはなかったけど fastly は www.ruby-lang.org でも使われている)
+- Current State of HTTP
+- なぜ HTTP/2 を使うのか?
+- ボトルネックがバンド幅からレイテンシーに変わってきた
+- 3割ぐらいのサーバーが HTTP/2 (RFC 7540) に対応している
+- https への移行も進んでいる
+- HPACK (ヘッダー圧縮): いい感じ
+- 多重化と優先順位付け
+- Push: ネガティブなコメントもあり
+- 理想的な HTTP トランザクションの流れ
+- 現実はできていない
+- TCP head-of-line blocking : 優先度の低いデータが滞留しているため、優先度の高いデータが送れない問題
+- 直ちに送れるデータ量 CWND のサイズが Web サーバーがわからないので、バッファいっぱいまで書いてしまう
+- 最適化できる
+- 最適化した結果のベンチマーク
+- HTTP/2 の優先順位付け
+- クライアントが指定した順位を参考にしてサーバーが送信
+- Firefox の場合、CSS や JS  を優先して、残りは HTML と画像 (HTML をちょっと優先)
+- Safari, Blink はすべて同じなので、数の多い画像がたくさん帯域を使ってしまう
+- 頭の悪いクライアントにはサーバー側で対処する必要がある
+- 解決策、ベンチマーク
+- Hidden resource
+- CSS の `@import` の前に画像があると CSS のリクエストの前に画像を取りに行ってしまう
+- コンテンツ側で対処する必要あり
+- Push
+- How to Push: `Link: </style.css>; rel=preload` ヘッダが w3c で仕様策定中
+- リクエスト処理中にプッシュする方法
+- H2O の場合 `100 Continue` という中間レスポンスで `Link` ヘッダーを送って最終的に `200 OK` などを返すという方法がある
+- H2O の設定に `mruby` で記述
+- RUM = Real User Monitoring
+- Push vs. cache
+- キャッシュ済みのリソースは無駄なので送信したくない
+- Cookie を使う: すでに動く
+- cache-digest を使う: ServiceWorker Script がブラウザーに必要
+- push の悪影響を避ける話
+- CSS, JS は push すると良さそうだが、画像は push しない方が良さそう
+- まとめ
+- 質疑応答
+- 質問1: `100 Continue` の実績はあるのか?
+- `unicorn` とかで実際に試したという話はまだなさそう
+- 質問2: ロードバランサーで動かない問題
+- TCP HoL blocking は原理的に回避不可能
+- QUIC が普及すれば、原理的に (L4?) ロードバランサーが使えないので、解決するか
+
+基本的にはサーバーやブラウザーの実装が頑張ってくれて、アプリケーション作成者としては hidden resource あたりに気をつけるだけで良い感じにしてくれるようになるのかもしれない。
+
+## Optimizing Ruby
+
+- [Optimizing Ruby - RubyKaigi 2016](http://rubykaigi.org/2016/presentations/shyouhei.html "Optimizing Ruby - RubyKaigi 2016")
+- 自己紹介
+- Ruby is slow と言われている
+- GC? GVL? dynamic? ではない
+- 脱最適化されていないから
+- コンパイル時に `1 + 2` が `3` にできない
+- `Integer#+` が再定義される可能性があるから
+- 普通は再定義されない
+- 常に遅いのと、再定義されていないときは速いけど再定義されると遅くなるのはどっちがいいか
+- 脱最適化は `SELF` という Smalltalk の variant がオリジナルで、開発者の関係で今は JVM に入っている
+- JIT コンパイルはしない
+- VM 命令を変換するだけ
+- 命令の長さは変えない (必要なら nop で埋める)
+- `iseq_encoded` を `iseq_deoptimize` に `memcpy` しておく
+- `created_at` も追加
+- 脱最適化は `iseq_deoptimize` を `iseq_encoded` に `memcpy` して戻す
+- C 言語のみなのでポータブル
+- プログラムカウンターをいじらない
+- VM timestamp で再定義の検出
+- ほとんどオーバーヘッドがない
+- ここまでのまとめ
+- これで最適化ができるようになった
+- 定数の畳み込み
+- Folding 1 + 2
+- send の最適化
+- 呼び出した後、すぐに値が捨てられるものを削除
+- 「pure」なメソッドというのを考える
+- pure ではないメソッドの例
+- pure なメソッドの例 (ちょっと複雑な例として、left-pad、ライプニッツの公式)
+- 決まらないという第三の状態がある (`method_missing` が発生するようなものとか)
+- 最初は未定にしておき、実行中に決めていくようにした
+- `callcache` に保存
+- 呼び出され方も影響する
+- メソッドの返り値が使われていたら最適化しない
+- 引数の中に最適化できないメソッド呼び出しがあったら、そっちは残すように調整が必要
+- 変数の最適化
+- 厳密に判定するのは難しいので、あらかさまに不要な代入されて使われていない (write-only) 変数を最適化する
+- `binding` とかブロック (`binding` が勝手につく) があると最適化できない
+- ここまでのまとめ
+- 基本的な最適化しかしていない
+- 例外などに影響しないようにしている
+- まだまだ他の最適化をする余地がある
+- ベンチマーク
+- 速くなったものはすごく速くなったが遅くなったものはさほどでもない
+- まとめ
+- FAQs
+- https://github.com/ruby/ruby/pull/1419
+- 質疑応答
+- 質問1: メモ取れず
+- 質問2: メソッドが pure かどうか知るメソッドはあるか?
+- デバッグに必要だったのである
+- 実行ごとに変わる可能性がある
+- 質問3: メモリー使用量は?
+- 評価していないが、減っているはずはないので多少増えているはず
+- 質問4: メモ取れず
+- Rails アプリなどの大きなものでの評価はまだ
+- 質問5: fork の CoW への影響は?
+- fork のことは頭になかったが影響があるかも
+- 他の JIT でも同じなので、あたたまってから fork するとか
+- 質問6: シーケンスが長くなる最適化は?
+- VM のスタックの調整が必要なのでなんとかという話
+- 質問7: `+` が pure なのはどうやって判定している?
+- 特別扱いしている
+- 質問8: Thread ? (英語で長いのでよくわからず)
+- 質問9: ローカル変数で write-only な変数はそもそもいらないので警告を出してほしい
+- `eval` などで使われる可能性があるので、完全になくすのはできない
+- 警告だけなら良いかも
+- ko1 さん: 警告だけならすでに `-w` オプションで出る (`warning: assigned but unused variable`)
+
+## Afternoon Break
+
+## Hijacking syscalls with (m)ruby
+
+- [Hijacking syscalls with (m)ruby - RubyKaigi 2016](http://rubykaigi.org/2016/presentations/franckverrot.html "Hijacking syscalls with (m)ruby - RubyKaigi 2016")
+- どっちも英語なのでどちらにしようか悩みましたが、こっちにしました。
+- Afternoon Break でのんびりしていたらすでに始まっていたので、最初の方は少し見逃しました。
+- system call の説明
+- Chaos Monkey
+- Securing Ruby apps
+- Library preloading
+- (m)ruby
+- mruby を External DSL として使う
+- `super` でオリジナルの system call を呼ぶ
+- あんまり聞いていなかった。
+- 質疑応答は質問なしで終了
+
+## cookpad
+
+- 基調講演前にスポンサーセッション
+
+## Dive into CRuby
+
+- [Dive into CRuby - RubyKaigi 2016](http://rubykaigi.org/2016/presentations/nalsh.html "Dive into CRuby - RubyKaigi 2016")
+- 自己紹介
+- 貢献したいモチベーション
+- なぜ新機能を追加したいか?
+- 実際どういうコードで使いたいかという例 (use case) が必要
+- 顧客が本当に必要だったもの
+- [Feature #6752 Replacing ill-formed subsequence](https://bugs.ruby-lang.org/issues/6752)
+- Case: Web Forms: 400 Bad Request でいいのでは。
+- Case: Files: 無理矢理読むのは間違っている。適切なエンコーディングを指定すべき。
+- Case: Web Crawler: 実際の Web ページが壊れているので無理矢理読むことしかできない。
+- 例: twitter
+- RT の初期の切り詰めがバグっていて、尻切れとんぼなバイト列ができたのではないか
+- iconv を使っている人がいた
+- `String#encode` (encode エンジンベース) と `String#scrub` (正規表現ベース) の両方を作った
+- `scrub` という名前は zfs の修復コマンドが由来
+- CRuby のファイル一覧紹介
+- NOTE: cygwin はメンテナがいないので募集中
+- `string.c` に `str_scrub` を追加
+- `str_scrub` の説明
+- `rb_str_scrub`, `rb_enc_str_scrub` とたどっていく
+- [Feature #7361 Pathname#touch](https://bugs.ruby-lang.org/issues/7361) reject された悪い例
+- 「アクセス日時と変更日時を変更する」という機能と「空のファイルを作成する」という機能がある
+- (`FileUtils.touch` はあるのに、と思った覚えが)
+- [API デザインケーススタディ](http://amzn.to/2c1vKnu)
+- LLVM の clang (llvm-gcc を含む) はほぼ gcc と同じだが違う部分があるので対応が必要だった
+- Ruby は保守的な GC なので、最適化で消されると困ることがある
+- continuation で問題が起きた ([r34278](https://github.com/ruby/ruby/commit/ca227314390b75a59f718618281ab5f7dfa184c4))
+- 原因を調べるのが大変だった
+- Visual C++ 2015
+- Windows だとファイルとソケットの扱いが違う
+- Unix のように統一的に扱うのは C ランタイム側の機能だった
+- その中身の `_pioinfo` を直接さわっていたが、公開されなくなった
+- ヘッダーファイルに公開されなくても DLL の中にはある
+- `_isatty` の機械語の `_pioinfo` を触ってるっぽい部分のアドレスをとって `_pioinfo` を探し出す
+- 入れるかどうか1年ぐらい悩んだが、 VC++ 2016 でも解決しそうになかったので入れた
+- DLL の名前がデバッグ版だと違う
+- こんなダメダメなコードなのに修正のパッチを送ってくれる人がいた! OSS すごい!
+- パフォーマンス改善の話
+- NewRelic で bugs.ruby-lang.org のプロファイルが取れる
+- ボトルネックがないと最適化が難しい
+- とりあえず 0.5% の `String#blank?` を速くする
+- `Regexp#match?`: `MatchData` オブジェクトを作らずにマッチするかどうかだけ判定するメソッド
+- Note: Perl も似た最適化がある
+- SSE 4.2 STTNI: 16 バイトごとに処理する
+- 最後の末尾の部分で読み込めない部分を踏むと SEGV するので、末尾処理が大変
+- RubyVM を改善する話
+- Ruby の layer にボトルネックがないので C の layer で探す
+- perf-top で optcarrot や fluentd を計測
+- `vm_exec_core`, `vm_search_method` が top 2
+- 分岐予測
+- CPU が新しいもので比べるだけで改善
+- NOP 命令が翻訳された機械語を見ると若干無駄なことをしている
+- `opt_plus`
+- Fixnum + Fixnum の最適化は説明に時間がかかるので詳細は省略
+- JIT はホットスポットがないと効果がない
+- Register machine [Feature #12589](https://bugs.ruby-lang.org/issues/12589)
+- Debugging / Profiling / (メモできず)
+- [frsyuki/sigdump](https://github.com/frsyuki/sigdump) でデーモンでもシグナルでスタックダンプとか取れる
+- strace with CRuby
+- futex が並んでいるのは timer thread が切り替えようとしているだけで正常な処理なので情報がない
+- procfs での情報の取り方の説明: EIP からたどる
+- 簡単にできるように [pid2line.rb](https://gist.github.com/nurse/0619b6af90df140508c2) を作った
+- 最近の Ubuntu では sudo が必要
+- SEGV: Segmentation fault
+- バグ報告するときは最初から最後まで貼り付けてください
+- C level backtrace では DWARF などのデバッグ情報を使って非公開の関数でも名前をとっている
+- core file: 情報が詰まっている
+- 前提条件として Linux では Ruby の Thread が pthread の thread、さらに OS の lwp と1対1対応している話
+- `ruby_current_vm` から辿れる話
+- `.gdbinit` という便利スクリプトの紹介
+- `rb_ps_thread`
+- まとめ
+- ユースケース (現実の例) を収集しよう
+- 現実のアプリケーションのボトルネックを知ろう
+- 時間オーバーしているけど少しだけ質疑応答
+- 質問1: パッチを送ったときに反応がない場合は?
+- matz をつつけば良い、urabe さんやなるせさんでも良い
+- 開発者会議の Wiki にのせてもらえれば議論にのる
+- 質問2 (ko1 さん): twitter をみているとレベルが高いので無理と思っている人がいる
+- 趣味の話なのでこういう話ができないとコミッターになれないというわけではない
+- 興味の分野はみんな違うので、他の人が興味がなさそうな分野が良い
+- openssl の rhe さんが良い例
+- 隙間はたくさんあるのでいろいろ出すと良い
+- 質問3(urabe さん): `.gdbinit` を便利に使っているが、`.gdbinit` のデバッグはどうやっている?
+- 手で直している
+- akr さん: Python で書き換えるのはどうか?
+- Mac のような LLVM 環境で使えないという問題もある
+- sorah さん(?)と: GUI があって便利という話
+
+面白かったけど、みんなついていけてたんだろうかという話も。
+
+## Closing
+
+- Closing の前に落し物の案内
+- (今年も参加者数のスライドとかはあったので Togetter まとめの方をみると載ってるかも)
+- 来年の情報はなし
+
+## Togetter まとめ
+
+昨日のメモと同じく、[資料も反響もすべてチェック！ 京都で3倍広くなった #RubyKaigi 2016 まとめまとめ - Togetterまとめ](http://togetter.com/li/1022255 "資料も反響もすべてチェック！ 京都で3倍広くなった #RubyKaigi 2016 まとめまとめ - Togetterまとめ") があるので、個別のまとめへのリンクは省略しました。
+
+## The RubyKaigi 2016 After Party & Lightning Talks!
+
+[The RubyKaigi 2016 After Party &amp; Lightning Talks!](https://rubykaigi.doorkeeper.jp/events/51800 "The RubyKaigi 2016 After Party &amp; Lightning Talks!") は多分スタッフの片付けの時間の都合からだと思いますが、20:15 からという遅い開始時間なので、しばらく空き時間がありました。
+
+時間が足りないぐらいずっと LT をしていたので、特に懇親会的な時間はなくて、話をする人は LT を聞かずに話をしていたような感じでした。
+
+トイレに行ったり飲み物のおかわりをもらいに行ったりしている間、少し聞けないものがあったぐらいで、ほぼ全て聞いていたので、話はできませんでした。
+
+話の内容自体も面白いものが多くて良かったのですが、Unicode に SNOWMAN WITHOUT SNOW という文字があるとかそういう本筋と関係ないところも印象に残りました。
