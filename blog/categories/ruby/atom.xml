@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-09-11T01:11:58+09:00</updated>
+  <updated>2016-09-14T00:00:04+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,241 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[bundled gem と default gem の違いの具体例]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-09-13-bundled-gem-and-default-gem-more.html"/>
+    <updated>2016-09-13T23:33:33+09:00</updated>
+    <id>http://blog.n-z.jp/blog/bundled-gem-and-default-gem-more</id>
+    <content type="html"><![CDATA[<p><a href="/blog/2016-09-10-bundled-gem-and-default-gem.html">bundled gem と default gem の違い</a>で概要は説明しましたが、具体的にどうなっているのか試してみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認環境</h2>
+
+<ul>
+<li>Mac OS X Yosemite (10.10.5)</li>
+<li>homebrew</li>
+<li>rbenv 1.0.0</li>
+<li>ruby-build v20160913</li>
+<li>ruby 2.4.0-preview2, 2.3.1</li>
+<li>bundler 1.13.0, 1.12.5</li>
+<li>activesupport 5.0.0.1</li>
+<li>rdoc 4.2.1, 5.0.0.beta2</li>
+</ul>
+
+
+<h2>クリーンな 2.4.0-preview2 を準備</h2>
+
+<p>homebrew で入れた rbenv + ruby-build を使って 2.4.0-preview2 をインストールしました。
+bundler も必要なのでインストールして、普通の gem の例として activesupport も入れておきました。</p>
+
+<pre><code>% rbenv install 2.4.0-preview2
+Downloading ruby-2.4.0-preview2.tar.bz2...
+-&gt; https://cache.ruby-lang.org/pub/ruby/2.4/ruby-2.4.0-preview2.tar.bz2
+Installing ruby-2.4.0-preview2...
+Installed ruby-2.4.0-preview2 to /Users/kazu/.rbenv/versions/2.4.0-preview2
+% rbenv shell 2.4.0-preview2
+% gem list
+
+*** LOCAL GEMS ***
+
+bigdecimal (default: 1.2.8)
+did_you_mean (1.0.2)
+io-console (default: 0.4.6)
+json (default: 2.0.2)
+minitest (5.9.0)
+net-telnet (0.1.1)
+openssl (default: 2.0.0.beta.2)
+power_assert (0.3.1)
+psych (default: 2.1.1)
+rake (11.2.2)
+rdoc (default: 5.0.0.beta2)
+test-unit (3.2.1)
+xmlrpc (0.1.1)
+% gem install bundler
+Fetching: bundler-1.13.0.gem (100%)
+Successfully installed bundler-1.13.0
+1 gem installed
+% gem install activesupport
+Fetching: i18n-0.7.0.gem (100%)
+Successfully installed i18n-0.7.0
+Fetching: thread_safe-0.3.5.gem (100%)
+Successfully installed thread_safe-0.3.5
+Fetching: tzinfo-1.2.2.gem (100%)
+Successfully installed tzinfo-1.2.2
+Fetching: concurrent-ruby-1.0.2.gem (100%)
+Successfully installed concurrent-ruby-1.0.2
+Fetching: activesupport-5.0.0.1.gem (100%)
+Successfully installed activesupport-5.0.0.1
+5 gems installed
+</code></pre>
+
+<h2>bundler なしの環境での require</h2>
+
+<p>普通の状態ではどれも問題なく require できます。</p>
+
+<pre><code>% rbenv exec irb -r irb/completion --simple-prompt
+&gt;&gt; require 'json' # default gem
+=&gt; true
+&gt;&gt; require 'xmlrpc' # bundled gem
+=&gt; true
+&gt;&gt; require 'uri' # stdlib
+=&gt; true
+&gt;&gt; require 'active_support/all' # normal gem
+=&gt; true
+</code></pre>
+
+<h2>bundler 環境でのテスト</h2>
+
+<p>bundler 環境下では bundled gem は普通の gem と同じように読み込めないことがわかります。</p>
+
+<pre><code>% mkdir /tmp/test
+% cd /tmp/test
+% bundle init
+Writing new Gemfile to /private/tmp/test/Gemfile
+% bundle exec irb -r irb/completion --simple-prompt
+&gt;&gt; require 'json' # default gem
+=&gt; true
+&gt;&gt; begin; require 'xmlrpc'; rescue LoadError; $!; end # bundled gem
+=&gt; #&lt;LoadError: cannot load such file -- xmlrpc&gt;
+&gt;&gt; require 'uri' # stdlib
+=&gt; false
+&gt;&gt; begin; require 'active_support/all'; rescue LoadError; $!; end # normal gem
+=&gt; #&lt;LoadError: cannot load such file -- active_support/all&gt;
+&gt;&gt;
+</code></pre>
+
+<h2>uninstall</h2>
+
+<p>default gem は uninstall ができなくて、bundled gem は uninstall できることがわかります。</p>
+
+<pre><code>% gem uninstall json
+ERROR:  While executing gem ... (Gem::InstallError)
+    gem "json" cannot be uninstalled because it is a default gem
+% gem uninstall xmlrpc
+Successfully uninstalled xmlrpc-0.1.1
+</code></pre>
+
+<h2>Gemfile でバージョン指定</h2>
+
+<p><code>Gemfile</code> でバージョン指定していれば default gem の代わりに指定したバージョンの gem が使われることがわかります。</p>
+
+<pre><code>% echo "gem 'json', '2.0.0'" &gt;&gt; Gemfile
+% bundle install
+Fetching gem metadata from https://rubygems.org/.
+Fetching version metadata from https://rubygems.org/
+Resolving dependencies...
+Installing json 2.0.0 with native extensions
+Using bundler 1.13.0
+Bundle complete! 1 Gemfile dependency, 2 gems now installed.
+Use `bundle show [gemname]` to see where a bundled gem is installed.
+% bundle exec irb -r irb/completion --simple-prompt
+&gt;&gt; require 'json'
+=&gt; true
+&gt;&gt; JSON::VERSION
+=&gt; "2.0.0"
+</code></pre>
+
+<h2>おかしなことが起こる例</h2>
+
+<p>ruby 2.4 だと古い json 1.x が入らない関係で rdoc 4.x が入らなかったので、
+ここだけ使用中の ruby 2.3.1 で検証しました。</p>
+
+<h3>準備</h3>
+
+<p>rubygems が古いため、 <code>default:</code> は付いていませんが、 4.2.1 が default gem です。</p>
+
+<pre><code>% rbenv shell 2.3.1
+% echo "gem 'rdoc', '= 5.0.0.beta2'" &gt;&gt; Gemfile
+% bundle install
+Warning: the running version of Bundler is older than the version that created the lockfile. We suggest you upgrade to the latest version of Bundler by running `gem install bundler`.
+Fetching gem metadata from https://rubygems.org/
+Fetching version metadata from https://rubygems.org/
+Resolving dependencies...
+Installing json 2.0.0 with native extensions
+Installing rdoc 5.0.0.beta2
+Using bundler 1.12.5
+Bundle complete! 2 Gemfile dependencies, 3 gems now installed.
+Use `bundle show [gemname]` to see where a bundled gem is installed.
+% gem list rdoc
+
+*** LOCAL GEMS ***
+
+rdoc (5.0.0.beta2, 4.2.1)
+</code></pre>
+
+<h3>rdoc 5 で減ったファイルを探す</h3>
+
+<p>探してみたところ、 <code>rdoc/markdown/literals_1_9.rb</code> が <code>rdoc/markdown/literals.rb</code> に改名されていてなくなっていたのを見つけたので、
+これを使っておかしな挙動を確かめてみました。</p>
+
+<h3>bundler 環境下で確認</h3>
+
+<p>bundler 環境下では <code>Gemfile</code> で指定した 5.0.0.beta2 が読み込まれるのがわかります。</p>
+
+<p>ここまでは良いのですが、 5.0.0.beta2 ではなくなっているファイルを <code>require 'rdoc/markdown/literals_1_9'</code> で読み込もうとすると、
+default gem の 4.2.1 のファイルが (組み合わせがおかしいので警告が出つつ) 読み込めてしまいます。</p>
+
+<p><code>$LOAD_PATH</code> を確認してみると、そういう挙動になる理由はわかるのですが、増減するファイルによっては何か気づきにくい問題が起きるかもしれません。</p>
+
+<pre><code>% bundle exec irb -r irb/completion --simple-prompt
+&gt;&gt; require 'rdoc'
+=&gt; true
+&gt;&gt; RDoc::VERSION
+=&gt; "5.0.0.beta2"
+&gt;&gt; require 'rdoc/markdown/literals_1_9'
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/2.3.0/rdoc/markdown/literals_1_9.rb:413: warning: already initialized constant RDoc::Markdown::Literals::Rules
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/rdoc-5.0.0.beta2/lib/rdoc/markdown/literals.rb:409: warning: previous definition of Rules was here
+=&gt; true
+&gt;&gt; puts $LOAD_PATH
+/usr/local/Cellar/rbenv/1.0.0/rbenv.d/exec/gem-rehash
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/bundler-1.12.5/lib
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/rdoc-5.0.0.beta2/lib
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/json-2.0.0/lib
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/extensions/x86_64-darwin-14/2.3.0-static/json-2.0.0
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/site_ruby/2.3.0
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/site_ruby/2.3.0/x86_64-darwin14
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/site_ruby
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/vendor_ruby/2.3.0
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/vendor_ruby/2.3.0/x86_64-darwin14
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/vendor_ruby
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/2.3.0
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/2.3.0/x86_64-darwin14
+=&gt; nil
+</code></pre>
+
+<h3>gem which で確認</h3>
+
+<p><code>gem which</code> でどのファイルが <code>require</code> で読み込まれるのか確認できるので、参考になるかもしれません。</p>
+
+<pre><code>% gem which rdoc/markdown/entities
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/2.3.0/rdoc/markdown/entities.rb
+% bundle exec gem which rdoc/markdown/entities
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/rdoc-5.0.0.beta2/lib/rdoc/markdown/entities.rb
+% bundle exec gem which rdoc/markdown/literals_1_9
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/2.3.0/rdoc/markdown/literals_1_9.rb
+% bundle exec gem which rdoc/markdown/literals
+/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/rdoc-5.0.0.beta2/lib/rdoc/markdown/literals.rb
+</code></pre>
+
+<h2>普通は問題にならないであろう問題点</h2>
+
+<p>基本的には Ruby コミッターしか影響しないはずなので、単なるおまけです。</p>
+
+<p>どこに報告すればいいのかわからなかったので、とりあえず gist にメモを書いた (<a href="https://gist.github.com/znz/62946cbb55de4fe58a5101d7875a2ba1">rubygems with multi default gem problem</a>) のですが、Ruby コミッターのように開発版を上書きインストールし続けている環境を持っていると、
+default gem として複数バージョンの gemspec を持ってしまうことがあり、実際には後から <code>make install</code> した方しか入っていないので、ダミーの gemspec だけ残っているバージョンを指定した時におかしなことになるという話です。</p>
+
+<p>クリーンインストールしなおすなり、 <code>$(gem env gemdir)/specifications/default</code> の古い gemspec を消すなりすれば良いだけなので、そんなに困る問題でもないです。</p>
+
+<h2>まとめ</h2>
+
+<p>bundled gem と default gem の違いを実際の動作を元に比べてみました。
+また、 bundler と組み合わせて問題が起きる可能性がある例をみてみました。
+通常の使い方では問題が起きることはないと思いますが、トリビア的に知っておくとおもしろいかもしれません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[bundled gem と default gem の違い]]></title>
@@ -53,7 +288,7 @@
 
 <h2>続く</h2>
 
-<p>続くかも。</p>
+<p><a href="/blog/2016-09-13-bundled-gem-and-default-gem-more.html">bundled gem と default gem の違いの具体例</a>に続きを書きました。</p>
 ]]></content>
   </entry>
   
@@ -1674,65 +1909,6 @@ queue.push(2.0)
 <p>同じ国立京都国際会館の中のさくらフロアで RubyKaigi 2016 Official Party がありました。</p>
 
 <p>ほとんど<a href="https://github.com/rurema">るりま</a>関連の話をしていただけで終わってしまった感じでした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[require './file'とrequire_relative 'file'の違い]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-07-26-require-relative.html"/>
-    <updated>2016-07-26T21:16:07+09:00</updated>
-    <id>http://blog.n-z.jp/blog/require-relative</id>
-    <content type="html"><![CDATA[<p>最近 Debian の Perl が <code>CVE-2016-1238</code> (<a href="https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=588017" title="#588017">#588017</a>) で更新されました。
-似たような変更は Ruby だと <a href="https://www.ruby-lang.org/ja/news/2010/08/18/ruby-1-9-2-is-released/">1.9.2 から <code>.</code> が <code>$:</code> (<code>$LOAD_PATH</code>) から削除された</a>ということがありました。
-そして、明記はされていませんが <code>require_relative</code> が推奨されるようになったようです。</p>
-
-<!--more-->
-
-
-<h2><code>require './file'</code> と <code>require_relative 'file'</code> の違い</h2>
-
-<p><code>/var/tmp</code> と <code>/tmp</code> に確認用のファイルを以下のように準備して実行してみました。</p>
-
-<pre><code>$ head main.rb require.rb require_relative.rb /tmp/require.rb /tmp/require_relative.rb
-==&gt; main.rb &lt;==
-require './require'
-require_relative 'require_relative'
-
-==&gt; require.rb &lt;==
-p __FILE__
-
-==&gt; require_relative.rb &lt;==
-p __FILE__
-
-==&gt; /tmp/require.rb &lt;==
-p __FILE__
-
-==&gt; /tmp/require_relative.rb &lt;==
-p __FILE__
-$ ruby main.rb
-"/var/tmp/require.rb"
-"/var/tmp/require_relative.rb"
-$ cd /tmp
-$ ruby /var/tmp/main.rb
-"/tmp/require.rb"
-"/var/tmp/require_relative.rb"
-</code></pre>
-
-<p>結果を見ればわかるように <code>require './file'</code> はカレントディレクトリがどこなのかの影響を受けます。</p>
-
-<p>このような書き方を使っていると <code>$LOAD_PATH</code> から <code>.</code> が取り除かれていても (Windows の) DLL hijacking vulnerability のような脆弱性の原因になるため、
-<code>require_relative</code> を使う方が望ましいということになります。</p>
-
-<h2>require_relative の歴史</h2>
-
-<p>いつから使えるようになったのか調べたので、ついでにメモしておきます。</p>
-
-<ul>
-<li>ruby 1.9.0-1 で <code>lib/require_relative.rb</code> が追加され、 <code>require 'require_relative'</code> すれば <code>require_relative</code> が使えるようになる。</li>
-<li>ruby 1.9.0-2 で <code>lib/require_relative.rb</code> から <code>prelude.rb</code> (ruby 本体に組み込まれて実行開始時に自動実行されるファイル) に移動して <code>require 'require_relative'</code> なしで <code>require_relative</code> が使えるようになる。</li>
-<li>ruby 1.9.2 で <code>doc/NEWS</code> に <code>Kernel#require_relative</code> が載る。 <code>require_relative</code> が <code>prelude.rb</code> から C 実装に置き換えられる。</li>
-</ul>
-
 ]]></content>
   </entry>
   

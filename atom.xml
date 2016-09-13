@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-09-11T01:11:58+09:00</updated>
+  <updated>2016-09-14T00:00:04+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,371 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[bundled gem と default gem の違いの具体例]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-09-13-bundled-gem-and-default-gem-more.html"/>
+    <updated>2016-09-13T23:33:33+09:00</updated>
+    <id>http://blog.n-z.jp/blog/bundled-gem-and-default-gem-more</id>
+    <content type="html"><![CDATA[<p><a href="http://blog.n-z.jp/blog/2016-09-10-bundled-gem-and-default-gem.html">bundled gem と default gem の違い</a>で概要は説明しましたが、具体的にどうなっているのか試してみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認環境</h2>
+
+<ul>
+<li>Mac OS X Yosemite (10.10.5)</li>
+<li>homebrew</li>
+<li>rbenv 1.0.0</li>
+<li>ruby-build v20160913</li>
+<li>ruby 2.4.0-preview2, 2.3.1</li>
+<li>bundler 1.13.0, 1.12.5</li>
+<li>activesupport 5.0.0.1</li>
+<li>rdoc 4.2.1, 5.0.0.beta2</li>
+</ul>
+
+
+<h2>クリーンな 2.4.0-preview2 を準備</h2>
+
+<p>homebrew で入れた rbenv + ruby-build を使って 2.4.0-preview2 をインストールしました。
+bundler も必要なのでインストールして、普通の gem の例として activesupport も入れておきました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% rbenv install 2.4.0-preview2
+</span><span class='line'>Downloading ruby-2.4.0-preview2.tar.bz2...
+</span><span class='line'>-&gt; https://cache.ruby-lang.org/pub/ruby/2.4/ruby-2.4.0-preview2.tar.bz2
+</span><span class='line'>Installing ruby-2.4.0-preview2...
+</span><span class='line'>Installed ruby-2.4.0-preview2 to /Users/kazu/.rbenv/versions/2.4.0-preview2
+</span><span class='line'>% rbenv shell 2.4.0-preview2
+</span><span class='line'>% gem list
+</span><span class='line'>
+</span><span class='line'>*** LOCAL GEMS ***
+</span><span class='line'>
+</span><span class='line'>bigdecimal (default: 1.2.8)
+</span><span class='line'>did_you_mean (1.0.2)
+</span><span class='line'>io-console (default: 0.4.6)
+</span><span class='line'>json (default: 2.0.2)
+</span><span class='line'>minitest (5.9.0)
+</span><span class='line'>net-telnet (0.1.1)
+</span><span class='line'>openssl (default: 2.0.0.beta.2)
+</span><span class='line'>power_assert (0.3.1)
+</span><span class='line'>psych (default: 2.1.1)
+</span><span class='line'>rake (11.2.2)
+</span><span class='line'>rdoc (default: 5.0.0.beta2)
+</span><span class='line'>test-unit (3.2.1)
+</span><span class='line'>xmlrpc (0.1.1)
+</span><span class='line'>% gem install bundler
+</span><span class='line'>Fetching: bundler-1.13.0.gem (100%)
+</span><span class='line'>Successfully installed bundler-1.13.0
+</span><span class='line'>1 gem installed
+</span><span class='line'>% gem install activesupport
+</span><span class='line'>Fetching: i18n-0.7.0.gem (100%)
+</span><span class='line'>Successfully installed i18n-0.7.0
+</span><span class='line'>Fetching: thread_safe-0.3.5.gem (100%)
+</span><span class='line'>Successfully installed thread_safe-0.3.5
+</span><span class='line'>Fetching: tzinfo-1.2.2.gem (100%)
+</span><span class='line'>Successfully installed tzinfo-1.2.2
+</span><span class='line'>Fetching: concurrent-ruby-1.0.2.gem (100%)
+</span><span class='line'>Successfully installed concurrent-ruby-1.0.2
+</span><span class='line'>Fetching: activesupport-5.0.0.1.gem (100%)
+</span><span class='line'>Successfully installed activesupport-5.0.0.1
+</span><span class='line'>5 gems installed</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>bundler なしの環境での require</h2>
+
+<p>普通の状態ではどれも問題なく require できます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% rbenv exec irb -r irb/completion --simple-prompt
+</span><span class='line'>&gt;&gt; require 'json' # default gem
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; require 'xmlrpc' # bundled gem
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; require 'uri' # stdlib
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; require 'active_support/all' # normal gem
+</span><span class='line'>=&gt; true</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>bundler 環境でのテスト</h2>
+
+<p>bundler 環境下では bundled gem は普通の gem と同じように読み込めないことがわかります。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% mkdir /tmp/test
+</span><span class='line'>% cd /tmp/test
+</span><span class='line'>% bundle init
+</span><span class='line'>Writing new Gemfile to /private/tmp/test/Gemfile
+</span><span class='line'>% bundle exec irb -r irb/completion --simple-prompt
+</span><span class='line'>&gt;&gt; require 'json' # default gem
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; begin; require 'xmlrpc'; rescue LoadError; $!; end # bundled gem
+</span><span class='line'>=&gt; #&lt;LoadError: cannot load such file -- xmlrpc&gt;
+</span><span class='line'>&gt;&gt; require 'uri' # stdlib
+</span><span class='line'>=&gt; false
+</span><span class='line'>&gt;&gt; begin; require 'active_support/all'; rescue LoadError; $!; end # normal gem
+</span><span class='line'>=&gt; #&lt;LoadError: cannot load such file -- active_support/all&gt;
+</span><span class='line'>&gt;&gt;</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>uninstall</h2>
+
+<p>default gem は uninstall ができなくて、bundled gem は uninstall できることがわかります。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% gem uninstall json
+</span><span class='line'>ERROR:  While executing gem ... (Gem::InstallError)
+</span><span class='line'>    gem "json" cannot be uninstalled because it is a default gem
+</span><span class='line'>% gem uninstall xmlrpc
+</span><span class='line'>Successfully uninstalled xmlrpc-0.1.1</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Gemfile でバージョン指定</h2>
+
+<p><code>Gemfile</code> でバージョン指定していれば default gem の代わりに指定したバージョンの gem が使われることがわかります。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% echo "gem 'json', '2.0.0'" &gt;&gt; Gemfile
+</span><span class='line'>% bundle install
+</span><span class='line'>Fetching gem metadata from https://rubygems.org/.
+</span><span class='line'>Fetching version metadata from https://rubygems.org/
+</span><span class='line'>Resolving dependencies...
+</span><span class='line'>Installing json 2.0.0 with native extensions
+</span><span class='line'>Using bundler 1.13.0
+</span><span class='line'>Bundle complete! 1 Gemfile dependency, 2 gems now installed.
+</span><span class='line'>Use `bundle show [gemname]` to see where a bundled gem is installed.
+</span><span class='line'>% bundle exec irb -r irb/completion --simple-prompt
+</span><span class='line'>&gt;&gt; require 'json'
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; JSON::VERSION
+</span><span class='line'>=&gt; "2.0.0"</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>おかしなことが起こる例</h2>
+
+<p>ruby 2.4 だと古い json 1.x が入らない関係で rdoc 4.x が入らなかったので、
+ここだけ使用中の ruby 2.3.1 で検証しました。</p>
+
+<h3>準備</h3>
+
+<p>rubygems が古いため、 <code>default:</code> は付いていませんが、 4.2.1 が default gem です。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% rbenv shell 2.3.1
+</span><span class='line'>% echo "gem 'rdoc', '= 5.0.0.beta2'" &gt;&gt; Gemfile
+</span><span class='line'>% bundle install
+</span><span class='line'>Warning: the running version of Bundler is older than the version that created the lockfile. We suggest you upgrade to the latest version of Bundler by running `gem install bundler`.
+</span><span class='line'>Fetching gem metadata from https://rubygems.org/
+</span><span class='line'>Fetching version metadata from https://rubygems.org/
+</span><span class='line'>Resolving dependencies...
+</span><span class='line'>Installing json 2.0.0 with native extensions
+</span><span class='line'>Installing rdoc 5.0.0.beta2
+</span><span class='line'>Using bundler 1.12.5
+</span><span class='line'>Bundle complete! 2 Gemfile dependencies, 3 gems now installed.
+</span><span class='line'>Use `bundle show [gemname]` to see where a bundled gem is installed.
+</span><span class='line'>% gem list rdoc
+</span><span class='line'>
+</span><span class='line'>*** LOCAL GEMS ***
+</span><span class='line'>
+</span><span class='line'>rdoc (5.0.0.beta2, 4.2.1)</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>rdoc 5 で減ったファイルを探す</h3>
+
+<p>探してみたところ、 <code>rdoc/markdown/literals_1_9.rb</code> が <code>rdoc/markdown/literals.rb</code> に改名されていてなくなっていたのを見つけたので、
+これを使っておかしな挙動を確かめてみました。</p>
+
+<h3>bundler 環境下で確認</h3>
+
+<p>bundler 環境下では <code>Gemfile</code> で指定した 5.0.0.beta2 が読み込まれるのがわかります。</p>
+
+<p>ここまでは良いのですが、 5.0.0.beta2 ではなくなっているファイルを <code>require 'rdoc/markdown/literals_1_9'</code> で読み込もうとすると、
+default gem の 4.2.1 のファイルが (組み合わせがおかしいので警告が出つつ) 読み込めてしまいます。</p>
+
+<p><code>$LOAD_PATH</code> を確認してみると、そういう挙動になる理由はわかるのですが、増減するファイルによっては何か気づきにくい問題が起きるかもしれません。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% bundle exec irb -r irb/completion --simple-prompt
+</span><span class='line'>&gt;&gt; require 'rdoc'
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; RDoc::VERSION
+</span><span class='line'>=&gt; "5.0.0.beta2"
+</span><span class='line'>&gt;&gt; require 'rdoc/markdown/literals_1_9'
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/2.3.0/rdoc/markdown/literals_1_9.rb:413: warning: already initialized constant RDoc::Markdown::Literals::Rules
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/rdoc-5.0.0.beta2/lib/rdoc/markdown/literals.rb:409: warning: previous definition of Rules was here
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; puts $LOAD_PATH
+</span><span class='line'>/usr/local/Cellar/rbenv/1.0.0/rbenv.d/exec/gem-rehash
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/bundler-1.12.5/lib
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/rdoc-5.0.0.beta2/lib
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/json-2.0.0/lib
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/extensions/x86_64-darwin-14/2.3.0-static/json-2.0.0
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/site_ruby/2.3.0
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/site_ruby/2.3.0/x86_64-darwin14
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/site_ruby
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/vendor_ruby/2.3.0
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/vendor_ruby/2.3.0/x86_64-darwin14
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/vendor_ruby
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/2.3.0
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/2.3.0/x86_64-darwin14
+</span><span class='line'>=&gt; nil</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>gem which で確認</h3>
+
+<p><code>gem which</code> でどのファイルが <code>require</code> で読み込まれるのか確認できるので、参考になるかもしれません。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% gem which rdoc/markdown/entities
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/2.3.0/rdoc/markdown/entities.rb
+</span><span class='line'>% bundle exec gem which rdoc/markdown/entities
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/rdoc-5.0.0.beta2/lib/rdoc/markdown/entities.rb
+</span><span class='line'>% bundle exec gem which rdoc/markdown/literals_1_9
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/2.3.0/rdoc/markdown/literals_1_9.rb
+</span><span class='line'>% bundle exec gem which rdoc/markdown/literals
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/rdoc-5.0.0.beta2/lib/rdoc/markdown/literals.rb</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>普通は問題にならないであろう問題点</h2>
+
+<p>基本的には Ruby コミッターしか影響しないはずなので、単なるおまけです。</p>
+
+<p>どこに報告すればいいのかわからなかったので、とりあえず gist にメモを書いた (<a href="https://gist.github.com/znz/62946cbb55de4fe58a5101d7875a2ba1">rubygems with multi default gem problem</a>) のですが、Ruby コミッターのように開発版を上書きインストールし続けている環境を持っていると、
+default gem として複数バージョンの gemspec を持ってしまうことがあり、実際には後から <code>make install</code> した方しか入っていないので、ダミーの gemspec だけ残っているバージョンを指定した時におかしなことになるという話です。</p>
+
+<p>クリーンインストールしなおすなり、 <code>$(gem env gemdir)/specifications/default</code> の古い gemspec を消すなりすれば良いだけなので、そんなに困る問題でもないです。</p>
+
+<h2>まとめ</h2>
+
+<p>bundled gem と default gem の違いを実際の動作を元に比べてみました。
+また、 bundler と組み合わせて問題が起きる可能性がある例をみてみました。
+通常の使い方では問題が起きることはないと思いますが、トリビア的に知っておくとおもしろいかもしれません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[bundled gem と default gem の違い]]></title>
@@ -53,7 +418,7 @@
 
 <h2>続く</h2>
 
-<p>続くかも。</p>
+<p><a href="http://blog.n-z.jp/blog/2016-09-13-bundled-gem-and-default-gem-more.html">bundled gem と default gem の違いの具体例</a>に続きを書きました。</p>
 ]]></content>
   </entry>
   
@@ -5151,139 +5516,6 @@ Web の設定画面で見てみると info も化けていたので、元の設�
 <li>ライトユーザー向けの話</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[公開鍵認証 + libpam-google-authenticator による二要素認証を特定のユーザーだけ対象に導入する]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-04-18-libpam-google-authenticator.html"/>
-    <updated>2016-04-18T21:26:42+09:00</updated>
-    <id>http://blog.n-z.jp/blog/libpam-google-authenticator</id>
-    <content type="html"><![CDATA[<p>普通に <code>libpam-google-authenticator</code> を PAM の設定に追加するだけだと公開鍵認証の時に使われなくて二要素認証として嬉しくなかったのと、
-<code>libpam-google-authenticator</code> による二要素認証をいきなり全ユーザーに導入してしまうと <code>google-authenticator</code> コマンドによるトークン作成をしていないユーザーが入れなくなってしまったり、リモートバックアップ処理の自動実行などで入れなくなったりして困るので、
-一部のユーザーだけ二要素認証が必須になる設定を考えてみました。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Debian GNU/Linux 8.4 (jessie)</li>
-<li>openssh-server 1:6.7p1-5+deb8u1</li>
-<li>libpam-google-authenticator 20130529-2</li>
-</ul>
-
-
-<h2>設定時の注意</h2>
-
-<p>PAM の設定変更は失敗するとログインできなくなって危険なので、設定を戻したりできるシェルを最低一個は残した状態で設定を変更することをおすすめします。</p>
-
-<h2>PAM の設定</h2>
-
-<p>PAM の設定では <code>@include common-auth</code> の代わりに <code>pam_unix.so</code> を <code>pam_google_authenticator.so</code> に置き換えた設定を <code>/etc/pam.d/sshd</code> に追加しました。</p>
-
-<p>これで <code>keyboard-interactive</code> 認証では unix password による認証は使えなくなって <code>libpam-google-authenticator</code> による認証だけになります。</p>
-
-<p>ワンタイムパスワードなので、入力している値を見られても困らないし、実際 GitHub などでの入力画面では隠されていないので、 <code>/usr/share/doc/libpam-google-authenticator/README.gz</code> にも書いてある <code>echo_verification_code</code> の設定も追加してエコーバックされるようにしてみました。</p>
-
-<figure class='code'><figcaption><span>/etc/pam.d/sshd</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>+auth [success=1 default=ignore] pam_google_authenticator.so echo_verification_code
-</span><span class='line'>+auth requisite pam_deny.so
-</span><span class='line'>+auth required pam_permit.so
-</span><span class='line'> # Standard Un*x authentication.
-</span><span class='line'>-@include common-auth
-</span><span class='line'>+#@include common-auth</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>sshd の設定</h2>
-
-<p>他の <code>pam_google_authenticator.so</code> 導入記事にも書いてあるように
-<code>ChallengeResponseAuthentication</code> を <code>yes</code> に変更します。
-この設定を変更しないと <code>Verification code:</code> の入力プロンプトが出てこなくて、
-認証コードの入力ができません。</p>
-
-<figure class='code'><figcaption><span>/etc/ssh/sshd_config</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>ChallengeResponseAuthentication yes</span></code></pre></td></tr></table></div></figure>
-
-
-<p>最後に適当なグループ (今回は <code>/var/log/</code> のログファイルのグループなどに利用されている <code>adm</code> グループを利用しましたが <code>sudo</code> グループなどでも良いかもしれません) を <code>Match</code> で指定して、そのグループに属するユーザーの時だけ <code>AuthenticationMethods</code> で公開鍵認証と <code>keyboard-interactive</code> 認証の両方を必須にしました。</p>
-
-<figure class='code'><figcaption><span>/etc/ssh/sshd_config</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>Match Group adm
-</span><span class='line'>AuthenticationMethods publickey,keyboard-interactive</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>トークンを生成しているユーザーだけ有効にする設定</h2>
-
-<p><code>google-authenticator</code> コマンドで <code>~/.google-authenticator</code> を生成しているユーザーだけ有効にすることができたので、その方法もメモしておきます。</p>
-
-<p>方法としては <code>pam_exec</code> を使ってファイルの存在チェックをすれば可能でした。
-<code>pam_exec.so</code> の引数部分では直接環境変数展開ができなかったので、別途外部に実行ファイルを用意する方法がデバッグもしやすくておすすめです。</p>
-
-<p>存在チェックが成功すればそのまま次の行に進んで、存在しなければ後続の 2 行を飛ばして <code>pam_permit.so</code> で許可するようにしました。</p>
-
-<p>PAM の設定の詳細については<a href="http://tokyodebian.alioth.debian.org/pdf/debianmeetingresume2012-natsu.pdf">大統一Debian勉強会 特大号 東京エリア/関西Debian勉強会のPDF</a> か、<a href="http://gum.debian.or.jp/2012/">大統一Debian勉強会</a> の「Linux-PAMの設定について」の発表資料を参考にしてください。</p>
-
-<p><code>pam_exec.so</code> に <code>quiet</code> をつけないと <code>~/.google-authenticator</code> がない場合に毎回 <code>/usr/local/bin/check_google_authenticator.sh failed: exit code 1</code> が出るので、 <code>quiet</code> をつけて抑制するようにしました。
-<code>Authenticated with partial success.</code> というメッセージは <code>ssh</code> が出しているので消せませんでした。</p>
-
-<figure class='code'><figcaption><span>/etc/pam.d/sshd</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>auth [success=ignore default=2] pam_exec.so quiet /usr/local/bin/check_google_authenticator.sh
-</span><span class='line'>auth [success=1 default=ignore] pam_google_authenticator.so echo_verification_code
-</span><span class='line'>auth requisite pam_deny.so
-</span><span class='line'>auth required pam_permit.so</span></code></pre></td></tr></table></div></figure>
-
-
-<p>存在のチェック用スクリプトは <code>pam_exec</code> 経由で実行された時には <code>HOME</code> 環境変数が設定されていなくて、代わりに <code>PAM_USER</code> などが設定されているのを利用して <code>HOME</code> を設定されていなければ設定するようにしました。</p>
-
-<figure class='code'><figcaption><span>/usr/local/bin/check_google_authenticator.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#!/bin/sh</span>
-</span><span class='line'>: <span class="k">${</span><span class="nv">HOME</span><span class="p">:=</span><span class="k">$(</span>getent passwd <span class="s2">&quot;$PAM_USER&quot;</span> <span class="p">|</span> awk -F: <span class="s1">&#39;{print $6}&#39;</span><span class="k">)}</span>
-</span><span class='line'><span class="nb">test</span> -f <span class="s2">&quot;$HOME/.google_authenticator&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>/etc/pam.d/sshd にまとめる書き方</h2>
-
-<p>発表資料の PDF を確認して気付いたのですが、 <code>[ ]</code> でくくれば空白の入った引数も渡せるので、シェルを経由するようにすれば変数展開付きのコマンドを含められました。</p>
-
-<figure class='code'><figcaption><span>/etc/pam.d/sshd</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>auth [success=ignore default=2] pam_exec.so quiet /bin/sh -c [: ${HOME:=$(getent passwd "$PAM_USER" | awk -F: '{print $6}')}; test -f "$HOME/.google_authenticator"]
-</span><span class='line'>auth [success=1 default=ignore] pam_google_authenticator.so echo_verification_code
-</span><span class='line'>auth requisite pam_deny.so
-</span><span class='line'>auth required pam_permit.so</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>google-authenticator コマンドによるトークンの作成</h2>
-
-<p>二要素認証を使うユーザーで <code>google-authenticator</code> コマンドを実行してトークンを作成して、 iOS なら Google Authenticator のアプリに、 Android なら Google 認証システムアプリに QR コードを読み込ませておきます。
-<code>google-authenticator</code> コマンドの質問は全部 <code>y</code> で良いと思います。</p>
-
-<p>設定は <code>~/.google_authenticator</code> に保存されています。</p>
-
-<p>テスト環境では QR コードは読み込ませずに <code>emergency scratch codes</code> を使っていたのですが、
-<code>emergency scratch codes</code> は使っていくと <code>~/.google_authenticator</code> からどんどん減っていくので、適当なタイミングで <code>google-authenticator</code> コマンドを使って再生成させないと入れなくなりそうでした。</p>
-
-<h2>失敗した設定例</h2>
-
-<p><code>Match</code> で <code>ChallengeResponseAuthentication</code> を設定しようとしましたが、 <code>Directive 'ChallengeResponseAuthentication' is not allowed within a Match block</code> というエラーで設定できませんでした。</p>
-
-<p>公開鍵ごとに二要素認証の設定ができないか、検討してみましたが、使えそうな設定項目が見つかりませんでした。</p>
 ]]></content>
   </entry>
   

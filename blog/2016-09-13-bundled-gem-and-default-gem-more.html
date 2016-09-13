@@ -5,12 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>boot2dockerでdockerを試す - @znz blog</title>
+  <title>bundled gem と default gem の違いの具体例 - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="boot2dockerでdockerを試す Feb 23rd, 2014 12:47 am | Comments boot2docker で最新の docker を試してみました。
-他ではあまり書いていないアンインストール方法も書いているので、 &hellip;">
+  <meta name="description" content="bundled gem と default gem の違いの具体例 Sep 13th, 2016 11:33 pm | Comments bundled gem と default gem の違いで概要は説明しましたが、具体的にどうなっているのか試してみました。 動作確認環境 Mac OS X &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-02-23-boot2docker.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2016-09-13-bundled-gem-and-default-gem-more.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -84,7 +83,7 @@
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">boot2dockerでdockerを試す</h1>
+      <h1 class="entry-title">bundled gem と default gem の違いの具体例</h1>
       
       <!-- zenback_title_end -->
       
@@ -96,7 +95,7 @@
 
 
 
-<time class='entry-date' datetime='2014-02-23T00:47:22+09:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>23</span><span class='date-suffix'>rd</span>, <span class='date-year'>2014</span></span> <span class='time'>12:47 am</span></time>
+<time class='entry-date' datetime='2016-09-13T23:33:33+09:00'><span class='date'><span class='date-month'>Sep</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>11:33 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -109,257 +108,29 @@
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p>boot2docker で最新の docker を試してみました。
-他ではあまり書いていないアンインストール方法も書いているので、
-不要になった時や何か変になった時の削除方法も参考になると思います。</p>
+<div class="entry-content"><p><a href="/blog/2016-09-10-bundled-gem-and-default-gem.html">bundled gem と default gem の違い</a>で概要は説明しましたが、具体的にどうなっているのか試してみました。</p>
 
 <!--more-->
 
 
-<h2>対象バージョン</h2>
+<h2>動作確認環境</h2>
 
 <ul>
-<li>Mac OS X 10.9.1 で試しましたが Linux でも同様に動くはずです</li>
-<li>VirtualBox 4.3.6</li>
-<li>boot2docker 0.6.0</li>
-<li>docker 0.8.1</li>
+<li>Mac OS X Yosemite (10.10.5)</li>
+<li>homebrew</li>
+<li>rbenv 1.0.0</li>
+<li>ruby-build v20160913</li>
+<li>ruby 2.4.0-preview2, 2.3.1</li>
+<li>bundler 1.13.0, 1.12.5</li>
+<li>activesupport 5.0.0.1</li>
+<li>rdoc 4.2.1, 5.0.0.beta2</li>
 </ul>
 
 
-<p>014-08-03 追記: 追記部分の確認バージョン</p>
+<h2>クリーンな 2.4.0-preview2 を準備</h2>
 
-<ul>
-<li>boot2docker 1.1.2</li>
-<li>docker 1.1.2</li>
-</ul>
-
-
-<h2>VirtualBox</h2>
-
-<p>あらかじめ VirtualBox をインストールしておきます。</p>
-
-<h2>boot2docker</h2>
-
-<p><a href="http://docs.docker.io/en/latest/installation/mac/">http://docs.docker.io/en/latest/installation/mac/</a> の手順に従って
-<code>boot2docker</code> を入れてみます。</p>
-
-<h3>インストール</h3>
-
-<p>適当なディレクトリに <code>boot2docker</code> をダウンロードして実行可能にします。</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'> mkdir -p ~/boot2docker
-</span><span class='line'> cd ~/boot2docker
-</span><span class='line'> curl https://raw.github.com/boot2docker/boot2docker/master/boot2docker &gt; boot2docker
-</span><span class='line'> chmod +x boot2docker</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-
-<p>この段階でのアンインストールは <code>boot2docker</code> を削除するだけです。</p>
-
-<p>(2014-08-03 追記:
-Mac OS X なら
-<code>brew install boot2docker</code>
-などでもインストールできます。)</p>
-
-<h3>VM イメージの作成</h3>
-
-<p>初回は <code>./boot2docker init</code> を実行して iso のダウンロードと VM の作成をします。</p>
-
-<p>(2014-08-03 追記:
-ISO のダウンロードだけなら <code>boot2docker download</code> で、
-既に ISO があっても最新にするなら <code>boot2docker upgrade</code> で
-ダウンロードできます。)</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% ./boot2docker init
-</span><span class='line'>[2014-02-22 23:43:36] Creating VM boot2docker-vm
-</span><span class='line'>Virtual machine 'boot2docker-vm' is created and registered.
-</span><span class='line'>UUID: 61e0ec36-fc80-4b70-ac11-899f6526a57e
-</span><span class='line'>Settings file: '/Users/kazu/VirtualBox VMs/boot2docker-vm/boot2docker-vm.vbox'
-</span><span class='line'>[2014-02-22 23:43:36] Setting VM settings
-</span><span class='line'>[2014-02-22 23:43:36] Setting VM networking
-</span><span class='line'>[2014-02-22 23:43:36] boot2docker.iso not found.
-</span><span class='line'>[2014-02-22 23:43:38] Latest version is v0.6.0, downloading...
-</span><span class='line'>  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-</span><span class='line'>                                 Dload  Upload   Total   Spent    Left  Speed
-</span><span class='line'>100   346  100   346    0     0    319      0  0:00:01  0:00:01 --:--:--   319
-</span><span class='line'>100 24.0M  100 24.0M    0     0   295k      0  0:01:23  0:01:23 --:--:--  498k
-</span><span class='line'>[2014-02-22 23:45:02] Done
-</span><span class='line'>[2014-02-22 23:45:02] Setting VM disks
-</span><span class='line'>[2014-02-22 23:45:02] Creating 40000 Meg hard drive...
-</span><span class='line'>Converting from raw image file="stdin" to file="/Users/kazu/.boot2docker/boot2docker-vm.vmdk"...
-</span><span class='line'>Creating dynamic image with size 41943040000 bytes (40000MB)...
-</span><span class='line'>[2014-02-22 23:45:02] Done.
-</span><span class='line'>[2014-02-22 23:45:02] You can now type boot2docker up and wait for the VM to start.</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-
-<p>この段階のやり直しは VM が起動していれば <code>./boot2docker stop</code> で止めて、
-<code>./boot2docker delete</code> で VM を削除するだけではダメで、
-<code>~/.boot2docker</code> も削除する必要があります。</p>
-
-<p>パスは <code>boot2docker</code> の中の <code>BOOT2DOCKER_CFG_DIR</code> に書かれていて、
-以下の設定は <code>$HOME/.boot2docker/profile</code> で設定変更できます。</p>
-
-<ul>
-<li><code>VM_NAME</code> : VirtualBox での VM の名前 (デフォルト: <code>boot2docker-vm</code>)</li>
-<li><code>DOCKER_PORT</code> : ホスト側で docker 用に使うポート (デフォルト: <code>4243</code>)</li>
-<li><code>SSH_HOST_PORT</code> : ホスト側で ssh サーバー用に使うポート (デフォルト: <code>2022</code>)</li>
-<li><code>VM_DISK</code> : vmdk ファイルのパス (デフォルト: <code>${BOOT2DOCKER_CFG_DIR}/${VM_NAME}.vmdk</code>)</li>
-<li><code>VM_DISK_SIZE</code> : vmdk の容量 (デフォルト: <code>40000</code> メガバイト)</li>
-<li><code>VM_MEM</code> : メモリ (デフォルト: <code>1024</code>)</li>
-<li><code>BOOT2DOCKER_ISO</code> : ISO ファイルのパス (デフォルト: <code>${BOOT2DOCKER_CFG_DIR}/boot2docker.iso</code>)</li>
-</ul>
-
-
-<p>VM を作り直すだけなら <code>./boot2docker delete</code> して <code>./boot2docker init</code> すれば
-ISO はダウンロードし直さずに VM だけ作り直せます。</p>
-
-<p>間違えて先に <code>~/.boot2docker</code> を削除してしまうと VirtualBox の状態が不整合になるので、
-VirtualBox の GUI の方の仮想メディアマネージャーで存在しなくっているファイルを除去するなどの対処をして直します。</p>
-
-<h3>VM の起動</h3>
-
-<p>docker デーモンの VM を <code>./boot2docker up</code> で起動します。</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% ./boot2docker up
-</span><span class='line'>[2014-02-22 23:50:43] Starting boot2docker-vm...
-</span><span class='line'>[2014-02-22 23:51:03] Started.
-</span><span class='line'>
-</span><span class='line'>To connect the docker client to the Docker daemon, please set:
-</span><span class='line'>export DOCKER_HOST=tcp://localhost:4243
-</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-
-<p>止めるのは <code>./boot2docker stop</code> です。</p>
-
-<h3>ssh で中に入る</h3>
-
-<p><code>vagrant</code> と似た感じで <code>./boot2docker ssh</code> で中に入れます。
-ユーザーは <code>docker</code> でパスワードは <code>tcuser</code> です。
-Tiny Core Linux ベースなので、こういうパスワードになっているのだと思います。</p>
-
-<p>(2014-08-03 追記:
-最近の boot2docker では、
-ssh でのログインや sudo はパスワードなしで出来るようになっているようです。
-<code>su - docker</code> で確認したところ、パスワードは <code>tcuser</code> のままでした。)</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% ./boot2docker ssh
-</span><span class='line'>docker@localhost's password:
-</span><span class='line'>                        ##        .
-</span><span class='line'>                  ## ## ##       ==
-</span><span class='line'>               ## ## ## ##      ===
-</span><span class='line'>           /""""""""""""""""\___/ ===
-</span><span class='line'>      ~~~ {~~ ~~~~ ~~~ ~~~~ ~~ ~ /  ===- ~~~
-</span><span class='line'>           \______ o          __/
-</span><span class='line'>             \    \        __/
-</span><span class='line'>              \____\______/
-</span><span class='line'> _                 _   ____     _            _
-</span><span class='line'>| |__   ___   ___ | |_|___ \ __| | ___   ___| | _____ _ __
-</span><span class='line'>| '_ \ / _ \ / _ \| __| __) / _` |/ _ \ / __| |/ / _ \ '__|
-</span><span class='line'>| |_) | (_) | (_) | |_ / __/ (_| | (_) | (__|   &lt;  __/ |
-</span><span class='line'>|_.__/ \___/ \___/ \__|_____\__,_|\___/ \___|_|\_\___|_|
-</span><span class='line'>boot2docker: 0.6.0
-</span><span class='line'>docker@boot2docker:~$</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-
-<h2>docker を使ってみる</h2>
-
-<p>ホスト OS 側に docker コマンドをインストールして、そこから使っても良いのですが、
-Homebrew でインストールできたバージョンが 0.8.0 で少し古かったので、
-主に VM の中の docker コマンドを使いました。</p>
-
-<p>ドキュメントでは <code>sudo docker</code> で実行していますが、
-TCP 接続だったり、ローカルの unix socket の場合でもグループのアクセス権限で許可されている場合などは
-<code>sudo</code> なしの <code>docker</code> コマンドだけで大丈夫です。</p>
-
-<p><code>boot2docker</code> の VM の場合は <code>/var/run/docker.sock</code> が <code>docker</code> グループに読み書きが許可されていて、
-<code>docker</code> ユーザーが <code>docker</code> グループに属しているため、 <code>sudo</code> が不要になっています。</p>
-
-<h3>バージョンなどの情報確認</h3>
-
-<p><code>docker version</code> や <code>docker info</code> で情報を確認します。</p>
-
-<p><code>boot2docker</code> の場合は問題ないと思いますが、
-docker のサーバーとの接続がうまくいかない場合はここでエラーなどになるので、
-環境変数 <code>DOCKER_HOST</code> やポートフォワーディングや firewall などの設定を確認します。</p>
-
-<p>まず VM の外の Homebrew でインストールした docker コマンドから確認しました。
-ここでバージョンが古かったので、後は ssh で入った VM の中で docker コマンドを使うことにしました。</p>
-
-<p>(2014-08-03 追記:
-最近のバージョンでは <code>boot2docker up</code> の時に
-<code>export DOCKER_HOST=tcp://192.168.59.103:2375</code>
-のようなメッセージが出てくるように docker の接続に使う IP アドレスとポート番号が変わっています。)</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% export DOCKER_HOST=tcp://127.0.0.1:4243
-</span><span class='line'>% docker version
-</span><span class='line'>Client version: 0.8.0
-</span><span class='line'>Go version (client): go1.2
-</span><span class='line'>Git commit (client): cc3a8c8d8ec57e15b7b7316797132d770408ab1a
-</span><span class='line'>
-</span><span class='line'>Server version: 0.8.1
-</span><span class='line'>Git commit (server): a1598d1
-</span><span class='line'>Go version (server): go1.2
-</span><span class='line'>Last stable version: 0.8.1, please update docker</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-
-<p>VM の中では Server と Client のバージョンが最新版で一致しています。
-ついでに <code>docker info</code> も確認しました。</p>
+<p>homebrew で入れた rbenv + ruby-build を使って 2.4.0-preview2 をインストールしました。
+bundler も必要なのでインストールして、普通の gem の例として activesupport も入れておきました。</p>
 
 <div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -384,42 +155,229 @@ docker のサーバーとの接続がうまくいかない場合はここでエ�
 <span class='line-number'>21</span>
 <span class='line-number'>22</span>
 <span class='line-number'>23</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>docker@boot2docker:~$ docker version
-</span><span class='line'>Client version: 0.8.1
-</span><span class='line'>Go version (client): go1.2
-</span><span class='line'>Git commit (client): a1598d1
-</span><span class='line'>Server version: 0.8.1
-</span><span class='line'>Git commit (server): a1598d1
-</span><span class='line'>Go version (server): go1.2
-</span><span class='line'>Last stable version: 0.8.1
-</span><span class='line'>docker@boot2docker:~$ docker info
-</span><span class='line'>Containers: 0
-</span><span class='line'>Images: 0
-</span><span class='line'>Driver: aufs
-</span><span class='line'> Root Dir: /mnt/sda1/var/lib/docker/aufs
-</span><span class='line'> Dirs: 0
-</span><span class='line'>Debug mode (server): true
-</span><span class='line'>Debug mode (client): false
-</span><span class='line'>Fds: 10
-</span><span class='line'>Goroutines: 13
-</span><span class='line'>Execution Driver: lxc-0.8.0
-</span><span class='line'>EventsListeners: 0
-</span><span class='line'>Kernel Version: 3.13.3-tinycore64
-</span><span class='line'>Init Path: /usr/local/bin/docker
-</span><span class='line'>docker@boot2docker:~$</span></code></pre></td></tr></table></div></figure></notextile></div>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% rbenv install 2.4.0-preview2
+</span><span class='line'>Downloading ruby-2.4.0-preview2.tar.bz2...
+</span><span class='line'>-&gt; https://cache.ruby-lang.org/pub/ruby/2.4/ruby-2.4.0-preview2.tar.bz2
+</span><span class='line'>Installing ruby-2.4.0-preview2...
+</span><span class='line'>Installed ruby-2.4.0-preview2 to /Users/kazu/.rbenv/versions/2.4.0-preview2
+</span><span class='line'>% rbenv shell 2.4.0-preview2
+</span><span class='line'>% gem list
+</span><span class='line'>
+</span><span class='line'>*** LOCAL GEMS ***
+</span><span class='line'>
+</span><span class='line'>bigdecimal (default: 1.2.8)
+</span><span class='line'>did_you_mean (1.0.2)
+</span><span class='line'>io-console (default: 0.4.6)
+</span><span class='line'>json (default: 2.0.2)
+</span><span class='line'>minitest (5.9.0)
+</span><span class='line'>net-telnet (0.1.1)
+</span><span class='line'>openssl (default: 2.0.0.beta.2)
+</span><span class='line'>power_assert (0.3.1)
+</span><span class='line'>psych (default: 2.1.1)
+</span><span class='line'>rake (11.2.2)
+</span><span class='line'>rdoc (default: 5.0.0.beta2)
+</span><span class='line'>test-unit (3.2.1)
+</span><span class='line'>xmlrpc (0.1.1)
+</span><span class='line'>% gem install bundler
+</span><span class='line'>Fetching: bundler-1.13.0.gem (100%)
+</span><span class='line'>Successfully installed bundler-1.13.0
+</span><span class='line'>1 gem installed
+</span><span class='line'>% gem install activesupport
+</span><span class='line'>Fetching: i18n-0.7.0.gem (100%)
+</span><span class='line'>Successfully installed i18n-0.7.0
+</span><span class='line'>Fetching: thread_safe-0.3.5.gem (100%)
+</span><span class='line'>Successfully installed thread_safe-0.3.5
+</span><span class='line'>Fetching: tzinfo-1.2.2.gem (100%)
+</span><span class='line'>Successfully installed tzinfo-1.2.2
+</span><span class='line'>Fetching: concurrent-ruby-1.0.2.gem (100%)
+</span><span class='line'>Successfully installed concurrent-ruby-1.0.2
+</span><span class='line'>Fetching: activesupport-5.0.0.1.gem (100%)
+</span><span class='line'>Successfully installed activesupport-5.0.0.1
+</span><span class='line'>5 gems installed</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<h3>docker を試してみる</h3>
+<h2>bundler なしの環境での require</h2>
 
-<p><code>docker pull ubuntu</code> であらかじめダウンロードしてから <code>docker run</code> を実行しても良いのですが、
-いきなり <code>docker run -i -t ubuntu /bin/bash</code> を実行しても、
-自動的にダウンロードしてから実行されます。</p>
+<p>普通の状態ではどれも問題なく require できます。</p>
 
-<p>ダウンロードはサーバー側が遅いのか、時間がかかることがあるようなので、
-ゆっくり待った方が良さそうです。</p>
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% rbenv exec irb -r irb/completion --simple-prompt
+</span><span class='line'>&gt;&gt; require 'json' # default gem
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; require 'xmlrpc' # bundled gem
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; require 'uri' # stdlib
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; require 'active_support/all' # normal gem
+</span><span class='line'>=&gt; true</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<p>引数に指定した <code>/bin/bash</code> がコンテナの中の唯一のプロセスとして起動するので、
-自由に試してみて、 <code>exit</code> などで <code>/bin/bash</code> が終了すればコンテナも終了します。</p>
+
+<h2>bundler 環境でのテスト</h2>
+
+<p>bundler 環境下では bundled gem は普通の gem と同じように読み込めないことがわかります。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% mkdir /tmp/test
+</span><span class='line'>% cd /tmp/test
+</span><span class='line'>% bundle init
+</span><span class='line'>Writing new Gemfile to /private/tmp/test/Gemfile
+</span><span class='line'>% bundle exec irb -r irb/completion --simple-prompt
+</span><span class='line'>&gt;&gt; require 'json' # default gem
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; begin; require 'xmlrpc'; rescue LoadError; $!; end # bundled gem
+</span><span class='line'>=&gt; #&lt;LoadError: cannot load such file -- xmlrpc&gt;
+</span><span class='line'>&gt;&gt; require 'uri' # stdlib
+</span><span class='line'>=&gt; false
+</span><span class='line'>&gt;&gt; begin; require 'active_support/all'; rescue LoadError; $!; end # normal gem
+</span><span class='line'>=&gt; #&lt;LoadError: cannot load such file -- active_support/all&gt;
+</span><span class='line'>&gt;&gt;</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h2>uninstall</h2>
+
+<p>default gem は uninstall ができなくて、bundled gem は uninstall できることがわかります。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% gem uninstall json
+</span><span class='line'>ERROR:  While executing gem ... (Gem::InstallError)
+</span><span class='line'>    gem "json" cannot be uninstalled because it is a default gem
+</span><span class='line'>% gem uninstall xmlrpc
+</span><span class='line'>Successfully uninstalled xmlrpc-0.1.1</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h2>Gemfile でバージョン指定</h2>
+
+<p><code>Gemfile</code> でバージョン指定していれば default gem の代わりに指定したバージョンの gem が使われることがわかります。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% echo "gem 'json', '2.0.0'" &gt;&gt; Gemfile
+</span><span class='line'>% bundle install
+</span><span class='line'>Fetching gem metadata from https://rubygems.org/.
+</span><span class='line'>Fetching version metadata from https://rubygems.org/
+</span><span class='line'>Resolving dependencies...
+</span><span class='line'>Installing json 2.0.0 with native extensions
+</span><span class='line'>Using bundler 1.13.0
+</span><span class='line'>Bundle complete! 1 Gemfile dependency, 2 gems now installed.
+</span><span class='line'>Use `bundle show [gemname]` to see where a bundled gem is installed.
+</span><span class='line'>% bundle exec irb -r irb/completion --simple-prompt
+</span><span class='line'>&gt;&gt; require 'json'
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; JSON::VERSION
+</span><span class='line'>=&gt; "2.0.0"</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h2>おかしなことが起こる例</h2>
+
+<p>ruby 2.4 だと古い json 1.x が入らない関係で rdoc 4.x が入らなかったので、
+ここだけ使用中の ruby 2.3.1 で検証しました。</p>
+
+<h3>準備</h3>
+
+<p>rubygems が古いため、 <code>default:</code> は付いていませんが、 4.2.1 が default gem です。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% rbenv shell 2.3.1
+</span><span class='line'>% echo "gem 'rdoc', '= 5.0.0.beta2'" &gt;&gt; Gemfile
+</span><span class='line'>% bundle install
+</span><span class='line'>Warning: the running version of Bundler is older than the version that created the lockfile. We suggest you upgrade to the latest version of Bundler by running `gem install bundler`.
+</span><span class='line'>Fetching gem metadata from https://rubygems.org/
+</span><span class='line'>Fetching version metadata from https://rubygems.org/
+</span><span class='line'>Resolving dependencies...
+</span><span class='line'>Installing json 2.0.0 with native extensions
+</span><span class='line'>Installing rdoc 5.0.0.beta2
+</span><span class='line'>Using bundler 1.12.5
+</span><span class='line'>Bundle complete! 2 Gemfile dependencies, 3 gems now installed.
+</span><span class='line'>Use `bundle show [gemname]` to see where a bundled gem is installed.
+</span><span class='line'>% gem list rdoc
+</span><span class='line'>
+</span><span class='line'>*** LOCAL GEMS ***
+</span><span class='line'>
+</span><span class='line'>rdoc (5.0.0.beta2, 4.2.1)</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h3>rdoc 5 で減ったファイルを探す</h3>
+
+<p>探してみたところ、 <code>rdoc/markdown/literals_1_9.rb</code> が <code>rdoc/markdown/literals.rb</code> に改名されていてなくなっていたのを見つけたので、
+これを使っておかしな挙動を確かめてみました。</p>
+
+<h3>bundler 環境下で確認</h3>
+
+<p>bundler 環境下では <code>Gemfile</code> で指定した 5.0.0.beta2 が読み込まれるのがわかります。</p>
+
+<p>ここまでは良いのですが、 5.0.0.beta2 ではなくなっているファイルを <code>require 'rdoc/markdown/literals_1_9'</code> で読み込もうとすると、
+default gem の 4.2.1 のファイルが (組み合わせがおかしいので警告が出つつ) 読み込めてしまいます。</p>
+
+<p><code>$LOAD_PATH</code> を確認してみると、そういう挙動になる理由はわかるのですが、増減するファイルによっては何か気づきにくい問題が起きるかもしれません。</p>
 
 <div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -442,63 +400,71 @@ docker のサーバーとの接続がうまくいかない場合はここでエ�
 <span class='line-number'>19</span>
 <span class='line-number'>20</span>
 <span class='line-number'>21</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>docker@boot2docker:~$ docker run -i -t ubuntu /bin/bash
-</span><span class='line'>Unable to find image 'ubuntu' locally
-</span><span class='line'>Pulling repository ubuntu
-</span><span class='line'>9cd978db300e: Download complete
-</span><span class='line'>eb601b8965b8: Download complete
-</span><span class='line'>5ac751e8d623: Download complete
-</span><span class='line'>9cc9ea5ea540: Download complete
-</span><span class='line'>9f676bd305a4: Download complete
-</span><span class='line'>511136ea3c5a: Download complete
-</span><span class='line'>f323cf34fd77: Download complete
-</span><span class='line'>6170bb7b0ad1: Download complete
-</span><span class='line'>1c7f181e78b9: Download complete
-</span><span class='line'>7a4f87241845: Download complete
-</span><span class='line'>321f7f4200f4: Download complete
-</span><span class='line'>root@a64cca91db41:/# ps -ef
-</span><span class='line'>UID        PID  PPID  C STIME TTY          TIME CMD
-</span><span class='line'>root         1     0  0 15:32 ?        00:00:00 /bin/bash
-</span><span class='line'>root         9     1  0 15:33 ?        00:00:00 ps -ef
-</span><span class='line'>root@a64cca91db41:/# exit
-</span><span class='line'>exit
-</span><span class='line'>docker@boot2docker:~$</span></code></pre></td></tr></table></div></figure></notextile></div>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% bundle exec irb -r irb/completion --simple-prompt
+</span><span class='line'>&gt;&gt; require 'rdoc'
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; RDoc::VERSION
+</span><span class='line'>=&gt; "5.0.0.beta2"
+</span><span class='line'>&gt;&gt; require 'rdoc/markdown/literals_1_9'
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/2.3.0/rdoc/markdown/literals_1_9.rb:413: warning: already initialized constant RDoc::Markdown::Literals::Rules
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/rdoc-5.0.0.beta2/lib/rdoc/markdown/literals.rb:409: warning: previous definition of Rules was here
+</span><span class='line'>=&gt; true
+</span><span class='line'>&gt;&gt; puts $LOAD_PATH
+</span><span class='line'>/usr/local/Cellar/rbenv/1.0.0/rbenv.d/exec/gem-rehash
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/bundler-1.12.5/lib
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/rdoc-5.0.0.beta2/lib
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/json-2.0.0/lib
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/extensions/x86_64-darwin-14/2.3.0-static/json-2.0.0
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/site_ruby/2.3.0
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/site_ruby/2.3.0/x86_64-darwin14
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/site_ruby
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/vendor_ruby/2.3.0
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/vendor_ruby/2.3.0/x86_64-darwin14
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/vendor_ruby
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/2.3.0
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/2.3.0/x86_64-darwin14
+</span><span class='line'>=&gt; nil</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<p><a href="http://blog.n-z.jp/blog/2013-12-24-docker-rm.html">Dockerで不要になったコンテナやイメージを削除する</a>
-に書いたようにコンテナが溜まっていくので、削除しておきます。</p>
+<h3>gem which で確認</h3>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>docker@boot2docker:~$ docker ps -a -q
-</span><span class='line'>a64cca91db41
-</span><span class='line'>docker@boot2docker:~$ docker rm `docker ps -a -q`
-</span><span class='line'>a64cca91db41
-</span><span class='line'>docker@boot2docker:~$</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-
-<p>ちょっと試すだけなら <code>-rm</code> オプションを付けて自動削除するのが良さそうです。</p>
-
-<p>(2014-08-03 追記:
-最近の <code>docker</code> では <code>-rm</code> ではなく <code>--rm</code> を使うように警告
-「<code>Warning: '-rm' is deprecated, it will be replaced by '--rm' soon. See usage.</code>」
-が出てくるので、
-将来のバージョンでは長いオプションには <code>-</code> 2個が必須になるようです。)</p>
+<p><code>gem which</code> でどのファイルが <code>require</code> で読み込まれるのか確認できるので、参考になるかもしれません。</p>
 
 <div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
 <span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>docker@boot2docker:~$ docker run -i -t -rm ubuntu /bin/bash
-</span><span class='line'>root@f810cbccf394:/# exit
-</span><span class='line'>exit
-</span><span class='line'>docker@boot2docker:~$ docker ps -a -q
-</span><span class='line'>docker@boot2docker:~$</span></code></pre></td></tr></table></div></figure></notextile></div>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% gem which rdoc/markdown/entities
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/2.3.0/rdoc/markdown/entities.rb
+</span><span class='line'>% bundle exec gem which rdoc/markdown/entities
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/rdoc-5.0.0.beta2/lib/rdoc/markdown/entities.rb
+</span><span class='line'>% bundle exec gem which rdoc/markdown/literals_1_9
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/2.3.0/rdoc/markdown/literals_1_9.rb
+</span><span class='line'>% bundle exec gem which rdoc/markdown/literals
+</span><span class='line'>/Users/kazu/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/rdoc-5.0.0.beta2/lib/rdoc/markdown/literals.rb</span></code></pre></td></tr></table></div></figure></notextile></div>
 
+
+<h2>普通は問題にならないであろう問題点</h2>
+
+<p>基本的には Ruby コミッターしか影響しないはずなので、単なるおまけです。</p>
+
+<p>どこに報告すればいいのかわからなかったので、とりあえず gist にメモを書いた (<a href="https://gist.github.com/znz/62946cbb55de4fe58a5101d7875a2ba1">rubygems with multi default gem problem</a>) のですが、Ruby コミッターのように開発版を上書きインストールし続けている環境を持っていると、
+default gem として複数バージョンの gemspec を持ってしまうことがあり、実際には後から <code>make install</code> した方しか入っていないので、ダミーの gemspec だけ残っているバージョンを指定した時におかしなことになるという話です。</p>
+
+<p>クリーンインストールしなおすなり、 <code>$(gem env gemdir)/specifications/default</code> の古い gemspec を消すなりすれば良いだけなので、そんなに困る問題でもないです。</p>
+
+<h2>まとめ</h2>
+
+<p>bundled gem と default gem の違いを実際の動作を元に比べてみました。
+また、 bundler と組み合わせて問題が起きる可能性がある例をみてみました。
+通常の使い方では問題が起きることはないと思いますが、トリビア的に知っておくとおもしろいかもしれません。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -517,12 +483,12 @@ docker のサーバーとの接続がうまくいかない場合はここでエ�
 
 
 
-<time class='entry-date' datetime='2014-02-23T00:47:22+09:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>23</span><span class='date-suffix'>rd</span>, <span class='date-year'>2014</span></span> <span class='time'>12:47 am</span></time>
+<time class='entry-date' datetime='2016-09-13T23:33:33+09:00'><span class='date'><span class='date-month'>Sep</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>11:33 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/boot2docker/'>boot2docker</a>, <a class='category' href='/blog/categories/docker/'>docker</a>
+    <a class='category' href='/blog/categories/ruby/'>ruby</a>
   
 </span>
 
@@ -549,10 +515,8 @@ docker のサーバーとの接続がうまくいかない場合はここでエ�
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2014-02-22-reading-land-of-lisp.html" title="Previous Post: Land of Lisp 読書会 最終回（第5回）(兵庫県)に参加してきた">&laquo; Land of Lisp 読書会 最終回（第5回）(兵庫県)に参加してきた</a>
+        <a class="basic-alignment left" href="/blog/2016-09-10-bundled-gem-and-default-gem.html" title="Previous Post: bundled gem と default gem の違い">&laquo; bundled gem と default gem の違い</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2014-02-23-upstart-has-missing-features.html" title="Next Post: upstartに不足している機能">upstartに不足している機能 &raquo;</a>
       
     </p>
   </footer>
@@ -687,8 +651,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-02-23-boot2docker.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2014-02-23-boot2docker.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2016-09-13-bundled-gem-and-default-gem-more.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2016-09-13-bundled-gem-and-default-gem-more.html';
         var disqus_script = 'embed.js';
       
     (function () {
