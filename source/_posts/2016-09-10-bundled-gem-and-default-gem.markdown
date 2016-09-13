@@ -29,4 +29,4 @@ RubyKaigi 2016 の後の移動中に hsbt さんに bundled gem と default gem 
 
 ## 続く
 
-続くかも。
+[bundled gem と default gem の違いの具体例](/blog/2016-09-13-bundled-gem-and-default-gem-more.html)に続きを書きました。
