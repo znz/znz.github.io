@@ -4,7 +4,7 @@
   <title><![CDATA[Category: security | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/security/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-09-14T00:00:04+09:00</updated>
+  <updated>2016-09-25T23:19:44+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,200 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[2要素認証を設定し直した]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-09-25-update-2fa.html"/>
+    <updated>2016-09-25T22:59:39+09:00</updated>
+    <id>http://blog.n-z.jp/blog/update-2fa</id>
+    <content type="html"><![CDATA[<p>Google Authenticator を入れているデバイスを買い換えたので、2要素認証 (2FA: two-factor authentication) (サービスによっては MFA: Multi-factor authentication) を設定し直してみました。</p>
+
+<!--more-->
+
+
+<h2>2要素認証一般の話</h2>
+
+<ul>
+<li>今回使用しているのは TOTP という RFC にもなっている規格なので Google に依存しているわけではありません</li>
+<li><a href="https://support.apple.com/ja-jp/HT204915" title="Apple ID の 2 ファクタ認証">Apple ID の 2 ファクタ認証</a> は TOTP ではなさそうです</li>
+<li><a href="https://itunes.apple.com/jp/app/google-authenticator/id388497605?mt=8" title="Google Authenticator">Google Authenticator</a> (iOS) や <a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&amp;amp;hl=ja" title="Google 認証システム">Google 認証システム</a> (Android) がよく使われている気がします</li>
+<li>Google 依存を避けたいのなら <a href="http://www.iij.ad.jp/smartkey/" title="IIJ SmartKey">IIJ SmartKey</a> や Microsoft Authenticator というのもあるようです</li>
+<li>TOTP は QR コードかテキスト入力した秘密情報と時刻を元に認証用の数字を生成しているだけなので、複数の端末・アプリに同時に設定することも可能です (当然ですが、紛失した時のリスクは増加します)</li>
+</ul>
+
+
+<h2>github.com</h2>
+
+<ul>
+<li>ログインしておく</li>
+<li>右上の自分のアイコンをクリックして Settings をクリック</li>
+<li>Security をクリック</li>
+<li>Two-factor authentication の Edit をクリック</li>
+<li>パスワードの確認が入る</li>
+<li>Reconfigure two-factor authentication をクリック</li>
+<li>リカバリーコードと fallback SMS 設定には影響がないという説明を確認</li>
+<li><a href="https://help.github.com/articles/configuring-two-factor-authentication-via-a-totp-mobile-app/">https://help.github.com/articles/configuring-two-factor-authentication-via-a-totp-mobile-app/</a> に対応アプリの説明あり</li>
+<li>Set up using an app をクリック</li>
+<li>QR コードをアプリでスキャン</li>
+<li>アプリに表示されている6桁の数字を入力して Enable two-factor authentication をクリック</li>
+</ul>
+
+
+<h2>Google アカウント</h2>
+
+<ul>
+<li>ログインしておく</li>
+<li><a href="https://myaccount.google.com/">https://myaccount.google.com/</a> から「Google へのログイン」をクリック</li>
+<li>「2 段階認証プロセス」をクリック</li>
+<li>パスワードを再入力</li>
+<li>2 段階認証の確認コードを入力</li>
+<li>「2 つ目の手順」の「認証システム アプリ （デフォルト）」のペンのアイコンをクリック</li>
+<li>「登録された認証システム アプリ」ポップアップが出てきたので「変更」をクリック</li>
+<li>「お使いのスマートフォンの種類」で「Android」が選択されていたのでそのまま「次へ」をクリック (iPhone を選ぶとたぶん説明が違う)</li>
+<li>QR コードをアプリでスキャン</li>
+<li>「次へ」をクリック</li>
+<li>アプリに表示されている6桁の数字を入力して「確認」をクリック</li>
+<li>「完了」をクリック</li>
+</ul>
+
+
+<h2>Evernote</h2>
+
+<ul>
+<li>ログインする</li>
+<li>左下のアイコンから「設定」を開く</li>
+<li>「セキュリティ概要」を開く</li>
+<li>「2 段階認証が有効です」になっているので「設定を管理」をクリック</li>
+<li>再設定はなさそうなので「2 段階認証を無効化」で一度無効化</li>
+<li>「2 段階認証を無効化しますか？」が出てきたので「確認」をクリック</li>
+<li>「2 段階認証が有効化されていません」になったので「有効化」をクリック</li>
+<li>説明が出てくるので「続ける」をクリック</li>
+<li>重要事項が出てくるのでさらに「続ける」をクリック</li>
+<li>メールアドレスを確認が出てくるので「確認用Eメールを送信する」をクリック</li>
+<li>メールを確認して確認コードを入力して「続ける」をクリック</li>
+<li>「携帯電話番号を入力」で「日本 (+81)」のまま「90-xxxx-yyyy」のように入力して「続ける」をクリック</li>
+<li>SMS で確認コードが届くので確認コードを入力して「続ける」をクリック</li>
+<li>「（任意）バックアップ用電話番号を設定」が出てくるので左下の「スキップ」をクリック</li>
+<li>「Google 認証システムを入手する」の説明が出てくるので「iOS で続行」をクリック (一番上にあったので)</li>
+<li>QR コードをアプリでスキャン</li>
+<li>アプリに表示されている6桁の数字を入力して「続ける」をクリック</li>
+<li>「バックアップコード」が表示されるのでコピーするなり印刷するなりして安全な場所に保存 (個人的には gpg で暗号化したファイルに保存している)</li>
+<li>「続ける」をクリック</li>
+<li>「バックアップコードを入力」でバックアップコードのひとつを入力して「セットアップを完了」(ここで入力しても無効にはならない)</li>
+<li>「2 段階認証のセットアップが完了しました」の説明が出てくるので「完了」をクリック</li>
+<li>「2 段階認証が有効です」になっているので、必要なら「設定を管理」からアプリケーション用パスワードを再設定していく必要がありそう (使っていなかったので不明)</li>
+</ul>
+
+
+<h2>live.jp</h2>
+
+<ul>
+<li>ログインする</li>
+<li>右上のアカウント画像から「アカウントの表示」をクリック</li>
+<li>上のところから「セキュリティとプライバシー」をクリック</li>
+<li>「アカウント セキュリティ」の「その他のセキュリティ設定」をクリック</li>
+<li>「認証アプリ」から「本人確認アプリをセットアップ」をクリック</li>
+<li>「認証アプリの設定」に入るので「アプリをインストールするモバイル デバイス」から「iPhone、iPad、または iPod touch」を選択して「次へ」をクリック</li>
+<li>Microsoft Authenticator で「個人のアカウント」を追加</li>
+<li>同様に Android の設定の場合</li>
+<li>「認証アプリの設定」に入るので「アプリをインストールするモバイル デバイス」から「Android」を選択して「次へ」をクリック</li>
+<li>Microsoft Authenticator で「個人のアカウント」を追加</li>
+<li>同様に TOTP アプリの場合</li>
+<li>「認証アプリの設定」で「その他」を選択して「次へ」をクリック</li>
+<li>「この設定を行うと、以前に認証アプリを使って生成し、設定したコードがすべて無効になります。続行してもよろしいですか?」という確認が出てくるので「次へ」をクリック</li>
+<li>QR コードをアプリでスキャン</li>
+<li>「アプリによって生成されたコード」にアプリに表示されている6桁の数字を入力して「次へ」をクリック</li>
+</ul>
+
+
+<p>ログイン時に通知で許可するか拒否するか出てくるようになりました。
+「その他」で TOTP の設定をするとそちらが優先されるようになりましたが、どちらが優先されるかは最後にどちらを使ったかで決まるようです。</p>
+
+<p>TOTP から Microsoft Authenticator への通知への切り替えは「Microsoft アカウント アプリに本人確認要求を送ります。」でできて、通知から TOTP への切り替えは「問題が発生した場合」をクリックすると出てくる「セキュリティ コードを入力してください」でできるようです。</p>
+
+<p>Microsoft Authenticator の方は通知で認証できたり、表示されているのが 8 桁だったりして、
+Microsoft のアカウントの認証に対しては TOTP で一般的な 6 桁ではないので、
+他の方式なのかもしれないと思って、ちょっと調べてみたのですが、
+よくわかりませんでした。</p>
+
+<h2>Dropbox</h2>
+
+<ul>
+<li>ログインする</li>
+<li>右上のアカウントのところから「設定」をクリック</li>
+<li>「セキュリティ」タブをクリック</li>
+<li>「2 段階認証」の「主要」の「認証アプリ」の「編集」をクリック</li>
+<li>パスワードを入力して「次へ」をクリック</li>
+<li>「モバイル アプリを使用」を選んだまま「次へ」をクリック</li>
+<li>QR コードをアプリでスキャン</li>
+<li>「次へ」をクリック</li>
+<li>対応アプリについては <a href="https://www.dropbox.com/help/363#2fa-apps">https://www.dropbox.com/help/363#2fa-apps</a> に説明あり</li>
+<li>アプリに表示されている6桁の数字を入力して「確認」をクリック</li>
+<li>「予備の携帯番号 （オプション）」に「日本 (+81)」と「90xxxxyyyy」のように入力されていたのでそのまま「次へ」をクリック</li>
+</ul>
+
+
+<p>セキュリティの画面に戻って設定完了しました。</p>
+
+<h2>amazon.com</h2>
+
+<p>root-account-mfa-device とだけ出ていて、何のものなのかわかりにくかったのですが、
+Amazon Product Advertising API で使っている amazon.com のものでした。</p>
+
+<p>Amazon Product Advertising API で使っているだけなので、AWS の無料期間を始めないように注意しながら探しました。</p>
+
+<ul>
+<li><a href="https://console.aws.amazon.com/iam/home?#security_credential">https://console.aws.amazon.com/iam/home?#security_credential</a> の「Multi-Factor Authentication（MFA）」</li>
+<li>「再同期」は意味がなかったので「無効化」してから「MFA の有効化」をしなおしました</li>
+<li>「仮想 MFA デバイス」を選んで「次のステップ」</li>
+<li>対応アプリの説明は <a href="https://aws.amazon.com/jp/iam/details/mfa/">https://aws.amazon.com/jp/iam/details/mfa/</a></li>
+<li>説明を読んで「次のステップ」</li>
+<li>QR コードをアプリでスキャン</li>
+<li>アプリに表示されている6桁の数字を「認証コード1」に入力して、しばらく待って表示が変わったら「認証コード2」に入力して「仮想 MFA の有効化」</li>
+<li>「MFA デバイスは正常に関連付けられました。」と出るので「完了」</li>
+</ul>
+
+
+<h2>さくらの会員メニュー</h2>
+
+<ul>
+<li>ログインする</li>
+<li>説明ページ: <a href="https://help.sakura.ad.jp/hc/ja/articles/206057222">https://help.sakura.ad.jp/hc/ja/articles/206057222</a></li>
+<li>「2段階認証の設定」をクリックする (わかりにくいがタイトルっぽいところがリンクにもなっている)</li>
+<li>「※QRコードを発行・表示できるのは一度のみです。紛失した場合、一度設定を「無効」にする必要があります。」とあるので一度「無効」にして「設定変更」をクリック</li>
+<li>確認が出るので「無効化」をクリック</li>
+<li>再び「有効」にして「設定変更」をクリック</li>
+<li>「2段階認証設定」をクリック</li>
+<li>「QRコードを発行する」をクリック</li>
+<li>QR コードをアプリでスキャン</li>
+<li>「認証コード入力画面へ」をクリック</li>
+<li>認証コードを入力して「ログイン(認証)」をクリック</li>
+<li>「QRコード発行済み」になっていれば2FAは設定完了</li>
+<li>さらに「バックアップコードを作成」をクリック</li>
+<li>「現在のバックアップコードを表示する」をクリック</li>
+<li>バックアップコードを安全な場所に保管</li>
+</ul>
+
+
+<h2>libpam-google-authenticator</h2>
+
+<ul>
+<li>ログインする</li>
+<li><code>google-authenticator</code> コマンドを実行して <code>.google_authenticator</code> ファイルを上書きする</li>
+<li>途中で表示される QR コードをアプリでスキャン</li>
+<li>emergency scratch codes (バックアップコード) も再発行されるので安全な場所に控えておく</li>
+</ul>
+
+
+<h2>まとめ</h2>
+
+<p>再設定機能があるサービスは再設定がしやすくて良かったのですが、そういう機能がないところは一時的に無効にしてセキュリティレベルが下がってしまうのが気になりました。</p>
+
+<p>どちらが良いのかはわかりませんが、再設定によってバックアップコードが影響を受けないところと再発行のところがあるのも気になりました。</p>
+
+<p>二要素認証 (多要素認証) はセキュリティにとって重要なものなので、デバイスの買い替えなどの適当なタイミングで再設定できたのは良い機会だったのかと思いました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[OpenSSL/GnuTLS での CSR の作り方]]></title>
