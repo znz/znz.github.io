@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-09-25T23:19:44+09:00</updated>
+  <updated>2016-10-03T00:37:30+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,436 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[React On Rails の react-webpack-rails-tutorial を Dokku で試してみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-10-02-react-webpack-rails-tutorial-on-dokku.html"/>
+    <updated>2016-10-02T22:24:55+09:00</updated>
+    <id>http://blog.n-z.jp/blog/react-webpack-rails-tutorial-on-dokku</id>
+    <content type="html"><![CDATA[<p>react.js を rails と組み合わせて使うにはどうすればいいんだろうと思って調べてみると、<code>react-rails</code> gem の他に <code>react_on_rails</code> gem というもっとまとめていろんなことの面倒を見てくれるものがあったので、そのサンプルアプリである
+<a href="https://github.com/shakacode/react-webpack-rails-tutorial" title="react-webpack-rails-tutorial">react-webpack-rails-tutorial</a>
+を <a href="https://github.com/dokku/dokku/" title="Dokku">Dokku</a> にデプロイできるか試してみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>OS X El Capitan 10.11.6</li>
+<li>VirtualBox 5.1.6</li>
+<li>Vagrant 1.8.6</li>
+<li>Dokku master (0.7.2 からちょっと変更が進んだもの)</li>
+<li>react-webpack-rails-tutorial master</li>
+<li>ruby 2.3.1</li>
+<li>rails 5.0.0</li>
+<li>node 6.7.0</li>
+</ul>
+
+
+<h2>環境構築</h2>
+
+<p>まず <a href="https://github.com/dokku/dokku">https://github.com/dokku/dokku</a> を git clone したディレクトリで作業します。</p>
+
+<p>vagrant の provision から何度も試すようなら、 apt で日本のミラーを使うように shell provisioning を追加しておきます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gh">diff --git a/Vagrantfile b/Vagrantfile</span>
+</span><span class='line'><span class="gh">index 4f3fc6c..bccceb9 100644</span>
+</span><span class='line'><span class="gd">--- a/Vagrantfile</span>
+</span><span class='line'><span class="gi">+++ b/Vagrantfile</span>
+</span><span class='line'><span class="gu">@@ -47,6 +47,7 @@ Vagrant::configure(&quot;2&quot;) do |config|</span>
+</span><span class='line'>       vb.customize [&quot;modifyvm&quot;, :id, &quot;--natdnsproxy1&quot;, &quot;off&quot;]
+</span><span class='line'>     end
+</span><span class='line'>
+</span><span class='line'><span class="gi">+    vm.vm.provision :shell, :inline =&gt; &quot;sed -i -e &#39;s,//us\\.archive\\.ubuntu\\.com,//jp.archive.ubuntu.com,&#39; /etc/apt/sources.list&quot;</span>
+</span><span class='line'>     vm.vm.provision :shell, :inline =&gt; &quot;export DEBIAN_FRONTEND=noninteractive &amp;&amp; apt-get update &gt; /dev/null &amp;&amp; apt-get -qq -y install git &gt; /dev/null &amp;&amp; cd /root/dokku &amp;&amp; #{make_cmd}&quot;
+</span><span class='line'>     vm.vm.provision :shell, :inline =&gt; &quot;cd /root/dokku &amp;&amp; make dokku-installer&quot;
+</span><span class='line'>     vm.vm.provision :shell do |s|
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>vagrant up</code> します。
+gliderlabs/herokuish の docker イメージのダウンロードなどもあるので時間がかかります。</p>
+
+<h2>Web UI での設定</h2>
+
+<p><a href="http://dokku.me/">http://dokku.me/</a> を開いて初期設定します。
+<code>Hostname</code> を <code>dokku.me</code> に変更して <code>Use virtualhost naming for apps</code> にチェックを入れて <code>Finish Setup</code> を押します。</p>
+
+<p>意図した動作かどうかはわかりませんが、この作業をしなくても <code>app-name.dokku.me</code> は使えました。
+(<code>not-found-app.dokku.me</code> で初期設定画面は出てくるまま)</p>
+
+<h2>初期設定</h2>
+
+<p><code>/vagrant/tmp/init.sh</code> に以下のファイルをおいて実行します。
+<code>tmp</code> は <code>.gitignore</code> に入っていてローカルな作業ファイルをおくのに都合が良いです。</p>
+
+<p>内容としては以下のようなことをしています。</p>
+
+<ul>
+<li><code>docker</code> コマンドを <code>sudo</code> なしで呼べるように <code>docker</code> グループに <code>vagrant</code> ユーザーを追加</li>
+<li><code>/home/dokku</code> を調べたりするときなどに都合が良いように <code>dokku</code> グループに <code>vagrant</code> ユーザーを追加</li>
+<li>ruby などのダウンロードでタイムアウトしないように <code>CURL_TIMEOUT</code> を増やす</li>
+<li><code>dokku run</code> などで一時的に作成されるコンテナーをデフォルトで削除するように <code>DOKKU_RM_CONTAINER</code> を設定</li>
+<li><code>~/.ssh/known_hosts</code> がハッシュ化されているとどの行がどのホストかわからなくなるので <code>HashKnownHosts no</code> で無効化</li>
+<li>あとで git push のときに使う <code>10.0.0.2</code> のホスト鍵を <code>~/.ssh/known_hosts</code> に追加</li>
+<li>ssh の鍵ペアを作成して <code>dokku ssh-keys:add</code> で登録</li>
+<li>ruby のビルドに必要なパッケージなどをインストール</li>
+<li>anyenv, rbenv, ndenv をインストール</li>
+<li><code>~/.gemrc</code> を作成してデフォルトでドキュメントのインストールを無効化</li>
+<li>ndenv で最新の node をインストール</li>
+</ul>
+
+
+<p>デプロイするだけなら anyenv などは不要ですが、あとで開発環境としても動かしたかったので入れています。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="c">#!/bin/bash</span>
+</span><span class='line'><span class="nb">set</span> -euo pipefail
+</span><span class='line'><span class="nb">set</span> -x
+</span><span class='line'><span class="nb">cd</span> /home/vagrant
+</span><span class='line'>sudo usermod -aG docker vagrant
+</span><span class='line'>sudo usermod -aG dokku vagrant
+</span><span class='line'>dokku config:set --global <span class="nv">CURL_TIMEOUT</span><span class="o">=</span>120
+</span><span class='line'>dokku config:set --global <span class="nv">DOKKU_RM_CONTAINER</span><span class="o">=</span>1
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> ! -e <span class="s2">&quot;$HOME/.ssh/config&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  <span class="nb">echo</span> <span class="s2">&quot;HashKnownHosts no&quot;</span> &gt;<span class="s2">&quot;$HOME/.ssh/config&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> ! -e <span class="s2">&quot;$HOME/.ssh/known_hosts&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  ssh-keyscan -t ecdsa-sha2-nistp256 10.0.0.2 <span class="p">|</span> grep -v <span class="s1">&#39;#&#39;</span> &gt; <span class="s2">&quot;$HOME/.ssh/known_hosts&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> ! -e <span class="s2">&quot;$HOME/.ssh/id_rsa&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  ssh-keygen -N <span class="s1">&#39;&#39;</span> -f <span class="s2">&quot;$HOME/.ssh/id_rsa&quot;</span>
+</span><span class='line'>  sudo dokku ssh-keys:add vagrant <span class="s2">&quot;$HOME/.ssh/id_rsa.pub&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$(dpkg -l | grep libsqlite3-dev)&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  sudo sed -i~ -e <span class="s1">&#39;s/us\.archive/jp.archive/&#39;</span> /etc/apt/sources.list
+</span><span class='line'>  sudo apt-get update
+</span><span class='line'>  sudo apt-get -y install autoconf bison build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm3 libgdbm-dev
+</span><span class='line'>  sudo apt-get -y install libpq-dev
+</span><span class='line'>  sudo apt-get -y install libsqlite3-dev
+</span><span class='line'>  sudo apt-get -y install jq
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> ! -d ~/.anyenv <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  git clone https://github.com/riywo/anyenv.git ~/.anyenv
+</span><span class='line'>  <span class="nb">echo</span> <span class="s1">&#39;export PATH=&quot;$HOME/.anyenv/bin:$PATH&quot;&#39;</span> &gt;&gt; ~/.bashrc
+</span><span class='line'>  <span class="nb">echo</span> <span class="s1">&#39;eval &quot;$(anyenv init -)&quot;&#39;</span> &gt;&gt; ~/.bashrc
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> -z <span class="s2">&quot;$(command -v anyenv)&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  <span class="nb">export </span><span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;$HOME/.anyenv/bin:$PATH&quot;</span>
+</span><span class='line'>  <span class="nb">set</span> +x
+</span><span class='line'>  <span class="nb">eval</span> <span class="s2">&quot;$(anyenv init - --no-rehash)&quot;</span>
+</span><span class='line'>  <span class="nb">set</span> -x
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> ! -d ~/.anyenv/envs/rbenv <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  anyenv install rbenv
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> ! -f ~/.gemrc <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  cat <span class="s">&lt;&lt;EOF &gt;~/.gemrc</span>
+</span><span class='line'><span class="s">install: --no-rdoc --no-ri --format-executable</span>
+</span><span class='line'><span class="s">update: --no-rdoc --no-ri --format-executable</span>
+</span><span class='line'><span class="s">EOF</span>
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> ! -d <span class="s2">&quot;$HOME/.anyenv/envs/ndenv&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  anyenv install ndenv
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="nv">node_version</span><span class="o">=</span><span class="k">$(</span>ndenv install -l <span class="p">|</span> grep <span class="s1">&#39;^ *v&#39;</span> <span class="p">|</span> tail -n1 <span class="p">|</span> xargs<span class="k">)</span>
+</span><span class='line'><span class="k">if</span> ! ndenv versions <span class="p">|</span> grep -q <span class="s2">&quot;$node_version&quot;</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  ndenv install <span class="s2">&quot;$node_version&quot;</span>
+</span><span class='line'>  ndenv global <span class="s2">&quot;$node_version&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>react-webpack-rails-tutorial のデプロイ</h2>
+
+<p>一度 <code>exit</code> で抜けて <code>vagrant ssh</code> で入りなおしてグループの変更や anyenv などのインストールを反映します。</p>
+
+<p><code>/vagrant/tmp/react-webpack-rails-tutorial.sh</code> に以下のファイルをおいて実行します。</p>
+
+<p>内容としては以下のようなことをしています。</p>
+
+<ul>
+<li><a href="https://github.com/shakacode/react-webpack-rails-tutorial">https://github.com/shakacode/react-webpack-rails-tutorial</a> の取得</li>
+<li>react-webpack-rails-tutorial アプリの作成 (リンク作業に必要)</li>
+<li>dokku-postgres が入っていなければ入れる</li>
+<li>react-webpack-rails-tutorial-db を作ってリンク</li>
+<li>dokku という remote を追加</li>
+<li><a href="https://github.com/heroku/heroku-buildpack-multi">https://github.com/heroku/heroku-buildpack-multi</a> を使うため <code>.buildpacks</code> を作成</li>
+<li><code>rake db:migrate</code> の自動実行のため <code>app.json</code> を作成</li>
+<li>デプロイ</li>
+</ul>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="c">#!/bin/bash</span>
+</span><span class='line'><span class="nb">set</span> -euo pipefail
+</span><span class='line'><span class="nb">set</span> -x
+</span><span class='line'><span class="nb">cd</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> ! -d react-webpack-rails-tutorial <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  git clone https://github.com/shakacode/react-webpack-rails-tutorial
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> ! -d /home/dokku/react-webpack-rails-tutorial <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  dokku apps:create react-webpack-rails-tutorial
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> ! -d /var/lib/dokku/plugins/available/postgres <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git <span class="o">||</span> :
+</span><span class='line'>  sudo docker pull gliderlabs/herokuish
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> ! -f /home/dokku/react-webpack-rails-tutorial/DOCKER_OPTIONS_RUN <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  dokku postgres:create react-webpack-rails-tutorial-db <span class="o">||</span> :
+</span><span class='line'>  dokku postgres:link react-webpack-rails-tutorial-db react-webpack-rails-tutorial
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="nb">cd </span>react-webpack-rails-tutorial
+</span><span class='line'><span class="k">if</span> ! git remote <span class="p">|</span> grep -q dokku<span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  git remote add dokku dokku@10.0.0.2:react-webpack-rails-tutorial
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'>cat &gt;.buildpacks <span class="s">&lt;&lt;EOF</span>
+</span><span class='line'><span class="s">https://github.com/heroku/heroku-buildpack-nodejs</span>
+</span><span class='line'><span class="s">https://github.com/heroku/heroku-buildpack-ruby</span>
+</span><span class='line'><span class="s">EOF</span>
+</span><span class='line'>git add .buildpacks
+</span><span class='line'>git commit -m <span class="s1">&#39;Add .buildpacks&#39;</span> <span class="o">||</span> :
+</span><span class='line'>cat <span class="s">&lt;&lt;EOF &gt;app.json</span>
+</span><span class='line'><span class="s">{</span>
+</span><span class='line'><span class="s">  &quot;scripts&quot;: {</span>
+</span><span class='line'><span class="s">    &quot;dokku&quot;: {</span>
+</span><span class='line'><span class="s">      &quot;predeploy&quot;: &quot;bundle exec rake db:migrate&quot;</span>
+</span><span class='line'><span class="s">    }</span>
+</span><span class='line'><span class="s">  }</span>
+</span><span class='line'><span class="s">}</span>
+</span><span class='line'><span class="s">EOF</span>
+</span><span class='line'>git add app.json
+</span><span class='line'>git commit -m <span class="s2">&quot;Set script.dokku.predeploy to app.json&quot;</span> <span class="o">||</span> :
+</span><span class='line'>git push dokku master
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>動作確認</h2>
+
+<p>ブラウザーで <a href="http://react-webpack-rails-tutorial.dokku.me/">http://react-webpack-rails-tutorial.dokku.me/</a> を開いて動作確認します。</p>
+
+<h2>.buildpacks の順番</h2>
+
+<p><code>.buildpacks</code> で nodejs, ruby という順番で指定しましたが、逆の順番にすると以下のエラーで失敗しました。
+<code>react_on_rails</code> で使っているので、 nodejs の方を先に入れる必要があるようです。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='text'><span class='line'>-----&gt; Preparing app for Rails asset pipeline
+</span><span class='line'>       Running: rake assets:precompile
+</span><span class='line'>       cd client &amp;&amp; npm run build:production
+</span><span class='line'>       sh: 1: npm: not found
+</span><span class='line'>       rake aborted!
+</span><span class='line'>       Command failed with status (127): [cd client &amp;&amp; npm run build:production...]
+</span><span class='line'>       /tmp/build/vendor/bundle/ruby/2.3.0/gems/react_on_rails-6.1.0/lib/tasks/assets.rake:33:in `block (3 levels) in &lt;top (required)&gt;&#39;
+</span><span class='line'>       /tmp/build/vendor/bundle/ruby/2.3.0/gems/rake-11.2.2/exe/rake:27:in `&lt;top (required)&gt;&#39;
+</span><span class='line'>       Tasks: TOP =&gt; assets:precompile =&gt; react_on_rails:assets:compile_environment =&gt; react_on_rails:assets:webpack
+</span><span class='line'>       (See full trace by running task with --trace)
+</span><span class='line'>       !
+</span><span class='line'>       !     Precompiling assets failed.
+</span><span class='line'>       !
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>開発環境設定</h2>
+
+<p><a href="https://github.com/shakacode/react-webpack-rails-tutorial#basic-demo-setup">https://github.com/shakacode/react-webpack-rails-tutorial#basic-demo-setup</a> を参考にして設定します。</p>
+
+<p><code>/vagrant/tmp/react-webpack-rails-tutorial-dev.sh</code> に以下のファイルをおいて実行します。</p>
+
+<p>内容としては以下のようなことをしています。</p>
+
+<ul>
+<li><code>.ruby-version</code> で指定されている ruby のインストール
+<a href="https://github.com/thoughtbot/capybara-webkit/wiki/Installing-Qt-and-compiling-capybara-webkit#ubuntu-trusty-1404">https://github.com/thoughtbot/capybara-webkit/wiki/Installing-Qt-and-compiling-capybara-webkit#ubuntu-trusty-1404</a> のインストール (OS X 上で直接試したときにはこの依存をインストールする部分が大変でした)</li>
+<li>余計な差分が出ないように <code>Gemfile.lock</code> に記録されているバージョンの bundler をインストール</li>
+<li><code>bundle install</code> で依存している gem をインストール</li>
+<li><code>npm install</code> で依存している node modules をインストール</li>
+<li>sqlite3 のデータベース作成</li>
+</ul>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="c">#!/bin/bash</span>
+</span><span class='line'><span class="nb">set</span> -euo pipefail
+</span><span class='line'><span class="nb">set</span> -x
+</span><span class='line'><span class="nb">cd</span> <span class="s2">&quot;$HOME/react-webpack-rails-tutorial&quot;</span>
+</span><span class='line'><span class="nv">ruby_version</span><span class="o">=</span><span class="s2">&quot;$(&lt;.ruby-version)&quot;</span>
+</span><span class='line'><span class="k">if</span> ! rbenv versions <span class="p">|</span> grep -q <span class="s2">&quot;$ruby_version&quot;</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  rbenv install <span class="s2">&quot;$ruby_version&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'>sudo apt-get -y install libqt4-dev libqtwebkit-dev
+</span><span class='line'><span class="nv">bundler_version</span><span class="o">=</span><span class="k">$(</span>grep -A1 <span class="s1">&#39;BUNDLED WITH&#39;</span> Gemfile.lock <span class="p">|</span> tail -n1 <span class="p">|</span> tr -d <span class="s1">&#39; &#39;</span><span class="k">)</span>
+</span><span class='line'><span class="k">if</span> ! gem list <span class="p">|</span> grep -q bundler<span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>  gem install bundler -v <span class="s2">&quot;$bundler_version&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'>bundle install
+</span><span class='line'>npm install
+</span><span class='line'>rake db:setup
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>開発環境追加設定</h2>
+
+<p><code>foreman start -f Procfile.hot</code> で起動して
+<a href="http://dokku.me:5000/">http://dokku.me:5000/</a> で表示を確認すると「FATAL: Listen error: unable to monitor directories for changes. Visit <a href="https://github.com/guard/listen/wiki/Increasing-the-amount-of-inotify-watchers">https://github.com/guard/listen/wiki/Increasing-the-amount-of-inotify-watchers</a> for info on how to fix this.」というエラーになるので、サイトに書いてある通り、
+<code>echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf &amp;&amp; sudo sysctl -p</code>
+を実行しました。</p>
+
+<p>実行前の <code>cat /proc/sys/fs/inotify/max_user_watches</code> は 8192 でした。</p>
+
+<p>起動途中だと <code>ActionView::Template::Error (No such file or directory @ rb_file_s_mtime - app/assets/webpack/server-bundle.js):</code> というエラーになるので少し待てば良いようです。</p>
+
+<p>しかし、次にアクセスしてみるとなぜか hot-assets が落ちてしまってうまく動きませんでした。
+そして <code>ps x</code> でプロセスを確認するとちゃんと終了せずに残ってしまっているプロセスがあるので <code>pkill -f puma</code>, <code>pkill node</code> で終了させる必要がありました。</p>
+
+<p>表示できても assets として <code>http://localhost:3500/</code> を参照しているため、ポートフォワーディングの設定追加が必要そうでした。</p>
+
+<h2>Procfile.static</h2>
+
+<p><code>foreman start -f Procfile.static</code> で起動して <code>http://dokku.me:5000/</code> を開いたところ、開けることもありましたが、落ちることも多くて安定しませんでした。</p>
+
+<h2>まとめ</h2>
+
+<p>Vagrant の VM は開発環境としてはなぜか安定しませんでしたが、 Dokku をデプロイ先としては安定して使えたので、
+<code>react_on_rails</code> は開発対象の選択肢として入れても良さそうな感じがしました。</p>
+
+<p>開発環境として OS X 上で直接動かしたときは問題なく動いたので、<code>localhost</code> ではなく <code>10.0.2.2</code> を使ってしまったのが不具合の原因だったのかもしれませんが、もう少し調べてみないとなんとも言えません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[2要素認証を設定し直した]]></title>
@@ -5441,184 +5871,6 @@ jessie-backports にも反映されたので、 certbot パッケージに入れ
   <a href="http://slide.rabbit-shocker.org/authors/znz/lilo-20160501/" title="lilo.linux.or.jp を wheezy から jessie にあげた話">lilo.linux.or.jp を wheezy から jessie にあげた話</a>
 </div>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[wheezy から jessie にあげたら mailman でエラーが起きていた]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-04-30-mailman-error.html"/>
-    <updated>2016-04-30T23:52:04+09:00</updated>
-    <id>http://blog.n-z.jp/blog/mailman-error</id>
-    <content type="html"><![CDATA[<p>wheezy から jessie にあげた VPS の環境のうちの 1 個で mailman を使っていたのですが、ちゃんと確認していなかったらエラーが起きてちゃんとメールが配送されていなかったので、修正しました。</p>
-
-<!--more-->
-
-
-<h2>環境</h2>
-
-<ul>
-<li>Debian GNU/Linux amd64 の wheezy から jessie にあげた環境</li>
-<li><a href="http://packages.debian.org/mailman">mailman</a> 1:2.1.15-1+deb7u1 から 1:2.1.18-2</li>
-</ul>
-
-
-<h2>エラーの内容</h2>
-
-<p><code>/var/log/mailman/error</code> を見ると以下のようなエラーが出てメールの配送がされていませんでした。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>Apr 30 17:02:36 2016 (17947) Uncaught runner exception: 'utf8' codec can't decode byte 0xcb in position 5: invalid conti
-</span><span class='line'>nuation byte
-</span><span class='line'>Apr 30 17:02:36 2016 (17947) Traceback (most recent call last):
-</span><span class='line'>  File "/var/lib/mailman/Mailman/Queue/Runner.py", line 119, in _oneloop
-</span><span class='line'>    self._onefile(msg, msgdata)
-</span><span class='line'>  File "/var/lib/mailman/Mailman/Queue/Runner.py", line 190, in _onefile
-</span><span class='line'>    keepqueued = self._dispose(mlist, msg, msgdata)
-</span><span class='line'>  File "/var/lib/mailman/Mailman/Queue/IncomingRunner.py", line 130, in _dispose
-</span><span class='line'>    more = self._dopipeline(mlist, msg, msgdata, pipeline)
-</span><span class='line'>  File "/var/lib/mailman/Mailman/Queue/IncomingRunner.py", line 153, in _dopipeline
-</span><span class='line'>    sys.modules[modname].process(mlist, msg, msgdata)
-</span><span class='line'>  File "/var/lib/mailman/Mailman/Handlers/CookHeaders.py", line 179, in process
-</span><span class='line'>    i18ndesc = uheader(mlist, mlist.description, 'Reply-To')
-</span><span class='line'>  File "/var/lib/mailman/Mailman/Handlers/CookHeaders.py", line 65, in uheader
-</span><span class='line'>    return Header(s, charset, maxlinelen, header_name, continuation_ws)
-</span><span class='line'>  File "/usr/lib/python2.7/email/header.py", line 183, in __init__
-</span><span class='line'>    self.append(s, charset, errors)
-</span><span class='line'>  File "/usr/lib/python2.7/email/header.py", line 267, in append
-</span><span class='line'>    ustr = unicode(s, incodec, errors)
-</span><span class='line'>UnicodeDecodeError: 'utf8' codec can't decode byte 0xcb in position 5: invalid continuation byte
-</span><span class='line'>
-</span><span class='line'>Apr 30 17:02:36 2016 (17947) SHUNTING: 1462003356.244866+ea73a2d0f0636f691f515c4b199b5e8c21436142</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>調査</h2>
-
-<p>エラーメッセージで適当に切り出していろいろ検索してみたところ、
-<a href="https://bugs.launchpad.net/mailman/+bug/1462755">qrunner crashes on invalid unicode sequence</a>
-と同じ現象だとわかりました。</p>
-
-<p>コメントにあるように調査してみたところ、確かに description に問題がありそうでした。
-Web の設定画面で見てみると info も化けていたので、元の設定を調査するために <code>withlist</code> の環境で表示しておきました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'># withlist lilo
-</span><span class='line'>lilo のリストを読み込中 (ロック解除)
-</span><span class='line'>変数 `m' が lilo の MailList インスタンスです
-</span><span class='line'>&gt;&gt;&gt; m.preferred_language
-</span><span class='line'>'ja'
-</span><span class='line'>&gt;&gt;&gt; m.description
-</span><span class='line'>'LILO \xcb\xdc\xc2\xceML'
-</span><span class='line'>&gt;&gt;&gt; m.info
-</span><span class='line'>'LILO ( \xa4\xea\xa4\xed : Linux Install Learning Osaka ) \xa4\xcf\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xb2\xf1\xa4\xc7\xa4\xb9\xa1\xa3 \xbc\xe7\xa4\xcb\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xa4\xce\xb8\xf2\xce\xae\xa1\xa2\xbe\xf0\xca\xf3\xb8\xf2\xb4\xb9\xa4\xce\xbe\xec\xa4\xf2\xc4\xf3\xb6\xa1\xa4\xb9\xa4\xeb\xa4\xbf\xa4\xe1\xa4\xcb\xb3\xe8\xc6\xb0\xa4\xb7\xa4\xc6\xa4\xa4\xa4\xde\xa4\xb9\xa1\xa3'
-</span><span class='line'>&gt;&gt;&gt;
-</span><span class='line'>最終処理中
-</span><span class='line'>#</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>変換</h2>
-
-<p>何でも良かったのですが、使い慣れているという理由で ruby の nkf で変換しました。
-変換した結果を Web の設定画面から設定し直しました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% rbenv exec irb -r irb/completion --simple-prompt
-</span><span class='line'>&gt;&gt; require 'nkf'
-</span><span class='line'>=&gt; true
-</span><span class='line'>&gt;&gt; NKF.nkf('-w',"LILO \xcb\xdc\xc2\xceML")
-</span><span class='line'>=&gt; "LILO 本体ML"
-</span><span class='line'>&gt;&gt; NKF.nkf('-w',"'LILO ( \xa4\xea\xa4\xed : Linux Install Learning Osaka ) \xa4\xcf\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xb2\xf1\xa4\xc7\xa4\xb9\xa1\xa3 \xbc\xe7\xa4\xcb\xb4\xd8\xc0\xbe\xa4\xce Linux \xa5\xe6\xa1\xbc\xa5\xb6\xa4\xce\xb8\xf2\xce\xae\xa1\xa2\xbe\xf0\xca\xf3\xb8\xf2\xb4\xb9\xa4\xce\xbe\xec\xa4\xf2\xc4\xf3\xb6\xa1\xa4\xb9\xa4\xeb\xa4\xbf\xa4\xe1\xa4\xcb\xb3\xe8\xc6\xb0\xa4\xb7\xa4\xc6\xa4\xa4\xa4\xde\xa4\xb9\xa1\xa3'")
-</span><span class='line'>=&gt; "'LILO ( りろ : Linux Install Learning Osaka ) は関西の Linux ユーザ会です。 主に関西の Linux ユーザの交流、情報交換 の場を提供するために活動しています。'"
-</span><span class='line'>&gt;&gt;</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>失敗したメールの再配送</h2>
-
-<p>設定し直した後、しばらく待ってみても再配送はされなかったので、メールキューの強制再実行が必要かと思って、 <code>/var/lib/mailman</code> 以下を調べてみたところ、 <code>/var/lib/mailman/qfiles/shunt/</code> の中にファイルが溜まっていることがわかりました。</p>
-
-<p>さらに調べていて見つけた
-<a href="http://docs.python.jp/contrib/mailman/siteadmin.html#unshunt">http://docs.python.jp/contrib/mailman/siteadmin.html#unshunt</a>
-によると qrunner が処理中にエラーを発生させて処理できなかったメールは <code>&lt;prefix&gt;/qfiles/shunt</code> に保存されていて、<code>unshunt</code> コマンドで処理できるらしいということなので、試してみたところ、ちゃんと溜まっていたメールが配送されました。</p>
-
-<h2>NEWS.Debian 確認</h2>
-
-<p>復旧を優先して、ちゃんと見るのを忘れていたのですが、 <code>/usr/share/doc/mailman/NEWS.Debian.gz</code> によると <code>mailman (1:2.1.16-1exp1)</code> で UTF-8 化したから description を webinterface などから設定しなおせと書いてありました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>mailman (1:2.1.16-1exp1) experimental; urgency=low
-</span><span class='line'>
-</span><span class='line'>  This version has changed the encoding of most strings, templates
-</span><span class='line'>  and pages to UTF-8 to meet the Debian release goal of full UTF-8
-</span><span class='line'>  support in all packages. It also no longer automatically converts
-</span><span class='line'>  mails to ISO-8859-1.
-</span><span class='line'>
-</span><span class='line'>  If you have been using any nōn-ASCII strings in places such as
-</span><span class='line'>  the mailing list description, these were be stored wrongly in the
-</span><span class='line'>  list configuration file (config.pck), so you will need to change
-</span><span class='line'>  those (e.g. via the webinterface) again in order to have them be
-</span><span class='line'>  displayed correctly.
-</span><span class='line'>
-</span><span class='line'> -- Thorsten Glaser &lt;tg@mirbsd.de&gt;  Sun, 29 Dec 2013 14:35:50 +0000</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>まとめ</h2>
-
-<p>mailman が UTF-8 対応で description や info などに日本語などの ASCII 以外の文字を使っているとエラーが起きるという話でした。</p>
-
-<p>実行例で気付いた人もいると思いますが、 lilo.linux.or.jp のサーバーでの話で、他にも管理用の ML などがあるのですが、それらは description や info が空だったので問題が起きていなかったようです。</p>
-
-<p>教訓としては、急いでいても apt-listchanges で最低限 NEWS だけはちゃんと読むようにした方が良いということでした。</p>
 ]]></content>
   </entry>
   

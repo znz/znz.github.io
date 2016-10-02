@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-09-25T23:19:44+09:00</updated>
+  <updated>2016-10-03T00:37:30+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,295 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[React On Rails の react-webpack-rails-tutorial を Dokku で試してみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-10-02-react-webpack-rails-tutorial-on-dokku.html"/>
+    <updated>2016-10-02T22:24:55+09:00</updated>
+    <id>http://blog.n-z.jp/blog/react-webpack-rails-tutorial-on-dokku</id>
+    <content type="html"><![CDATA[<p>react.js を rails と組み合わせて使うにはどうすればいいんだろうと思って調べてみると、<code>react-rails</code> gem の他に <code>react_on_rails</code> gem というもっとまとめていろんなことの面倒を見てくれるものがあったので、そのサンプルアプリである
+<a href="https://github.com/shakacode/react-webpack-rails-tutorial" title="react-webpack-rails-tutorial">react-webpack-rails-tutorial</a>
+を <a href="https://github.com/dokku/dokku/" title="Dokku">Dokku</a> にデプロイできるか試してみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>OS X El Capitan 10.11.6</li>
+<li>VirtualBox 5.1.6</li>
+<li>Vagrant 1.8.6</li>
+<li>Dokku master (0.7.2 からちょっと変更が進んだもの)</li>
+<li>react-webpack-rails-tutorial master</li>
+<li>ruby 2.3.1</li>
+<li>rails 5.0.0</li>
+<li>node 6.7.0</li>
+</ul>
+
+
+<h2>環境構築</h2>
+
+<p>まず <a href="https://github.com/dokku/dokku">https://github.com/dokku/dokku</a> を git clone したディレクトリで作業します。</p>
+
+<p>vagrant の provision から何度も試すようなら、 apt で日本のミラーを使うように shell provisioning を追加しておきます。</p>
+
+<pre><code class="diff">diff --git a/Vagrantfile b/Vagrantfile
+index 4f3fc6c..bccceb9 100644
+--- a/Vagrantfile
++++ b/Vagrantfile
+@@ -47,6 +47,7 @@ Vagrant::configure("2") do |config|
+       vb.customize ["modifyvm", :id, "--natdnsproxy1", "off"]
+     end
+
++    vm.vm.provision :shell, :inline =&gt; "sed -i -e 's,//us\\.archive\\.ubuntu\\.com,//jp.archive.ubuntu.com,' /etc/apt/sources.list"
+     vm.vm.provision :shell, :inline =&gt; "export DEBIAN_FRONTEND=noninteractive &amp;&amp; apt-get update &gt; /dev/null &amp;&amp; apt-get -qq -y install git &gt; /dev/null &amp;&amp; cd /root/dokku &amp;&amp; #{make_cmd}"
+     vm.vm.provision :shell, :inline =&gt; "cd /root/dokku &amp;&amp; make dokku-installer"
+     vm.vm.provision :shell do |s|
+</code></pre>
+
+<p><code>vagrant up</code> します。
+gliderlabs/herokuish の docker イメージのダウンロードなどもあるので時間がかかります。</p>
+
+<h2>Web UI での設定</h2>
+
+<p><a href="http://dokku.me/">http://dokku.me/</a> を開いて初期設定します。
+<code>Hostname</code> を <code>dokku.me</code> に変更して <code>Use virtualhost naming for apps</code> にチェックを入れて <code>Finish Setup</code> を押します。</p>
+
+<p>意図した動作かどうかはわかりませんが、この作業をしなくても <code>app-name.dokku.me</code> は使えました。
+(<code>not-found-app.dokku.me</code> で初期設定画面は出てくるまま)</p>
+
+<h2>初期設定</h2>
+
+<p><code>/vagrant/tmp/init.sh</code> に以下のファイルをおいて実行します。
+<code>tmp</code> は <code>.gitignore</code> に入っていてローカルな作業ファイルをおくのに都合が良いです。</p>
+
+<p>内容としては以下のようなことをしています。</p>
+
+<ul>
+<li><code>docker</code> コマンドを <code>sudo</code> なしで呼べるように <code>docker</code> グループに <code>vagrant</code> ユーザーを追加</li>
+<li><code>/home/dokku</code> を調べたりするときなどに都合が良いように <code>dokku</code> グループに <code>vagrant</code> ユーザーを追加</li>
+<li>ruby などのダウンロードでタイムアウトしないように <code>CURL_TIMEOUT</code> を増やす</li>
+<li><code>dokku run</code> などで一時的に作成されるコンテナーをデフォルトで削除するように <code>DOKKU_RM_CONTAINER</code> を設定</li>
+<li><code>~/.ssh/known_hosts</code> がハッシュ化されているとどの行がどのホストかわからなくなるので <code>HashKnownHosts no</code> で無効化</li>
+<li>あとで git push のときに使う <code>10.0.0.2</code> のホスト鍵を <code>~/.ssh/known_hosts</code> に追加</li>
+<li>ssh の鍵ペアを作成して <code>dokku ssh-keys:add</code> で登録</li>
+<li>ruby のビルドに必要なパッケージなどをインストール</li>
+<li>anyenv, rbenv, ndenv をインストール</li>
+<li><code>~/.gemrc</code> を作成してデフォルトでドキュメントのインストールを無効化</li>
+<li>ndenv で最新の node をインストール</li>
+</ul>
+
+
+<p>デプロイするだけなら anyenv などは不要ですが、あとで開発環境としても動かしたかったので入れています。</p>
+
+<pre><code class="sh">#!/bin/bash
+set -euo pipefail
+set -x
+cd /home/vagrant
+sudo usermod -aG docker vagrant
+sudo usermod -aG dokku vagrant
+dokku config:set --global CURL_TIMEOUT=120
+dokku config:set --global DOKKU_RM_CONTAINER=1
+if [[ ! -e "$HOME/.ssh/config" ]]; then
+  echo "HashKnownHosts no" &gt;"$HOME/.ssh/config"
+fi
+if [[ ! -e "$HOME/.ssh/known_hosts" ]]; then
+  ssh-keyscan -t ecdsa-sha2-nistp256 10.0.0.2 | grep -v '#' &gt; "$HOME/.ssh/known_hosts"
+fi
+if [[ ! -e "$HOME/.ssh/id_rsa" ]]; then
+  ssh-keygen -N '' -f "$HOME/.ssh/id_rsa"
+  sudo dokku ssh-keys:add vagrant "$HOME/.ssh/id_rsa.pub"
+fi
+
+if [[ -z "$(dpkg -l | grep libsqlite3-dev)" ]]; then
+  sudo sed -i~ -e 's/us\.archive/jp.archive/' /etc/apt/sources.list
+  sudo apt-get update
+  sudo apt-get -y install autoconf bison build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm3 libgdbm-dev
+  sudo apt-get -y install libpq-dev
+  sudo apt-get -y install libsqlite3-dev
+  sudo apt-get -y install jq
+fi
+if [[ ! -d ~/.anyenv ]]; then
+  git clone https://github.com/riywo/anyenv.git ~/.anyenv
+  echo 'export PATH="$HOME/.anyenv/bin:$PATH"' &gt;&gt; ~/.bashrc
+  echo 'eval "$(anyenv init -)"' &gt;&gt; ~/.bashrc
+fi
+if [[ -z "$(command -v anyenv)" ]]; then
+  export PATH="$HOME/.anyenv/bin:$PATH"
+  set +x
+  eval "$(anyenv init - --no-rehash)"
+  set -x
+fi
+if [[ ! -d ~/.anyenv/envs/rbenv ]]; then
+  anyenv install rbenv
+fi
+if [[ ! -f ~/.gemrc ]]; then
+  cat &lt;&lt;EOF &gt;~/.gemrc
+install: --no-rdoc --no-ri --format-executable
+update: --no-rdoc --no-ri --format-executable
+EOF
+fi
+if [[ ! -d "$HOME/.anyenv/envs/ndenv" ]]; then
+  anyenv install ndenv
+fi
+node_version=$(ndenv install -l | grep '^ *v' | tail -n1 | xargs)
+if ! ndenv versions | grep -q "$node_version"; then
+  ndenv install "$node_version"
+  ndenv global "$node_version"
+fi
+</code></pre>
+
+<h2>react-webpack-rails-tutorial のデプロイ</h2>
+
+<p>一度 <code>exit</code> で抜けて <code>vagrant ssh</code> で入りなおしてグループの変更や anyenv などのインストールを反映します。</p>
+
+<p><code>/vagrant/tmp/react-webpack-rails-tutorial.sh</code> に以下のファイルをおいて実行します。</p>
+
+<p>内容としては以下のようなことをしています。</p>
+
+<ul>
+<li><a href="https://github.com/shakacode/react-webpack-rails-tutorial">https://github.com/shakacode/react-webpack-rails-tutorial</a> の取得</li>
+<li>react-webpack-rails-tutorial アプリの作成 (リンク作業に必要)</li>
+<li>dokku-postgres が入っていなければ入れる</li>
+<li>react-webpack-rails-tutorial-db を作ってリンク</li>
+<li>dokku という remote を追加</li>
+<li><a href="https://github.com/heroku/heroku-buildpack-multi">https://github.com/heroku/heroku-buildpack-multi</a> を使うため <code>.buildpacks</code> を作成</li>
+<li><code>rake db:migrate</code> の自動実行のため <code>app.json</code> を作成</li>
+<li>デプロイ</li>
+</ul>
+
+
+<pre><code class="sh">#!/bin/bash
+set -euo pipefail
+set -x
+cd
+if [[ ! -d react-webpack-rails-tutorial ]]; then
+  git clone https://github.com/shakacode/react-webpack-rails-tutorial
+fi
+if [[ ! -d /home/dokku/react-webpack-rails-tutorial ]]; then
+  dokku apps:create react-webpack-rails-tutorial
+fi
+if [[ ! -d /var/lib/dokku/plugins/available/postgres ]]; then
+  sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git || :
+  sudo docker pull gliderlabs/herokuish
+fi
+if [[ ! -f /home/dokku/react-webpack-rails-tutorial/DOCKER_OPTIONS_RUN ]]; then
+  dokku postgres:create react-webpack-rails-tutorial-db || :
+  dokku postgres:link react-webpack-rails-tutorial-db react-webpack-rails-tutorial
+fi
+cd react-webpack-rails-tutorial
+if ! git remote | grep -q dokku; then
+  git remote add dokku dokku@10.0.0.2:react-webpack-rails-tutorial
+fi
+cat &gt;.buildpacks &lt;&lt;EOF
+https://github.com/heroku/heroku-buildpack-nodejs
+https://github.com/heroku/heroku-buildpack-ruby
+EOF
+git add .buildpacks
+git commit -m 'Add .buildpacks' || :
+cat &lt;&lt;EOF &gt;app.json
+{
+  "scripts": {
+    "dokku": {
+      "predeploy": "bundle exec rake db:migrate"
+    }
+  }
+}
+EOF
+git add app.json
+git commit -m "Set script.dokku.predeploy to app.json" || :
+git push dokku master
+</code></pre>
+
+<h2>動作確認</h2>
+
+<p>ブラウザーで <a href="http://react-webpack-rails-tutorial.dokku.me/">http://react-webpack-rails-tutorial.dokku.me/</a> を開いて動作確認します。</p>
+
+<h2>.buildpacks の順番</h2>
+
+<p><code>.buildpacks</code> で nodejs, ruby という順番で指定しましたが、逆の順番にすると以下のエラーで失敗しました。
+<code>react_on_rails</code> で使っているので、 nodejs の方を先に入れる必要があるようです。</p>
+
+<pre><code class="text">-----&gt; Preparing app for Rails asset pipeline
+       Running: rake assets:precompile
+       cd client &amp;&amp; npm run build:production
+       sh: 1: npm: not found
+       rake aborted!
+       Command failed with status (127): [cd client &amp;&amp; npm run build:production...]
+       /tmp/build/vendor/bundle/ruby/2.3.0/gems/react_on_rails-6.1.0/lib/tasks/assets.rake:33:in `block (3 levels) in &lt;top (required)&gt;'
+       /tmp/build/vendor/bundle/ruby/2.3.0/gems/rake-11.2.2/exe/rake:27:in `&lt;top (required)&gt;'
+       Tasks: TOP =&gt; assets:precompile =&gt; react_on_rails:assets:compile_environment =&gt; react_on_rails:assets:webpack
+       (See full trace by running task with --trace)
+       !
+       !     Precompiling assets failed.
+       !
+</code></pre>
+
+<h2>開発環境設定</h2>
+
+<p><a href="https://github.com/shakacode/react-webpack-rails-tutorial#basic-demo-setup">https://github.com/shakacode/react-webpack-rails-tutorial#basic-demo-setup</a> を参考にして設定します。</p>
+
+<p><code>/vagrant/tmp/react-webpack-rails-tutorial-dev.sh</code> に以下のファイルをおいて実行します。</p>
+
+<p>内容としては以下のようなことをしています。</p>
+
+<ul>
+<li><code>.ruby-version</code> で指定されている ruby のインストール
+<a href="https://github.com/thoughtbot/capybara-webkit/wiki/Installing-Qt-and-compiling-capybara-webkit#ubuntu-trusty-1404">https://github.com/thoughtbot/capybara-webkit/wiki/Installing-Qt-and-compiling-capybara-webkit#ubuntu-trusty-1404</a> のインストール (OS X 上で直接試したときにはこの依存をインストールする部分が大変でした)</li>
+<li>余計な差分が出ないように <code>Gemfile.lock</code> に記録されているバージョンの bundler をインストール</li>
+<li><code>bundle install</code> で依存している gem をインストール</li>
+<li><code>npm install</code> で依存している node modules をインストール</li>
+<li>sqlite3 のデータベース作成</li>
+</ul>
+
+
+<pre><code class="sh">#!/bin/bash
+set -euo pipefail
+set -x
+cd "$HOME/react-webpack-rails-tutorial"
+ruby_version="$(&lt;.ruby-version)"
+if ! rbenv versions | grep -q "$ruby_version"; then
+  rbenv install "$ruby_version"
+fi
+sudo apt-get -y install libqt4-dev libqtwebkit-dev
+bundler_version=$(grep -A1 'BUNDLED WITH' Gemfile.lock | tail -n1 | tr -d ' ')
+if ! gem list | grep -q bundler; then
+  gem install bundler -v "$bundler_version"
+fi
+bundle install
+npm install
+rake db:setup
+</code></pre>
+
+<h2>開発環境追加設定</h2>
+
+<p><code>foreman start -f Procfile.hot</code> で起動して
+<a href="http://dokku.me:5000/">http://dokku.me:5000/</a> で表示を確認すると「FATAL: Listen error: unable to monitor directories for changes. Visit <a href="https://github.com/guard/listen/wiki/Increasing-the-amount-of-inotify-watchers">https://github.com/guard/listen/wiki/Increasing-the-amount-of-inotify-watchers</a> for info on how to fix this.」というエラーになるので、サイトに書いてある通り、
+<code>echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf &amp;&amp; sudo sysctl -p</code>
+を実行しました。</p>
+
+<p>実行前の <code>cat /proc/sys/fs/inotify/max_user_watches</code> は 8192 でした。</p>
+
+<p>起動途中だと <code>ActionView::Template::Error (No such file or directory @ rb_file_s_mtime - app/assets/webpack/server-bundle.js):</code> というエラーになるので少し待てば良いようです。</p>
+
+<p>しかし、次にアクセスしてみるとなぜか hot-assets が落ちてしまってうまく動きませんでした。
+そして <code>ps x</code> でプロセスを確認するとちゃんと終了せずに残ってしまっているプロセスがあるので <code>pkill -f puma</code>, <code>pkill node</code> で終了させる必要がありました。</p>
+
+<p>表示できても assets として <code>http://localhost:3500/</code> を参照しているため、ポートフォワーディングの設定追加が必要そうでした。</p>
+
+<h2>Procfile.static</h2>
+
+<p><code>foreman start -f Procfile.static</code> で起動して <code>http://dokku.me:5000/</code> を開いたところ、開けることもありましたが、落ちることも多くて安定しませんでした。</p>
+
+<h2>まとめ</h2>
+
+<p>Vagrant の VM は開発環境としてはなぜか安定しませんでしたが、 Dokku をデプロイ先としては安定して使えたので、
+<code>react_on_rails</code> は開発対象の選択肢として入れても良さそうな感じがしました。</p>
+
+<p>開発環境として OS X 上で直接動かしたときは問題なく動いたので、<code>localhost</code> ではなく <code>10.0.2.2</code> を使ってしまったのが不具合の原因だったのかもしれませんが、もう少し調べてみないとなんとも言えません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[bundled gem と default gem の違いの具体例]]></title>
@@ -1308,607 +1597,6 @@ bindings や黒魔術の話のようにある程度は知っているけど実�
 ある程度関わっている るりま (Ruby Reference Manual) の話がしっかり聞けたのが良かったです。</p>
 
 <p>また、作業中は話をちゃんと聞けなかったという問題はあったものの、いくつか pull request を出したり issue を書いたりできたのも良かったです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[RubyKaigi 2016 の 1 日目に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-09-08-rubykaigi-2016.html"/>
-    <updated>2016-09-08T09:49:29+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubykaigi-2016</id>
-    <content type="html"><![CDATA[<p><a href="http://rubykaigi.org/2016" title="RubyKaigi 2016">RubyKaigi 2016</a> の 1 日目に参加したので、そのメモです。</p>
-
-<!--more-->
-
-
-<h2>会場</h2>
-
-<p>「<a href="https://twitter.com/a_matsuda/status/772749215000764417">スピーカーのキャンセルが出たため、初日の朝のキーノートの開始時間が50分遅くなります。</a>」という話があったため、時間に余裕を持って到着できました。</p>
-
-<p>家を出た時は雨は降っていなかったのですが、京都では大雨でした。
-(参考: <a href="https://twitter.com/kakutani/status/773680281689530368">https://twitter.com/kakutani/status/773680281689530368</a> )
-駅から会場までは天井のある通路で繋がっているので、傘なしでも濡れずにたどり着けました。</p>
-
-<p>会場は広くて、メインホールのテーブル席は全席電源つきという非常に便利な感じでした。
-メインホールの座席は座ると前にずれて、立ち上がると後ろに下がる椅子でした。</p>
-
-<h2>Opening</h2>
-
-<ul>
-<li>スタッフのうち、つじたさん、 aaron さん、デカ外人さんの紹介</li>
-<li>電源が各席にある</li>
-<li>メインホールはテーブル席の後ろに椅子だけの席もあるけど、そこも後ろに電源があるらしい</li>
-<li>スポンサーブースにコーヒーとお菓子</li>
-<li>懇親会のチケットが残り数十枚でラストチャンス</li>
-</ul>
-
-
-<h2>Ruby3 Typing</h2>
-
-<ul>
-<li><a href="http://rubykaigi.org/2016/presentations/yukihiro_matz.html" title="Ruby3 Typing - RubyKaigi 2016">Ruby3 Typing - RubyKaigi 2016</a></li>
-<li>日本語のキーノート</li>
-<li>Ruby3</li>
-<li>Performance, Concurrency, Typing</li>
-<li>それぞれ Shyouhei, Ko1, Matz が話をする</li>
-<li>2010s に出てきた言語は静的型言語が多い</li>
-<li>静的型がないので Ruby は死んだなどと言われてしまうこともある</li>
-<li>TypeScript, Flow, Go, Swift</li>
-<li>Microsoft, Facebook, Google, Apple など大企業の言語</li>
-<li>テクノロジー (動的型と静的型のような) は振り子のように行ったり来たりしている</li>
-<li>Smalltalk → Java → Ruby・JavaScript → Swift・Go → ?</li>
-<li>揺り戻しが起きた時に置いて行かれないように (静的型を目指すのではなく) 未来の動的型言語について考える</li>
-<li>型とは何か?</li>
-<li>学術的には型システム入門 (TAPL) とかあるけど</li>
-<li>Duck typing</li>
-<li>動けばいい</li>
-<li><code>log(dst IO, mesg String)</code> のように静的型指定してしまうと例えば <code>StringIO</code> を渡せない</li>
-<li>(スライドのトラブルが発生して、 rabbit 作者によるサポートを受けつつ rabbit を再起動してしまったので、亀がリセットされてしまった。)</li>
-<li>Duck typing は内部構造を気にしなくて良い</li>
-<li>Lower mental cost in development</li>
-<li>Duck typing は未来に対して開かれている</li>
-<li>Duck typing は柔軟性が高い</li>
-<li>&ldquo;Duck&rdquo; (Ruby の型) は nominal type ではない</li>
-<li>&ldquo;Duck&rdquo; は class ではない</li>
-<li>&ldquo;Duck&rdquo; は何か</li>
-<li>&ldquo;Duck&rdquo; は <em>expected</em> behavior (期待される振る舞い)</li>
-<li>期待は私たちの頭の中にある</li>
-<li>class による型はあくまでも近似 (approximation) であり足かせになる</li>
-<li>Go の interface はかなり良い</li>
-<li>Structual Subtyping vs Nominal Subtyping</li>
-<li>Duck typing is awesome!</li>
-<li>DRY (Don&rsquo;t Repeat Yourself) 原則</li>
-<li>冗長性を削ろう</li>
-<li>プログラムを書く時にかかなくていいものは削りたい</li>
-<li>型指定がなくても ruby のプログラムは動いているので必要ない</li>
-<li>むしろ積極的に外すべき</li>
-<li>しかし、動的型言語には欠点 (drawback) がある</li>
-<li>実行してみないとエラーがわからない</li>
-<li>エラーメッセージが親切ではない</li>
-<li>Coverage</li>
-<li>テストし忘れた部分はいつまでも気づかれない</li>
-<li>Less Documentation</li>
-<li>書く人は嬉しいが、読む人は困る</li>
-<li>コメント (rdoc とか) に結局 (型を) かいている</li>
-<li>型は絶対に書きたくない</li>
-<li>柔軟性が減るから</li>
-<li>ユーザーのためにドキュメントは欲しい</li>
-<li>コメントに書く</li>
-<li>型アノテーションを書ける言語もある</li>
-<li>型チェックを含まない型アノテーションはダメなアイデアだと思う</li>
-<li>Mixed/Gradual Typing (一部だけ型指定ができる) is a bad idea</li>
-<li>少なくとも Ruby にとっては。</li>
-<li>ドキュメントは欲しい</li>
-<li>型のある部分とない部分を混ぜたくない</li>
-<li>課題があるということは改善の余地がある</li>
-<li>未来の Ruby はこれをなんとかしたい</li>
-<li>我々はエンジニアなので技術でなんとかしたい</li>
-<li>静的型に型推論を足す</li>
-<li>型推論は素晴らしい</li>
-<li>静的型の柔軟性のなさは型推論とは無関係</li>
-<li>静的型の柔軟性がないという問題が解決しないので別のものが必要</li>
-<li>Static Typing with Duck-Typing として Go の Structual Subtyping は良い線をいっているが、 interface を書きたくない</li>
-<li>そこで型推論をさせてみよう</li>
-<li><code>dst should have rite()</code> を <code>dst should have write()</code> に修正 (また亀が戻った)</li>
-<li>interface を振る舞いから自動生成 : Soft Typing</li>
-<li>型推論された型には名前が付いていない</li>
-<li>名前をつけるのは結構なコスト</li>
-<li>ぼんやりとしたアイデアがぼんやりとしたアイデアのまま実現できるので、具体化する脳の労力が減る</li>
-<li>100% のチェックはできないかもしれない</li>
-<li>80% 程度のコンパイル時チェックでも 0% よりは良い</li>
-<li>dynamic typing に fallback できる</li>
-<li>ad-hoc な型情報も使えるのではないか</li>
-<li>gsub, slice, map を期待した a があったとき、そんなクラスはないのでエラーにできる</li>
-<li>実行時の情報も使えるのではないか</li>
-<li>タイプエラーが起きるようなテストは書かないと思うので、テスト実行時の型情報をとっておいて Type Database としてとっておいて gem として一緒に配布して実行時に使えるのではないか</li>
-<li>Type Database がコード補完などにも使えるのではないか</li>
-<li>まだ構想段階で動いていない</li>
-<li>コンセプト段階</li>
-<li>Ruby3 プロジェクトの一部</li>
-<li>重要なメッセージ : We Care about YOU</li>
-<li>テストがあれば大丈夫という話もあるが</li>
-<li>言語の方でもプログラミング体験を改善したい</li>
-<li>Ruby3 はいつか? わからない</li>
-<li>オープンソースソフトウェア (少なくとも Ruby) にはロードマップや締め切りはない</li>
-<li>目標を作る必要が有る</li>
-<li>ケネディ大統領が月に行くという少し難しい未来を宣言して、のちに実現された</li>
-<li>Soft typing, Ruby3x3, Concurrency</li>
-<li>心の中の目標としては次の東京オリンピックの頃には Ruby3 が出てると良いな</li>
-<li>みなさんからのアイデアや貢献は大歓迎</li>
-<li>前に進み続けたいから (To Keep Moving Forward)</li>
-<li>前に進み続けるためにできることはなんでもしたい</li>
-<li>Happy Hacking!</li>
-<li>質疑応答前に 3 分ほど CM (スポンサーセッション)</li>
-</ul>
-
-
-<h2>Speee さん</h2>
-
-<ul>
-<li>会場アンケート 知っている人 : 6割ぐらい</li>
-<li><a href="http://speee.jp/">http://speee.jp/</a></li>
-<li>現在はほぼ Ruby になった</li>
-<li>OSS への貢献へも増えた</li>
-<li>OSS Gate workshop がよかった</li>
-<li>いろいろなイベントもやっているので興味がある方は <a href="http://speee.connpass.com/">http://speee.connpass.com/</a> の「めんばーになる」</li>
-</ul>
-
-
-<h2>Ruby3 Typing (質疑応答)</h2>
-
-<ul>
-<li>まさかの質問なし?</li>
-<li>joker1007 さん?: 型情報を全く書かずに型推論だけでできる見込みはあるのか?</li>
-<li>伝統的な方法では無理</li>
-<li>ad-hoc なものや実行時の型情報でそこそこ実用的なものになる可能性はある</li>
-<li>まだ実際に動いているコードはないので、実際には無理でしたということで Ruby3 に入らない可能性はある</li>
-<li>誰?: IDE の仕様を参考にできるか?とかいう感じの質問</li>
-<li>現在は完全なものはないので参考にしづらい</li>
-<li>IDE があるので言語仕様はどうでもいいんだということはしたくない</li>
-<li>IDE ありきの言語に Ruby がなることはない</li>
-<li>誰?: (質問はよく聞き取れず)</li>
-<li>リリースマネージャーもしていない</li>
-<li>言語デザイナーをしている</li>
-<li>田中哲さん: 今回の話での Soft Typing という言葉の使い方は既存のアカデミックでの用語とは違うので、新しい言葉を考える必要が有るのではないか</li>
-<li>Diamondback Ruby というものが昔あった (後で聞いた話によると Diamondback Ruby は速度を目的としたもので、OCaml で実装されたものだったらしい)</li>
-<li>Soft Typing という用語はふさわしくないかも</li>
-<li>新しい言葉を考えておきます</li>
-<li><a href="http://togetter.com/li/1021897" title="&quot;型は絶対書きたくない&quot; &quot;Ruby3は東京オリンピックまでに&quot; Rubyの父Matzによる、「楽しいプログラミング体験を届けるために」 #rubykaigi 2016 Keynote - Togetterまとめ">&quot;型は絶対書きたくない&quot; &quot;Ruby3は東京オリンピックまでに&quot; Rubyの父Matzによる、「楽しいプログラミング体験を届けるために」 #rubykaigi 2016 Keynote - Togetterまとめ</a></li>
-</ul>
-
-
-<h2>アナウンスと Intermission</h2>
-
-<ul>
-<li>昼は弁当があるという話</li>
-<li>ベジタリアン用の弁当もあるという話</li>
-<li>英語で翻訳レシーバーの返却についてアナウンス?</li>
-<li>dRuby の slide sponsors が流れていた</li>
-</ul>
-
-
-<h2>dRuby in the last century.</h2>
-
-<ul>
-<li><a href="http://rubykaigi.org/2016/presentations/m_seki.html" title="dRuby in the last century. - RubyKaigi 2016">dRuby in the last century. - RubyKaigi 2016</a></li>
-<li>自己紹介</li>
-<li>前座が Matz</li>
-<li>dRuby の生い立ち, dRuby の紹介, これから</li>
-<li>1999 [ruby-list:15406] 1st dRuby <a href="http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-list/15406">http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-list/15406</a></li>
-<li>2005 最初の本</li>
-<li>2012 (-2014 絶版) 英語の本</li>
-<li>2000 Perl/Ruby Conference (Kyoto) この会場</li>
-<li>同じ会場で同じ話を</li>
-<li>dRuby はオーパーツ (OOPARTS) <a href="https://twitter.com/yugui/status/439412852013551616">https://twitter.com/yugui/status/439412852013551616</a></li>
-<li>Before dRuby (BD)</li>
-<li>BD8: プロセスをわける必然性のある組み込みシステムからの情報を集めるデーモンと情報を可視化するアプリケーション</li>
-<li>BD5: CGI (マイクロサービス的) 時代</li>
-<li>BD1: Ruby &amp; shttpsrv に出会う</li>
-<li>HTTP を小さなアプリに埋め込んでつないで楽しんでいた</li>
-<li>Ruby と Web の世界の翻訳作業が必要な点などが、なんか気に入らない</li>
-<li>Ruby ぽく話したい</li>
-<li>Ruby のように振舞う分散オブジェクト</li>
-<li>RPC ではなく RMI</li>
-<li>Ruby のメソッド呼び出しを socket で拡張</li>
-<li>簡単通信ライブラリではなく、もっと情緒的な (Ruby 的な) ものをめざした</li>
-<li>dRuby ってなに?</li>
-<li>分散オブジェクトシステム, プロセス腰にメソッドが呼べる, プロセス間でオブジェクトが送れる</li>
-<li>デモ</li>
-</ul>
-
-
-<p>端末1 (oso-matz) で irb を起動:</p>
-
-<pre><code>require 'drb'
-DRb.start_service('druby://localhost:54321', {})
-DRb.uri
-DRb.front
-</code></pre>
-
-<p>端末2 (jushi-matz) で irb を起動:</p>
-
-<pre><code>require 'drb'
-kvs = DRbObject.new_with_uri('druby://localhost:54321')
-kvs['greeting'] = 'Hellow, World.'
-</code></pre>
-
-<p>端末1に戻って <code>DRb.front</code> を確認すると <code>{"greeting"=&gt;"Hellow, World."}</code> になっている。</p>
-
-<p>Demo2: 端末2で:</p>
-
-<pre><code>kvs['outlet'] = $stdout
-</code></pre>
-
-<p>(<code>DRb.start_service('druby://localhost:54322')</code> のようにこちら側でも <code>DRb.start_service</code> しておかないと <code>DRb::DRbConnError: DRb::DRbServerNotFound</code> になってうまくいかなかった)</p>
-
-<p>端末1で:</p>
-
-<pre><code>DRb.front['outlet'].class
-DRb.front['outlet'].puts('Hello, Again.')
-</code></pre>
-
-<ul>
-<li>なにがおきた?</li>
-<li><code>$stdout</code> は <code>Marshal.dump</code> 不可能なので自動的に proxy に取り替えた</li>
-<li>永遠に proxy だと値が手に入らないので境界として <code>Marshal.dump</code> を使った</li>
-<li>OOP っぽさ</li>
-<li>オブジェクトが相互に呼びあえること</li>
-<li>block (イテレータ) も同じ仕組みで動く</li>
-</ul>
-
-
-<p>Demo3: Queue:</p>
-
-<p>端末1で:
-(<code>Queue</code> は最近の Ruby では本名は <code>Thread::Queue</code> に変わっていた)</p>
-
-<pre><code>queue = Queue.new
-DRb.front['queue'] = queue
-queue.pop
-queue.pop
-</code></pre>
-
-<p>端末2で:</p>
-
-<pre><code>queue = kvs['queue']
-queue.push(1.0)
-queue.push(2.0)
-</code></pre>
-
-<ul>
-<li>意図したわけではないが Thread 同期メカニズムがそのまま使えた</li>
-<li>dRuby が向いている用途がある</li>
-<li>Prototyping Twitter</li>
-<li>初期は dRuby/Rinda だったらしい : いまは使っていない</li>
-<li>自分のサービスも dRuby ではじめて最後には使わなくなることがある : 利用されて効率あげる必要がでてくるから</li>
-<li>紹介のまとめ</li>
-<li>これから</li>
-<li>初期の実装に戻したいところがいくつか</li>
-<li>セキュリティっぽいの消したい</li>
-<li>ACL, insecure_method &hellip;</li>
-<li>dRuby は RMI でメソッド呼び出しの拡張</li>
-<li>メソッド呼び出しなので穴だらけで良い</li>
-<li>危ないものは危なく見えるべき</li>
-<li>UnitTest : API のメソッド単位に書くものなのに、テストケースをストーリーレベルで書くべきだと勘違いしていた</li>
-<li>啓蒙する</li>
-<li>まずおもしろがってもらう</li>
-<li>並行処理の勘所に気づいてもらう</li>
-<li>すとうさん</li>
-<li>啓蒙活動に興味を持ったというのは、何か心境の変化があったのか?</li>
-<li>昨年のライブラリを作れば解決するという話にいらっとした</li>
-<li>miyohide さん</li>
-<li>啓蒙活動には、るびまに寄稿をするのが良いという話</li>
-<li><a href="http://togetter.com/li/1021932" title="突然のライブハンズオン！ 20世紀生まれの分散Ruby実装 dRuby #RubyKaigi #RubyKaigiA - Togetterまとめ">突然のライブハンズオン！ 20世紀生まれの分散Ruby実装 dRuby #RubyKaigi #RubyKaigiA - Togetterまとめ</a></li>
-<li><a href="https://speakerdeck.com/m_seki/druby2016" title="dRuby2016">dRuby2016</a></li>
-</ul>
-
-
-<h2>Lunch Break</h2>
-
-<ul>
-<li>11:55頃から</li>
-<li>弁当の写真を撮り忘れてしまった</li>
-<li>食べ終わった後は会場の散策</li>
-<li>懇親会のチェックインもしておいた</li>
-</ul>
-
-
-<h2>Who reordered my code?!</h2>
-
-<ul>
-<li>次の発表で部屋を移動するのが面倒だったのでメインホールにいた</li>
-<li>英語だったのとあまりちゃんと聞けていなかったのでメモなし</li>
-<li><a href="http://rubykaigi.org/2016/presentations/pitr_ch.html" title="Who reordered my code?! - RubyKaigi 2016">Who reordered my code?! - RubyKaigi 2016</a></li>
-<li>質疑応答: 質問なし</li>
-<li><a href="http://togetter.com/li/1021946" title="concurrent-rubyのコアコミッターが語る JRuby + Truffle 並列実行による高速化の試み #RubyKaigi #RubyKaigiA - Togetterまとめ">concurrent-rubyのコアコミッターが語る JRuby + Truffle 並列実行による高速化の試み #RubyKaigi #RubyKaigiA - Togetterまとめ</a></li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>プロジェクターのテストとして<a href="http://amzn.to/2bUWNxg">プログラミングElixir</a>の宣伝を表示</li>
-</ul>
-
-
-<h2>A proposal of new concurrency model for Ruby 3</h2>
-
-<ul>
-<li><a href="http://rubykaigi.org/2016/presentations/ko1.html" title="A proposal of new concurrency model for Ruby 3 - RubyKaigi 2016">A proposal of new concurrency model for Ruby 3 - RubyKaigi 2016</a></li>
-<li>英語で発表</li>
-<li><a href="http://www.atdot.net/~ko1/activities/2016_rubykaigi.pdf">Presentation slide</a></li>
-<li><a href="http://www.atdot.net/~ko1/diary/201609.html#d6">日本語 Script</a></li>
-<li>Concurrent の発表が多い</li>
-<li>Concurrent RubyKaigi</li>
-<li>なぜみんな Concurrency 好きか?</li>
-<li>なぜマルチスレッドプログラムが難しいのかと Guild という新しいアイデアの発表</li>
-<li>Ruby は安全・簡単な方を選んでいる</li>
-<li>data race と race condition の話</li>
-<li><code>Array#concat</code> とマルチスレッドの挙動</li>
-<li>マルチスレッドは難しいという話</li>
-<li>ロックが不十分だとバグるし、多すぎるとパフォーマンスに悪影響</li>
-<li>他の言語での知見</li>
-<li>&ldquo;Guild&rdquo;</li>
-<li>1個の Guild の中で同時に動く Thread は1個だけ</li>
-<li>オブジェクトの共有方法などの話</li>
-<li>Immutable なオブジェクトは共有可能</li>
-<li>数値, Symbol, nil/true/false が徐々に frozen になっていた</li>
-<li>doc/NEWS-2.0.0:  Fixnums, Bignums and Floats are frozen.</li>
-<li>doc/NEWS-2.1.0:  * All symbols are now frozen.</li>
-<li>doc/NEWS-2.2.0:  * nil/true/false objects are frozen. [Feature #8923]</li>
-<li>&ldquo;こんなこともあろうかと&rdquo;</li>
-<li>Guild の説明続き</li>
-<li>パフォーマンスの話とか</li>
-<li>質疑応答</li>
-<li>質問1: 聞き取れず</li>
-<li>質問2: Thread との違い?</li>
-<li>質問3: sekiさん: <code>Array#concat</code> の問題は解決するのか? (ちゃんと聞き取れなかったので、違うかも)</li>
-<li>解決しない</li>
-<li>そもそもできないんだから他の方法を考えるんじゃないか</li>
-<li>間違った使い方ができないような方法を考えましたという話</li>
-<li>質問4: move operation がなんとか (聞き取れず)</li>
-<li>move 操作はパフォーマンスのため</li>
-<li>他にこういうことをやっている人がいるのでは?</li>
-<li>知らない</li>
-<li>質問5: たぶんグローバルデータの話</li>
-<li>Ruby global data のスライドで説明</li>
-<li><a href="http://togetter.com/li/1021975" title="Rubyコアコミッター笹田耕一さん解説 Ruby3のための新しい並列実行モデル Guild #RubyKaigi #RubyKaigiA - Togetterまとめ">Rubyコアコミッター笹田耕一さん解説 Ruby3のための新しい並列実行モデル Guild #RubyKaigi #RubyKaigiA - Togetterまとめ</a></li>
-</ul>
-
-
-<p>ささださんのプレゼンは事前に日本語 Script も公開されていたし、スライドも事前にチェックできたのでよかった。</p>
-
-<p>セッション後の質問を受けていたのを横で聞いていたら、できるだけ 1 Guild 1 Thread で Thread の代わりに Guild を使うようになってほしいという感じらしかった。</p>
-
-<p>スライドでは frozen になったものに Numeric と書いてあったが実際には Rational は frozen ではないのでちょっと違う。</p>
-
-<h2>おやつ休憩</h2>
-
-<ul>
-<li>アナウンス</li>
-<li>スポンサーブースにおやつがデプロイされている</li>
-<li>弁当が少し残っているのでまだお腹が空いているという人はどうぞ</li>
-<li>懇親会受付</li>
-</ul>
-
-
-<h2>Isomorphic web programming in Ruby</h2>
-
-<ul>
-<li>英語はつらいので日本語のセッションということで Room D にきました</li>
-<li>Room D には電源も無線もありませんでした</li>
-<li><a href="http://rubykaigi.org/2016/presentations/youchan.html" title="Isomorphic web programming in Ruby - RubyKaigi 2016">Isomorphic web programming in Ruby - RubyKaigi 2016</a></li>
-<li>昨年の RubyKaigi 2015 では <a href="https://github.com/youchan/hyalite">https://github.com/youchan/hyalite</a> (React のようなものを Ruby で書ける) の話をした</li>
-<li>Menilite というのを作っている</li>
-<li>モデルをサーバーとクライアントで共有する</li>
-<li>(内容とは関係ないけど、亀がうさぎに比べてかなり進んでいるのは、プレゼン開始時に亀の位置がすでに進んでいたからのように見えた)</li>
-<li>デモ</li>
-<li>silica というラッパーコマンド</li>
-<li>まだ new しかサブコマンドがない</li>
-<li>Sinatra と Opal を使ったコードが自動生成</li>
-<li>ネットワークがつらいようなので Gemfile の github を参照しているところを path に書き換えてローカルのを参照するようにして bundle install</li>
-<li>ライブコーディングは時間がなさそうだったので、あらかじめ git の branch を用意しておいた</li>
-<li>しかしライブコーディングをしている</li>
-<li>sinatra-activerecord を使っている</li>
-<li>migration を毎回書くのは面倒なので silica でサポートしたい</li>
-<li><code>git stash -u</code> でライブコーディングした変更を捨ててあらかじめ用意していたものを checkout</li>
-<li>ユーザー追加、サインアップ</li>
-<li>パスワードは BCrypt で暗号化</li>
-<li><code>RUBY_ENGINE</code> による分岐でサーバーサイドだけの処理にする</li>
-<li>signup 部分をライブコーディング</li>
-<li>youchan, topsecret で signup しようとする</li>
-<li><code>BCrypt</code> を typo していて error になったので <code>git stash -u</code> で捨てて、あらかじめ用意していた変更を checkout</li>
-<li>時間がなくなってきたので、この後の変更もどんどん checkout しながら紹介</li>
-<li>ログインしていなかったらログイン画面に飛ばす処理</li>
-<li>ログイン処理</li>
-<li>ユーザーごとにアクセス権を設定</li>
-<li>セッションをクリアしていないので、ログインに失敗した時に前のユーザーのままだった</li>
-<li>デモ終了</li>
-<li>なぜ独自のモデルか</li>
-<li>GUID : データベースで自動生成されるシーケンス番号の ID はクライアントから使いにくい</li>
-<li>access control : すべてのデータがクライアントから見えてしまうとまずい</li>
-<li><a href="http://togetter.com/li/1021990" title="このライブコーディングがすごい！ RubyでIsomorphic Webプログラミングを実現する Menilite 紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ">このライブコーディングがすごい！ RubyでIsomorphic Webプログラミングを実現する Menilite 紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ</a></li>
-</ul>
-
-
-<p>ライブコーディングがあったので、 vim を使ってるとか SKK (AquaSKK?) を使ってるとかそういうところも気になりました。</p>
-
-<h2>Intermission</h2>
-
-<ul>
-<li>メインホールに移動した</li>
-</ul>
-
-
-<h2>Unifying Fixnum and Bignum into Integer</h2>
-
-<ul>
-<li><a href="http://rubykaigi.org/2016/presentations/tanaka_akr.html" title="Unifying Fixnum and Bignum into Integer - RubyKaigi 2016">Unifying Fixnum and Bignum into Integer - RubyKaigi 2016</a></li>
-<li><a href="https://bugs.ruby-lang.org/issues/12005" title="Unify Fixnum and Bignum into Integer">Unify Fixnum and Bignum into Integer</a> で提案された</li>
-<li><code>Fixnum</code> や <code>Bignum</code> という定数は <code>Integer</code> を指すようになる</li>
-<li><code>Fixnum</code> や <code>Bignum</code> という定数を参照しているコードでも <code>NameError</code> は起きない</li>
-<li>C コードで <code>rb_cFixnum</code> や <code>rb_cBignum</code> を参照しているコードはコンパイルエラーになる</li>
-<li>両対応するには <code>RUBY_INTEGER_UNIFICATION</code> マクロで分岐する</li>
-<li>前提として <code>Fixnum</code> と <code>Bignum</code> とは何か</li>
-<li><code>Integer</code> という抽象クラスとそれを継承した <code>Fixnum</code>　と <code>Bignum</code> というクラスがあった</li>
-<li><code>1.class</code> と <code>(2**100).class</code></li>
-<li>Ruby 2.4 では <code>Integer</code> だけになる</li>
-<li><code>Fixnum</code> の範囲は ILP32, LLP64 (Windows など), LP64, JRuby で違った</li>
-<li>portable ではないので基本的には使ってはいけない</li>
-<li>Ruby には仕様がある: <a href="http://www.iso.org/iso/iso_catalogue/catalogue_tc/catalogue_detail.htm?csnumber=59579">ISO/IEC 30170:2012</a>, <a href="http://www.jisc.go.jp/app/pager?%23jps.JPSH0090D:JPSO0020:/JPS/JPSO0090.jsp=&amp;RKKNP_vJISJISNO=X3017">JIS X 3017:2011</a></li>
-<li>Integer の範囲は unbounded</li>
-<li><code>Fixnum</code> と <code>Bignum</code> の定義はしても良い</li>
-<li>Ruby 2.3 も Ruby 2.4 も仕様に準拠</li>
-<li>仕様の記述者は <code>Fixnum</code> と <code>Bignum</code> は実装の詳細と考えて仕様に入れなかったのではないか</li>
-<li>利点</li>
-<li><code>Fixnum</code> と <code>Bignum</code> を間違って使うことがなくなる</li>
-<li>Ruby を勉強するのが簡単になる</li>
-<li>ドキュメントもシンプルになる</li>
-<li>シンプルに簡単にもっと数学的になる</li>
-<li>欠点: 非互換性</li>
-<li><code>Fixnum</code> の間違った使い方の例: <code>lib/rubygems/specification.rb</code>: <code>specification_version.is_a?(Fixnum)</code></li>
-<li>Ruby 2.4 では間違った使い方ができなくなる</li>
-<li><code>obj.is_a?(Fixnum)</code> は <code>obj.is_a?(Integer)</code> の意味になる</li>
-<li>REPL で <code>1.class</code> を実行すると <code>Fixnum</code> になっていたのが <code>Integer</code> になる</li>
-<li>Ruby を学ぶのが簡単になる</li>
-<li>1 が integer というのは誰でも知っている</li>
-<li>1 が <code>Fixnum</code> というのはほとんどの人は知らない (Lisp プログラマーを除く)</li>
-<li>教える側にとっても楽になる</li>
-<li>教科書がシンプルになる</li>
-<li>ドキュメントもシンプルになる</li>
-<li><code>Fixnum#foo</code> と <code>Bignum#foo</code> のドキュメントが重複していた</li>
-<li><code>ri foo</code> も重複して出ていた</li>
-<li>シンプルに簡単にもっと数学的になる</li>
-<li>Ruby レベルの非互換</li>
-<li><code>Fixnum</code> と <code>Bignum</code> が <code>Integer</code> を参照するようになる</li>
-<li><code>NameError</code> は起きない</li>
-<li><code>Fixnum == Bignum</code> が <code>true</code> になる</li>
-<li><code>1.is_a?(Bignum)</code> が <code>true</code> になる</li>
-<li><code>(2**100).is_a?(Fixnum)</code> が <code>true</code> になる</li>
-<li><code>Fixnum</code> と <code>Bignum</code> は少なくとも Ruby 2.3 が EOL になるまで削除しない方が良いと思っている</li>
-<li><code>Fixnum</code> の範囲が隠れる</li>
-<li><code>test/ruby/test_integer_comb.rb</code>: <code>max = 1; max *= 2 while (max-1).class == Fixnum; FIXNUM_MAX = max/2-1</code> が Ruby 2.4 では無限ループに</li>
-<li>推奨される解決策: <code>Fixnum</code> の範囲に依存しない</li>
-<li>CRuby のみの推奨しない解決策: <code>require 'rbconfig/sizeof'; FIXNUM_MIN = -(1 &lt;&lt; (8 * RbConfig::SIZEOF['long'] - 2)); FIXNUM_MAX = (1 &lt;&lt; (8 * RbConfig::SIZEOF['long'] -2)) - 1</code> (<code>rbconfig/sizeof</code> は Ruby 2.1 から)</li>
-<li>JRuby は知らない</li>
-<li>使わない方が良いがどうしても必要ならこういう方法もあるという話</li>
-<li>メタプログラミングや DSL が壊れる</li>
-<li>メタプログラミング</li>
-<li><code>mathn.rb</code> が <code>Fixnum</code> と <code>Bignum</code> に定義</li>
-<li><code>Integer</code> だけに変更</li>
-<li>activesupport <code>NumericWithFormat</code> を prepend</li>
-<li><code>Integer</code> だけに変更</li>
-<li>DSL</li>
-<li>Sequel</li>
-<li><code>add_column :column, Bignum</code></li>
-<li><code>:Bignum</code> というシンボルを使うようになった</li>
-<li>C レベル</li>
-<li>利点: なし</li>
-<li>欠点: 非互換</li>
-<li>Ruby 2.3 での <code>Integer</code> の実装詳細</li>
-<li>Ruby 2.4 での <code>Integer</code> の実装詳細</li>
-<li>クラス階層が変わっただけ</li>
-<li>拡張ライブラリの更新 : <code>rb_class_of(obj) == rb_cFixnum</code> → <code>FIXNUM_P(obj)</code> などの簡単な置き換え</li>
-<li>影響のあった拡張ライブラリ : オブジェクトをダンプ/ロードするようなものがほとんどだった</li>
-<li>ext/json, msgpack, syck, yajl, oj, ox, ruby-gnome2, etc.</li>
-<li>Version Dependencies</li>
-<li>Minor version up (1.3.2 to 1.3.3) が better</li>
-<li>Major version version up (1.3.2 to 2.0.0) は pessimistic (悲観的な) version dependency <code>(~&gt; 1.3)</code> で問題が起きる</li>
-<li>詳細: <a href="https://www.hsbt.org/diary/20160829.html">https://www.hsbt.org/diary/20160829.html</a></li>
-<li>利点のほとんどは初心者向け</li>
-<li>経験を積んだ Ruby プログラマーには大きな問題ではない</li>
-<li>バージョンの非互換の問題</li>
-<li>コミッターは具体的にどう支持していたのかという話</li>
-<li><a href="http://togetter.com/li/1022003" title="Rubyコミッターが語る Ruby2.4にてFixnumとBignumをIntergerに統合する話 #RubyKaigi #RubyKaigiA - Togetterまとめ">Rubyコミッターが語る Ruby2.4にてFixnumとBignumをIntergerに統合する話 #RubyKaigi #RubyKaigiA - Togetterまとめ</a></li>
-<li>発表資料: <a href="http://www.a-k-r.org/d/2016-09.html#a2016_09_08_1">http://www.a-k-r.org/d/2016-09.html#a2016_09_08_1</a></li>
-</ul>
-
-
-<h3>gem の Ruby 本体のバージョン依存関連</h3>
-
-<p>Togetterまとめ によると <a href="http://sue445.hatenablog.com/entry/2016/09/02/121047" title="gemspecにRUBY_VERSIONによるif文書くのは意味がないので今すぐやめるべき">gemspecにRUBY_VERSIONによるif文書くのは意味がないので今すぐやめるべき</a> という話もあるみたいです。</p>
-
-<p>watch している gem だと <a href="https://github.com/sj26/mailcatcher" title="MailCatcher">MailCatcher</a> が間接的に依存している <code>mime-types</code> が 3 になったときに Ruby 2.0 以上が必須になって問題が起きていたということがありました。</p>
-
-<h2>Intermission</h2>
-
-<ul>
-<li>そのままメインホールにいた</li>
-</ul>
-
-
-<h2>Ups and Downs of Ruby Internationalization</h2>
-
-<ul>
-<li><a href="http://rubykaigi.org/2016/presentations/duerst.html" title="Ups and Downs of Ruby Internationalization - RubyKaigi 2016">Ups and Downs of Ruby Internationalization - RubyKaigi 2016</a></li>
-<li>会場アンケート</li>
-<li>A-Z 以外の文字を使っている人</li>
-<li>US-ASCII 以外を使っている人</li>
-<li>UTF-8 以外を使っている人</li>
-<li>Ruby のバージョンと Unicode のバージョン</li>
-<li>2014: 2.2 7.0.0</li>
-<li>2015: 2.3 8.0.0</li>
-<li>2016: 2.4 9.0.0</li>
-<li><code>upcase</code>, <code>downcase</code>, <code>capitalize</code>, <code>swapcase</code></li>
-<li>Ruby 2.3 では US-ASCII 以外の範囲は変換しなかった</li>
-<li>Ruby 2.4 では他の文字も変換する</li>
-<li>使用例</li>
-<li>互換性がない変更が入っているので preview で早めにチェックしてほしいという話</li>
-<li>US-ASCII の範囲に限定したい時は <code>upcase :ascii</code> など</li>
-<li>変換用データは Unicode から</li>
-<li>文字数は保存されない</li>
-<li>不可逆</li>
-<li>コンテキスト依存</li>
-<li>特殊な場合: <code>upcase :turkic</code> の話</li>
-<li>特殊な場合: <code>upcase :lithuanian</code> の話</li>
-<li>特殊な場合: Case folding (大小畳込み) <code>downcase :fold</code></li>
-<li>特殊な場合: Titlecase <code>capitalize</code></li>
-<li>実装詳細の話</li>
-<li>簡単だがとても大きな <code>tr</code> のようなもの</li>
-<li><code>string.c:sym_upcase</code>: <code>String#upcase</code> 相当を呼んでいる</li>
-<li><code>string.c:rb_string_upcase</code>: <code>dup.upcase!</code> 相当</li>
-<li><code>string.c:rb_string_upcase_bang</code>: 実際の変換をしているのはここ</li>
-<li><code>OnigCaseFoldType</code> で変換の種類が決まっている</li>
-<li><code>string.c:rb_str_casemap</code></li>
-<li>UTF-8 以外の encoding に対応する primitive の話</li>
-<li><code>Shift_JIS</code> などの対応は不要?</li>
-<li>Oniguruma/Onigmo は folding のデータを持っているので再利用(?)</li>
-<li><code>enc/unicode/data/9.0.0/casefold.h</code> の話</li>
-<li><code>swapcase</code> は誰も使っていない?</li>
-<li>会場に聞いてみると誰も使っていない感じだった。</li>
-<li>大文字小文字の合成文字で問題がある</li>
-<li>Test-Driven Development</li>
-<li>Data-Driven Testing</li>
-<li>Character Properties</li>
-<li><code>Regexp</code> でほとんど可能</li>
-<li>ある文字の script を得るのは不可能</li>
-<li>Unicode Normalization</li>
-<li>Ruby 2.2 から <code>'string'.unicode_normalize :nfkc</code> がある</li>
-<li><a href="http://www.sw.it.aoyama.ac.jp/2016/pub/RubyKaigi/">http://www.sw.it.aoyama.ac.jp/2016/pub/RubyKaigi/</a> と最後に出ていたようだけどまだ公開されていない?</li>
-<li><a href="http://togetter.com/li/1022019" title="&quot;Who has used swapcase?&quot; Rubyにおける国際化機能のかなしみ #RubyKaigi #RubyKaigiA - Togetterまとめ">&quot;Who has used swapcase?&quot; Rubyにおける国際化機能のかなしみ #RubyKaigi #RubyKaigiA - Togetterまとめ</a></li>
-</ul>
-
-
-<p>具体例に出てくる文字が入力できないし、英語も聞き取れないしで、あんまりメモが取れなかったです。</p>
-
-<h2>見ていなかったセッションなどの Togetter まとめ</h2>
-
-<ul>
-<li><a href="http://togetter.com/li/1021880" title="&quot;この悪天候… 最高のカンファレンス日和！&quot; &quot;会場広い！&quot; &quot;Wi-Fiはやくきてくれーっ！&quot; #RubyKaigi 2016 オープニングまで - Togetterまとめ">&quot;この悪天候… 最高のカンファレンス日和！&quot; &quot;会場広い！&quot; &quot;Wi-Fiはやくきてくれーっ！&quot; #RubyKaigi 2016 オープニングまで - Togetterまとめ</a></li>
-<li><a href="http://togetter.com/li/1021901" title="Ruby on Erlang！！！ errubyの紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ">Ruby on Erlang！！！ errubyの紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ</a></li>
-<li><a href="http://togetter.com/li/1021953" title="DSLで記述できるmRuby製コンテナ haconiwa ！ その開発動機とは #RubyKaigi #RubyKaigiB - Togetterまとめ">DSLで記述できるmRuby製コンテナ haconiwa ！ その開発動機とは #RubyKaigi #RubyKaigiB - Togetterまとめ</a></li>
-<li><a href="http://togetter.com/li/1021974" title="【Unityちゃん】らくらくシェーダコーディング！ mrubyで実装するGLSLジェネレータ #RubyKaigi #RubyKaigiB - Togetterまとめ">【Unityちゃん】らくらくシェーダコーディング！ mrubyで実装するGLSLジェネレータ #RubyKaigi #RubyKaigiB - Togetterまとめ</a></li>
-<li><a href="http://togetter.com/li/1021993" title="JRubyにおけるString実装高速化 Rope 紹介 #RubyKaigi #RubyKaigiA - Togetterまとめ">JRubyにおけるString実装高速化 Rope 紹介 #RubyKaigi #RubyKaigiA - Togetterまとめ</a></li>
-<li><a href="http://togetter.com/li/1022009" title="Windows環境にて如何にしてマルチプロセスサーバを実現するか fluentd・ServerEngine実装の紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ">Windows環境にて如何にしてマルチプロセスサーバを実現するか fluentd・ServerEngine実装の紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ</a></li>
-<li><a href="http://togetter.com/li/1022022" title="【超満員】クックパッド導入事例 Dockerでスケールするジョブキューシステム【登壇者混乱】 #RubyKaigi #RubyKaigiB - Togetterまとめ">【超満員】クックパッド導入事例 Dockerでスケールするジョブキューシステム【登壇者混乱】 #RubyKaigi #RubyKaigiB - Togetterまとめ</a></li>
-</ul>
-
-
-<h2>懇親会</h2>
-
-<p>同じ国立京都国際会館の中のさくらフロアで RubyKaigi 2016 Official Party がありました。</p>
-
-<p>ほとんど<a href="https://github.com/rurema">るりま</a>関連の話をしていただけで終わってしまった感じでした。</p>
 ]]></content>
   </entry>
   

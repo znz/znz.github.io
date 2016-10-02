@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rails | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rails/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-09-25T23:19:44+09:00</updated>
+  <updated>2016-10-03T00:37:30+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,295 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[React On Rails の react-webpack-rails-tutorial を Dokku で試してみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-10-02-react-webpack-rails-tutorial-on-dokku.html"/>
+    <updated>2016-10-02T22:24:55+09:00</updated>
+    <id>http://blog.n-z.jp/blog/react-webpack-rails-tutorial-on-dokku</id>
+    <content type="html"><![CDATA[<p>react.js を rails と組み合わせて使うにはどうすればいいんだろうと思って調べてみると、<code>react-rails</code> gem の他に <code>react_on_rails</code> gem というもっとまとめていろんなことの面倒を見てくれるものがあったので、そのサンプルアプリである
+<a href="https://github.com/shakacode/react-webpack-rails-tutorial" title="react-webpack-rails-tutorial">react-webpack-rails-tutorial</a>
+を <a href="https://github.com/dokku/dokku/" title="Dokku">Dokku</a> にデプロイできるか試してみました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>OS X El Capitan 10.11.6</li>
+<li>VirtualBox 5.1.6</li>
+<li>Vagrant 1.8.6</li>
+<li>Dokku master (0.7.2 からちょっと変更が進んだもの)</li>
+<li>react-webpack-rails-tutorial master</li>
+<li>ruby 2.3.1</li>
+<li>rails 5.0.0</li>
+<li>node 6.7.0</li>
+</ul>
+
+
+<h2>環境構築</h2>
+
+<p>まず <a href="https://github.com/dokku/dokku">https://github.com/dokku/dokku</a> を git clone したディレクトリで作業します。</p>
+
+<p>vagrant の provision から何度も試すようなら、 apt で日本のミラーを使うように shell provisioning を追加しておきます。</p>
+
+<pre><code class="diff">diff --git a/Vagrantfile b/Vagrantfile
+index 4f3fc6c..bccceb9 100644
+--- a/Vagrantfile
++++ b/Vagrantfile
+@@ -47,6 +47,7 @@ Vagrant::configure("2") do |config|
+       vb.customize ["modifyvm", :id, "--natdnsproxy1", "off"]
+     end
+
++    vm.vm.provision :shell, :inline =&gt; "sed -i -e 's,//us\\.archive\\.ubuntu\\.com,//jp.archive.ubuntu.com,' /etc/apt/sources.list"
+     vm.vm.provision :shell, :inline =&gt; "export DEBIAN_FRONTEND=noninteractive &amp;&amp; apt-get update &gt; /dev/null &amp;&amp; apt-get -qq -y install git &gt; /dev/null &amp;&amp; cd /root/dokku &amp;&amp; #{make_cmd}"
+     vm.vm.provision :shell, :inline =&gt; "cd /root/dokku &amp;&amp; make dokku-installer"
+     vm.vm.provision :shell do |s|
+</code></pre>
+
+<p><code>vagrant up</code> します。
+gliderlabs/herokuish の docker イメージのダウンロードなどもあるので時間がかかります。</p>
+
+<h2>Web UI での設定</h2>
+
+<p><a href="http://dokku.me/">http://dokku.me/</a> を開いて初期設定します。
+<code>Hostname</code> を <code>dokku.me</code> に変更して <code>Use virtualhost naming for apps</code> にチェックを入れて <code>Finish Setup</code> を押します。</p>
+
+<p>意図した動作かどうかはわかりませんが、この作業をしなくても <code>app-name.dokku.me</code> は使えました。
+(<code>not-found-app.dokku.me</code> で初期設定画面は出てくるまま)</p>
+
+<h2>初期設定</h2>
+
+<p><code>/vagrant/tmp/init.sh</code> に以下のファイルをおいて実行します。
+<code>tmp</code> は <code>.gitignore</code> に入っていてローカルな作業ファイルをおくのに都合が良いです。</p>
+
+<p>内容としては以下のようなことをしています。</p>
+
+<ul>
+<li><code>docker</code> コマンドを <code>sudo</code> なしで呼べるように <code>docker</code> グループに <code>vagrant</code> ユーザーを追加</li>
+<li><code>/home/dokku</code> を調べたりするときなどに都合が良いように <code>dokku</code> グループに <code>vagrant</code> ユーザーを追加</li>
+<li>ruby などのダウンロードでタイムアウトしないように <code>CURL_TIMEOUT</code> を増やす</li>
+<li><code>dokku run</code> などで一時的に作成されるコンテナーをデフォルトで削除するように <code>DOKKU_RM_CONTAINER</code> を設定</li>
+<li><code>~/.ssh/known_hosts</code> がハッシュ化されているとどの行がどのホストかわからなくなるので <code>HashKnownHosts no</code> で無効化</li>
+<li>あとで git push のときに使う <code>10.0.0.2</code> のホスト鍵を <code>~/.ssh/known_hosts</code> に追加</li>
+<li>ssh の鍵ペアを作成して <code>dokku ssh-keys:add</code> で登録</li>
+<li>ruby のビルドに必要なパッケージなどをインストール</li>
+<li>anyenv, rbenv, ndenv をインストール</li>
+<li><code>~/.gemrc</code> を作成してデフォルトでドキュメントのインストールを無効化</li>
+<li>ndenv で最新の node をインストール</li>
+</ul>
+
+
+<p>デプロイするだけなら anyenv などは不要ですが、あとで開発環境としても動かしたかったので入れています。</p>
+
+<pre><code class="sh">#!/bin/bash
+set -euo pipefail
+set -x
+cd /home/vagrant
+sudo usermod -aG docker vagrant
+sudo usermod -aG dokku vagrant
+dokku config:set --global CURL_TIMEOUT=120
+dokku config:set --global DOKKU_RM_CONTAINER=1
+if [[ ! -e "$HOME/.ssh/config" ]]; then
+  echo "HashKnownHosts no" &gt;"$HOME/.ssh/config"
+fi
+if [[ ! -e "$HOME/.ssh/known_hosts" ]]; then
+  ssh-keyscan -t ecdsa-sha2-nistp256 10.0.0.2 | grep -v '#' &gt; "$HOME/.ssh/known_hosts"
+fi
+if [[ ! -e "$HOME/.ssh/id_rsa" ]]; then
+  ssh-keygen -N '' -f "$HOME/.ssh/id_rsa"
+  sudo dokku ssh-keys:add vagrant "$HOME/.ssh/id_rsa.pub"
+fi
+
+if [[ -z "$(dpkg -l | grep libsqlite3-dev)" ]]; then
+  sudo sed -i~ -e 's/us\.archive/jp.archive/' /etc/apt/sources.list
+  sudo apt-get update
+  sudo apt-get -y install autoconf bison build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm3 libgdbm-dev
+  sudo apt-get -y install libpq-dev
+  sudo apt-get -y install libsqlite3-dev
+  sudo apt-get -y install jq
+fi
+if [[ ! -d ~/.anyenv ]]; then
+  git clone https://github.com/riywo/anyenv.git ~/.anyenv
+  echo 'export PATH="$HOME/.anyenv/bin:$PATH"' &gt;&gt; ~/.bashrc
+  echo 'eval "$(anyenv init -)"' &gt;&gt; ~/.bashrc
+fi
+if [[ -z "$(command -v anyenv)" ]]; then
+  export PATH="$HOME/.anyenv/bin:$PATH"
+  set +x
+  eval "$(anyenv init - --no-rehash)"
+  set -x
+fi
+if [[ ! -d ~/.anyenv/envs/rbenv ]]; then
+  anyenv install rbenv
+fi
+if [[ ! -f ~/.gemrc ]]; then
+  cat &lt;&lt;EOF &gt;~/.gemrc
+install: --no-rdoc --no-ri --format-executable
+update: --no-rdoc --no-ri --format-executable
+EOF
+fi
+if [[ ! -d "$HOME/.anyenv/envs/ndenv" ]]; then
+  anyenv install ndenv
+fi
+node_version=$(ndenv install -l | grep '^ *v' | tail -n1 | xargs)
+if ! ndenv versions | grep -q "$node_version"; then
+  ndenv install "$node_version"
+  ndenv global "$node_version"
+fi
+</code></pre>
+
+<h2>react-webpack-rails-tutorial のデプロイ</h2>
+
+<p>一度 <code>exit</code> で抜けて <code>vagrant ssh</code> で入りなおしてグループの変更や anyenv などのインストールを反映します。</p>
+
+<p><code>/vagrant/tmp/react-webpack-rails-tutorial.sh</code> に以下のファイルをおいて実行します。</p>
+
+<p>内容としては以下のようなことをしています。</p>
+
+<ul>
+<li><a href="https://github.com/shakacode/react-webpack-rails-tutorial">https://github.com/shakacode/react-webpack-rails-tutorial</a> の取得</li>
+<li>react-webpack-rails-tutorial アプリの作成 (リンク作業に必要)</li>
+<li>dokku-postgres が入っていなければ入れる</li>
+<li>react-webpack-rails-tutorial-db を作ってリンク</li>
+<li>dokku という remote を追加</li>
+<li><a href="https://github.com/heroku/heroku-buildpack-multi">https://github.com/heroku/heroku-buildpack-multi</a> を使うため <code>.buildpacks</code> を作成</li>
+<li><code>rake db:migrate</code> の自動実行のため <code>app.json</code> を作成</li>
+<li>デプロイ</li>
+</ul>
+
+
+<pre><code class="sh">#!/bin/bash
+set -euo pipefail
+set -x
+cd
+if [[ ! -d react-webpack-rails-tutorial ]]; then
+  git clone https://github.com/shakacode/react-webpack-rails-tutorial
+fi
+if [[ ! -d /home/dokku/react-webpack-rails-tutorial ]]; then
+  dokku apps:create react-webpack-rails-tutorial
+fi
+if [[ ! -d /var/lib/dokku/plugins/available/postgres ]]; then
+  sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git || :
+  sudo docker pull gliderlabs/herokuish
+fi
+if [[ ! -f /home/dokku/react-webpack-rails-tutorial/DOCKER_OPTIONS_RUN ]]; then
+  dokku postgres:create react-webpack-rails-tutorial-db || :
+  dokku postgres:link react-webpack-rails-tutorial-db react-webpack-rails-tutorial
+fi
+cd react-webpack-rails-tutorial
+if ! git remote | grep -q dokku; then
+  git remote add dokku dokku@10.0.0.2:react-webpack-rails-tutorial
+fi
+cat &gt;.buildpacks &lt;&lt;EOF
+https://github.com/heroku/heroku-buildpack-nodejs
+https://github.com/heroku/heroku-buildpack-ruby
+EOF
+git add .buildpacks
+git commit -m 'Add .buildpacks' || :
+cat &lt;&lt;EOF &gt;app.json
+{
+  "scripts": {
+    "dokku": {
+      "predeploy": "bundle exec rake db:migrate"
+    }
+  }
+}
+EOF
+git add app.json
+git commit -m "Set script.dokku.predeploy to app.json" || :
+git push dokku master
+</code></pre>
+
+<h2>動作確認</h2>
+
+<p>ブラウザーで <a href="http://react-webpack-rails-tutorial.dokku.me/">http://react-webpack-rails-tutorial.dokku.me/</a> を開いて動作確認します。</p>
+
+<h2>.buildpacks の順番</h2>
+
+<p><code>.buildpacks</code> で nodejs, ruby という順番で指定しましたが、逆の順番にすると以下のエラーで失敗しました。
+<code>react_on_rails</code> で使っているので、 nodejs の方を先に入れる必要があるようです。</p>
+
+<pre><code class="text">-----&gt; Preparing app for Rails asset pipeline
+       Running: rake assets:precompile
+       cd client &amp;&amp; npm run build:production
+       sh: 1: npm: not found
+       rake aborted!
+       Command failed with status (127): [cd client &amp;&amp; npm run build:production...]
+       /tmp/build/vendor/bundle/ruby/2.3.0/gems/react_on_rails-6.1.0/lib/tasks/assets.rake:33:in `block (3 levels) in &lt;top (required)&gt;'
+       /tmp/build/vendor/bundle/ruby/2.3.0/gems/rake-11.2.2/exe/rake:27:in `&lt;top (required)&gt;'
+       Tasks: TOP =&gt; assets:precompile =&gt; react_on_rails:assets:compile_environment =&gt; react_on_rails:assets:webpack
+       (See full trace by running task with --trace)
+       !
+       !     Precompiling assets failed.
+       !
+</code></pre>
+
+<h2>開発環境設定</h2>
+
+<p><a href="https://github.com/shakacode/react-webpack-rails-tutorial#basic-demo-setup">https://github.com/shakacode/react-webpack-rails-tutorial#basic-demo-setup</a> を参考にして設定します。</p>
+
+<p><code>/vagrant/tmp/react-webpack-rails-tutorial-dev.sh</code> に以下のファイルをおいて実行します。</p>
+
+<p>内容としては以下のようなことをしています。</p>
+
+<ul>
+<li><code>.ruby-version</code> で指定されている ruby のインストール
+<a href="https://github.com/thoughtbot/capybara-webkit/wiki/Installing-Qt-and-compiling-capybara-webkit#ubuntu-trusty-1404">https://github.com/thoughtbot/capybara-webkit/wiki/Installing-Qt-and-compiling-capybara-webkit#ubuntu-trusty-1404</a> のインストール (OS X 上で直接試したときにはこの依存をインストールする部分が大変でした)</li>
+<li>余計な差分が出ないように <code>Gemfile.lock</code> に記録されているバージョンの bundler をインストール</li>
+<li><code>bundle install</code> で依存している gem をインストール</li>
+<li><code>npm install</code> で依存している node modules をインストール</li>
+<li>sqlite3 のデータベース作成</li>
+</ul>
+
+
+<pre><code class="sh">#!/bin/bash
+set -euo pipefail
+set -x
+cd "$HOME/react-webpack-rails-tutorial"
+ruby_version="$(&lt;.ruby-version)"
+if ! rbenv versions | grep -q "$ruby_version"; then
+  rbenv install "$ruby_version"
+fi
+sudo apt-get -y install libqt4-dev libqtwebkit-dev
+bundler_version=$(grep -A1 'BUNDLED WITH' Gemfile.lock | tail -n1 | tr -d ' ')
+if ! gem list | grep -q bundler; then
+  gem install bundler -v "$bundler_version"
+fi
+bundle install
+npm install
+rake db:setup
+</code></pre>
+
+<h2>開発環境追加設定</h2>
+
+<p><code>foreman start -f Procfile.hot</code> で起動して
+<a href="http://dokku.me:5000/">http://dokku.me:5000/</a> で表示を確認すると「FATAL: Listen error: unable to monitor directories for changes. Visit <a href="https://github.com/guard/listen/wiki/Increasing-the-amount-of-inotify-watchers">https://github.com/guard/listen/wiki/Increasing-the-amount-of-inotify-watchers</a> for info on how to fix this.」というエラーになるので、サイトに書いてある通り、
+<code>echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf &amp;&amp; sudo sysctl -p</code>
+を実行しました。</p>
+
+<p>実行前の <code>cat /proc/sys/fs/inotify/max_user_watches</code> は 8192 でした。</p>
+
+<p>起動途中だと <code>ActionView::Template::Error (No such file or directory @ rb_file_s_mtime - app/assets/webpack/server-bundle.js):</code> というエラーになるので少し待てば良いようです。</p>
+
+<p>しかし、次にアクセスしてみるとなぜか hot-assets が落ちてしまってうまく動きませんでした。
+そして <code>ps x</code> でプロセスを確認するとちゃんと終了せずに残ってしまっているプロセスがあるので <code>pkill -f puma</code>, <code>pkill node</code> で終了させる必要がありました。</p>
+
+<p>表示できても assets として <code>http://localhost:3500/</code> を参照しているため、ポートフォワーディングの設定追加が必要そうでした。</p>
+
+<h2>Procfile.static</h2>
+
+<p><code>foreman start -f Procfile.static</code> で起動して <code>http://dokku.me:5000/</code> を開いたところ、開けることもありましたが、落ちることも多くて安定しませんでした。</p>
+
+<h2>まとめ</h2>
+
+<p>Vagrant の VM は開発環境としてはなぜか安定しませんでしたが、 Dokku をデプロイ先としては安定して使えたので、
+<code>react_on_rails</code> は開発対象の選択肢として入れても良さそうな感じがしました。</p>
+
+<p>開発環境として OS X 上で直接動かしたときは問題なく動いたので、<code>localhost</code> ではなく <code>10.0.2.2</code> を使ってしまったのが不具合の原因だったのかもしれませんが、もう少し調べてみないとなんとも言えません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[devise で電子メールアドレスのドメイン部分を省略してもログインできるようにする]]></title>
@@ -322,37 +611,6 @@ firewall で塞がれている場合にエラーになったり
 <p>その後、
 capistrano 3.3.4 と capistrano-stats 1.1.0 にあがって、
 デフォルトの N を 2 回は全く送信しないようになりました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Rails 4.1.7 にあげたら一部の画像が表示されなくなった]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-11-05-sprockets.html"/>
-    <updated>2014-11-05T21:11:09+09:00</updated>
-    <id>http://blog.n-z.jp/blog/sprockets</id>
-    <content type="html"><![CDATA[<p>Rails 4.1.7 にあげたら一部の画像が表示されなくなるという現象が起きて、しばらく悩んでいたのですが解決しました。</p>
-
-<!--more-->
-
-
-<h2>原因</h2>
-
-<ul>
-<li>Rails か sprockets のバージョンアップでファイル名につけられる digest が変わった。</li>
-<li><code>image_tag</code> で画像を参照している HTML が <code>cache</code> の中にあった。</li>
-</ul>
-
-
-<h2>現象</h2>
-
-<p><code>rails console</code> で <code>Rails.application.assets.find_asset(asset_name).digest</code> を試しても新しい digest がちゃんと返ってくるのに、
-ブラウザー上では古い digest の URL が参照されていてファイルが見つからないという現象になっていました。</p>
-
-<p>アセットはキャッシュ期間の長いファイルとして設定しているので、複数ブラウザーで確認すると最初は現象が起きたり起きなかったりしていて、サーバー側の問題だと気づくのが遅れました。</p>
-
-<h2>対処</h2>
-
-<p><code>dalli</code> gem 経由で <code>memcached</code> をキャッシュ使っていたので <code>sudo service memcached restart</code> してキャッシュを破棄しました。</p>
 ]]></content>
   </entry>
   
