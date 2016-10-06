@@ -5,11 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>404 Page Not Found - @znz blog</title>
+  <title>bash で PATH を配列に分解 - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="404 Page Not Found このページは存在しません。 About Me Ruby のコミッターとかやってます。 フルスタックエンジニア(って何?)かもしれません。 Recent Posts bash で PATH を配列に分解 React On Rails の react- &hellip;">
+  <meta name="description" content="bash で PATH を配列に分解 Oct 6th, 2016 11:50 pm | Comments zsh だと PATH と同期している配列変数として path があるのですが、
+bash にはそういうものがなくて困ったので、分解する方法を考えてみました。 結論 先に結論を書いておくと、 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/404.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2016-10-06-bash-path-to-array.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,18 +77,227 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">404 Page Not Found</h1>
+    
+      
+      <!-- zenback_title_begin -->
+      
+      <h1 class="entry-title">bash で PATH を配列に分解</h1>
+      
+      <!-- zenback_title_end -->
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2016-10-06T23:50:00+09:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>6</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>11:50 pm</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <p>このページは存在しません。</p>
 
+
+
+<!-- zenback_body_begin -->
+
+<div class="entry-content"><p>zsh だと <code>PATH</code> と同期している配列変数として <code>path</code> があるのですが、
+bash にはそういうものがなくて困ったので、分解する方法を考えてみました。</p>
+
+<!--more-->
+
+
+<h2>結論</h2>
+
+<p>先に結論を書いておくと、最終的には <code>IFS=: read -r -a path &lt;&lt;&lt;"$PATH"</code> という方法で分解できました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> bash -c <span class="s1">&#39;IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>のように動作確認できます。</p>
+
+<p>declare で表示というのは <a href="http://yonchu.hatenablog.com/entry/2013/07/09/230656" title="シェルスクリプトのデバッグは typeset または declare を使うと良いかも - よんちゅBlog">シェルスクリプトのデバッグは typeset または declare を使うと良いかも - よんちゅBlog</a> を参考にしました。</p>
+
+<h2><code>-r</code> オプション</h2>
+
+<p><code>-r</code> オプションは <code>read</code> コマンドを使うときの定石ですが、具体的には <code>\:</code> のような並びがあるときに影響がありました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> <span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;/bin:/tmp/foo\:/tmp/bar&quot;</span> bash -c <span class="s1">&#39;IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
+</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot; [1]=&quot;/tmp/foo\\&quot; [2]=&quot;/tmp/bar&quot;)&#39;</span>
+</span><span class='line'><span class="gp">%</span> <span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;/bin:/tmp/foo\:/tmp/bar&quot;</span> bash -c <span class="s1">&#39;IFS=: read -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
+</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot; [1]=&quot;/tmp/foo:/tmp/bar&quot;)&#39;</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>実際のパスの挙動は <code>-r</code> がある場合と同じようでした。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> mkdir /tmp/foo<span class="se">\\</span>
+</span><span class='line'><span class="gp">%</span> <span class="nb">echo echo </span>hoge &gt; /tmp/foo<span class="se">\\</span>/hoge
+</span><span class='line'><span class="gp">%</span> chmod +x /tmp/foo<span class="se">\\</span>/hoge
+</span><span class='line'><span class="gp">%</span> <span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;/bin:/tmp/foo\:/tmp/bar&quot;</span> bash -c <span class="s1">&#39;IFS=: read -a path &lt;&lt;&lt;&quot;$PATH&quot;; for p in &quot;${path[@]}&quot;; do test -x &quot;$p/hoge&quot; &amp;&amp; &quot;$p/hoge&quot;; done&#39;</span>
+</span><span class='line'><span class="go">PATH=&quot;/bin:/tmp/foo\:/tmp/bar&quot; bash -c &#39;IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; for p in &quot;${path[@]}&quot;; do test -x &quot;$p/hoge&quot; &amp;&amp; &quot;$p/hoge&quot;; done&#39;</span>
+</span><span class='line'><span class="go">hoge</span>
+</span><span class='line'><span class="gp">%</span> <span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;/bin:/tmp/foo\:/tmp/bar&quot;</span> hoge
+</span><span class='line'><span class="go">hoge</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h2><code>-d</code> オプション</h2>
+
+<p><code>-d</code> オプションというのもあったので試してみたのですが、そこで完全に読み込み終了になってしまって、期待した動作にはなりませんでした。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> <span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;/bin:/tmp/foo\:/tmp/bar&quot;</span> bash -c <span class="s1">&#39;read -d : -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
+</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot;)&#39;</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h2><code>-a</code> オプション</h2>
+
+<p><code>-a</code> オプションはこのように複数の変数を指定する代わりにひとつの変数を指定して配列を代入してくれるオプションでした。</p>
+
+<p><code>-a</code> オプションがないと指定した変数のうち、最後に残り全て入ってしまうようです。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">PATH=&quot;/bin:/tmp/foo\:/tmp/bar:/tmp/baz&quot; bash -c &#39;IFS=: read -r path1 path2 path3 &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path1 path2 path3&#39;</span>
+</span><span class='line'><span class="go">declare -- path1=&quot;/bin&quot;</span>
+</span><span class='line'><span class="go">declare -- path2=&quot;/tmp/foo\\&quot;</span>
+</span><span class='line'><span class="go">declare -- path3=&quot;/tmp/bar:/tmp/baz&quot;</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h2>here string</h2>
+
+<p><code>&lt;&lt;&lt;word</code> は <code>echo word |</code> のようなもので、標準入力に <code>word</code> を渡してくれる機能です。</p>
+
+<h2>IFS</h2>
+
+<p><code>read</code> などの単語区切りです。
+デフォルトは空白、タブ、改行です。</p>
+
+<p>ずっと変えてしまうと影響が大きすぎるので、 <code>read</code> の行だけ変更するようにしています。</p>
+
+<p>また、このやり方を使うことで空白の入ったディレクトリを含むパスもうまく扱えます。</p>
+
+<h2>カレントディレクトリを表す空のパスの扱い</h2>
+
+<p>頭や途中に入った空文字列 (カレントディレクトリを表す) は扱えたのですが、末尾にある場合はうまくいきませんでした。</p>
+
+<p>セキュリティ上の問題もあるので、普通は設定しないと思うので、対応しなくても問題はないと思いますが、完全に変換したい場合は特別扱いを追加する必要がありそうでした。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span>  bash -c <span class="s1">&#39;PATH=:/bin; IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
+</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;&quot; [1]=&quot;/bin&quot;)&#39;</span>
+</span><span class='line'><span class="gp">%</span>  bash -c <span class="s1">&#39;PATH=/bin::/bin; IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
+</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot; [1]=&quot;&quot; [2]=&quot;/bin&quot;)&#39;</span>
+</span><span class='line'><span class="gp">%</span>  bash -c <span class="s1">&#39;PATH=/bin:; IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
+</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot;)&#39;</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h2>まとめ</h2>
+
+<p>zsh には元から <code>path</code> があるし、 <code>/bin/sh</code> には配列がないので bash 限定ではありますが、
+<code>IFS=: read -r -a path &lt;&lt;&lt;"$PATH"</code> で実用上問題なく変換できるということがわかったので、必要な時には使うと良いのではないでしょうか。</p>
+</div>
+
+<!-- zenback_body_end -->
+
+
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2016-10-06T23:50:00+09:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>6</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>11:50 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/linux/'>linux</a>, <a class='category' href='/blog/categories/shell/'>shell</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2016-10-02-react-webpack-rails-tutorial-on-dokku.html" title="Previous Post: React On Rails の react-webpack-rails-tutorial を Dokku で試してみた">&laquo; React On Rails の react-webpack-rails-tutorial を Dokku で試してみた</a>
+      
+      
+    </p>
+  </footer>
 </article>
 
+<section>
+  <!-- X:S ZenBackWidget --><div id="zenback-widget-loader"></div><script type="text/javascript">!function(d,i){if(!d.getElementById(i)){var r=Math.ceil((new Date()*1)*Math.random());var j=d.createElement("script");j.id=i;j.async=true;j.src="//w.zenback.jp/v1/?base_uri=http%3A//blog.n-z.jp/&nsid=122901358100652638%3A%3A122901381991399941&rand="+r;d.body.appendChild(j);}}(document,"zenback-widget-js");</script><!-- X:E ZenBackWidget -->
+
+</section>
+
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -200,6 +410,22 @@ Hatena.BookmarkWidget.load();
 
 </footer>
   
+
+<script type="text/javascript">
+      var disqus_shortname = 'znzblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2016-10-06-bash-path-to-array.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2016-10-06-bash-path-to-array.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
 
 
 

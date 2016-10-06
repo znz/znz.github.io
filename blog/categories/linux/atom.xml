@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-10-03T00:37:30+09:00</updated>
+  <updated>2016-10-07T00:27:05+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,104 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[bash で PATH を配列に分解]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-10-06-bash-path-to-array.html"/>
+    <updated>2016-10-06T23:50:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/bash-path-to-array</id>
+    <content type="html"><![CDATA[<p>zsh だと <code>PATH</code> と同期している配列変数として <code>path</code> があるのですが、
+bash にはそういうものがなくて困ったので、分解する方法を考えてみました。</p>
+
+<!--more-->
+
+
+<h2>結論</h2>
+
+<p>先に結論を書いておくと、最終的には <code>IFS=: read -r -a path &lt;&lt;&lt;"$PATH"</code> という方法で分解できました。</p>
+
+<pre><code class="console">% bash -c 'IFS=: read -r -a path &lt;&lt;&lt;"$PATH"; declare -p path'
+</code></pre>
+
+<p>のように動作確認できます。</p>
+
+<p>declare で表示というのは <a href="http://yonchu.hatenablog.com/entry/2013/07/09/230656" title="シェルスクリプトのデバッグは typeset または declare を使うと良いかも - よんちゅBlog">シェルスクリプトのデバッグは typeset または declare を使うと良いかも - よんちゅBlog</a> を参考にしました。</p>
+
+<h2><code>-r</code> オプション</h2>
+
+<p><code>-r</code> オプションは <code>read</code> コマンドを使うときの定石ですが、具体的には <code>\:</code> のような並びがあるときに影響がありました。</p>
+
+<pre><code class="console">% PATH="/bin:/tmp/foo\:/tmp/bar" bash -c 'IFS=: read -r -a path &lt;&lt;&lt;"$PATH"; declare -p path'
+declare -a path='([0]="/bin" [1]="/tmp/foo\\" [2]="/tmp/bar")'
+% PATH="/bin:/tmp/foo\:/tmp/bar" bash -c 'IFS=: read -a path &lt;&lt;&lt;"$PATH"; declare -p path'
+declare -a path='([0]="/bin" [1]="/tmp/foo:/tmp/bar")'
+</code></pre>
+
+<p>実際のパスの挙動は <code>-r</code> がある場合と同じようでした。</p>
+
+<pre><code class="console">% mkdir /tmp/foo\\
+% echo echo hoge &gt; /tmp/foo\\/hoge
+% chmod +x /tmp/foo\\/hoge
+% PATH="/bin:/tmp/foo\:/tmp/bar" bash -c 'IFS=: read -a path &lt;&lt;&lt;"$PATH"; for p in "${path[@]}"; do test -x "$p/hoge" &amp;&amp; "$p/hoge"; done'
+PATH="/bin:/tmp/foo\:/tmp/bar" bash -c 'IFS=: read -r -a path &lt;&lt;&lt;"$PATH"; for p in "${path[@]}"; do test -x "$p/hoge" &amp;&amp; "$p/hoge"; done'
+hoge
+% PATH="/bin:/tmp/foo\:/tmp/bar" hoge
+hoge
+</code></pre>
+
+<h2><code>-d</code> オプション</h2>
+
+<p><code>-d</code> オプションというのもあったので試してみたのですが、そこで完全に読み込み終了になってしまって、期待した動作にはなりませんでした。</p>
+
+<pre><code class="console">% PATH="/bin:/tmp/foo\:/tmp/bar" bash -c 'read -d : -r -a path &lt;&lt;&lt;"$PATH"; declare -p path'
+declare -a path='([0]="/bin")'
+</code></pre>
+
+<h2><code>-a</code> オプション</h2>
+
+<p><code>-a</code> オプションはこのように複数の変数を指定する代わりにひとつの変数を指定して配列を代入してくれるオプションでした。</p>
+
+<p><code>-a</code> オプションがないと指定した変数のうち、最後に残り全て入ってしまうようです。</p>
+
+<pre><code class="console">PATH="/bin:/tmp/foo\:/tmp/bar:/tmp/baz" bash -c 'IFS=: read -r path1 path2 path3 &lt;&lt;&lt;"$PATH"; declare -p path1 path2 path3'
+declare -- path1="/bin"
+declare -- path2="/tmp/foo\\"
+declare -- path3="/tmp/bar:/tmp/baz"
+</code></pre>
+
+<h2>here string</h2>
+
+<p><code>&lt;&lt;&lt;word</code> は <code>echo word |</code> のようなもので、標準入力に <code>word</code> を渡してくれる機能です。</p>
+
+<h2>IFS</h2>
+
+<p><code>read</code> などの単語区切りです。
+デフォルトは空白、タブ、改行です。</p>
+
+<p>ずっと変えてしまうと影響が大きすぎるので、 <code>read</code> の行だけ変更するようにしています。</p>
+
+<p>また、このやり方を使うことで空白の入ったディレクトリを含むパスもうまく扱えます。</p>
+
+<h2>カレントディレクトリを表す空のパスの扱い</h2>
+
+<p>頭や途中に入った空文字列 (カレントディレクトリを表す) は扱えたのですが、末尾にある場合はうまくいきませんでした。</p>
+
+<p>セキュリティ上の問題もあるので、普通は設定しないと思うので、対応しなくても問題はないと思いますが、完全に変換したい場合は特別扱いを追加する必要がありそうでした。</p>
+
+<pre><code class="console">%  bash -c 'PATH=:/bin; IFS=: read -r -a path &lt;&lt;&lt;"$PATH"; declare -p path'
+declare -a path='([0]="" [1]="/bin")'
+%  bash -c 'PATH=/bin::/bin; IFS=: read -r -a path &lt;&lt;&lt;"$PATH"; declare -p path'
+declare -a path='([0]="/bin" [1]="" [2]="/bin")'
+%  bash -c 'PATH=/bin:; IFS=: read -r -a path &lt;&lt;&lt;"$PATH"; declare -p path'
+declare -a path='([0]="/bin")'
+</code></pre>
+
+<h2>まとめ</h2>
+
+<p>zsh には元から <code>path</code> があるし、 <code>/bin/sh</code> には配列がないので bash 限定ではありますが、
+<code>IFS=: read -r -a path &lt;&lt;&lt;"$PATH"</code> で実用上問題なく変換できるということがわかったので、必要な時には使うと良いのではないでしょうか。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[lsで丸数字で始まるファイル名の順番が変だった]]></title>
@@ -600,213 +698,6 @@ apachectl graceful
 <pre><code class="text">% ls -alF /usr/bin/letsencrypt
 lrwxrwxrwx 1 root root 7  5月 28 07:30 /usr/bin/letsencrypt -&gt; certbot*
 </code></pre>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[ubuntuで「ハッシュサムが適合しません」で backports のパッケージが入ってしまって大変だった]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-05-26-ubuntu-hash-mismatch.html"/>
-    <updated>2016-05-26T22:23:35+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ubuntu-hash-mismatch</id>
-    <content type="html"><![CDATA[<p><code>jp.archive.ubuntu.com</code> のミラーが不完全だったのか、「ハッシュサムが適合しません」という警告が出て、そのまま <code>sudo aptitude full-upgrade -DV</code> をしたら backports のパッケージが入ってしまって大変な思いをしたという話です。</p>
-
-<!--more-->
-
-
-<h2>環境</h2>
-
-<ul>
-<li>Ubuntu 14.04.4 LTS</li>
-</ul>
-
-
-<h2>警告</h2>
-
-<p><code>sudo aptitude update</code> で以下のような警告とエラーが出ていました。</p>
-
-<pre><code>W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/main/source/Sources を取得できませんでした: ハッシュサムが適合しません
-W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/universe/source/Sources を取得できませんでした: ハッシュサムが適合しません
-W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/main/binary-amd64/Packages を取得できませんでした: ハッシュ サムが適合しません
-W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/universe/binary-amd64/Packages を取得できませんでした: ハッ シュサムが適合しません
-W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/main/binary-i386/Packages を取得できませんでした: ハッシュサムが適合しません
-W: http://jp.archive.ubuntu.com/ubuntu/dists/trusty-updates/universe/binary-i386/Packages を取得できませんでした: ハッシュサムが適合しません
-E: 一部のインデックスファイルのダウンロードに失敗しました。無視されたか古いものを代わりに利用しています。
-E: パッケージキャッシュを再構築できませんでした
-</code></pre>
-
-<h2>不用意なアップグレード</h2>
-
-<p>あまり気にせず、セキュリティアップデートがあれば更新しておこうと思って、 <code>sudo aptitude full-upgrade -DV</code> を実行してみたところ、以下のパッケージが更新対象に上がりました。</p>
-
-<p>証明書の設定で <code>SSLCertificateChainFile</code> が必要なくなる 2.4.8 をまたぐので、ちょっと危険な気はしましたが、個人のサーバーなので多少の停止時間は構わないだろうと思ってアップグレードしてしまいました。</p>
-
-<pre><code>以下のパッケージが更新されます:
-  apache2 [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
-  apache2-bin [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
-  apache2-data [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
-  apache2-dev [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
-  apache2-mpm-prefork [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
-  apache2-utils [2.4.7-1ubuntu4.9 -&gt; 2.4.10-1ubuntu1.1~ubuntu14.04.1]
-  libcgmanager0 [0.24-0ubuntu7.5 -&gt; 0.39-2ubuntu2~ubuntu14.04.1]
-</code></pre>
-
-<h2>backports のパッケージだった</h2>
-
-<p>ダウンロード中の URL を見て backports のパッケージが入ってしまっている、と気づいたのですが、手遅れで止める間もなく上がってしまいました。</p>
-
-<pre><code>% apt-cache policy apache2
-apache2:
-  インストールされているバージョン: 2.4.7-1ubuntu4.9
-  候補:               2.4.10-1ubuntu1.1~ubuntu14.04.1
-  バージョンテーブル:
-     2.4.10-1ubuntu1.1~ubuntu14.04.1 0
-        100 http://jp.archive.ubuntu.com/ubuntu/ trusty-backports/main amd64 Packages
- *** 2.4.7-1ubuntu4.9 0
-        100 /var/lib/dpkg/status
-     2.4.7-1ubuntu4.5 0
-        500 http://security.ubuntu.com/ubuntu/ trusty-security/main amd64 Packages
-     2.4.7-1ubuntu4 0
-        500 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
-</code></pre>
-
-<h2>ダウングレード失敗</h2>
-
-<p><code>/etc/apt/preferences</code> を設定してダウングレードすることにしました。</p>
-
-<p>まず以下を試してみたところ、 <code>base-files</code> などを含む大量のパッケージがダウングレード対象になってしまったので中断しました。</p>
-
-<pre><code>Package: *
-Pin: release a=trusty
-Pin-Priority: 1001
-</code></pre>
-
-<p><code>apt-cache policy</code> で確認してみると、現在のバージョンのインストール候補がなくなっているのが原因の一つでした。</p>
-
-<pre><code>% apt-cache policy base-files
-base-files:
-  インストールされているバージョン: 7.2ubuntu5.4
-  候補:               7.2ubuntu5
-  バージョンテーブル:
- *** 7.2ubuntu5.4 0
-        100 /var/lib/dpkg/status
-     7.2ubuntu5 0
-       1001 http://ubuntutym.u-toyama.ac.jp/ubuntu/ trusty/main amd64 Packages
-</code></pre>
-
-<p>そこで、 <code>/etc/apt/sources.list</code> の末尾に <code>archive.ubuntu.com</code> を一時的に追加することにしました。</p>
-
-<pre><code>deb http://archive.ubuntu.com/ubuntu/ trusty main restricted universe multiverse
-#deb-src http://archive.ubuntu.com/ubuntu/ trusty main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu/ trusty-updates main restricted universe multiverse
-deb-src http://archive.ubuntu.com/ubuntu/ trusty-updates main restricted universe multiverse
-</code></pre>
-
-<p>すると <code>trusty-updates</code> も出てきたのですが、 priority が 500 になって期待した値になっていませんでした。</p>
-
-<pre><code>% apt-cache policy base-files
-base-files:
-  インストールされているバージョン: 7.2ubuntu5.4
-  候補:               7.2ubuntu5
-  バージョンテーブル:
- *** 7.2ubuntu5.4 0
-        500 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
-        100 /var/lib/dpkg/status
-     7.2ubuntu5 0
-       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
-       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
-</code></pre>
-
-<p>次に <code>n=trusty</code> を試してみたところ、 <code>backports</code> も priority が 1001 になってしまってダウングレードできませんでした。</p>
-
-<pre><code>Package: *
-Pin: release n=trusty
-Pin-Priority: 1001
-</code></pre>
-
-<pre><code>% apt-cache policy base-files
-base-files:
-  インストールされているバージョン: 7.2ubuntu5.4
-  候補:               7.2ubuntu5.4
-  バージョンテーブル:
- *** 7.2ubuntu5.4 0
-       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
-        100 /var/lib/dpkg/status
-     7.2ubuntu5 0
-       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
-       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
-% apt-cache policy apache2
-apache2:
-  インストールされているバージョン: 2.4.10-1ubuntu1.1~ubuntu14.04.1
-  候補:               2.4.10-1ubuntu1.1~ubuntu14.04.1
-  バージョンテーブル:
- *** 2.4.10-1ubuntu1.1~ubuntu14.04.1 0
-       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty-backports/main amd64 Packages
-        100 /var/lib/dpkg/status
-     2.4.7-1ubuntu4.9 0
-       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
-     2.4.7-1ubuntu4.5 0
-       1001 http://security.ubuntu.com/ubuntu/ trusty-security/main amd64 Packages
-     2.4.7-1ubuntu4 0
-       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
-       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
-</code></pre>
-
-<h2>ダウングレード成功</h2>
-
-<p>最終的に <code>a=trusty-updates</code> と <code>a=trusty-security</code> も追加することでダウングレードできました。</p>
-
-<pre><code>Package: *
-Pin: release a=trusty
-Pin-Priority: 1001
-
-Package: *
-Pin: release a=trusty-updates
-Pin-Priority: 1001
-
-Package: *
-Pin: release a=trusty-security
-Pin-Priority: 1001
-</code></pre>
-
-<pre><code>% apt-cache policy apache2
-apache2:
-  インストールされているバージョン: 2.4.10-1ubuntu1.1~ubuntu14.04.1
-  候補:               2.4.7-1ubuntu4.9
-  バージョンテーブル:
- *** 2.4.10-1ubuntu1.1~ubuntu14.04.1 0
-        100 http://jp.archive.ubuntu.com/ubuntu/ trusty-backports/main amd64 Packages
-        100 /var/lib/dpkg/status
-     2.4.7-1ubuntu4.9 0
-       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
-     2.4.7-1ubuntu4.5 0
-       1001 http://security.ubuntu.com/ubuntu/ trusty-security/main amd64 Packages
-     2.4.7-1ubuntu4 0
-       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
-       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
-% apt-cache policy base-files
-base-files:
-  インストールされているバージョン: 7.2ubuntu5.4
-  候補:               7.2ubuntu5.4
-  バージョンテーブル:
- *** 7.2ubuntu5.4 0
-       1001 http://archive.ubuntu.com/ubuntu/ trusty-updates/main amd64 Packages
-        100 /var/lib/dpkg/status
-     7.2ubuntu5 0
-       1001 http://jp.archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
-       1001 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
-</code></pre>
-
-<h2>backports のコメントアウト</h2>
-
-<p>backports のパッケージは使っていなかったので、この後 backports の apt-line はコメントアウトしました。</p>
-
-<h2>まとめ</h2>
-
-<p><code>apt</code> の <code>update</code> に失敗した時はアップグレード対象のパッケージに注意しましょう。</p>
-
-<p>ダウングレードする時は <code>apt_preferences(5)</code> の <code>Pin</code> 設定をうまく工夫しましょう。</p>
-
-<p>backports のパッケージが不要なら backports の apt-line を追加するのは避けましょう。</p>
 ]]></content>
   </entry>
   
