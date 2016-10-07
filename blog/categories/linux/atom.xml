@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-10-07T00:27:05+09:00</updated>
+  <updated>2016-10-07T22:26:33+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,131 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[bash で PATH を配列に分解の続き]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-10-07-bash-path-to-array-again.html"/>
+    <updated>2016-10-07T21:39:31+09:00</updated>
+    <id>http://blog.n-z.jp/blog/bash-path-to-array-again</id>
+    <content type="html"><![CDATA[<p>zsh だと <code>PATH</code> と同期している配列変数として <code>path</code> があるのですが、
+bash にはそういうものがなくて困ったので、分解する方法を考えてみた話の続きです。
+末尾の空文字列や改行に対応しました。</p>
+
+<!--more-->
+
+
+<h2>昨日の方法の問題点</h2>
+
+<p><a href="/blog/2016-10-06-bash-path-to-array.html">昨日の記事</a> に書きましたが、末尾の空文字列の処理に問題がありました。
+また、書いていませんでしたが、改行に対応できていませんでした。</p>
+
+<h2>末尾対応</h2>
+
+<p><code>PATH= bash -c 'ls'</code> を <code>/bin</code> やそれ以外で実行してみたら
+空の <code>PATH</code> はカレントディレクトリのみと同じ意味のようなので、
+「<a href="https://twitter.com/fixedpoint_jp/status/784229832930369536">末尾の空文字列に対応するために、PATHにの最後に:を追加した文字列をreadすればいい?</a>」
+という指摘のように末尾に <code>:</code> を追加する方法で良さそうでした。</p>
+
+<p>つまり、以下のようになります。</p>
+
+<pre><code class="console">% bash -c 'PATH=/bin:; IFS=: read -r -a path &lt;&lt;&lt;"$PATH:"; declare -p path'
+declare -a path='([0]="/bin" [1]="")'
+% bash -c 'PATH=/bin; IFS=: read -r -a path &lt;&lt;&lt;"$PATH:"; declare -p path'
+declare -a path='([0]="/bin")'
+% bash -c 'PATH=; IFS=: read -r -a path &lt;&lt;&lt;"$PATH:"; declare -p path'
+declare -a path='([0]="")'
+</code></pre>
+
+<p>「PATH自体が空だった場合は振舞いが変わるけど。」という話もありましたが、
+<code>PATH</code> 探索を再現できれば良いということを考えると空の場合も問題なさそうでした。</p>
+
+<pre><code class="console">% bash -c 'PATH=; ls'
+bash: ls: No such file or directory
+% cd /bin
+% bash -c 'PATH=; ls /bin/bash'
+/bin/bash
+</code></pre>
+
+<h2>改行対応</h2>
+
+<p>いろいろ試していると改行を含む <code>PATH</code> を扱えないことに気づいたのですが、
+<code>-d $'\0'</code> (以下の例ではコマンドラインのエスケープでひどいことになっていますが) を
+指定して区切り文字を変えると here string の末尾に付く改行も入力の一部として
+扱われてしまうのでうまくいかないようでしたが、末尾の要素を <code>unset</code> で削除することで
+良い感じになりました。</p>
+
+<p><code>$'\0'</code> は NUL 文字で C 言語での終端文字なので、普通は <code>PATH</code> の途中に入らないことが期待できるので、ありえない文字として指定しています。</p>
+
+<pre><code class="console">% bash -c 'PATH=/bin; IFS=: read -d $'"'"'\0'"'"' -r -a path &lt;&lt;&lt;"$PATH:"; declare -p path'
+declare -a path='([0]="/bin" [1]="
+")'
+% bash -c 'PATH=/bin; IFS=: read -d $'"'"'\0'"'"' -r -a path &lt;&lt;&lt;"$PATH:"; unset path[-1]; declare -p path'
+declare -a path='([0]="/bin")'
+% bash -c 'PATH=/foo$'"'"'\n'"'"'bar:/bin; IFS=: read -d $'"'"'\0'"'"' -r -a path &lt;&lt;&lt;"$PATH:"; unset path[-1]; declare -p path'
+declare -a path='([0]="/foo
+bar" [1]="/bin")'
+</code></pre>
+
+<p>わかりやすいようにファイルにして実行すると以下のような感じです。</p>
+
+<pre><code class="console">% cat /tmp/p.bash
+PATH=/foo$'\n'bar:/bin
+IFS=: read -d $'\0' -r -a path &lt;&lt;&lt;"$PATH:"
+unset path[-1]
+declare -p path
+PATH=/foo$'\n'bar:/bin:
+IFS=: read -d $'\0' -r -a path &lt;&lt;&lt;"$PATH:"
+unset path[-1]
+declare -p path
+% bash /tmp/p.bash
+declare -a path='([0]="/foo
+bar" [1]="/bin")'
+declare -a path='([0]="/foo
+bar" [1]="/bin" [2]="")'
+</code></pre>
+
+<h2>他の処理例</h2>
+
+<p><code>/etc/group</code> くらいのデータになると awk などを使った方が良いと思いますが、
+<code>/etc/group</code> (末尾に空文字列が入ることがある) のパースも良い感じにできるようです。</p>
+
+<p>設定されていない状態でも構わなかったり、
+末尾に空文字列が入らないことがわかっている <code>/etc/passwd</code> などの場合は
+bash の組み込みコマンドだけでいけそうです。</p>
+
+<pre><code class="console">% cat /tmp/t.bash
+#!/bin/bash
+sed 's/$/:/' /etc/group | while IFS=: read -r -a group; do
+  declare -p group
+done
+% bash /tmp/t.bash
+declare -a group='([0]="root" [1]="x" [2]="0" [3]="")'
+declare -a group='([0]="daemon" [1]="x" [2]="1" [3]="")'
+declare -a group='([0]="bin" [1]="x" [2]="2" [3]="")'
+declare -a group='([0]="sys" [1]="x" [2]="3" [3]="")'
+declare -a group='([0]="adm" [1]="x" [2]="4" [3]="syslog,vagrant")'
+(略)
+declare -a group='([0]="lpadmin" [1]="x" [2]="114" [3]="vagrant")'
+declare -a group='([0]="sambashare" [1]="x" [2]="115" [3]="vagrant")'
+declare -a group='([0]="vboxsf" [1]="x" [2]="999" [3]="")'
+declare -a group='([0]="scanner" [1]="x" [2]="116" [3]="")'
+declare -a group='([0]="colord" [1]="x" [2]="117" [3]="")'
+</code></pre>
+
+<h2>まとめ</h2>
+
+<p>最終的には</p>
+
+<pre><code class="bash">IFS=: read -d $'\0' -r -a path &lt;&lt;&lt;"$PATH:"
+unset path[-1]
+</code></pre>
+
+<p>で <code>PATH</code> を配列に変換できることがわかりました。</p>
+
+<p>入力データに改行がないとわかっているなら <code>-d $'\0'</code> などは省略できるので、
+入力データの性質に応じて適度に手を抜きつつ処理をするのが良いのではないでしょうか。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[bash で PATH を配列に分解]]></title>
@@ -27,6 +152,8 @@ bash にはそういうものがなくて困ったので、分解する方法を
 <h2>結論</h2>
 
 <p>先に結論を書いておくと、最終的には <code>IFS=: read -r -a path &lt;&lt;&lt;"$PATH"</code> という方法で分解できました。</p>
+
+<p>2016-10-07 追記: 詳細は<a href="/blog/2016-10-07-bash-path-to-array-again.html">続き</a> に書きましたが、改行などに対応できていませんでした。</p>
 
 <pre><code class="console">% bash -c 'IFS=: read -r -a path &lt;&lt;&lt;"$PATH"; declare -p path'
 </code></pre>
@@ -108,6 +235,8 @@ declare -a path='([0]="/bin")'
 
 <p>zsh には元から <code>path</code> があるし、 <code>/bin/sh</code> には配列がないので bash 限定ではありますが、
 <code>IFS=: read -r -a path &lt;&lt;&lt;"$PATH"</code> で実用上問題なく変換できるということがわかったので、必要な時には使うと良いのではないでしょうか。</p>
+
+<p>2016-10-07 追記: 末尾の空文字列や改行に対応した<a href="/blog/2016-10-07-bash-path-to-array-again.html">続き</a>を書きました。</p>
 ]]></content>
   </entry>
   
@@ -542,162 +671,6 @@ testing:
 また Cookie Monster と呼ばれる問題の影響についても少し触れました。</p>
 
 <p>また、ステージング環境の ACME サーバーを使うのにソースを書き換えなくてもオプション指定で済むということを説明しました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[jessie の letsencrypt を certbot にあげてみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-05-30-letsencrypt-to-certbot-on-jessie.html"/>
-    <updated>2016-05-30T21:20:43+09:00</updated>
-    <id>http://blog.n-z.jp/blog/letsencrypt-to-certbot-on-jessie</id>
-    <content type="html"><![CDATA[<p>Debian で <a href="https://packages.debian.org/letsencrypt">letsencrypt パッケージ</a>が <a href="https://packages.debian.org/certbot">certbot パッケージ</a>に変わって、
-jessie-backports にも反映されたので、 certbot パッケージに入れ替えてみました。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Debian GNU/Linux 8.4 (jessie) (amd64)</li>
-<li>letsencrypt 0.5.0-1~bpo8+1 から certbot 0.6.0-2~bpo8+1</li>
-</ul>
-
-
-<h2>アップグレード失敗</h2>
-
-<p>普通に upgrade しようとすると以下のように失敗します。</p>
-
-<pre><code class="text">%  sudo aptitude full-upgrade -DV
-以下のパッケージが更新されます:
-  python-acme{b} [0.5.0-1~bpo8+1 -&gt; 0.6.0-1~bpo8+1] (破: python-letsencrypt)
-更新: 1 個、新規インストール: 0 個、削除: 0 個、保留: 0 個。
-アーカイブ 54.6 k バイト中 0  バイトを取得する必要があります。展開後に 1,024  バイトのディスク領域が新たに消費されます。以下のパッケージには満たされていない依存関係があります:
- python-acme : 破壊: python-letsencrypt (&lt; 0.6.0) [0.5.0-1~bpo8+1 が既にインストール済みです]
-以下のアクションでこれらの依存関係の問題は解決されます:
-
-     以下のパッケージを削除する:
-1)     letsencrypt
-2)     python-letsencrypt
-
-
-
-この解決方法を受け入れますか? [Y/n/q/?]q
-これらの依存関係の問題を解決するための努力をすべて放棄します。
-中断。
-</code></pre>
-
-<h2>certbot パッケージで入れ替え</h2>
-
-<p>以下のように <code>certbot</code> パッケージをインストールすることで <code>letsencrypt</code> パッケージが削除されます。</p>
-
-<pre><code class="text">% sudo aptitude install certbot
-以下の新規パッケージがインストールされます:
-  certbot{b} python-certbot{ab}
-以下のパッケージが更新されます:
-  python-acme{b}
-更新: 1 個、新規インストール: 2 個、削除: 0 個、保留: 0 個。
-アーカイブ 204 k バイト中 149 k バイトを取得する必要があります。展開後に 816 k バイトのディスク領域が新たに消費されます 。
-以下のパッケージには満たされていない依存関係があります:
- python-acme : 破壊: python-letsencrypt (&lt; 0.6.0) [0.5.0-1~bpo8+1 が既にインストール済みです]
- python-certbot : 破壊: python-letsencrypt [0.5.0-1~bpo8+1 が既にインストール済みです]
- certbot : 破壊: letsencrypt [0.5.0-1~bpo8+1 が既にインストール済みです]
-以下のアクションでこれらの依存関係の問題は解決されます:
-
-     以下のパッケージを削除する:
-1)     letsencrypt
-2)     python-letsencrypt
-
-
-
-この解決方法を受け入れますか? [Y/n/q/?]
-以下の新規パッケージがインストールされます:
-  certbot python-certbot{a}
-以下のパッケージが削除されます:
-  letsencrypt{a} python-letsencrypt{a}
-以下のパッケージが更新されます:
-  python-acme
-更新: 1 個、新規インストール: 2 個、削除: 2 個、保留: 0 個。
-アーカイブ 204 k バイト中 149 k バイトを取得する必要があります。展開後に 14.3 k バイトのディスク領域が新たに消費されます。
-先に進みますか? [Y/n/?]
-</code></pre>
-
-<h2>自動更新設定確認</h2>
-
-<p>インストール後に <code>etckeeper</code> の <code>commit</code> が発生して差分があるようだったので、
-<code>sudo etckeeper vcs log -p --stat</code> で確認してみたところ、
-<code>/etc/cron.d/certbot</code> ができていました。</p>
-
-<pre><code class="diff">diff --git a/cron.d/certbot b/cron.d/certbot
-new file mode 100644
-index 0000000..9c3dc35
---- /dev/null
-+++ b/cron.d/certbot
-@@ -0,0 +1,6 @@
-+# Upstream recommends attempting renewal twice a day
-+#
-+# Eventually, this will be an opportunity to validate certificates
-+# haven't been revoked, etc.  Renewal will only occur if expiration
-+# is within 30 days.
-+* */12 * * * root perl -e 'sleep int(rand(3600))'; certbot -q renew
-</code></pre>
-
-<h2>自動更新設定変更</h2>
-
-<p>自動更新はログを残しつつ、 apache の reload も行う自前のスクリプトを用意していたので、
-そちらを引き続き使うことにして、 <code>/etc/cron.d/certbot</code> はコメントアウトして動かないようにしました。</p>
-
-<pre><code class="diff">% sudo etckeeper vcs diff
-diff --git a/cron.d/certbot b/cron.d/certbot
-index 9c3dc35..e81f9aa 100644
---- a/cron.d/certbot
-+++ b/cron.d/certbot
-@@ -3,4 +3,4 @@
- # Eventually, this will be an opportunity to validate certificates
- # haven't been revoked, etc.  Renewal will only occur if expiration
- # is within 30 days.
--* */12 * * * root perl -e 'sleep int(rand(3600))'; certbot -q renew
-+#* */12 * * * root perl -e 'sleep int(rand(3600))'; certbot -q renew
-diff --git a/cron.daily/local-letsencrypt b/cron.daily/local-letsencrypt
-index 8b83e29..40a23ea 100755
---- a/cron.daily/local-letsencrypt
-+++ b/cron.daily/local-letsencrypt
-@@ -3,7 +3,7 @@ LOGFILE=/var/log/letsencrypt/renew.log
- if [ -f "$LOGFILE" ]; then
-     savelog -c 90 -q "$LOGFILE"
- fi
--if ! letsencrypt renew &gt; "$LOGFILE" 2&gt;&amp;1 ; then
-+if ! certbot renew &gt; "$LOGFILE" 2&gt;&amp;1 ; then
-     echo Automated renewal failed:
-     cat "$LOGFILE"
-     exit 1
-</code></pre>
-
-<h2>現状の自動更新スクリプト</h2>
-
-<p>現状の自動更新スクリプト <code>/etc/cron.daily/local-letsencrypt</code> は以下のようにしています。</p>
-
-<pre><code class="bash">#!/bin/sh
-LOGFILE=/var/log/letsencrypt/renew.log
-if [ -f "$LOGFILE" ]; then
-    savelog -c 90 -q "$LOGFILE"
-fi
-if ! certbot renew &gt; "$LOGFILE" 2&gt;&amp;1 ; then
-    echo Automated renewal failed:
-    cat "$LOGFILE"
-    exit 1
-fi
-if [ -f "$LOGFILE".0 ]; then
-    diff -u "$LOGFILE".0 "$LOGFILE"
-fi
-apachectl graceful
-</code></pre>
-
-<p>以下のようなシンボリックリンクがあるので、 <code>letsencrypt renew</code> のままでも大丈夫そうでしたが、念のため変更しました。</p>
-
-<pre><code class="text">% ls -alF /usr/bin/letsencrypt
-lrwxrwxrwx 1 root root 7  5月 28 07:30 /usr/bin/letsencrypt -&gt; certbot*
-</code></pre>
 ]]></content>
   </entry>
   
