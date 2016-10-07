@@ -3,7 +3,7 @@ layout: post
 title: "bash で PATH を配列に分解"
 date: 2016-10-06 23:50:00 +0900
 comments: true
-categories: linux shell
+categories: linux shell bash
 ---
 zsh だと `PATH` と同期している配列変数として `path` があるのですが、
 bash にはそういうものがなくて困ったので、分解する方法を考えてみました。
@@ -13,6 +13,8 @@ bash にはそういうものがなくて困ったので、分解する方法を
 ## 結論
 
 先に結論を書いておくと、最終的には `IFS=: read -r -a path <<<"$PATH"` という方法で分解できました。
+
+2016-10-07 追記: 詳細は[続き](/blog/2016-10-07-bash-path-to-array-again.html) に書きましたが、改行などに対応できていませんでした。
 
 ```console
 % bash -c 'IFS=: read -r -a path <<<"$PATH"; declare -p path'
@@ -100,3 +102,5 @@ declare -a path='([0]="/bin")'
 
 zsh には元から `path` があるし、 `/bin/sh` には配列がないので bash 限定ではありますが、
 `IFS=: read -r -a path <<<"$PATH"` で実用上問題なく変換できるということがわかったので、必要な時には使うと良いのではないでしょうか。
+
+2016-10-07 追記: 末尾の空文字列や改行に対応した[続き](/blog/2016-10-07-bash-path-to-array-again.html)を書きました。
