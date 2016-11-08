@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-11-05T18:18:23+09:00</updated>
+  <updated>2016-11-09T00:01:20+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,170 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[jessie の certbot が 0.9.3 に上がったので設定を変更した]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-11-08-certbot-0-dot-9-3.html"/>
+    <updated>2016-11-08T23:14:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/certbot-0-dot-9-3</id>
+    <content type="html"><![CDATA[<p>jessie の certbot が 0.9.3 に上がって、
+<code>/etc/cron.d/certbot</code> よりも systemd の <code>certbot.timer</code> が優先して動くように変わったので、
+reload に post-hook を使うように変えたり、
+ログの差分メールの仕組みを変えたりしました。</p>
+
+<!--more-->
+
+
+<h2>今までの方法</h2>
+
+<p>今までは <code>/etc/cron.daily/local-letsencrypt</code> で <code>certbot renew</code> を呼び出して、ログを保存して <code>diff</code> を出力して cron からメールを送信させて、
+<code>reload</code> は更新の有無にかかわらず実行していました。</p>
+
+<pre><code class="sh">#!/bin/sh
+LOGFILE=/var/log/certbot-renew.log
+if [ -f "$LOGFILE" ]; then
+    savelog -c 90 -q "$LOGFILE"
+fi
+if ! certbot renew &gt; "$LOGFILE" 2&gt;&amp;1 ; then
+    echo Automated renewal failed:
+    cat "$LOGFILE"
+    exit 1
+fi
+if [ -f "$LOGFILE".0 ]; then
+    diff -u "$LOGFILE".0 "$LOGFILE"
+fi
+apachectl graceful
+service postfix reload
+</code></pre>
+
+<h2>certbot パッケージでインストールされた自動更新の仕組み</h2>
+
+<p><code>/etc/cron.d/certbot</code> は <code>/run/systemd/system</code> をチェックして普通は動かないようになっていました。</p>
+
+<pre><code> % cat /etc/cron.d/certbot
+ # /etc/cron.d/certbot: crontab entries for the certbot package
+ #
+ # Upstream recommends attempting renewal twice a day
+ #
+ # Eventually, this will be an opportunity to validate certificates
+ # haven't been revoked, etc.  Renewal will only occur if expiration
+ # is within 30 days.
+ SHELL=/bin/sh
+ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+ 0 */12 * * * root test -x /usr/bin/certbot -a \! -d /run/systemd/system &amp;&amp; perl -e 'sleep int(rand(3600))' &amp;&amp; certbot -q renew
+</code></pre>
+
+<p>systemd の方では、<code>timer</code> から動かすため、有効化されていない <code>certbot.service</code> と、 service を動かすための <code>certbot.timer</code> が入っていました。</p>
+
+<pre><code>% cat /lib/systemd/system/certbot.service
+[Unit]
+Description=Certbot
+Documentation=file:///usr/share/doc/python-certbot-doc/html/index.html
+Documentation=https://letsencrypt.readthedocs.io/en/latest/
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/certbot -q renew
+PrivateTmp=true
+% cat /lib/systemd/system/certbot.timer
+[Unit]
+Description=Run certbot twice daily
+
+[Timer]
+OnCalendar=*-*-* 00,12:00:00
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+</code></pre>
+
+<p><code>OnCalendar</code> で毎日 00:00:00 と 12:00:00 に動くようになっていました。
+<code>RandomizedDelaySec</code> でランダムな遅延の設定をしようとしているようですが、
+jessie の systemd は対応していないようで、
+<code>systemd[1]: [/lib/systemd/system/certbot.timer:6] Unknown lvalue 'RandomizedDelaySec' in section 'Timer'</code>
+というログが出ていました。
+(<a href="https://bugs.debian.org/843607" title="#843607 - certbot: Unknown lvalue 'RandomizedDelaySec' in section 'Timer'">#843607 - certbot: Unknown lvalue &lsquo;RandomizedDelaySec&rsquo; in section &lsquo;Timer&rsquo;</a> として報告済みです。)</p>
+
+<h2>ログの diff のメール送信方法変更</h2>
+
+<p>設定を追加するには <code>/etc/systemd/system/certbot.service.d</code> にファイルをおけば良いので、
+以下の内容の <code>/etc/systemd/system/certbot.service.d/diffmail.conf</code> を作成しました。</p>
+
+<p><code>certbot.service</code> の <code>ExecStart=/usr/bin/certbot -q renew</code> の後に実行したかったので、
+<code>ExecStopPost</code> を使ってみました。</p>
+
+<pre><code>[Service]
+ExecStopPost=/bin/bash -c "diff -u &lt;(cut -d: -f4- /var/log/letsencrypt/letsencrypt.log.1 | egrep -v '^DEBUG') &lt;(cut -d: -f4- /var/log/letsencrypt/letsencrypt.log | egrep -v '^DEBUG') | ifne mail -s 'Change certbot log' root"
+</code></pre>
+
+<p>前回のログ (<code>letsencrypt.log.1</code>) と今回のログ (<code>letsencrypt.log</code>) から、必ず差分になってしまう時刻を <code>cut</code> で削って、さらに DEBUG ログの中にも現在日時で変化する部分があったので除外するようにしてから差分をとっています。</p>
+
+<p>そして <a href="https://packages.debian.org/moreutils" title="moreutils">moreutils</a> の <code>ifne</code> を使って差分があるときだけメール送信をするようにしています。</p>
+
+<h2>post-hook への変更</h2>
+
+<p>systemd の <code>ExecStart</code> を書き換えるのは、メンテナンスしにくいとか、手動で <code>certbot renew</code> を実行したときに使われないなど、あまりよくないかと思い、
+<code>/etc/letsencrypt/cli.ini</code> で設定することにしました。</p>
+
+<p>letsencrypt の証明書を apache のみで使っているサーバーでは post-hook にリロードするコマンドを直接設定しました。</p>
+
+<p>ついでに <code>rsa-key-size</code> も 2048 から 4096 に変更するようにしました。</p>
+
+<pre><code>% cat /etc/letsencrypt/cli.ini
+rsa-key-size = 4096
+post-hook = apachectl graceful
+</code></pre>
+
+<h2>複数コマンドの post-hook</h2>
+
+<p><code>post-hook = apachectl graceful; service postfix reload &gt;/dev/null</code> のような書き方は
+<code>certbot: error: Unexpected line 1 in /etc/letsencrypt/cli.ini: post-hook = apachectl graceful; service postfix reload &gt;/dev/null</code>
+というエラーになってうまくいかなかったので、
+<code>/etc/letsencrypt/post-hook</code> に実行ファイルを作って、それを post-hook に指定することにしました。</p>
+
+<pre><code> % sudoedit /etc/letsencrypt/cli.ini
+ % sudoedit /etc/letsencrypt/post-hook
+ % sudo chmod +x /etc/letsencrypt/post-hook
+ % cat /etc/letsencrypt/cli.ini
+ rsa-key-size = 4096
+ post-hook = /etc/letsencrypt/post-hook
+ % cat /etc/letsencrypt/post-hook
+ #!/bin/sh
+ apachectl graceful
+ service postfix reload &gt;/dev/null
+</code></pre>
+
+<h2>テスト実行</h2>
+
+<p><code>sudo certbot renew</code> で試しに実行してみたところ、以下のような感じで更新の必要がないときは <code>post-hook</code> は実行されないことが確認できました。</p>
+
+<pre><code>% sudo certbot renew
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+
+-------------------------------------------------------------------------------
+Processing /etc/letsencrypt/renewal/www.example.org.conf
+-------------------------------------------------------------------------------
+Cert not yet due for renewal
+
+The following certs are not due for renewal yet:
+  /etc/letsencrypt/live/www.example.org/fullchain.pem (skipped)
+No renewals were attempted.
+No renewals attempted, so not running post-hook
+</code></pre>
+
+<h2>まとめ</h2>
+
+<p><code>certbot renew</code> で証明書が更新されたときに実行したいことは <code>post-hook</code> に、
+証明書の更新とは関係なく毎回実行したいことは systemd の <code>ExecStopPost</code> を使えば良いことがわかりました。</p>
+
+<p>certbot の hook には <code>post-hook</code> 以外に <code>pre-hook</code> と <code>renew-hook</code> もあるので、
+用途によってはそちらも使えそうです。
+(<code>webroot</code> プラグインを使っているので使っていませんが、
+<code>standalone</code> プラグインを使っているのなら <code>pre-hook</code> で <code>stop</code> して <code>post-hook</code> で <code>start</code> するとか、
+<code>renew-hook</code> で更新されたドメインに応じて必要な時だけ <code>postfix reload</code> するとか)</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[bash で PATH を配列に分解の続き]]></title>
@@ -599,78 +763,6 @@ OS X では locale data が GNU/Linux とは違うようで <code>uniq</code> �
   <a href="http://slide.rabbit-shocker.org/authors/znz/lilo-20160814/" title="lilo.linux.or.jp の話">lilo.linux.or.jp の話</a>
 </div>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[letsencrypt の Rate Limit について]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-06-17-letsencrypt.html"/>
-    <updated>2016-06-17T15:44:18+09:00</updated>
-    <id>http://blog.n-z.jp/blog/letsencrypt</id>
-    <content type="html"><![CDATA[<p><a href="http://www.clear-code.com/blog/2016/6/16.html" title="Let’s Encryptをcloudapp.azure.comで使おうとするときのハマりどころ">Let’s Encryptをcloudapp.azure.comで使おうとするときのハマりどころ</a>
-という記事で Rate Limit の制限解除方法について誤解があるようなので、解説してみたいと思います。</p>
-
-<!--more-->
-
-
-<h2>Rate Limit について</h2>
-
-<p><code>細かな制限はいろいろありますが、どうやら特定ドメインに対しては、週に20個のSSL/TLSサーバー証明書しか発行しないようです。そのため*.cloudapp.azure.comなどのように、皆がこぞってSSL/TLSサーバー証明書を取得しに行くような場合、見事に制限にひっかかってしまいます。</code>
-と書いてありますが、これはその通りだと思います。</p>
-
-<p><code>これを回避するには別途独自にドメインをとるなどしなければなりません。</code>
-とありますが、 Dynamic DNS や IaaS などを利用している場合はプロバイダーに対応してもらうという方法があります。
-また、その方が Cookie Monster と呼ばれる問題にも対処出来て望ましいと思います。</p>
-
-<h2>適用例外について</h2>
-
-<p><a href="https://github.com/certbot/certbot/issues/1607" title="DDNS Rate Limited">DDNS Rate Limited</a>
-や
-<a href="https://github.com/certbot/certbot/issues/2186" title="Too many certificates already issued for dynamic dns provider sub domain">Too many certificates already issued for dynamic dns provider sub domain</a>
-のやりとりをみてもらえば詳細はわかるのですが、簡単に言うと</p>
-
-<ul>
-<li>プロバイダーに <a href="https://publicsuffix.org/">Public Suffix List</a> に登録してもらう</li>
-<li><a href="https://github.com/letsencrypt/boulder">Let&rsquo;s Encrypt のサーバー</a> に反映してもらう</li>
-</ul>
-
-
-<p>ということになります。</p>
-
-<h2>「正式版じゃなくてもいいから試してみたい」について</h2>
-
-<p><code>certbot --help all</code> で出てくるヘルプにあるように <code>--test-cert</code> オプションか <code>--staging</code> オプションを使えば <code>/usr/lib/python2.7/dist-packages/certbot/constants.py</code> を書き換えるなどという方法をとらなくてもステージング環境の ACME サーバーを使えるようになります。</p>
-
-<pre><code>% certbot --help all
-(中略)
-testing:
-  The following flags are meant for testing purposes only! Do NOT change
-  them, unless you really know what you're doing!
-
-  --debug               Show tracebacks in case of errors, and allow
-                        letsencrypt-auto execution on experimental platforms
-                        (default: False)
-  --no-verify-ssl       Disable SSL certificate verification. (default: False)
-  --tls-sni-01-port TLS_SNI_01_PORT
-                        Port number to perform tls-sni-01 challenge. Boulder
-                        in testing mode defaults to 5001. (default: 443)
-  --http-01-port HTTP01_PORT
-                        Port used in the SimpleHttp challenge. (default: 80)
-  --break-my-certs      Be willing to replace or renew valid certs with
-                        invalid (testing/staging) certs (default: False)
-  --test-cert, --staging
-                        Use the staging server to obtain test (invalid) certs;
-                        equivalent to --server https://acme-
-                        staging.api.letsencrypt.org/directory (default: False)
-(後略)
-</code></pre>
-
-<h2>まとめ</h2>
-
-<p>Dynamic DNS や IaaS などを使っていて Rate Limit に引っかかった時の対処方法について説明しました。
-また Cookie Monster と呼ばれる問題の影響についても少し触れました。</p>
-
-<p>また、ステージング環境の ACME サーバーを使うのにソースを書き換えなくてもオプション指定で済むということを説明しました。</p>
 ]]></content>
   </entry>
   

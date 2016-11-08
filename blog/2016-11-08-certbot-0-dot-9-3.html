@@ -5,12 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>LILO ＆ 東海道らぐ・オフラインミーティング（2015/05/03）に参加しました - @znz blog</title>
+  <title>jessie の certbot が 0.9.3 に上がったので設定を変更した - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="LILO ＆ 東海道らぐ・オフラインミーティング（2015/05/03）に参加しました May 3rd, 2015 1:00 pm | Comments LILO ＆ 東海道らぐ・オフラインミーティング（2015/05/03） - LILO | Doorkeeper
-に参加しました。 &hellip;">
+  <meta name="description" content="jessie の certbot が 0.9.3 に上がったので設定を変更した Nov 8th, 2016 11:14 pm | Comments jessie の certbot が 0.9.3 に上がって、
+/etc/cron.d/certbot よりも systemd の certbot. &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2015-05-03-lilo-tokaidolug.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2016-11-08-certbot-0-dot-9-3.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -84,7 +84,7 @@
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">LILO ＆ 東海道らぐ・オフラインミーティング（2015/05/03）に参加しました</h1>
+      <h1 class="entry-title">jessie の certbot が 0.9.3 に上がったので設定を変更した</h1>
       
       <!-- zenback_title_end -->
       
@@ -96,7 +96,7 @@
 
 
 
-<time class='entry-date' datetime='2015-05-03T13:00:00+09:00'><span class='date'><span class='date-month'>May</span> <span class='date-day'>3</span><span class='date-suffix'>rd</span>, <span class='date-year'>2015</span></span> <span class='time'>1:00 pm</span></time>
+<time class='entry-date' datetime='2016-11-08T23:14:00+09:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>8</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>11:14 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -109,79 +109,243 @@
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><a href="https://lilo.doorkeeper.jp/events/23873" title="LILO ＆ 東海道らぐ・オフラインミーティング（2015/05/03） - LILO | Doorkeeper">LILO ＆ 東海道らぐ・オフラインミーティング（2015/05/03） - LILO | Doorkeeper</a>
-に参加しました。</p>
-
-<p>前回と同じくアンカンファレンス形式でした。</p>
+<div class="entry-content"><p>jessie の certbot が 0.9.3 に上がって、
+<code>/etc/cron.d/certbot</code> よりも systemd の <code>certbot.timer</code> が優先して動くように変わったので、
+reload に post-hook を使うように変えたり、
+ログの差分メールの仕組みを変えたりしました。</p>
 
 <!--more-->
 
 
-<h2>メモ</h2>
+<h2>今までの方法</h2>
 
-<p>今回のメモです。</p>
+<p>今までは <code>/etc/cron.daily/local-letsencrypt</code> で <code>certbot renew</code> を呼び出して、ログを保存して <code>diff</code> を出力して cron からメールを送信させて、
+<code>reload</code> は更新の有無にかかわらず実行していました。</p>
 
-<ul>
-<li><a href="http://lilo.linux.or.jp/" title="Welcome to LILO">Welcome to LILO</a> では日付が間違っている</li>
-<li>ハッシュタグ: <code>#lilo_jp</code> <code>#東海道らぐ</code></li>
-<li>自己紹介から</li>
-<li>k-of 11/6,7</li>
-<li>おーぷん万葉</li>
-<li><a href="https://github.com/hashimom/Izumo">https://github.com/hashimom/Izumo</a> Canna のフォーク</li>
-<li>GuruPlug Server</li>
-<li>4月に ibus-mozc サポート終了</li>
-<li>IzumoWebSock プロトコル (JSON + WebSocket)</li>
-<li>Canna は K&amp;R なソースコード</li>
-<li><a href="https://github.com/hashimom/Izumo/blob/bc04c5efad8fc462fa6730823566126edef36c69/server/comm.h">https://github.com/hashimom/Izumo/blob/bc04c5efad8fc462fa6730823566126edef36c69/server/comm.h</a> などの謎の <code>pro(())</code></li>
-<li>M17N</li>
-<li>ASUS U38N</li>
-<li>Linux Mint</li>
-<li>M17N には ibus 推奨</li>
-<li>ibus-m17n パッケージ</li>
-<li>UTF-8 の環境なら同様にできるはず</li>
-<li>Plamo はまだ euc-jp らしい</li>
-<li>アラトゥエ・コミュニティの、先生きのこり問題</li>
-<li>around twenty</li>
-<li>iPhone でプレゼン</li>
-<li><a href="http://railsgirls.jp/" title="Rails Girls - Japanese">Rails Girls - Japanese</a></li>
-<li>Diversity</li>
-<li><a href="http://rubykaigi.org/2014/presentation/S-HarukaIwao" title="RubyKaigi 2014 | RailsGirls: Not Only For Girls">RubyKaigi 2014 | RailsGirls: Not Only For Girls</a></li>
-<li>「時代が変わり、常識も変わる」</li>
-<li>「楽しいか、楽しくないか」が重要</li>
-<li>LILO のインストール大会の話</li>
-<li>今時のチープなノートPC HP Stream 11 で Xubuntu を動かす</li>
-<li>WIMBoot だとリカバリパーティションっぽいものは消してはいけない</li>
-<li>謎PCとのつきあい方</li>
-<li>opencocon</li>
-<li>HP Thin-Client 2533t</li>
-<li>VIA C7 1GHz</li>
-<li>Windows XP Embedded</li>
-<li>Android Nexus7 で Linux を色々と遊んでみよう</li>
-<li>Mikutter</li>
-<li>Debian Noroot</li>
-<li>LibreOffice</li>
-<li>root 化</li>
-<li>Debian Kit と Complete Linux</li>
-<li>CyanobenMod</li>
-<li>Firefox OS</li>
-<li>Ubuntu Touch</li>
-<li>OSC京都、香港OSC、台湾OSDC</li>
-<li>Raspberry PI とつないでみました <a href="http://www.kuzuore.com/misc/documents/lilo_tokaido/20150503/raspi_buzzer.pdf">http://www.kuzuore.com/misc/documents/lilo_tokaido/20150503/raspi_buzzer.pdf</a> <a href="http://www.kuzuore.com/misc/documents/lilo_tokaido/20150503/raspi_buzzer.odp">http://www.kuzuore.com/misc/documents/lilo_tokaido/20150503/raspi_buzzer.odp</a></li>
-<li>サウンドジェネレーター6 DNGR-G48 <a href="http://prod.kyohritsu.com/DNGR-G48.html">http://prod.kyohritsu.com/DNGR-G48.html</a></li>
-<li><a href="https://github.com/sato-makoto/Raspi_LED/tree/master/wonder_snd">https://github.com/sato-makoto/Raspi_LED/tree/master/wonder_snd</a></li>
-<li>LibreOffice の UX と QA のあれこれ</li>
-<li>次は 4.5 ではなく 5.0</li>
-<li>デザインコンテスト中</li>
-<li><a href="https://wiki.documentfoundation.org/BugHunting_Session_5.0.0.0">https://wiki.documentfoundation.org/BugHunting_Session_5.0.0.0</a> 5/22-5/24</li>
-<li>何をやるかはおまかせ</li>
-<li>LibreOffice Online</li>
-<li>Qt + LibreOffice + ibus で問題が起きるらしいという話</li>
-<li><a href="http://www.ospn.jp/osc2015-kyoto/" title="オープンソースカンファレンス2015 Kansai@Kyoto - オープンソースの文化祭！">オープンソースカンファレンス2015 Kansai@Kyoto - オープンソースの文化祭！</a> 8/7-8/8</li>
-<li>GuruPlug Server のデモ</li>
-<li><a href="http://www.jspnet.co.jp/guruplug/tips.html#tips002" title="JTAGを利用しない接続方法">JTAGを利用しない接続方法</a></li>
-<li><a href="http://www.jspnet.co.jp/guruplug/tips.html#tips013" title="LEDを操作してみよう">LEDを操作してみよう</a></li>
-</ul>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="c">#!/bin/sh</span>
+</span><span class='line'><span class="nv">LOGFILE</span><span class="o">=</span>/var/log/certbot-renew.log
+</span><span class='line'><span class="k">if</span> <span class="o">[</span> -f <span class="s2">&quot;$LOGFILE&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>    savelog -c <span class="m">90</span> -q <span class="s2">&quot;$LOGFILE&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> ! certbot renew &gt; <span class="s2">&quot;$LOGFILE&quot;</span> 2&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>    <span class="nb">echo </span>Automated renewal failed:
+</span><span class='line'>    cat <span class="s2">&quot;$LOGFILE&quot;</span>
+</span><span class='line'>    <span class="nb">exit </span>1
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[</span> -f <span class="s2">&quot;$LOGFILE&quot;</span>.0 <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+</span><span class='line'>    diff -u <span class="s2">&quot;$LOGFILE&quot;</span>.0 <span class="s2">&quot;$LOGFILE&quot;</span>
+</span><span class='line'><span class="k">fi</span>
+</span><span class='line'>apachectl graceful
+</span><span class='line'>service postfix reload
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
+
+<h2>certbot パッケージでインストールされた自動更新の仕組み</h2>
+
+<p><code>/etc/cron.d/certbot</code> は <code>/run/systemd/system</code> をチェックして普通は動かないようになっていました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'> % cat /etc/cron.d/certbot
+</span><span class='line'> <span class="c"># /etc/cron.d/certbot: crontab entries for the certbot package</span>
+</span><span class='line'> <span class="c">#</span>
+</span><span class='line'> <span class="c"># Upstream recommends attempting renewal twice a day</span>
+</span><span class='line'> <span class="c">#</span>
+</span><span class='line'> <span class="c"># Eventually, this will be an opportunity to validate certificates</span>
+</span><span class='line'> <span class="c"># haven&#39;t been revoked, etc.  Renewal will only occur if expiration</span>
+</span><span class='line'> <span class="c"># is within 30 days.</span>
+</span><span class='line'> <span class="nv">SHELL</span><span class="o">=</span>/bin/sh
+</span><span class='line'> <span class="nv">PATH</span><span class="o">=</span>/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+</span><span class='line'>
+</span><span class='line'> <span class="m">0</span> */12 * * * root <span class="nb">test</span> -x /usr/bin/certbot -a <span class="se">\!</span> -d /run/systemd/system <span class="o">&amp;&amp;</span> perl -e <span class="s1">&#39;sleep int(rand(3600))&#39;</span> <span class="o">&amp;&amp;</span> certbot -q renew
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>systemd の方では、<code>timer</code> から動かすため、有効化されていない <code>certbot.service</code> と、 service を動かすための <code>certbot.timer</code> が入っていました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>% cat /lib/systemd/system/certbot.service
+</span><span class='line'><span class="o">[</span>Unit<span class="o">]</span>
+</span><span class='line'><span class="nv">Description</span><span class="o">=</span>Certbot
+</span><span class='line'><span class="nv">Documentation</span><span class="o">=</span>file:///usr/share/doc/python-certbot-doc/html/index.html
+</span><span class='line'><span class="nv">Documentation</span><span class="o">=</span>https://letsencrypt.readthedocs.io/en/latest/
+</span><span class='line'><span class="o">[</span>Service<span class="o">]</span>
+</span><span class='line'><span class="nv">Type</span><span class="o">=</span>oneshot
+</span><span class='line'><span class="nv">ExecStart</span><span class="o">=</span>/usr/bin/certbot -q renew
+</span><span class='line'><span class="nv">PrivateTmp</span><span class="o">=</span><span class="nb">true</span>
+</span><span class='line'>% cat /lib/systemd/system/certbot.timer
+</span><span class='line'><span class="o">[</span>Unit<span class="o">]</span>
+</span><span class='line'><span class="nv">Description</span><span class="o">=</span>Run certbot twice daily
+</span><span class='line'>
+</span><span class='line'><span class="o">[</span>Timer<span class="o">]</span>
+</span><span class='line'><span class="nv">OnCalendar</span><span class="o">=</span>*-*-* 00,12:00:00
+</span><span class='line'><span class="nv">RandomizedDelaySec</span><span class="o">=</span>3600
+</span><span class='line'><span class="nv">Persistent</span><span class="o">=</span><span class="nb">true</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">[</span>Install<span class="o">]</span>
+</span><span class='line'><span class="nv">WantedBy</span><span class="o">=</span>timers.target
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p><code>OnCalendar</code> で毎日 00:00:00 と 12:00:00 に動くようになっていました。
+<code>RandomizedDelaySec</code> でランダムな遅延の設定をしようとしているようですが、
+jessie の systemd は対応していないようで、
+<code>systemd[1]: [/lib/systemd/system/certbot.timer:6] Unknown lvalue 'RandomizedDelaySec' in section 'Timer'</code>
+というログが出ていました。
+(<a href="https://bugs.debian.org/843607" title="#843607 - certbot: Unknown lvalue 'RandomizedDelaySec' in section 'Timer'">#843607 - certbot: Unknown lvalue &lsquo;RandomizedDelaySec&rsquo; in section &lsquo;Timer&rsquo;</a> として報告済みです。)</p>
+
+<h2>ログの diff のメール送信方法変更</h2>
+
+<p>設定を追加するには <code>/etc/systemd/system/certbot.service.d</code> にファイルをおけば良いので、
+以下の内容の <code>/etc/systemd/system/certbot.service.d/diffmail.conf</code> を作成しました。</p>
+
+<p><code>certbot.service</code> の <code>ExecStart=/usr/bin/certbot -q renew</code> の後に実行したかったので、
+<code>ExecStopPost</code> を使ってみました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="o">[</span>Service<span class="o">]</span>
+</span><span class='line'><span class="nv">ExecStopPost</span><span class="o">=</span>/bin/bash -c <span class="s2">&quot;diff -u &lt;(cut -d: -f4- /var/log/letsencrypt/letsencrypt.log.1 | egrep -v &#39;^DEBUG&#39;) &lt;(cut -d: -f4- /var/log/letsencrypt/letsencrypt.log | egrep -v &#39;^DEBUG&#39;) | ifne mail -s &#39;Change certbot log&#39; root&quot;</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>前回のログ (<code>letsencrypt.log.1</code>) と今回のログ (<code>letsencrypt.log</code>) から、必ず差分になってしまう時刻を <code>cut</code> で削って、さらに DEBUG ログの中にも現在日時で変化する部分があったので除外するようにしてから差分をとっています。</p>
+
+<p>そして <a href="https://packages.debian.org/moreutils" title="moreutils">moreutils</a> の <code>ifne</code> を使って差分があるときだけメール送信をするようにしています。</p>
+
+<h2>post-hook への変更</h2>
+
+<p>systemd の <code>ExecStart</code> を書き換えるのは、メンテナンスしにくいとか、手動で <code>certbot renew</code> を実行したときに使われないなど、あまりよくないかと思い、
+<code>/etc/letsencrypt/cli.ini</code> で設定することにしました。</p>
+
+<p>letsencrypt の証明書を apache のみで使っているサーバーでは post-hook にリロードするコマンドを直接設定しました。</p>
+
+<p>ついでに <code>rsa-key-size</code> も 2048 から 4096 に変更するようにしました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>% cat /etc/letsencrypt/cli.ini
+</span><span class='line'>rsa-key-size <span class="o">=</span> 4096
+</span><span class='line'>post-hook <span class="o">=</span> apachectl graceful
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h2>複数コマンドの post-hook</h2>
+
+<p><code>post-hook = apachectl graceful; service postfix reload &gt;/dev/null</code> のような書き方は
+<code>certbot: error: Unexpected line 1 in /etc/letsencrypt/cli.ini: post-hook = apachectl graceful; service postfix reload &gt;/dev/null</code>
+というエラーになってうまくいかなかったので、
+<code>/etc/letsencrypt/post-hook</code> に実行ファイルを作って、それを post-hook に指定することにしました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'> % sudoedit /etc/letsencrypt/cli.ini
+</span><span class='line'> % sudoedit /etc/letsencrypt/post-hook
+</span><span class='line'> % sudo chmod +x /etc/letsencrypt/post-hook
+</span><span class='line'> % cat /etc/letsencrypt/cli.ini
+</span><span class='line'> rsa-key-size <span class="o">=</span> 4096
+</span><span class='line'> post-hook <span class="o">=</span> /etc/letsencrypt/post-hook
+</span><span class='line'> % cat /etc/letsencrypt/post-hook
+</span><span class='line'> <span class="c">#!/bin/sh</span>
+</span><span class='line'> apachectl graceful
+</span><span class='line'> service postfix reload &gt;/dev/null
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h2>テスト実行</h2>
+
+<p><code>sudo certbot renew</code> で試しに実行してみたところ、以下のような感じで更新の必要がないときは <code>post-hook</code> は実行されないことが確認できました。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'>% sudo certbot renew
+</span><span class='line'>Saving debug log to /var/log/letsencrypt/letsencrypt.log
+</span><span class='line'>
+</span><span class='line'>-------------------------------------------------------------------------------
+</span><span class='line'>Processing /etc/letsencrypt/renewal/www.example.org.conf
+</span><span class='line'>-------------------------------------------------------------------------------
+</span><span class='line'>Cert not yet due <span class="k">for</span> renewal
+</span><span class='line'>
+</span><span class='line'>The following certs are not due <span class="k">for</span> renewal yet:
+</span><span class='line'>  /etc/letsencrypt/live/www.example.org/fullchain.pem <span class="o">(</span>skipped<span class="o">)</span>
+</span><span class='line'>No renewals were attempted.
+</span><span class='line'>No renewals attempted, so not running post-hook
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h2>まとめ</h2>
+
+<p><code>certbot renew</code> で証明書が更新されたときに実行したいことは <code>post-hook</code> に、
+証明書の更新とは関係なく毎回実行したいことは systemd の <code>ExecStopPost</code> を使えば良いことがわかりました。</p>
+
+<p>certbot の hook には <code>post-hook</code> 以外に <code>pre-hook</code> と <code>renew-hook</code> もあるので、
+用途によってはそちらも使えそうです。
+(<code>webroot</code> プラグインを使っているので使っていませんが、
+<code>standalone</code> プラグインを使っているのなら <code>pre-hook</code> で <code>stop</code> して <code>post-hook</code> で <code>start</code> するとか、
+<code>renew-hook</code> で更新されたドメインに応じて必要な時だけ <code>postfix reload</code> するとか)</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -200,12 +364,12 @@
 
 
 
-<time class='entry-date' datetime='2015-05-03T13:00:00+09:00'><span class='date'><span class='date-month'>May</span> <span class='date-day'>3</span><span class='date-suffix'>rd</span>, <span class='date-year'>2015</span></span> <span class='time'>1:00 pm</span></time>
+<time class='entry-date' datetime='2016-11-08T23:14:00+09:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>8</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>11:14 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/event/'>event</a>, <a class='category' href='/blog/categories/lilo/'>lilo</a>, <a class='category' href='/blog/categories/linux/'>linux</a>
+    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/letsencrypt/'>letsencrypt</a>, <a class='category' href='/blog/categories/linux/'>linux</a>
   
 </span>
 
@@ -232,10 +396,8 @@
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2015-04-25-rubykansai66.html" title="Previous Post: 第66回 Ruby関西 勉強会に参加した">&laquo; 第66回 Ruby関西 勉強会に参加した</a>
+        <a class="basic-alignment left" href="/blog/2016-11-05-rubykansai75.html" title="Previous Post: 第75回 Ruby関西 勉強会に参加しました">&laquo; 第75回 Ruby関西 勉強会に参加しました</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2015-05-09-amagasakirb.html" title="Next Post: 5月9日 アンダースタンディング コンピュテーション読書会　第３回(兵庫県)に参加しました">5月9日 アンダースタンディング コンピュテーション読書会　第３回(兵庫県)に参加しました &raquo;</a>
       
     </p>
   </footer>
@@ -370,8 +532,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2015-05-03-lilo-tokaidolug.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2015-05-03-lilo-tokaidolug.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2016-11-08-certbot-0-dot-9-3.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2016-11-08-certbot-0-dot-9-3.html';
         var disqus_script = 'embed.js';
       
     (function () {

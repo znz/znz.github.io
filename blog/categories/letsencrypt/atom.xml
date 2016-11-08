@@ -4,7 +4,7 @@
   <title><![CDATA[Category: letsencrypt | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/letsencrypt/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-11-05T18:18:23+09:00</updated>
+  <updated>2016-11-09T00:01:20+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,170 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[jessie の certbot が 0.9.3 に上がったので設定を変更した]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-11-08-certbot-0-dot-9-3.html"/>
+    <updated>2016-11-08T23:14:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/certbot-0-dot-9-3</id>
+    <content type="html"><![CDATA[<p>jessie の certbot が 0.9.3 に上がって、
+<code>/etc/cron.d/certbot</code> よりも systemd の <code>certbot.timer</code> が優先して動くように変わったので、
+reload に post-hook を使うように変えたり、
+ログの差分メールの仕組みを変えたりしました。</p>
+
+<!--more-->
+
+
+<h2>今までの方法</h2>
+
+<p>今までは <code>/etc/cron.daily/local-letsencrypt</code> で <code>certbot renew</code> を呼び出して、ログを保存して <code>diff</code> を出力して cron からメールを送信させて、
+<code>reload</code> は更新の有無にかかわらず実行していました。</p>
+
+<pre><code class="sh">#!/bin/sh
+LOGFILE=/var/log/certbot-renew.log
+if [ -f "$LOGFILE" ]; then
+    savelog -c 90 -q "$LOGFILE"
+fi
+if ! certbot renew &gt; "$LOGFILE" 2&gt;&amp;1 ; then
+    echo Automated renewal failed:
+    cat "$LOGFILE"
+    exit 1
+fi
+if [ -f "$LOGFILE".0 ]; then
+    diff -u "$LOGFILE".0 "$LOGFILE"
+fi
+apachectl graceful
+service postfix reload
+</code></pre>
+
+<h2>certbot パッケージでインストールされた自動更新の仕組み</h2>
+
+<p><code>/etc/cron.d/certbot</code> は <code>/run/systemd/system</code> をチェックして普通は動かないようになっていました。</p>
+
+<pre><code> % cat /etc/cron.d/certbot
+ # /etc/cron.d/certbot: crontab entries for the certbot package
+ #
+ # Upstream recommends attempting renewal twice a day
+ #
+ # Eventually, this will be an opportunity to validate certificates
+ # haven't been revoked, etc.  Renewal will only occur if expiration
+ # is within 30 days.
+ SHELL=/bin/sh
+ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+ 0 */12 * * * root test -x /usr/bin/certbot -a \! -d /run/systemd/system &amp;&amp; perl -e 'sleep int(rand(3600))' &amp;&amp; certbot -q renew
+</code></pre>
+
+<p>systemd の方では、<code>timer</code> から動かすため、有効化されていない <code>certbot.service</code> と、 service を動かすための <code>certbot.timer</code> が入っていました。</p>
+
+<pre><code>% cat /lib/systemd/system/certbot.service
+[Unit]
+Description=Certbot
+Documentation=file:///usr/share/doc/python-certbot-doc/html/index.html
+Documentation=https://letsencrypt.readthedocs.io/en/latest/
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/certbot -q renew
+PrivateTmp=true
+% cat /lib/systemd/system/certbot.timer
+[Unit]
+Description=Run certbot twice daily
+
+[Timer]
+OnCalendar=*-*-* 00,12:00:00
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+</code></pre>
+
+<p><code>OnCalendar</code> で毎日 00:00:00 と 12:00:00 に動くようになっていました。
+<code>RandomizedDelaySec</code> でランダムな遅延の設定をしようとしているようですが、
+jessie の systemd は対応していないようで、
+<code>systemd[1]: [/lib/systemd/system/certbot.timer:6] Unknown lvalue 'RandomizedDelaySec' in section 'Timer'</code>
+というログが出ていました。
+(<a href="https://bugs.debian.org/843607" title="#843607 - certbot: Unknown lvalue 'RandomizedDelaySec' in section 'Timer'">#843607 - certbot: Unknown lvalue &lsquo;RandomizedDelaySec&rsquo; in section &lsquo;Timer&rsquo;</a> として報告済みです。)</p>
+
+<h2>ログの diff のメール送信方法変更</h2>
+
+<p>設定を追加するには <code>/etc/systemd/system/certbot.service.d</code> にファイルをおけば良いので、
+以下の内容の <code>/etc/systemd/system/certbot.service.d/diffmail.conf</code> を作成しました。</p>
+
+<p><code>certbot.service</code> の <code>ExecStart=/usr/bin/certbot -q renew</code> の後に実行したかったので、
+<code>ExecStopPost</code> を使ってみました。</p>
+
+<pre><code>[Service]
+ExecStopPost=/bin/bash -c "diff -u &lt;(cut -d: -f4- /var/log/letsencrypt/letsencrypt.log.1 | egrep -v '^DEBUG') &lt;(cut -d: -f4- /var/log/letsencrypt/letsencrypt.log | egrep -v '^DEBUG') | ifne mail -s 'Change certbot log' root"
+</code></pre>
+
+<p>前回のログ (<code>letsencrypt.log.1</code>) と今回のログ (<code>letsencrypt.log</code>) から、必ず差分になってしまう時刻を <code>cut</code> で削って、さらに DEBUG ログの中にも現在日時で変化する部分があったので除外するようにしてから差分をとっています。</p>
+
+<p>そして <a href="https://packages.debian.org/moreutils" title="moreutils">moreutils</a> の <code>ifne</code> を使って差分があるときだけメール送信をするようにしています。</p>
+
+<h2>post-hook への変更</h2>
+
+<p>systemd の <code>ExecStart</code> を書き換えるのは、メンテナンスしにくいとか、手動で <code>certbot renew</code> を実行したときに使われないなど、あまりよくないかと思い、
+<code>/etc/letsencrypt/cli.ini</code> で設定することにしました。</p>
+
+<p>letsencrypt の証明書を apache のみで使っているサーバーでは post-hook にリロードするコマンドを直接設定しました。</p>
+
+<p>ついでに <code>rsa-key-size</code> も 2048 から 4096 に変更するようにしました。</p>
+
+<pre><code>% cat /etc/letsencrypt/cli.ini
+rsa-key-size = 4096
+post-hook = apachectl graceful
+</code></pre>
+
+<h2>複数コマンドの post-hook</h2>
+
+<p><code>post-hook = apachectl graceful; service postfix reload &gt;/dev/null</code> のような書き方は
+<code>certbot: error: Unexpected line 1 in /etc/letsencrypt/cli.ini: post-hook = apachectl graceful; service postfix reload &gt;/dev/null</code>
+というエラーになってうまくいかなかったので、
+<code>/etc/letsencrypt/post-hook</code> に実行ファイルを作って、それを post-hook に指定することにしました。</p>
+
+<pre><code> % sudoedit /etc/letsencrypt/cli.ini
+ % sudoedit /etc/letsencrypt/post-hook
+ % sudo chmod +x /etc/letsencrypt/post-hook
+ % cat /etc/letsencrypt/cli.ini
+ rsa-key-size = 4096
+ post-hook = /etc/letsencrypt/post-hook
+ % cat /etc/letsencrypt/post-hook
+ #!/bin/sh
+ apachectl graceful
+ service postfix reload &gt;/dev/null
+</code></pre>
+
+<h2>テスト実行</h2>
+
+<p><code>sudo certbot renew</code> で試しに実行してみたところ、以下のような感じで更新の必要がないときは <code>post-hook</code> は実行されないことが確認できました。</p>
+
+<pre><code>% sudo certbot renew
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+
+-------------------------------------------------------------------------------
+Processing /etc/letsencrypt/renewal/www.example.org.conf
+-------------------------------------------------------------------------------
+Cert not yet due for renewal
+
+The following certs are not due for renewal yet:
+  /etc/letsencrypt/live/www.example.org/fullchain.pem (skipped)
+No renewals were attempted.
+No renewals attempted, so not running post-hook
+</code></pre>
+
+<h2>まとめ</h2>
+
+<p><code>certbot renew</code> で証明書が更新されたときに実行したいことは <code>post-hook</code> に、
+証明書の更新とは関係なく毎回実行したいことは systemd の <code>ExecStopPost</code> を使えば良いことがわかりました。</p>
+
+<p>certbot の hook には <code>post-hook</code> 以外に <code>pre-hook</code> と <code>renew-hook</code> もあるので、
+用途によってはそちらも使えそうです。
+(<code>webroot</code> プラグインを使っているので使っていませんが、
+<code>standalone</code> プラグインを使っているのなら <code>pre-hook</code> で <code>stop</code> して <code>post-hook</code> で <code>start</code> するとか、
+<code>renew-hook</code> で更新されたドメインに応じて必要な時だけ <code>postfix reload</code> するとか)</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Let's Encrypt Subscriber Agreementの比較]]></title>
@@ -704,238 +868,6 @@ More detailed help:
 
    all, automation, paths, security, testing, or any of the subcommands or
    plugins (certonly, install, nginx, apache, standalone, webroot, etc)
-</code></pre>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[jessie に backports から letsencrypt を入れてみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-04-08-jessie-letsencrypt.html"/>
-    <updated>2016-04-08T14:30:02+09:00</updated>
-    <id>http://blog.n-z.jp/blog/jessie-letsencrypt</id>
-    <content type="html"><![CDATA[<p>現在リリースされている Ubuntu と違って Debian jessie には backports に letsencrypt パッケージがあるので、ちょっと古いですがパッケージ版の letsencrypt を使ってみることにしました。</p>
-
-<p>Ubuntu も今月リリースされる 16.04 (xenial) には universe ですが letsencrypt パッケージが含まれるので、それが使えると思います。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Debian GNU/Linux 8.4 (jessie) (amd64)</li>
-<li>letsencrypt 0.4.1-1~bpo8+1</li>
-<li>apache2 2.4.10-10+deb8u4</li>
-</ul>
-
-
-<h2>インストール</h2>
-
-<p><code>/etc/apt/sources.list</code> で <code>deb http://ftp.jp.debian.org/debian jessie-backports main contrib non-free</code> のように backports を有効にしておきます。</p>
-
-<p>依存パッケージも backports のものが必要なので <code>-t jessie-backports</code> 付きでインストールする必要がありました。</p>
-
-<p><code>webroot</code> を使う予定だったので、 <code>python-letsencrypt-apache</code> はインストールしませんでした。</p>
-
-<p>stable にあるパッケージのうち、いくつかのパッケージも backports のものに上がってしまうので、そのリスクが許容できない場合は <code>letsencrypt-auto</code> など、他のインストール方法を検討した方が良さそうです。</p>
-
-<pre><code>%  sudo apt install letsencrypt
-パッケージリストを読み込んでいます... 完了
-依存関係ツリーを作成しています
-状態情報を読み取っています... 完了
-インストールすることができないパッケージがありました。おそらく、あり得
-ない状況を要求したか、(不安定版ディストリビューションを使用しているの
-であれば) 必要なパッケージがまだ作成されていなかったり Incoming から移
-動されていないことが考えられます。
-以下の情報がこの問題を解決するために役立つかもしれません:
-
-以下のパッケージには満たせない依存関係があります:
- letsencrypt : 依存: python-letsencrypt (= 0.4.1-1~bpo8+1) しかし、インストールされようとしていませ ん
-E: 問題を解決することができません。壊れた変更禁止パッケージがあります。
-zsh: exit 100   sudo apt install letsencrypt
-%  sudo apt install -t jessie-backports letsencrypt
-パッケージリストを読み込んでいます... 完了
-依存関係ツリーを作成しています
-状態情報を読み取っています... 完了
-以下のパッケージが自動でインストールされましたが、もう必要とされていません:
-  python-cffi python-ply python-pycparser
-これを削除するには 'apt-get autoremove' を利用してください。
-以下の追加パッケージがインストールされます:
-  dialog python-acme python-cffi python-cffi-backend python-configargparse python-configobj
-  python-cryptography python-dialog python-enum34 python-funcsigs python-idna python-ipaddress
-  python-letsencrypt python-mock python-ndg-httpsclient python-openssl python-parsedatetime
-  python-pbr python-psutil python-pyasn1 python-pyicu python-requests python-rfc3339 python-six
-  python-urllib3 python-zope.component python-zope.event python-zope.interface
-提案パッケージ:
-  python-letsencrypt-apache python-letsencrypt-doc python-configobj-doc python-cryptography-doc
-  python-cryptography-vectors python-enum34-doc python-funcsigs-doc python-mock-doc
-  python-openssl-doc python-openssl-dbg doc-base python-ntlm
-以下のパッケージが新たにインストールされます:
-  dialog letsencrypt python-acme python-cffi-backend python-configargparse python-configobj
-  python-dialog python-enum34 python-funcsigs python-idna python-ipaddress python-letsencrypt
-  python-mock python-ndg-httpsclient python-parsedatetime python-pbr python-psutil python-pyasn1
-  python-pyicu python-requests python-rfc3339 python-urllib3 python-zope.component
-  python-zope.event python-zope.interface
-以下のパッケージはアップグレードされます:
-  python-cffi python-cryptography python-openssl python-six
-アップグレード: 4 個、新規インストール: 25 個、削除: 0 個、保留: 24 個。
-1,906 kB のアーカイブを取得する必要があります。
-この操作後に追加で 8,772 kB のディスク容量が消費されます。
-続行しますか? [Y/n]
-</code></pre>
-
-<h2>letsencrypt コマンド実行</h2>
-
-<p>一般ユーザー権限で実行するとエラーになり、カレントディレクトリに <code>letsencrypt.log</code> が作成されていました。
-<code>--help</code> 付きでの実行は特にエラーもなく、 <code>letsencrypt.log</code> も作成されることなくヘルプが表示されました。</p>
-
-<pre><code>%  letsencrypt
-An unexpected error occurred:
-OSError: [Errno 13] Permission denied: '/etc/letsencrypt'
-Please see the logfile 'letsencrypt.log' for more details.
-%  rm letsencrypt.log
-%  letsencrypt --help
-
-  letsencrypt [SUBCOMMAND] [options] [-d domain] [-d domain] ...
-
-The Let's Encrypt agent can obtain and install HTTPS/TLS/SSL certificates.  By
-default, it will attempt to use a webserver both for obtaining and installing
-the cert. Major SUBCOMMANDS are:
-
-  (default) run        Obtain &amp; install a cert in your current webserver
-  certonly             Obtain cert, but do not install it (aka "auth")
-  install              Install a previously obtained cert in a server
-  renew                Renew previously obtained certs that are near expiry
-  revoke               Revoke a previously obtained certificate
-  rollback             Rollback server configuration changes made during install
-  config_changes       Show changes made to server config during installation
-  plugins              Display information about installed plugins
-
-Choice of server plugins for obtaining and installing cert:
-
-  (the apache plugin is not installed)
-  --standalone      Run a standalone webserver for authentication
-  (nginx support is experimental, buggy, and not installed by default)
-  --webroot         Place files in a server's webroot folder for authentication
-
-OR use different plugins to obtain (authenticate) the cert and then install it:
-
-  --authenticator standalone --installer apache
-
-More detailed help:
-
-  -h, --help [topic]    print this message, or detailed help on a topic;
-                        the available topics are:
-
-   all, automation, paths, security, testing, or any of the subcommands or
-   plugins (certonly, install, nginx, apache, standalone, webroot, etc)
-</code></pre>
-
-<h2>本番実行</h2>
-
-<p><code>letsencrypt certonly</code> で証明書発行します。</p>
-
-<pre><code>%  sudo letsencrypt certonly --webroot -w /srv/www/www.example.org/htdocs -d www.example.org
-</code></pre>
-
-<p>まず、アカウントの作成があるので、アカウントの作成はメールアドレス入力しました。
-アカウントのリカバリや緊急時の連絡などに使われるだけのようで、今の所ここで入力したメールアドレスに letsencrypt からメールが来たことはありません。</p>
-
-<pre><code>         ┌──────────────────────────────────────────────────────────────────────┐
-         │ Enter email address (used for urgent notices and lost key recovery)  │
-         │ ┌──────────────────────────────────────────────────────────────────┐ │
-         │ │                                                                  │ │
-         │ └──────────────────────────────────────────────────────────────────┘ │
-         ├──────────────────────────────────────────────────────────────────────┤
-         │                     &lt; 了解 &gt;           &lt; 取消 &gt;                      │
-         └──────────────────────────────────────────────────────────────────────┘
-</code></pre>
-
-<p>Terms of Service は前回みた時から変わっていないので、今度も Agree しました。</p>
-
-<pre><code>         ┌──────────────────────────────────────────────────────────────────────┐
-         │ Please read the Terms of Service at                                  │
-         │ https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf. You │
-         │ must agree in order to register with the ACME server at              │
-         │ https://acme-v01.api.letsencrypt.org/directory                       │
-         │                                                                      │
-         │                                                                      │
-         │                                                                      │
-         │                                                                      │
-         │                                                                      │
-         │                                                                      │
-         │                                                                      │
-         │                                                                      │
-         │                                                                      │
-         │                                                                      │
-         │                                                                      │
-         │                                                                      │
-         ├──────────────────────────────────────────────────────────────────────┤
-         │                     &lt;Agree &gt;           &lt;Cancel&gt;                      │
-         └──────────────────────────────────────────────────────────────────────┘
-</code></pre>
-
-<p>以下のような作成完了のメッセージが出ました。</p>
-
-<pre><code>IMPORTANT NOTES:
- - If you lose your account credentials, you can recover through
-   e-mails sent to z@n-z.jp.
- - Congratulations! Your certificate and chain have been saved at
-   /etc/letsencrypt/live/www.example.org/fullchain.pem. Your cert will
-   expire on 2016-07-07. To obtain a new version of the certificate in
-   the future, simply run Let's Encrypt again.
- - Your account credentials have been saved in your Let's Encrypt
-   configuration directory at /etc/letsencrypt. You should make a
-   secure backup of this folder now. This configuration directory will
-   also contain certificates and private keys obtained by Let's
-   Encrypt so making regular backups of this folder is ideal.
- - If you like Let's Encrypt, please consider supporting our work by:
-
-   Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
-   Donating to EFF:                    https://eff.org/donate-le
-</code></pre>
-
-<p>問題があれば <code>/var/log/letsencrypt/letsencrypt.log</code> でログを確認します。</p>
-
-<h2>apache2 の設定変更</h2>
-
-<p>apache2 の設定を変更して、 <code>sudo service apache2 reload</code> で反映します。
-ブラウザーで Let&rsquo;s Encrypt Authority X3 の証明書になっていることが確認できたら設定完了です。</p>
-
-<pre><code>SSLCertificateKeyFile /etc/letsencrypt/live/www.example.org/privkey.pem
-SSLCertificateFile /etc/letsencrypt/live/www.example.org/fullchain.pem
-</code></pre>
-
-<h2>自動更新設定</h2>
-
-<p>パッケージの <code>letsencrypt</code> でインストールされたものではないということを明示するために <code>local</code> をつけて <code>/etc/cron.daily/local-letsencrypt</code> に自動更新の設定をしました。</p>
-
-<p>試しに実行してみてちゃんと動いていれば設定完了です。</p>
-
-<pre><code>% sudoedit /etc/cron.daily/local-letsencrypt
-% sudo chmod +x /etc/cron.daily/local-letsencrypt
-% sudo /etc/cron.daily/local-letsencrypt
-% sudo cat /var/log/letsencrypt/renew.log
-Processing /etc/letsencrypt/renewal/www.example.org.conf
-
-The following certs are not due for renewal yet:
-  /etc/letsencrypt/live/www.example.org/fullchain.pem (skipped)
-No renewals were attempted.
-</code></pre>
-
-<p><a href="http://blog.n-z.jp/blog/2016-04-07-letsencrypt.html">前回の記事</a> のように <a href="http://packages.debian.org/debianutils">debianutils</a> の <code>savelog</code> でログをローテートして、証明書の有効期限の 90 日分残すようにしています。</p>
-
-<pre><code class="bash /etc/cron.daily/local-letsencrypt">#!/bin/sh
-LOGFILE=/var/log/letsencrypt/renew.log
-if [ -f "$LOGFILE" ]; then
-    savelog -c 90 -q "$LOGFILE"
-fi
-if ! letsencrypt renew &gt; "$LOGFILE" 2&gt;&amp;1 ; then
-    echo Automated renewal failed:
-    cat "$LOGFILE"
-    exit 1
-fi
-apachectl graceful
 </code></pre>
 ]]></content>
   </entry>

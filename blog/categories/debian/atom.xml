@@ -4,7 +4,7 @@
   <title><![CDATA[Category: debian | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/debian/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-11-05T18:18:23+09:00</updated>
+  <updated>2016-11-09T00:01:20+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,170 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[jessie の certbot が 0.9.3 に上がったので設定を変更した]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-11-08-certbot-0-dot-9-3.html"/>
+    <updated>2016-11-08T23:14:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/certbot-0-dot-9-3</id>
+    <content type="html"><![CDATA[<p>jessie の certbot が 0.9.3 に上がって、
+<code>/etc/cron.d/certbot</code> よりも systemd の <code>certbot.timer</code> が優先して動くように変わったので、
+reload に post-hook を使うように変えたり、
+ログの差分メールの仕組みを変えたりしました。</p>
+
+<!--more-->
+
+
+<h2>今までの方法</h2>
+
+<p>今までは <code>/etc/cron.daily/local-letsencrypt</code> で <code>certbot renew</code> を呼び出して、ログを保存して <code>diff</code> を出力して cron からメールを送信させて、
+<code>reload</code> は更新の有無にかかわらず実行していました。</p>
+
+<pre><code class="sh">#!/bin/sh
+LOGFILE=/var/log/certbot-renew.log
+if [ -f "$LOGFILE" ]; then
+    savelog -c 90 -q "$LOGFILE"
+fi
+if ! certbot renew &gt; "$LOGFILE" 2&gt;&amp;1 ; then
+    echo Automated renewal failed:
+    cat "$LOGFILE"
+    exit 1
+fi
+if [ -f "$LOGFILE".0 ]; then
+    diff -u "$LOGFILE".0 "$LOGFILE"
+fi
+apachectl graceful
+service postfix reload
+</code></pre>
+
+<h2>certbot パッケージでインストールされた自動更新の仕組み</h2>
+
+<p><code>/etc/cron.d/certbot</code> は <code>/run/systemd/system</code> をチェックして普通は動かないようになっていました。</p>
+
+<pre><code> % cat /etc/cron.d/certbot
+ # /etc/cron.d/certbot: crontab entries for the certbot package
+ #
+ # Upstream recommends attempting renewal twice a day
+ #
+ # Eventually, this will be an opportunity to validate certificates
+ # haven't been revoked, etc.  Renewal will only occur if expiration
+ # is within 30 days.
+ SHELL=/bin/sh
+ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+ 0 */12 * * * root test -x /usr/bin/certbot -a \! -d /run/systemd/system &amp;&amp; perl -e 'sleep int(rand(3600))' &amp;&amp; certbot -q renew
+</code></pre>
+
+<p>systemd の方では、<code>timer</code> から動かすため、有効化されていない <code>certbot.service</code> と、 service を動かすための <code>certbot.timer</code> が入っていました。</p>
+
+<pre><code>% cat /lib/systemd/system/certbot.service
+[Unit]
+Description=Certbot
+Documentation=file:///usr/share/doc/python-certbot-doc/html/index.html
+Documentation=https://letsencrypt.readthedocs.io/en/latest/
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/certbot -q renew
+PrivateTmp=true
+% cat /lib/systemd/system/certbot.timer
+[Unit]
+Description=Run certbot twice daily
+
+[Timer]
+OnCalendar=*-*-* 00,12:00:00
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+</code></pre>
+
+<p><code>OnCalendar</code> で毎日 00:00:00 と 12:00:00 に動くようになっていました。
+<code>RandomizedDelaySec</code> でランダムな遅延の設定をしようとしているようですが、
+jessie の systemd は対応していないようで、
+<code>systemd[1]: [/lib/systemd/system/certbot.timer:6] Unknown lvalue 'RandomizedDelaySec' in section 'Timer'</code>
+というログが出ていました。
+(<a href="https://bugs.debian.org/843607" title="#843607 - certbot: Unknown lvalue 'RandomizedDelaySec' in section 'Timer'">#843607 - certbot: Unknown lvalue &lsquo;RandomizedDelaySec&rsquo; in section &lsquo;Timer&rsquo;</a> として報告済みです。)</p>
+
+<h2>ログの diff のメール送信方法変更</h2>
+
+<p>設定を追加するには <code>/etc/systemd/system/certbot.service.d</code> にファイルをおけば良いので、
+以下の内容の <code>/etc/systemd/system/certbot.service.d/diffmail.conf</code> を作成しました。</p>
+
+<p><code>certbot.service</code> の <code>ExecStart=/usr/bin/certbot -q renew</code> の後に実行したかったので、
+<code>ExecStopPost</code> を使ってみました。</p>
+
+<pre><code>[Service]
+ExecStopPost=/bin/bash -c "diff -u &lt;(cut -d: -f4- /var/log/letsencrypt/letsencrypt.log.1 | egrep -v '^DEBUG') &lt;(cut -d: -f4- /var/log/letsencrypt/letsencrypt.log | egrep -v '^DEBUG') | ifne mail -s 'Change certbot log' root"
+</code></pre>
+
+<p>前回のログ (<code>letsencrypt.log.1</code>) と今回のログ (<code>letsencrypt.log</code>) から、必ず差分になってしまう時刻を <code>cut</code> で削って、さらに DEBUG ログの中にも現在日時で変化する部分があったので除外するようにしてから差分をとっています。</p>
+
+<p>そして <a href="https://packages.debian.org/moreutils" title="moreutils">moreutils</a> の <code>ifne</code> を使って差分があるときだけメール送信をするようにしています。</p>
+
+<h2>post-hook への変更</h2>
+
+<p>systemd の <code>ExecStart</code> を書き換えるのは、メンテナンスしにくいとか、手動で <code>certbot renew</code> を実行したときに使われないなど、あまりよくないかと思い、
+<code>/etc/letsencrypt/cli.ini</code> で設定することにしました。</p>
+
+<p>letsencrypt の証明書を apache のみで使っているサーバーでは post-hook にリロードするコマンドを直接設定しました。</p>
+
+<p>ついでに <code>rsa-key-size</code> も 2048 から 4096 に変更するようにしました。</p>
+
+<pre><code>% cat /etc/letsencrypt/cli.ini
+rsa-key-size = 4096
+post-hook = apachectl graceful
+</code></pre>
+
+<h2>複数コマンドの post-hook</h2>
+
+<p><code>post-hook = apachectl graceful; service postfix reload &gt;/dev/null</code> のような書き方は
+<code>certbot: error: Unexpected line 1 in /etc/letsencrypt/cli.ini: post-hook = apachectl graceful; service postfix reload &gt;/dev/null</code>
+というエラーになってうまくいかなかったので、
+<code>/etc/letsencrypt/post-hook</code> に実行ファイルを作って、それを post-hook に指定することにしました。</p>
+
+<pre><code> % sudoedit /etc/letsencrypt/cli.ini
+ % sudoedit /etc/letsencrypt/post-hook
+ % sudo chmod +x /etc/letsencrypt/post-hook
+ % cat /etc/letsencrypt/cli.ini
+ rsa-key-size = 4096
+ post-hook = /etc/letsencrypt/post-hook
+ % cat /etc/letsencrypt/post-hook
+ #!/bin/sh
+ apachectl graceful
+ service postfix reload &gt;/dev/null
+</code></pre>
+
+<h2>テスト実行</h2>
+
+<p><code>sudo certbot renew</code> で試しに実行してみたところ、以下のような感じで更新の必要がないときは <code>post-hook</code> は実行されないことが確認できました。</p>
+
+<pre><code>% sudo certbot renew
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+
+-------------------------------------------------------------------------------
+Processing /etc/letsencrypt/renewal/www.example.org.conf
+-------------------------------------------------------------------------------
+Cert not yet due for renewal
+
+The following certs are not due for renewal yet:
+  /etc/letsencrypt/live/www.example.org/fullchain.pem (skipped)
+No renewals were attempted.
+No renewals attempted, so not running post-hook
+</code></pre>
+
+<h2>まとめ</h2>
+
+<p><code>certbot renew</code> で証明書が更新されたときに実行したいことは <code>post-hook</code> に、
+証明書の更新とは関係なく毎回実行したいことは systemd の <code>ExecStopPost</code> を使えば良いことがわかりました。</p>
+
+<p>certbot の hook には <code>post-hook</code> 以外に <code>pre-hook</code> と <code>renew-hook</code> もあるので、
+用途によってはそちらも使えそうです。
+(<code>webroot</code> プラグインを使っているので使っていませんが、
+<code>standalone</code> プラグインを使っているのなら <code>pre-hook</code> で <code>stop</code> して <code>post-hook</code> で <code>start</code> するとか、
+<code>renew-hook</code> で更新されたドメインに応じて必要な時だけ <code>postfix reload</code> するとか)</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[lsで丸数字で始まるファイル名の順番が変だった]]></title>
@@ -645,163 +809,6 @@ auth required pam_permit.so
 <p><code>Match</code> で <code>ChallengeResponseAuthentication</code> を設定しようとしましたが、 <code>Directive 'ChallengeResponseAuthentication' is not allowed within a Match block</code> というエラーで設定できませんでした。</p>
 
 <p>公開鍵ごとに二要素認証の設定ができないか、検討してみましたが、使えそうな設定項目が見つかりませんでした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[jessie で dovecot-imapd と postfix の設定をして Thunderbird 用の autoconfig ファイルを用意した]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-04-17-jessie-dovecot.html"/>
-    <updated>2016-04-17T21:14:05+09:00</updated>
-    <id>http://blog.n-z.jp/blog/jessie-dovecot</id>
-    <content type="html"><![CDATA[<p><a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0387?page=4">Ubuntu Weekly Recipe 第387回　UbuntuでSSLを利用したサービスを構築する</a> を参考にして、 Debian jessie で dovecot-imapd で IMAP サーバーの設定をしました。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Debian GNU/Linux 8.4 (jessie)</li>
-<li>postfix 2.11.3-1</li>
-<li>dovecot-imapd 1:2.2.13-12~deb8u1</li>
-<li>Thunderbird 38.6.0</li>
-</ul>
-
-
-<h2>インストール</h2>
-
-<p><code>sudo aptitude install dovecot-imapd</code> でインストールしました。</p>
-
-<h2>認証設定</h2>
-
-<p>クライアントによっては plain 認証は使えず login 認証が必要なので <code>sudoedit /etc/dovecot/conf.d/10-auth.conf</code> で <code>auth_mechanisms = plain login</code> に設定を変更しました。</p>
-
-<h2>ssl 設定</h2>
-
-<p><code>sudoedit /etc/dovecot/conf.d/10-ssl.conf</code> で以下の設定を変更しました。</p>
-
-<ul>
-<li><code>ssl = no</code> を <code>ssl = required</code> に</li>
-<li><code>ssl_cert</code>, <code>ssl_key</code> を設定</li>
-<li><code>#ssl_protocols = !SSLv2</code> を <code>ssl_protocols = !SSLv2 !SSLv3</code> に</li>
-</ul>
-
-
-<p><a href="http://wiki.dovecot.org/SSL/DovecotConfiguration">http://wiki.dovecot.org/SSL/DovecotConfiguration</a> によると <code>ssl</code> の設定については <code>ssl=no</code>, <code>ssl=yes and disable_plaintext_auth=yes</code>, <code>ssl=yes and disable_plaintext_auth=yes</code>, <code>ssl=required</code> という設定の組み合わせがあるようです。</p>
-
-<h2>Maildir 設定</h2>
-
-<p>postfix の設定で <code>Maildir</code> への配送を使っているので、 <code>sudoedit /etc/dovecot/conf.d/10-mail.conf</code> で <code>mail_location = mbox:~/mail:INBOX=/var/mail/%u</code> を <code>mail_location = maildir:~/Maildir</code> に設定を変更しました。</p>
-
-<h2>postfix との認証連携</h2>
-
-<p>まず <code>sudo ls -al /var/spool/postfix/private</code> で <code>auth</code> がないのを確認しました。</p>
-
-<p><code>sudoedit /etc/dovecot/conf.d/10-master.conf</code> で</p>
-
-<pre><code class="plain /etc/dovecot/conf.d/10-master.conf">  #unix_listener /var/spool/postfix/private/auth {
-  #  mode = 0666
-  #}
-</code></pre>
-
-<p>を</p>
-
-<pre><code class="plain /etc/dovecot/conf.d/10-master.conf">  unix_listener /var/spool/postfix/private/auth {
-    mode = 0660
-    user = postfix
-    group = postfix
-  }
-</code></pre>
-
-<p>に変更しました。</p>
-
-<p>設定反映後に <code>sudo ls -al /var/spool/postfix/private</code> で <code>auth</code> が owner も group も postfix でパーミッションが <code>srw-rw----</code> になっているのを確認します。</p>
-
-<h2>設定反映</h2>
-
-<p><code>sudo service dovecot restart</code> で設定を反映しました。</p>
-
-<p><code>journalctl -u dovecot.service</code> や <code>sudo ss -lntp | grep dovecot</code> で問題なく起動していることを確認しました。</p>
-
-<h2>ufw でポート開放</h2>
-
-<p><code>ufw allow 993/tcp</code> と <code>ufw limit 993/tcp</code> でポートを開放して連続接続数制限をしました。</p>
-
-<h2>postfix 設定</h2>
-
-<h3>SSL 設定</h3>
-
-<p><code>smtpd_tls_cert_file</code> と <code>smtpd_tls_key_file</code> を設定します。
-<code>smtpd_tls_cert_file</code> は中間証明書も結合したファイルを指定します。</p>
-
-<p>その他の設定は以下のように設定しました。</p>
-
-<pre><code class="plain /etc/postfix/main.cf">smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3
-smtpd_tls_protocols = !SSLv2, !SSLv3
-smtp_tls_mandatory_protocols = !SSLv2, !SSLv3
-smtp_tls_protocols = !SSLv2, !SSLv3
-</code></pre>
-
-<p><code>smtpd_tls_security_level = may</code> は設定すると外部からのメール送信で問題が起きたことがあったので、メールの送信テストをしつつ、様子を見ながら設定するかどうか決めます。</p>
-
-<h3>SASL 設定</h3>
-
-<p><a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0387?page=4">Ubuntu Weekly Recipe</a> では <code>smtpd_sasl_auth_enable</code> は <code>/etc/postfix/main.cf</code> でも <code>yes</code> にしていますが、 <code>/etc/postfix/master.cf</code> で <code>smtps</code> と <code>submission</code> で個別に <code>yes</code> に設定されているので、 <code>/etc/postfix/main.cf</code> では <code>no</code> のままにしておきます。</p>
-
-<p>そうしておかないと 25 番ポートでも SMTP-Auth が有効になって、しかも <code>smtpd_tls_security_level = may</code> だとパスワードが平文で流れても良いということになるので、危険なことが起きる可能性があります。
-最近は OBP25B という対策が普及しているので、一般のクライアントが間違って平文で送信してしまう可能性は低いと思いますが、余計な危険は避けておくのが良いと思います。</p>
-
-<p>CRAM-MD5 が有効なら <code>smtpd_sasl_security_options = noanonymous,noplaintext</code> にして <code>master.cf</code> で <code>noanonymous</code> だけにしても良いかと思ったのですが、 plain 認証と login 認証しかない状態で <code>noplaintext</code> もつけてしまうと 25 番ポートで listen しているのに接続しても最初の <code>220 mail.example.org ESMTP Postfix (Debian/GNU)</code> が出てこなくてログに <code>fatal: no SASL authentication mechanisms</code> と記録されるという状態になってしまいました。
-<code>/etc/passwd</code> (<code>/etc/shadow</code>) による認証だとパスワードをハッシュ化された状態でしか保存していないため、 CRAM-MD5 は使えないので、これ以上の検証はできませんでした。</p>
-
-<p>以上を踏まえて以下のように設定しました。</p>
-
-<pre><code class="plain /etc/postfix/main.cf">smtpd_sasl_auth_enable = no
-smtpd_sasl_local_domain = $myhostname
-smtpd_sasl_security_options = noanonymous
-smtpd_sasl_type = dovecot
-smtpd_sasl_path = private/auth
-broken_sasl_auth_clients = yes
-</code></pre>
-
-<p><code>smtpd_sasl_local_domain</code> や <code>broken_sasl_auth_clients</code> は不要かもしれません。</p>
-
-<h2>Thunderbird 用自動設定ファイル設置</h2>
-
-<p><a href="https://developer.mozilla.org/ja/docs/Mozilla/Thunderbird/Autoconfiguration">Thunderbird のアカウント情報自動設定機能</a>のために <code>mail/config-v1.1.xml</code> を設置します。</p>
-
-<p><code>@example.com</code> のメールアドレスに対して <code>http://autoconfig.example.com/mail/config-v1.1.xml</code> か <code>http://example.com/.well-known/autoconfig/mail/config-v1.1.xml</code> を用意します。</p>
-
-<p>内容は以下のような感じになります。
-<code>mozilla.org</code> の例との主な違いは <code>authentication</code> を <code>password-encrypted</code> ではなく <code>password-cleartext</code> にしているところと、 <code>username</code> を <code>%EMAILADDRESS%</code> ではなく <code>%EMAILLOCALPART%</code> にしているところです。</p>
-
-<pre><code class="xml mail/config-v1.1.xml">&lt;?xml version="1.0" encoding="utf-8"?&gt;
-&lt;clientConfig version="1.1"&gt;
-  &lt;emailProvider id="example.com"&gt;
-    &lt;domain&gt;example.com&lt;/domain&gt;
-    &lt;displayName&gt;Example.com Mail&lt;/displayName&gt;
-    &lt;displayShortName&gt;example.com&lt;/displayShortName&gt;
-    &lt;incomingServer type="imap"&gt;
-      &lt;hostname&gt;mail.example.com&lt;/hostname&gt;
-      &lt;port&gt;993&lt;/port&gt;
-      &lt;socketType&gt;SSL&lt;/socketType&gt;
-      &lt;authentication&gt;password-cleartext&lt;/authentication&gt;
-      &lt;username&gt;%EMAILLOCALPART%&lt;/username&gt;
-    &lt;/incomingServer&gt;
-    &lt;outgoingServer type="smtp"&gt;
-      &lt;hostname&gt;mail.example.com&lt;/hostname&gt;
-      &lt;port&gt;587&lt;/port&gt;
-      &lt;socketType&gt;STARTTLS&lt;/socketType&gt;
-      &lt;authentication&gt;password-cleartext&lt;/authentication&gt;
-      &lt;username&gt;%EMAILLOCALPART%&lt;/username&gt;
-    &lt;/outgoingServer&gt;
-  &lt;/emailProvider&gt;
-&lt;/clientConfig&gt;
-</code></pre>
-
-<h2>まとめ</h2>
-
-<p><a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0387?page=4">Ubuntu Weekly Recipe</a></p>
 ]]></content>
   </entry>
   
