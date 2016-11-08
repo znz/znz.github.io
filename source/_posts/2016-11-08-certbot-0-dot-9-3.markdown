@@ -1,0 +1,169 @@
+---
+layout: post
+title: "jessie の certbot が 0.9.3 に上がったので設定を変更した"
+date: 2016-11-08 23:14:00 +0900
+comments: true
+categories: letsencrypt debian linux
+---
+jessie の certbot が 0.9.3 に上がって、
+`/etc/cron.d/certbot` よりも systemd の `certbot.timer` が優先して動くように変わったので、
+reload に post-hook を使うように変えたり、
+ログの差分メールの仕組みを変えたりしました。
+
+<!--more-->
+
+## 今までの方法
+
+今までは `/etc/cron.daily/local-letsencrypt` で `certbot renew` を呼び出して、ログを保存して `diff` を出力して cron からメールを送信させて、
+`reload` は更新の有無にかかわらず実行していました。
+
+```sh
+#!/bin/sh
+LOGFILE=/var/log/certbot-renew.log
+if [ -f "$LOGFILE" ]; then
+    savelog -c 90 -q "$LOGFILE"
+fi
+if ! certbot renew > "$LOGFILE" 2>&1 ; then
+    echo Automated renewal failed:
+    cat "$LOGFILE"
+    exit 1
+fi
+if [ -f "$LOGFILE".0 ]; then
+    diff -u "$LOGFILE".0 "$LOGFILE"
+fi
+apachectl graceful
+service postfix reload
+```
+
+## certbot パッケージでインストールされた自動更新の仕組み
+
+`/etc/cron.d/certbot` は `/run/systemd/system` をチェックして普通は動かないようになっていました。
+
+```
+ % cat /etc/cron.d/certbot
+ # /etc/cron.d/certbot: crontab entries for the certbot package
+ #
+ # Upstream recommends attempting renewal twice a day
+ #
+ # Eventually, this will be an opportunity to validate certificates
+ # haven't been revoked, etc.  Renewal will only occur if expiration
+ # is within 30 days.
+ SHELL=/bin/sh
+ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+ 
+ 0 */12 * * * root test -x /usr/bin/certbot -a \! -d /run/systemd/system && perl -e 'sleep int(rand(3600))' && certbot -q renew
+```
+
+systemd の方では、`timer` から動かすため、有効化されていない `certbot.service` と、 service を動かすための `certbot.timer` が入っていました。
+
+```
+% cat /lib/systemd/system/certbot.service
+[Unit]
+Description=Certbot
+Documentation=file:///usr/share/doc/python-certbot-doc/html/index.html
+Documentation=https://letsencrypt.readthedocs.io/en/latest/
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/certbot -q renew
+PrivateTmp=true
+% cat /lib/systemd/system/certbot.timer
+[Unit]
+Description=Run certbot twice daily
+
+[Timer]
+OnCalendar=*-*-* 00,12:00:00
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+`OnCalendar` で毎日 00:00:00 と 12:00:00 に動くようになっていました。
+`RandomizedDelaySec` でランダムな遅延の設定をしようとしているようですが、
+jessie の systemd は対応していないようで、
+`systemd[1]: [/lib/systemd/system/certbot.timer:6] Unknown lvalue 'RandomizedDelaySec' in section 'Timer'`
+というログが出ていました。
+([#843607 - certbot: Unknown lvalue 'RandomizedDelaySec' in section 'Timer'](https://bugs.debian.org/843607 "#843607 - certbot: Unknown lvalue 'RandomizedDelaySec' in section 'Timer'") として報告済みです。)
+
+## ログの diff のメール送信方法変更
+
+設定を追加するには `/etc/systemd/system/certbot.service.d` にファイルをおけば良いので、
+以下の内容の `/etc/systemd/system/certbot.service.d/diffmail.conf` を作成しました。
+
+`certbot.service` の `ExecStart=/usr/bin/certbot -q renew` の後に実行したかったので、
+`ExecStopPost` を使ってみました。
+
+```
+[Service]
+ExecStopPost=/bin/bash -c "diff -u <(cut -d: -f4- /var/log/letsencrypt/letsencrypt.log.1 | egrep -v '^DEBUG') <(cut -d: -f4- /var/log/letsencrypt/letsencrypt.log | egrep -v '^DEBUG') | ifne mail -s 'Change certbot log' root"
+```
+
+前回のログ (`letsencrypt.log.1`) と今回のログ (`letsencrypt.log`) から、必ず差分になってしまう時刻を `cut` で削って、さらに DEBUG ログの中にも現在日時で変化する部分があったので除外するようにしてから差分をとっています。
+
+そして [moreutils](https://packages.debian.org/moreutils "moreutils") の `ifne` を使って差分があるときだけメール送信をするようにしています。
+
+## post-hook への変更
+
+systemd の `ExecStart` を書き換えるのは、メンテナンスしにくいとか、手動で `certbot renew` を実行したときに使われないなど、あまりよくないかと思い、
+`/etc/letsencrypt/cli.ini` で設定することにしました。
+
+letsencrypt の証明書を apache のみで使っているサーバーでは post-hook にリロードするコマンドを直接設定しました。
+
+ついでに `rsa-key-size` も 2048 から 4096 に変更するようにしました。
+
+```
+% cat /etc/letsencrypt/cli.ini
+rsa-key-size = 4096
+post-hook = apachectl graceful
+```
+
+## 複数コマンドの post-hook
+
+`post-hook = apachectl graceful; service postfix reload >/dev/null` のような書き方は
+`certbot: error: Unexpected line 1 in /etc/letsencrypt/cli.ini: post-hook = apachectl graceful; service postfix reload >/dev/null`
+というエラーになってうまくいかなかったので、
+`/etc/letsencrypt/post-hook` に実行ファイルを作って、それを post-hook に指定することにしました。
+
+```
+ % sudoedit /etc/letsencrypt/cli.ini
+ % sudoedit /etc/letsencrypt/post-hook
+ % sudo chmod +x /etc/letsencrypt/post-hook
+ % cat /etc/letsencrypt/cli.ini
+ rsa-key-size = 4096
+ post-hook = /etc/letsencrypt/post-hook
+ % cat /etc/letsencrypt/post-hook
+ #!/bin/sh
+ apachectl graceful
+ service postfix reload >/dev/null
+```
+
+## テスト実行
+
+`sudo certbot renew` で試しに実行してみたところ、以下のような感じで更新の必要がないときは `post-hook` は実行されないことが確認できました。
+
+```
+% sudo certbot renew
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+
+-------------------------------------------------------------------------------
+Processing /etc/letsencrypt/renewal/www.example.org.conf
+-------------------------------------------------------------------------------
+Cert not yet due for renewal
+
+The following certs are not due for renewal yet:
+  /etc/letsencrypt/live/www.example.org/fullchain.pem (skipped)
+No renewals were attempted.
+No renewals attempted, so not running post-hook
+```
+
+## まとめ
+
+`certbot renew` で証明書が更新されたときに実行したいことは `post-hook` に、
+証明書の更新とは関係なく毎回実行したいことは systemd の `ExecStopPost` を使えば良いことがわかりました。
+
+certbot の hook には `post-hook` 以外に `pre-hook` と `renew-hook` もあるので、
+用途によってはそちらも使えそうです。
+(`webroot` プラグインを使っているので使っていませんが、
+`standalone` プラグインを使っているのなら `pre-hook` で `stop` して `post-hook` で `start` するとか、
+`renew-hook` で更新されたドメインに応じて必要な時だけ `postfix reload` するとか)
