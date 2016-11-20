@@ -4,7 +4,7 @@
   <title><![CDATA[Category: letsencrypt | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/letsencrypt/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2016-11-12T23:56:03+09:00</updated>
+  <updated>2016-11-20T20:26:37+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,62 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[certbot の renew hook について]]></title>
+    <link href="http://blog.n-z.jp/blog/2016-11-20-certbot-renew-hook.html"/>
+    <updated>2016-11-20T14:52:31+09:00</updated>
+    <id>http://blog.n-z.jp/blog/certbot-renew-hook</id>
+    <content type="html"><![CDATA[<p>certbot で設定の再読み込みには post-hook よりも renew-hook を使った方が良さそうでした。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Debian GNU/Linux 8.6 (jessie)</li>
+<li>certbot 0.9.3-1~bpo8+1</li>
+</ul>
+
+
+<h2>hook の指定方法について</h2>
+
+<p><code>certbot renew --pre-hook "service nginx stop" --post-hook "service nginx start"</code> のように <code>certbot</code> コマンドの引数で直接指定するか、 <code>/etc/letsencrypt/cli.ini</code> または <code>$XDG_CONFIG_HOME/letsencrypt/cli.ini</code> (<code>$XDG_CONFIG_HOME</code> が設定されていなければ <code>~/.config/letsencrypt/cli.ini</code>) に <code>renew-hook = service nginx reload</code> のように <code>--</code> を省いたオプション名で ini ファイルに指定する方法があるようです。(<code>ini</code> ファイルは <code>--config cli.ini</code> または <code>-c cli.ini</code> のようにコマンドラインで指定も可能)</p>
+
+<h2>pre-hook, post-hook について</h2>
+
+<p><code>pre-hook</code> と <code>post-hook</code> は standalone プラグインを使っている時に、 <code>certbot</code> の Web サーバーが 80 番ポートを使えるようにするために、通常の Web サーバーを止める用途に適しているようです。</p>
+
+<p>そのため、<code>--dry-run</code> の時でも呼ばれるようです。</p>
+
+<p>使用例:
+<code>certbot renew --pre-hook "service nginx stop" --post-hook "service nginx start"</code></p>
+
+<h2>renew-hook について</h2>
+
+<p><code>renew-hook</code> は証明書の更新が成功するごとに呼ばれるので、証明書の再読み込みに適しているようです。</p>
+
+<p>環境変数 <code>RENEWED_LINEAGE</code> に <code>/etc/letsencrypt/live/www.example.com</code> のような証明書の場所へのパスが、
+環境変数 <code>RENEWED_DOMAINS</code> に <code>www.example.com example.com</code> のようにスペース区切りの更新されたドメインのリストが渡ってくるようです。</p>
+
+<p>証明書の更新ごとに呼ばれるようなので、たまたま同じタイミングで <code>www.example.com</code> と <code>other.example.net</code> の更新が起こったとして、
+証明書の作成の時に <code>-d</code> を同時に指定して同じ証明書の SAN (Subject Alternative Name) に入っているなら、
+<code>RENEWED_DOMAINS</code> に並んでいて、
+別々に証明書を作成していれば <code>renew-hook</code> が別々に呼ばれるのではないかと思います。</p>
+
+<p>(同じ日に証明書を作成したり、複数ドメインを入れた証明書を作成していないので確認できていませんが。)</p>
+
+<h2>renew-hook のすすめ</h2>
+
+<p>以上の違いから、
+<code>webroot</code> プラグインを使っている時の証明書の自動再読み込みには
+<code>post-hook</code> ではなく <code>renew-hook</code> を使うのがおすすめです。</p>
+
+<p>Web 上で <code>post-hook</code> を使っている例の方が多いのは、
+<code>renew-hook</code> の方が後から実装されたからではないかと思います。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[jessie の certbot が 0.9.3 に上がったので設定を変更した]]></title>
@@ -784,90 +840,6 @@ apachectl graceful
 
 <pre><code class="text">% ls -alF /usr/bin/letsencrypt
 lrwxrwxrwx 1 root root 7  5月 28 07:30 /usr/bin/letsencrypt -&gt; certbot*
-</code></pre>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[letsencrypt-auto が certbot-auto になった]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-05-13-letsencrypt-certbot.html"/>
-    <updated>2016-05-13T23:40:09+09:00</updated>
-    <id>http://blog.n-z.jp/blog/letsencrypt-certbot</id>
-    <content type="html"><![CDATA[<p><a href="https://www.eff.org/deeplinks/2016/05/announcing-certbot-new-tls-robot">EFF の Let&rsquo;s Encrypt クライアントが Certbot になった</a>という話です。</p>
-
-<!--more-->
-
-
-<h2>経緯</h2>
-
-<p><a href="https://letsencrypt.jp/usage/">Let&rsquo;s Encrypt の使い方</a> から引用しつつまとめます。</p>
-
-<ul>
-<li>2016年4月12日 に、Let&rsquo;s Encrypt の公開ベータプログラム（Public Beta Program）が終了し、正式サービスが開始されました。</li>
-<li>この時点でベータがとれたのは Let&rsquo;s Encrypt のサービス側で <code>letsencrypt-auto</code> コマンドを含む github.com/letsencrypt/letsencrypt にあったクライアントはまだベータのままでした。</li>
-<li>クライアントの 0.6.0 のリリースにあたり github.com/letsencrypt/letsencrypt は github.com/certbot/certbot に移動して Certbot に改名されました。</li>
-<li><a href="https://www.eff.org/deeplinks/2016/05/announcing-certbot-new-tls-robot">Announcing Certbot: EFF&rsquo;s Client for Let&rsquo;s Encrypt</a> に書いてあるように Certbot もまだベータで、今年中に Certbot 1.0 のリリースが予定されているようです。</li>
-</ul>
-
-
-<p>改名されたのは EFF の Let&rsquo;s Encrypt クライアントだけでサービス自体は Let&rsquo;s Encrypt という名前のままです。</p>
-
-<h2>その他の変更点</h2>
-
-<p>インストール方法も <code>git clone</code> して <code>letsencrypt-auto</code> を実行する方法から、 <code>https://dl.eff.org/certbot-auto</code> をダウンロードして実行する方法に変わっています。</p>
-
-<h2>インストール済み環境への影響</h2>
-
-<p>インストール済み環境ではどうなるのかと思って、 <code>letsencrypt-auto --help</code> を実行してアップグレードさせてみたところ、以下のようになりました。</p>
-
-<p>出力をよく見ると <code>sudo</code> のところで <code>CERTBOT_AUTO</code> という環境変数の指定が増えていて、 <code>letsencrypt-auto</code> コマンド自体はそのまま使えるようです。</p>
-
-<pre><code>% ~/letsencrypt/letsencrypt-auto --help
-Checking for new version...
-Upgrading letsencrypt-auto 0.5.0 to 0.6.0...
-Replacing letsencrypt-auto...
-   sudo cp -p /home/vpsuser/letsencrypt/letsencrypt-auto /tmp/user/1000/tmp.AiqGtrjioJ/letsencrypt-auto.permission-clone
-   sudo cp /tmp/user/1000/tmp.AiqGtrjioJ/letsencrypt-auto /tmp/user/1000/tmp.AiqGtrjioJ/letsencrypt-auto.permission-clone
-   sudo mv -f /tmp/user/1000/tmp.AiqGtrjioJ/letsencrypt-auto.permission-clone /home/vpsuser/letsencrypt/letsencrypt-auto
-Creating virtual environment...
-Installing Python packages...
-Installation succeeded.
-Requesting root privileges to run certbot...
-   sudo CERTBOT_AUTO=/home/vpsuser/letsencrypt/letsencrypt-auto /home/vpsuser/.local/share/letsencrypt/bin/letsencrypt --help
-
-  letsencrypt-auto [SUBCOMMAND] [options] [-d domain] [-d domain] ...
-
-Certbot can obtain and install HTTPS/TLS/SSL certificates.  By default,
-it will attempt to use a webserver both for obtaining and installing the
-cert. Major SUBCOMMANDS are:
-
-  (default) run        Obtain &amp; install a cert in your current webserver
-  certonly             Obtain cert, but do not install it (aka "auth")
-  install              Install a previously obtained cert in a server
-  renew                Renew previously obtained certs that are near expiry
-  revoke               Revoke a previously obtained certificate
-  rollback             Rollback server configuration changes made during install
-  config_changes       Show changes made to server config during installation
-  plugins              Display information about installed plugins
-
-Choice of server plugins for obtaining and installing cert:
-
-  --apache          Use the Apache plugin for authentication &amp; installation
-  --standalone      Run a standalone webserver for authentication
-  (nginx support is experimental, buggy, and not installed by default)
-  --webroot         Place files in a server's webroot folder for authentication
-
-OR use different plugins to obtain (authenticate) the cert and then install it:
-
-  --authenticator standalone --installer apache
-
-More detailed help:
-
-  -h, --help [topic]    print this message, or detailed help on a topic;
-                        the available topics are:
-
-   all, automation, paths, security, testing, or any of the subcommands or
-   plugins (certonly, install, nginx, apache, standalone, webroot, etc)
 </code></pre>
 ]]></content>
   </entry>
