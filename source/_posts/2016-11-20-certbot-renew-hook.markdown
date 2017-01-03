@@ -37,9 +37,9 @@ certbot で設定の再読み込みには post-hook よりも renew-hook を使�
 証明書の更新ごとに呼ばれるようなので、たまたま同じタイミングで `www.example.com` と `other.example.net` の更新が起こったとして、
 証明書の作成の時に `-d` を同時に指定して同じ証明書の SAN (Subject Alternative Name) に入っているなら、
 `RENEWED_DOMAINS` に並んでいて、
-別々に証明書を作成していれば `renew-hook` が別々に呼ばれるのではないかと思います。
+別々に証明書を作成していれば `renew-hook` が別々に呼ばれました。
 
-(同じ日に証明書を作成したり、複数ドメインを入れた証明書を作成していないので確認できていませんが。)
+(2017-01-03 追記: `post-hook` は 1 回しか呼ばれませんでした。詳細は[certbot の renew hook について (その2)](/blog/2017-01-03-certbot-renew-hook.html)を参照)
 
 ## renew-hook のすすめ
 
