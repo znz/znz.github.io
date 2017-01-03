@@ -5,14 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>RubyHiroba 2014に参加した - @znz blog</title>
+  <title>certbot の renew hook について (その2) - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="RubyHiroba 2014に参加した Sep 21st, 2014 2:04 pm | Comments RubyHiroba 2014
-に参加しました。 メモ 少し遅めに到着して、午前中は生活発表会の方にいて、
-午後は LTthon の方にいました。
-そのときのメモです。 http:// &hellip;">
+  <meta name="description" content="certbot の renew hook について (その2) Jan 3rd, 2017 1:06 pm | Comments certbot で設定の再読み込みには post-hook よりも renew-hook を使った方が良さそうという話 の続きです。 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -21,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-09-21-rubyhiroba-2014.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-01-03-certbot-renew-hook.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -86,7 +83,7 @@
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">RubyHiroba 2014に参加した</h1>
+      <h1 class="entry-title">certbot の renew hook について (その2)</h1>
       
       <!-- zenback_title_end -->
       
@@ -98,7 +95,7 @@
 
 
 
-<time class='entry-date' datetime='2014-09-21T14:04:00+09:00'><span class='date'><span class='date-month'>Sep</span> <span class='date-day'>21</span><span class='date-suffix'>st</span>, <span class='date-year'>2014</span></span> <span class='time'>2:04 pm</span></time>
+<time class='entry-date' datetime='2017-01-03T13:06:39+09:00'><span class='date'><span class='date-month'>Jan</span> <span class='date-day'>3</span><span class='date-suffix'>rd</span>, <span class='date-year'>2017</span></span> <span class='time'>1:06 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -111,45 +108,254 @@
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><a href="http://rubyhiroba.org/2014/" title="RubyHiroba 2014">RubyHiroba 2014</a>
-に参加しました。</p>
+<div class="entry-content"><p><a href="/blog/2016-11-20-certbot-renew-hook.html">certbot で設定の再読み込みには post-hook よりも renew-hook を使った方が良さそうという話</a> の続きです。</p>
+
+<p>前回の記事の時点では同時に複数証明書が更新される時の挙動が確認できていませんでしたが、
+確認できたので、その説明です。</p>
 
 <!--more-->
 
 
-<h2>メモ</h2>
-
-<p>少し遅めに到着して、午前中は生活発表会の方にいて、
-午後は LTthon の方にいました。
-そのときのメモです。</p>
+<h2>対象バージョン</h2>
 
 <ul>
-<li><a href="http://railsguides.jp/">http://railsguides.jp/</a></li>
-<li><code>1.tap { break 2 }</code> のように <code>tap</code> で <code>break</code> を使うと <code>self</code> 以外を返せる</li>
-<li>ロジバン</li>
-<li>amedayo.jp</li>
-<li>travis CI が 2.1 や 2.2 に対応している</li>
-<li><a href="http://sixeight.hatenablog.com/entry/2014/09/20/024603" title="rbenv global 2.2.0-preview1 した話 - ちなみに">rbenv global 2.2.0-preview1 した話 - ちなみに</a></li>
-<li>Hound CI</li>
-<li><a href="https://github.com/mmozuras/pronto">https://github.com/mmozuras/pronto</a></li>
-<li><a href="https://github.com/willnet/prid">https://github.com/willnet/prid</a></li>
-<li>rbpdf gem</li>
-<li><code>prepend</code> でモンキーパッチ</li>
-<li><a href="http://labocho.github.io/rubydoc-ja-docsets/" title="Ruby リファレンスマニュアル for Dash">Ruby リファレンスマニュアル for Dash</a></li>
-<li><a href="https://github.com/labocho/pagehook">https://github.com/labocho/pagehook</a></li>
-<li><a href="http://rubygems.org/gems/byndler">http://rubygems.org/gems/byndler</a></li>
-<li><a href="https://github.com/ko1/allocation_tracer">https://github.com/ko1/allocation_tracer</a></li>
-<li><a href="https://github.com/ko1/gc_tracer">https://github.com/ko1/gc_tracer</a></li>
-<li><a href="http://tmix.jp/">http://tmix.jp/</a></li>
+<li><h2>対象バージョン</h2></li>
+<li><p>Ubuntu 14.04.5 LTS (trusty)</p></li>
+<li>letsencrypt 0.9.3</li>
 </ul>
 
 
-<h2>LTthon での発表内容</h2>
+<h2>RENEWED_DOMAINS の挙動</h2>
 
-<p>飛び入り参加で最後の方に無理矢理ネタを考えて発表しました。</p>
+<p>pre-hook, post-hook, renew-hook でそれぞれ env を実行して環境変数を記録してみたところ、同時に更新される時は pre-hook, post-hook は 1 回ずつ、 renew-hook はドメインごとに呼ばれることがわかりました。</p>
 
-<p>内容としては、スライドは全く用意せずに、
-普段やっている <code>git svn rebase --fetch-all</code> して Emacs で ChangeLog を flyspell (と develock.el と flycheck) でチェックして修正して <code>git svn dcommit</code> するというのを実演しました。</p>
+<p>ドメインに応じてメールサーバーの reload などの処理をする場合は post-hook ではなく renew-hook を使う必要がありそうです。</p>
+
+<p>ドメインなどは置き換えていますが、以下のような出力でした。
+(<code>TMPDIR</code> などが <code>/tmp/user/0</code> になっているのは libpam-tmpdir を設定しているからだと思います。)</p>
+
+<p>pre-hook の env:</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>TEMPDIR=/tmp/user/0
+</span><span class='line'>HOME=/root
+</span><span class='line'>OLDPWD=/root
+</span><span class='line'>TMPDIR=/tmp/user/0
+</span><span class='line'>LOGNAME=root
+</span><span class='line'>TEMP=/tmp/user/0
+</span><span class='line'>COLUMNS=80
+</span><span class='line'>PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+</span><span class='line'>CERTBOT_AUTO=/home/vpsuser/letsencrypt/letsencrypt-auto
+</span><span class='line'>LANG=ja_JP.UTF-8
+</span><span class='line'>TMP=/tmp/user/0
+</span><span class='line'>SHELL=/bin/sh
+</span><span class='line'>PWD=/
+</span><span class='line'>LINES=24</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>post-hook の env:</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>TEMPDIR=/tmp/user/0
+</span><span class='line'>HOME=/root
+</span><span class='line'>OLDPWD=/root
+</span><span class='line'>RENEWED_LINEAGE=/etc/letsencrypt/live/other.example.net
+</span><span class='line'>TMPDIR=/tmp/user/0
+</span><span class='line'>LOGNAME=root
+</span><span class='line'>TEMP=/tmp/user/0
+</span><span class='line'>COLUMNS=80
+</span><span class='line'>PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+</span><span class='line'>CERTBOT_AUTO=/home/vpsuser/letsencrypt/letsencrypt-auto
+</span><span class='line'>LANG=ja_JP.UTF-8
+</span><span class='line'>TMP=/tmp/user/0
+</span><span class='line'>SHELL=/bin/sh
+</span><span class='line'>PWD=/
+</span><span class='line'>RENEWED_DOMAINS=other.example.net
+</span><span class='line'>LINES=24</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>renew-hook の env:</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>TEMPDIR=/tmp/user/0
+</span><span class='line'>HOME=/root
+</span><span class='line'>OLDPWD=/root
+</span><span class='line'>RENEWED_LINEAGE=/etc/letsencrypt/live/www.example.com
+</span><span class='line'>TMPDIR=/tmp/user/0
+</span><span class='line'>LOGNAME=root
+</span><span class='line'>TEMP=/tmp/user/0
+</span><span class='line'>COLUMNS=80
+</span><span class='line'>PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+</span><span class='line'>CERTBOT_AUTO=/home/vpsuser/letsencrypt/letsencrypt-auto
+</span><span class='line'>LANG=ja_JP.UTF-8
+</span><span class='line'>TMP=/tmp/user/0
+</span><span class='line'>SHELL=/bin/sh
+</span><span class='line'>PWD=/
+</span><span class='line'>RENEWED_DOMAINS=www.example.com
+</span><span class='line'>LINES=24</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>renew-hook 2 回目:</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>TEMPDIR=/tmp/user/0
+</span><span class='line'>HOME=/root
+</span><span class='line'>OLDPWD=/root
+</span><span class='line'>RENEWED_LINEAGE=/etc/letsencrypt/live/other.example.net
+</span><span class='line'>TMPDIR=/tmp/user/0
+</span><span class='line'>LOGNAME=root
+</span><span class='line'>TEMP=/tmp/user/0
+</span><span class='line'>COLUMNS=80
+</span><span class='line'>PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+</span><span class='line'>CERTBOT_AUTO=/home/vpsuser/letsencrypt/letsencrypt-auto
+</span><span class='line'>LANG=ja_JP.UTF-8
+</span><span class='line'>TMP=/tmp/user/0
+</span><span class='line'>SHELL=/bin/sh
+</span><span class='line'>PWD=/
+</span><span class='line'>RENEWED_DOMAINS=other.example.net
+</span><span class='line'>LINES=24</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<h2>hook の例</h2>
+
+<p>hook を cli.ini で設定します。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% cat /etc/letsencrypt/cli.ini
+</span><span class='line'>rsa-key-size = 4096
+</span><span class='line'>pre-hook = /etc/letsencrypt/pre-hook
+</span><span class='line'>post-hook = /etc/letsencrypt/post-hook
+</span><span class='line'>renew-hook = /etc/letsencrypt/renew-hook</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+
+<p>hook の実行ファイルを作成します。
+忘れずに実行属性をつけておく必要があります。</p>
+
+<p>pre-hook と post-hook は呼ばれたことと環境変数の記録だけですが、
+renew-hook は呼ばれたことと環境変数の記録をしつつ、
+apache に証明書の反映と、
+メールサーバーのドメインの時のみ、
+メール関係のデーモンにも反映をしています。
+postfix だけ reload 時に標準出力にメッセージを出していたので、
+捨てています。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% cat /etc/letsencrypt/pre-hook
+</span><span class='line'>#!/bin/sh
+</span><span class='line'>{
+</span><span class='line'>  date
+</span><span class='line'>  env
+</span><span class='line'>} &gt;&gt; /tmp/pre-hook.env
+</span><span class='line'>% cat /etc/letsencrypt/post-hook
+</span><span class='line'>#!/bin/sh
+</span><span class='line'>{
+</span><span class='line'>  date
+</span><span class='line'>  env
+</span><span class='line'>} &gt;&gt; /tmp/post-hook.env
+</span><span class='line'>% cat /etc/letsencrypt/renew-hook
+</span><span class='line'>#!/bin/sh
+</span><span class='line'>{
+</span><span class='line'>  date
+</span><span class='line'>  env
+</span><span class='line'>} &gt;&gt; /tmp/renew-hook.env
+</span><span class='line'>apachectl graceful
+</span><span class='line'>for domain in $RENEWED_DOMAINS; do
+</span><span class='line'>  case "$domain" in
+</span><span class='line'>    mx*)
+</span><span class='line'>      service postfix reload &gt;/dev/null
+</span><span class='line'>      service dovecot reload
+</span><span class='line'>      ;;
+</span><span class='line'>  esac
+</span><span class='line'>done</span></code></pre></td></tr></table></div></figure></notextile></div>
+
 </div>
 
 <!-- zenback_body_end -->
@@ -168,12 +374,12 @@
 
 
 
-<time class='entry-date' datetime='2014-09-21T14:04:00+09:00'><span class='date'><span class='date-month'>Sep</span> <span class='date-day'>21</span><span class='date-suffix'>st</span>, <span class='date-year'>2014</span></span> <span class='time'>2:04 pm</span></time>
+<time class='entry-date' datetime='2017-01-03T13:06:39+09:00'><span class='date'><span class='date-month'>Jan</span> <span class='date-day'>3</span><span class='date-suffix'>rd</span>, <span class='date-year'>2017</span></span> <span class='time'>1:06 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/event/'>event</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
+    <a class='category' href='/blog/categories/letsencrypt/'>letsencrypt</a>
   
 </span>
 
@@ -200,10 +406,8 @@
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2014-09-20-rubykaigi-2014-3rd-day.html" title="Previous Post: RubyKaigi 2014の3日目に参加した">&laquo; RubyKaigi 2014の3日目に参加した</a>
+        <a class="basic-alignment left" href="/blog/2016-12-10-mini-debian-conference-japan-2016.html" title="Previous Post: Mini Debian Conference Japan 2016に参加して発表してきた">&laquo; Mini Debian Conference Japan 2016に参加して発表してきた</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2014-09-24-rubymotion-mokumoku-osaka.html" title="Next Post: 第 15 回 RubyMotion もくもく会 in Osaka に参加した">第 15 回 RubyMotion もくもく会 in Osaka に参加した &raquo;</a>
       
     </p>
   </footer>
@@ -338,8 +542,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-09-21-rubyhiroba-2014.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2014-09-21-rubyhiroba-2014.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-01-03-certbot-renew-hook.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-01-03-certbot-renew-hook.html';
         var disqus_script = 'embed.js';
       
     (function () {
