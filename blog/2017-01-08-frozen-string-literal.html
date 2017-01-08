@@ -5,13 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>第66回 Ruby関西 勉強会に参加した - @znz blog</title>
+  <title>frozen_string_literalをtrueにしていっている - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="第66回 Ruby関西 勉強会に参加した Apr 25th, 2015 1:26 pm | Comments 第66回 Ruby関西 勉強会
-に参加したので、そのメモです。 勉強会自体の URL doorkeeper
-github GitLab Flow https://speakerdeck. &hellip;">
+  <meta name="description" content="frozen_string_literalをtrueにしていっている Jan 8th, 2017 5:35 pm | Comments Ruby の trunk で最近は frozen_string_literal を true に変更するというコミットをしていっています。
+(Revision &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -20,7 +19,7 @@ github GitLab Flow https://speakerdeck. &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2015-04-25-rubykansai66.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-01-08-frozen-string-literal.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -85,7 +84,7 @@ github GitLab Flow https://speakerdeck. &hellip;">
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">第66回 Ruby関西 勉強会に参加した</h1>
+      <h1 class="entry-title">frozen_string_literalをtrueにしていっている</h1>
       
       <!-- zenback_title_end -->
       
@@ -97,7 +96,7 @@ github GitLab Flow https://speakerdeck. &hellip;">
 
 
 
-<time class='entry-date' datetime='2015-04-25T13:26:49+09:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>25</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>1:26 pm</span></time>
+<time class='entry-date' datetime='2017-01-08T17:35:03+09:00'><span class='date'><span class='date-month'>Jan</span> <span class='date-day'>8</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>5:35 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -110,81 +109,52 @@ github GitLab Flow https://speakerdeck. &hellip;">
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><a href="https://rubykansai.doorkeeper.jp/events/21276" title="第66回 Ruby関西 勉強会">第66回 Ruby関西 勉強会</a>
-に参加したので、そのメモです。</p>
+<div class="entry-content"><p><a href="https://www.ruby-lang.org/ja/documentation/repository-guide/">Ruby の trunk</a> で最近は <code>frozen_string_literal</code> を <code>true</code> に変更するというコミットをしていっています。
+(<a href="https://svn.ruby-lang.org/cgi-bin/viewvc.cgi?revision=53141&amp;view=revision" title="Revision 53141">Revision 53141</a> で <code>frozen_string_literal: false</code> として magic comment 自体は追加されています。)</p>
+
+<p>その時にちょっと確認に手間取った変更があったので、そのメモです。</p>
 
 <!--more-->
 
 
-<h2>勉強会自体の URL</h2>
+<h2>lib/fileutils.rb</h2>
 
-<ul>
-<li><a href="https://rubykansai.doorkeeper.jp/events/21276" title="doorkeeper">doorkeeper</a></li>
-<li><a href="https://github.com/rubykansai/workshops/wiki/Kansaiworkshop066" title="github">github</a></li>
-</ul>
+<p>確認に手間取ったのは <a href="https://svn.ruby-lang.org/cgi-bin/viewvc.cgi?revision=57275&amp;view=revision" title="Revision 57275">Revision 57275</a> の <code>lib/fileutils.rb</code> の変更です。</p>
 
+<h2>freeze の削除</h2>
 
-<h2>GitLab Flow</h2>
+<p>まず最初は <code>.freeze</code> を削除した変更です。</p>
 
-<ul>
-<li><a href="https://speakerdeck.com/ogom/gres">https://speakerdeck.com/ogom/gres</a></li>
-<li>1 スクラムマスターに依頼</li>
-<li>2 イシュー登録</li>
-<li>3 エンジニアにアサイン</li>
-<li>4 見に行く</li>
-<li>5 コードに反映</li>
-<li>6 ブランチにコミット</li>
-<li>7 エビデンスを登録</li>
-<li>8 リモートブランチにあげる</li>
-<li>9 コードレビューのためのマージリクエスト (pull request)</li>
-<li>10 レビュアーをアサイン</li>
-<li>11 リクエストを見る</li>
-<li>12 コードを見る</li>
-<li>13 リファクタリング</li>
-<li>14 マージリクエストを評価</li>
-<li>15 スクラムマスターに知らせる</li>
-<li>16 スクラムマスターがイシューのエビデンスを確認する (コードはレビュアーが見ているので見ない)</li>
-<li>17 マージとリリース</li>
-<li>DDD.rb</li>
-<li><a href="http://kanban.leanlabs.io/">http://kanban.leanlabs.io/</a></li>
-<li><a href="https://gitlab.com/ogom/gres/blob/master/README.md">https://gitlab.com/ogom/gres/blob/master/README.md</a></li>
-</ul>
+<p><code>frozen_string_literal: true</code> にすれば <code>"文字列リテラル".freeze</code> の <code>.freeze</code> は不要になるはずと思ったのですが、実行してみてちゃんと <code>frozen?</code> が <code>true</code> になるのかと <code>--dump=insns</code> で disasm の結果をみて確認しました。</p>
 
+<p>該当部分の変更は以下の通りです。</p>
 
-<h2>ノンプログラマーが6ヶ月でWebサービスを作る課程で感じた事</h2>
-
-<ul>
-<li><a href="http://email.nyusureta.com/" title="ニュースレター配信システム Easy Follow E-mail System">ニュースレター配信システム Easy Follow E-mail System</a></li>
-<li><a href="http://www.slideshare.net/soheiyagi/ruby20150425" title="ノンプログラマーが6ヶ月でWebサービスを作る課程で感じた事／Ruby関西20150425">ノンプログラマーが6ヶ月でWebサービスを作る課程で感じた事／Ruby関西20150425</a></li>
-</ul>
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gu">@@ -1432,9 +1432,9 @@ def join(dir, base)</span>
+</span><span class='line'>     end
+</span><span class='line'>
+</span><span class='line'>     if File::ALT_SEPARATOR
+</span><span class='line'><span class="gd">-      DIRECTORY_TERM = &quot;(?=[/#{Regexp.quote(File::ALT_SEPARATOR)}]|\\z)&quot;.freeze</span>
+</span><span class='line'><span class="gi">+      DIRECTORY_TERM = &quot;(?=[/#{Regexp.quote(File::ALT_SEPARATOR)}]|\\z)&quot;</span>
+</span><span class='line'>     else
+</span><span class='line'><span class="gd">-      DIRECTORY_TERM = &quot;(?=/|\\z)&quot;.freeze</span>
+</span><span class='line'><span class="gi">+      DIRECTORY_TERM = &quot;(?=/|\\z)&quot;</span>
+</span><span class='line'>     end
+</span><span class='line'>     SYSCASE = File::FNM_SYSCASE.nonzero? ? &quot;-i&quot; : &quot;&quot;
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<h2>ハマるRuby</h2>
-
-<ul>
-<li>填まる／嵌まる (後者)</li>
-<li><code>and</code>/<code>or</code> と <code>&amp;&amp;</code>/<code>||</code> の優先順位が違う話</li>
-<li>代入演算子の返り値</li>
-<li><code>super</code> で参照される引数を書き換えたときの挙動の話</li>
-<li>定数のスコープの話</li>
-</ul>
-
-
-<h2>Ruby初級者向けレッスン</h2>
-
-<ul>
-<li>文字列</li>
-<li>Emacs で rcodetools</li>
-<li><a href="https://gist.github.com/higaki/8147246">https://gist.github.com/higaki/8147246</a></li>
-<li><a href="https://github.com/higaki/learn_ruby_kansai_66">https://github.com/higaki/learn_ruby_kansai_66</a></li>
-<li><a href="http://docs.ruby-lang.org/ja/">http://docs.ruby-lang.org/ja/</a></li>
-<li><a href="http://qa.atmarkit.co.jp/q/2026" title="Rubyのsize/length/countの違いは？">Rubyのsize/length/countの違いは？</a></li>
-</ul>
-
-
-<h3>解答例</h3>
-
-<p>演習問題の 1 と 3 をやってみた例です。</p>
+<p>文字列補間がある場合は <code>freeze</code> の呼び出しが減っていました。</p>
 
 <div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -204,56 +174,202 @@ github GitLab Flow https://speakerdeck. &hellip;">
 <span class='line-number'>16</span>
 <span class='line-number'>17</span>
 <span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1">#!/usr/bin/env ruby</span>
-</span><span class='line'><span class="c1"># coding: utf-8</span>
-</span><span class='line'><span class="n">s</span> <span class="o">=</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span>
-</span><span class='line'><span class="sh">文 字</span>
-</span><span class='line'><span class="sh">文字</span>
-</span><span class='line'><span class="no">EOF</span>
-</span><span class='line'><span class="nb">puts</span> <span class="n">s</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span class='line'><span class="nb">puts</span> <span class="n">s</span><span class="o">.</span><span class="n">lines</span><span class="o">.</span><span class="n">size</span>
-</span><span class='line'><span class="nb">puts</span> <span class="n">s</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/(?u)\w+/</span><span class="p">)</span><span class="o">.</span><span class="n">size</span>
-</span><span class='line'><span class="nb">puts</span> <span class="n">s</span><span class="o">.</span><span class="n">chars</span><span class="o">.</span><span class="n">size</span>
-</span><span class='line'><span class="nb">puts</span> <span class="n">s</span><span class="o">.</span><span class="n">bytes</span><span class="o">.</span><span class="n">size</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1"># 試行錯誤例</span>
-</span><span class='line'><span class="nb">p</span> <span class="n">s</span><span class="o">.</span><span class="n">each_line</span><span class="o">.</span><span class="n">size</span> <span class="c1"># nil ??</span>
-</span><span class='line'><span class="nb">p</span> <span class="n">s</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/(?u:\w)+/</span><span class="p">)</span><span class="o">.</span><span class="n">size</span>
-</span><span class='line'><span class="nb">p</span> <span class="n">s</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="sr">/[[:graph:]]+/</span><span class="p">)</span><span class="o">.</span><span class="n">size</span>
-</span><span class='line'><span class="nb">p</span> <span class="n">s</span><span class="o">.</span><span class="n">each_char</span><span class="o">.</span><span class="n">size</span>
-</span><span class='line'><span class="nb">p</span> <span class="n">s</span><span class="o">.</span><span class="n">each_byte</span><span class="o">.</span><span class="n">size</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> cat /tmp/a.rb
+</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">true</span>
+</span><span class='line'><span class="go">ALT_SEPARATOR = &#39;\\&#39;</span>
+</span><span class='line'><span class="go">p &quot;(?=[/#{Regexp.quote(ALT_SEPARATOR)}]|\\z)&quot;.freeze.frozen?</span>
+</span><span class='line'><span class="gp">%</span> cat /tmp/b.rb
+</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">true</span>
+</span><span class='line'><span class="go">ALT_SEPARATOR = &#39;\\&#39;</span>
+</span><span class='line'><span class="go">p &quot;(?=[/#{Regexp.quote(ALT_SEPARATOR)}]|\\z)&quot;.frozen?</span>
+</span><span class='line'><span class="gp">%</span> ruby /tmp/a.rb
+</span><span class='line'><span class="go">true</span>
+</span><span class='line'><span class="gp">%</span> ruby /tmp/b.rb
+</span><span class='line'><span class="go">true</span>
+</span><span class='line'><span class="gp">%</span> diff -u &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/a.rb<span class="o">)</span> &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/b.rb<span class="o">)</span>
+</span><span class='line'><span class="go">--- /proc/self/fd/11    2017-01-08 17:43:38.532932848 +0900</span>
+</span><span class='line'><span class="go">+++ /proc/self/fd/13    2017-01-08 17:43:38.532932848 +0900</span>
+</span><span class='line'><span class="go">@@ -1,4 +1,4 @@</span>
+</span><span class='line'><span class="go">-== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/a.rb&gt;=====================================</span>
+</span><span class='line'><span class="go">+== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/b.rb&gt;=====================================</span>
+</span><span class='line'><span class="go"> 0000 trace            1                                               (   2)</span>
+</span><span class='line'><span class="go"> 0002 putobject        &quot;\\&quot;</span>
+</span><span class='line'><span class="go"> 0004 putspecialobject 3</span>
+</span><span class='line'><span class="go">@@ -17,7 +17,6 @@</span>
+</span><span class='line'><span class="go"> 0031 putobject        &quot;]|\\z)&quot;</span>
+</span><span class='line'><span class="go"> 0033 concatstrings    3</span>
+</span><span class='line'><span class="go"> 0035 freezestring     nil</span>
+</span><span class='line'><span class="go">-0037 opt_send_without_block &lt;callinfo!mid:freeze, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
+</span><span class='line'><span class="go">-0040 opt_send_without_block &lt;callinfo!mid:frozen?, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
+</span><span class='line'><span class="go">-0043 opt_send_without_block &lt;callinfo!mid:p, argc:1, FCALL|ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
+</span><span class='line'><span class="go">-0046 leave</span>
+</span><span class='line'><span class="go">+0037 opt_send_without_block &lt;callinfo!mid:frozen?, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
+</span><span class='line'><span class="go">+0040 opt_send_without_block &lt;callinfo!mid:p, argc:1, FCALL|ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
+</span><span class='line'><span class="go">+0043 leave</span>
 </span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<p>ランダムに入れ替え。</p>
+<p>文字列補間がない場合は <code>opt_str_freeze</code> (<code>freeze</code> が再定義されていたら呼ぶ) から <code>putobject</code> (単純にスタックにプッシュするだけ) に変わっていました。</p>
 
 <div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cambridge</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/\b([^ ])([^ ]+?)([^ ])\b/</span><span class="p">)</span> <span class="k">do</span>
-</span><span class='line'>  <span class="o">[</span><span class="vg">$1</span><span class="p">,</span> <span class="o">*</span><span class="vg">$2</span><span class="o">.</span><span class="n">chars</span><span class="o">.</span><span class="n">shuffle</span><span class="p">,</span> <span class="vg">$3</span><span class="o">].</span><span class="n">join</span>
-</span><span class='line'><span class="k">end</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> cat /tmp/1.rb
+</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">false</span>
+</span><span class='line'><span class="go">p &#39;&#39;.freeze.frozen?</span>
+</span><span class='line'><span class="gp">%</span> cat /tmp/2.rb
+</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">true</span>
+</span><span class='line'><span class="go">p &#39;&#39;.freeze.frozen?</span>
+</span><span class='line'><span class="gp">%</span> cat /tmp/3.rb
+</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">true</span>
+</span><span class='line'><span class="go">p &#39;&#39;.frozen?</span>
+</span><span class='line'><span class="gp">%</span> ruby /tmp/1.rb
+</span><span class='line'><span class="go">true</span>
+</span><span class='line'><span class="gp">%</span> ruby /tmp/2.rb
+</span><span class='line'><span class="go">true</span>
+</span><span class='line'><span class="gp">%</span> ruby /tmp/3.rb
+</span><span class='line'><span class="go">true</span>
+</span><span class='line'><span class="gp">%</span> diff -u &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/1.rb<span class="o">)</span> &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/2.rb<span class="o">)</span>
+</span><span class='line'><span class="go">--- /proc/self/fd/11    2017-01-08 17:52:25.569282848 +0900</span>
+</span><span class='line'><span class="go">+++ /proc/self/fd/13    2017-01-08 17:52:25.569282848 +0900</span>
+</span><span class='line'><span class="go">@@ -1,4 +1,4 @@</span>
+</span><span class='line'><span class="go">-== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/1.rb&gt;=====================================</span>
+</span><span class='line'><span class="go">+== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/2.rb&gt;=====================================</span>
+</span><span class='line'><span class="go"> 0000 trace            1                                               (   2)</span>
+</span><span class='line'><span class="go"> 0002 putself</span>
+</span><span class='line'><span class="go"> 0003 opt_str_freeze   &quot;&quot;</span>
+</span><span class='line'><span class="gp">%</span> diff -u &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/1.rb<span class="o">)</span> &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/3.rb<span class="o">)</span>
+</span><span class='line'><span class="go">--- /proc/self/fd/11    2017-01-08 17:52:27.952090848 +0900</span>
+</span><span class='line'><span class="go">+++ /proc/self/fd/13    2017-01-08 17:52:27.952090848 +0900</span>
+</span><span class='line'><span class="go">@@ -1,7 +1,7 @@</span>
+</span><span class='line'><span class="go">-== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/1.rb&gt;=====================================</span>
+</span><span class='line'><span class="go">+== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/3.rb&gt;=====================================</span>
+</span><span class='line'><span class="go"> 0000 trace            1                                               (   2)</span>
+</span><span class='line'><span class="go"> 0002 putself</span>
+</span><span class='line'><span class="go">-0003 opt_str_freeze   &quot;&quot;</span>
+</span><span class='line'><span class="go">+0003 putobject        &quot;&quot;</span>
+</span><span class='line'><span class="go"> 0005 opt_send_without_block &lt;callinfo!mid:frozen?, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
+</span><span class='line'><span class="go"> 0008 opt_send_without_block &lt;callinfo!mid:p, argc:1, FCALL|ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
+</span><span class='line'><span class="go"> 0011 leave</span>
 </span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<p>動作確認用に reverse にしていた時。</p>
+<h2>String.new への変更</h2>
+
+<p>同じコミットの <code>compare_stream</code> の変更は一通り目視確認していた時には <code>&lt;&lt;</code> による破壊的変更ではないので見落としていて、 <code>make install</code> を実行したら引っかかったので気づいたのですが、 <code>File#read</code> にバッファとして文字列を渡していることによる破壊的変更でした。</p>
+
+<p>該当部分の変更は以下の通りです。</p>
 
 <div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">cambridge</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="sr">/\b([^ ])([^ ]+?)([^ ])\b/</span><span class="p">)</span> <span class="k">do</span>
-</span><span class='line'>  <span class="o">[</span><span class="vg">$1</span><span class="p">,</span> <span class="o">*</span><span class="vg">$2</span><span class="o">.</span><span class="n">chars</span><span class="o">.</span><span class="n">reverse</span><span class="p">,</span> <span class="vg">$3</span><span class="o">].</span><span class="n">join</span>
-</span><span class='line'><span class="k">end</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gu">@@ -735,8 +735,8 @@ def compare_file(a, b)</span>
+</span><span class='line'>   #
+</span><span class='line'>   def compare_stream(a, b)
+</span><span class='line'>     bsize = fu_stream_blksize(a, b)
+</span><span class='line'><span class="gd">-    sa = &quot;&quot;</span>
+</span><span class='line'><span class="gd">-    sb = &quot;&quot;</span>
+</span><span class='line'><span class="gi">+    sa = String.new(capacity: bsize)</span>
+</span><span class='line'><span class="gi">+    sb = String.new(capacity: bsize)</span>
+</span><span class='line'>     begin
+</span><span class='line'>       a.read(bsize, sa)
+</span><span class='line'>       b.read(bsize, sb)
 </span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<h2>告知</h2>
+<p>変更候補として</p>
 
 <ul>
-<li><a href="https://rubykansai.doorkeeper.jp/events/23266" title="第67回 Ruby関西 勉強会">第67回 Ruby関西 勉強会</a> は 6 月 13 日 (土) に京都女子大学</li>
-<li><a href="http://rubykansai.github.io/kansai06/" title="関西Ruby会議06">関西Ruby会議06</a> は 7 月 11 日 (土) に新大阪 MOTEX 2 階ホール</li>
-<li>などなど</li>
+<li><code>"".dup</code> にする (文字列のエンコーディングがソースエンコーディング (この場合は UTF-8) になる)</li>
+<li><code>String.new</code> にする (文字列のエンコーディングが ASCII-8BIT になる)</li>
 </ul>
+
+
+<p>がありましたが、エンコーディングはどちらでも良かったのと、
+ここではバッファサイズとして <code>bsize</code> バイトが望ましいという情報が別途存在していたので、
+ruby 2.4.0 からの新機能の <code>String.new(capacity: size)</code> を使うことにしました。</p>
+
+<p>エンコーディングの違いは以下のように確認できます。</p>
+
+<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> cat /tmp/a.rb
+</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">true</span>
+</span><span class='line'><span class="go">p &quot;&quot;.dup.frozen?</span>
+</span><span class='line'><span class="go">p &quot;&quot;.dup.encoding</span>
+</span><span class='line'><span class="go">p String.new.frozen?</span>
+</span><span class='line'><span class="go">p String.new.encoding</span>
+</span><span class='line'><span class="gp">%</span> ruby /tmp/a.rb
+</span><span class='line'><span class="go">false</span>
+</span><span class='line'><span class="gp">#</span>&lt;Encoding:UTF-8&gt;
+</span><span class='line'><span class="go">false</span>
+</span><span class='line'><span class="gp">#</span>&lt;Encoding:ASCII-8BIT&gt;
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 </div>
 
@@ -273,12 +389,12 @@ github GitLab Flow https://speakerdeck. &hellip;">
 
 
 
-<time class='entry-date' datetime='2015-04-25T13:26:49+09:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>25</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>1:26 pm</span></time>
+<time class='entry-date' datetime='2017-01-08T17:35:03+09:00'><span class='date'><span class='date-month'>Jan</span> <span class='date-day'>8</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>5:35 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/event/'>event</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>, <a class='category' href='/blog/categories/rubykansai/'>rubykansai</a>
+    <a class='category' href='/blog/categories/ruby/'>ruby</a>
   
 </span>
 
@@ -305,10 +421,8 @@ github GitLab Flow https://speakerdeck. &hellip;">
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2015-04-20-sakura-vps-dokku.html" title="Previous Post: さくらのVPSにdokkuをdebで入れてみた">&laquo; さくらのVPSにdokkuをdebで入れてみた</a>
+        <a class="basic-alignment left" href="/blog/2017-01-07-lilo-tokaidolug.html" title="Previous Post:  LILO&東海道らぐオフラインミーティング 2017/01/07">&laquo;  LILO&東海道らぐオフラインミーティング 2017/01/07</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2015-05-03-lilo-tokaidolug.html" title="Next Post: LILO ＆ 東海道らぐ・オフラインミーティング（2015/05/03）に参加しました">LILO ＆ 東海道らぐ・オフラインミーティング（2015/05/03）に参加しました &raquo;</a>
       
     </p>
   </footer>
@@ -443,8 +557,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2015-04-25-rubykansai66.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2015-04-25-rubykansai66.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-01-08-frozen-string-literal.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-01-08-frozen-string-literal.html';
         var disqus_script = 'embed.js';
       
     (function () {

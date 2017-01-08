@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-01-07T23:54:30+09:00</updated>
+  <updated>2017-01-08T18:29:16+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,276 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[frozen_string_literalをtrueにしていっている]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-01-08-frozen-string-literal.html"/>
+    <updated>2017-01-08T17:35:03+09:00</updated>
+    <id>http://blog.n-z.jp/blog/frozen-string-literal</id>
+    <content type="html"><![CDATA[<p><a href="https://www.ruby-lang.org/ja/documentation/repository-guide/">Ruby の trunk</a> で最近は <code>frozen_string_literal</code> を <code>true</code> に変更するというコミットをしていっています。
+(<a href="https://svn.ruby-lang.org/cgi-bin/viewvc.cgi?revision=53141&amp;view=revision" title="Revision 53141">Revision 53141</a> で <code>frozen_string_literal: false</code> として magic comment 自体は追加されています。)</p>
+
+<p>その時にちょっと確認に手間取った変更があったので、そのメモです。</p>
+
+<!--more-->
+
+
+<h2>lib/fileutils.rb</h2>
+
+<p>確認に手間取ったのは <a href="https://svn.ruby-lang.org/cgi-bin/viewvc.cgi?revision=57275&amp;view=revision" title="Revision 57275">Revision 57275</a> の <code>lib/fileutils.rb</code> の変更です。</p>
+
+<h2>freeze の削除</h2>
+
+<p>まず最初は <code>.freeze</code> を削除した変更です。</p>
+
+<p><code>frozen_string_literal: true</code> にすれば <code>"文字列リテラル".freeze</code> の <code>.freeze</code> は不要になるはずと思ったのですが、実行してみてちゃんと <code>frozen?</code> が <code>true</code> になるのかと <code>--dump=insns</code> で disasm の結果をみて確認しました。</p>
+
+<p>該当部分の変更は以下の通りです。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gu">@@ -1432,9 +1432,9 @@ def join(dir, base)</span>
+</span><span class='line'>     end
+</span><span class='line'>
+</span><span class='line'>     if File::ALT_SEPARATOR
+</span><span class='line'><span class="gd">-      DIRECTORY_TERM = &quot;(?=[/#{Regexp.quote(File::ALT_SEPARATOR)}]|\\z)&quot;.freeze</span>
+</span><span class='line'><span class="gi">+      DIRECTORY_TERM = &quot;(?=[/#{Regexp.quote(File::ALT_SEPARATOR)}]|\\z)&quot;</span>
+</span><span class='line'>     else
+</span><span class='line'><span class="gd">-      DIRECTORY_TERM = &quot;(?=/|\\z)&quot;.freeze</span>
+</span><span class='line'><span class="gi">+      DIRECTORY_TERM = &quot;(?=/|\\z)&quot;</span>
+</span><span class='line'>     end
+</span><span class='line'>     SYSCASE = File::FNM_SYSCASE.nonzero? ? &quot;-i&quot; : &quot;&quot;
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>文字列補間がある場合は <code>freeze</code> の呼び出しが減っていました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> cat /tmp/a.rb
+</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">true</span>
+</span><span class='line'><span class="go">ALT_SEPARATOR = &#39;\\&#39;</span>
+</span><span class='line'><span class="go">p &quot;(?=[/#{Regexp.quote(ALT_SEPARATOR)}]|\\z)&quot;.freeze.frozen?</span>
+</span><span class='line'><span class="gp">%</span> cat /tmp/b.rb
+</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">true</span>
+</span><span class='line'><span class="go">ALT_SEPARATOR = &#39;\\&#39;</span>
+</span><span class='line'><span class="go">p &quot;(?=[/#{Regexp.quote(ALT_SEPARATOR)}]|\\z)&quot;.frozen?</span>
+</span><span class='line'><span class="gp">%</span> ruby /tmp/a.rb
+</span><span class='line'><span class="go">true</span>
+</span><span class='line'><span class="gp">%</span> ruby /tmp/b.rb
+</span><span class='line'><span class="go">true</span>
+</span><span class='line'><span class="gp">%</span> diff -u &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/a.rb<span class="o">)</span> &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/b.rb<span class="o">)</span>
+</span><span class='line'><span class="go">--- /proc/self/fd/11    2017-01-08 17:43:38.532932848 +0900</span>
+</span><span class='line'><span class="go">+++ /proc/self/fd/13    2017-01-08 17:43:38.532932848 +0900</span>
+</span><span class='line'><span class="go">@@ -1,4 +1,4 @@</span>
+</span><span class='line'><span class="go">-== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/a.rb&gt;=====================================</span>
+</span><span class='line'><span class="go">+== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/b.rb&gt;=====================================</span>
+</span><span class='line'><span class="go"> 0000 trace            1                                               (   2)</span>
+</span><span class='line'><span class="go"> 0002 putobject        &quot;\\&quot;</span>
+</span><span class='line'><span class="go"> 0004 putspecialobject 3</span>
+</span><span class='line'><span class="go">@@ -17,7 +17,6 @@</span>
+</span><span class='line'><span class="go"> 0031 putobject        &quot;]|\\z)&quot;</span>
+</span><span class='line'><span class="go"> 0033 concatstrings    3</span>
+</span><span class='line'><span class="go"> 0035 freezestring     nil</span>
+</span><span class='line'><span class="go">-0037 opt_send_without_block &lt;callinfo!mid:freeze, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
+</span><span class='line'><span class="go">-0040 opt_send_without_block &lt;callinfo!mid:frozen?, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
+</span><span class='line'><span class="go">-0043 opt_send_without_block &lt;callinfo!mid:p, argc:1, FCALL|ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
+</span><span class='line'><span class="go">-0046 leave</span>
+</span><span class='line'><span class="go">+0037 opt_send_without_block &lt;callinfo!mid:frozen?, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
+</span><span class='line'><span class="go">+0040 opt_send_without_block &lt;callinfo!mid:p, argc:1, FCALL|ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
+</span><span class='line'><span class="go">+0043 leave</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>文字列補間がない場合は <code>opt_str_freeze</code> (<code>freeze</code> が再定義されていたら呼ぶ) から <code>putobject</code> (単純にスタックにプッシュするだけ) に変わっていました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> cat /tmp/1.rb
+</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">false</span>
+</span><span class='line'><span class="go">p &#39;&#39;.freeze.frozen?</span>
+</span><span class='line'><span class="gp">%</span> cat /tmp/2.rb
+</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">true</span>
+</span><span class='line'><span class="go">p &#39;&#39;.freeze.frozen?</span>
+</span><span class='line'><span class="gp">%</span> cat /tmp/3.rb
+</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">true</span>
+</span><span class='line'><span class="go">p &#39;&#39;.frozen?</span>
+</span><span class='line'><span class="gp">%</span> ruby /tmp/1.rb
+</span><span class='line'><span class="go">true</span>
+</span><span class='line'><span class="gp">%</span> ruby /tmp/2.rb
+</span><span class='line'><span class="go">true</span>
+</span><span class='line'><span class="gp">%</span> ruby /tmp/3.rb
+</span><span class='line'><span class="go">true</span>
+</span><span class='line'><span class="gp">%</span> diff -u &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/1.rb<span class="o">)</span> &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/2.rb<span class="o">)</span>
+</span><span class='line'><span class="go">--- /proc/self/fd/11    2017-01-08 17:52:25.569282848 +0900</span>
+</span><span class='line'><span class="go">+++ /proc/self/fd/13    2017-01-08 17:52:25.569282848 +0900</span>
+</span><span class='line'><span class="go">@@ -1,4 +1,4 @@</span>
+</span><span class='line'><span class="go">-== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/1.rb&gt;=====================================</span>
+</span><span class='line'><span class="go">+== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/2.rb&gt;=====================================</span>
+</span><span class='line'><span class="go"> 0000 trace            1                                               (   2)</span>
+</span><span class='line'><span class="go"> 0002 putself</span>
+</span><span class='line'><span class="go"> 0003 opt_str_freeze   &quot;&quot;</span>
+</span><span class='line'><span class="gp">%</span> diff -u &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/1.rb<span class="o">)</span> &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/3.rb<span class="o">)</span>
+</span><span class='line'><span class="go">--- /proc/self/fd/11    2017-01-08 17:52:27.952090848 +0900</span>
+</span><span class='line'><span class="go">+++ /proc/self/fd/13    2017-01-08 17:52:27.952090848 +0900</span>
+</span><span class='line'><span class="go">@@ -1,7 +1,7 @@</span>
+</span><span class='line'><span class="go">-== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/1.rb&gt;=====================================</span>
+</span><span class='line'><span class="go">+== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/3.rb&gt;=====================================</span>
+</span><span class='line'><span class="go"> 0000 trace            1                                               (   2)</span>
+</span><span class='line'><span class="go"> 0002 putself</span>
+</span><span class='line'><span class="go">-0003 opt_str_freeze   &quot;&quot;</span>
+</span><span class='line'><span class="go">+0003 putobject        &quot;&quot;</span>
+</span><span class='line'><span class="go"> 0005 opt_send_without_block &lt;callinfo!mid:frozen?, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
+</span><span class='line'><span class="go"> 0008 opt_send_without_block &lt;callinfo!mid:p, argc:1, FCALL|ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
+</span><span class='line'><span class="go"> 0011 leave</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>String.new への変更</h2>
+
+<p>同じコミットの <code>compare_stream</code> の変更は一通り目視確認していた時には <code>&lt;&lt;</code> による破壊的変更ではないので見落としていて、 <code>make install</code> を実行したら引っかかったので気づいたのですが、 <code>File#read</code> にバッファとして文字列を渡していることによる破壊的変更でした。</p>
+
+<p>該当部分の変更は以下の通りです。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gu">@@ -735,8 +735,8 @@ def compare_file(a, b)</span>
+</span><span class='line'>   #
+</span><span class='line'>   def compare_stream(a, b)
+</span><span class='line'>     bsize = fu_stream_blksize(a, b)
+</span><span class='line'><span class="gd">-    sa = &quot;&quot;</span>
+</span><span class='line'><span class="gd">-    sb = &quot;&quot;</span>
+</span><span class='line'><span class="gi">+    sa = String.new(capacity: bsize)</span>
+</span><span class='line'><span class="gi">+    sb = String.new(capacity: bsize)</span>
+</span><span class='line'>     begin
+</span><span class='line'>       a.read(bsize, sa)
+</span><span class='line'>       b.read(bsize, sb)
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>変更候補として</p>
+
+<ul>
+<li><code>"".dup</code> にする (文字列のエンコーディングがソースエンコーディング (この場合は UTF-8) になる)</li>
+<li><code>String.new</code> にする (文字列のエンコーディングが ASCII-8BIT になる)</li>
+</ul>
+
+
+<p>がありましたが、エンコーディングはどちらでも良かったのと、
+ここではバッファサイズとして <code>bsize</code> バイトが望ましいという情報が別途存在していたので、
+ruby 2.4.0 からの新機能の <code>String.new(capacity: size)</code> を使うことにしました。</p>
+
+<p>エンコーディングの違いは以下のように確認できます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> cat /tmp/a.rb
+</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">true</span>
+</span><span class='line'><span class="go">p &quot;&quot;.dup.frozen?</span>
+</span><span class='line'><span class="go">p &quot;&quot;.dup.encoding</span>
+</span><span class='line'><span class="go">p String.new.frozen?</span>
+</span><span class='line'><span class="go">p String.new.encoding</span>
+</span><span class='line'><span class="gp">%</span> ruby /tmp/a.rb
+</span><span class='line'><span class="go">false</span>
+</span><span class='line'><span class="gp">#</span>&lt;Encoding:UTF-8&gt;
+</span><span class='line'><span class="go">false</span>
+</span><span class='line'><span class="gp">#</span>&lt;Encoding:ASCII-8BIT&gt;
+</span></code></pre></td></tr></table></div></figure>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ LILO&東海道らぐオフラインミーティング 2017/01/07]]></title>
@@ -5411,71 +5681,6 @@ rake や Ruby/Tk みたいに削除されて gems/bundled_gems に入るのか�
 <li>会場が 20:00 までなのできりのいいところで帰るようにという話</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[OS X の Emacs で EasyPG が gpg2 で Opening input file: Decryption failed, になったので対処した]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-08-20-mac-easypg-gpg2.html"/>
-    <updated>2016-08-20T13:23:22+09:00</updated>
-    <id>http://blog.n-z.jp/blog/mac-easypg-gpg2</id>
-    <content type="html"><![CDATA[<p>OS X の Homebrew で入れている gnupg が更新されて gpg コマンドではなく gpg1 コマンドしか入らなくなって、 gpg コマンドは gnupg2 で入れるようになった影響で、 Emacs 上の EasyPG で <code>*.gpg</code> ファイルを開くときに <code>Opening input file: Decryption failed,</code> で開けなくなったので、その対処をしました。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<p>OS 自体以外は Homebrew で入れたバージョンです。</p>
-
-<ul>
-<li>OS X : Yosemite (10.10.5)</li>
-<li>Emacs.app : 24.5.1</li>
-<li>gnupg : 1.4.21</li>
-<li>gnupg2 : 2.0.30_2</li>
-<li>gpg-agent : 2.0.30_1</li>
-<li>pinentry-mac : 0.9.4</li>
-</ul>
-
-
-<h2>現象</h2>
-
-<p><code>*.gpg</code> ファイルを開くと今までは minibuffer でパスフレーズをきいてきていたのに、 gpg コマンドが gnupg 1 系から gnupg 2 系に変わったら、 <code>Opening input file: Decryption failed,</code> というエラー (<code>*Messages*</code> バッファには <code>epa-file--find-file-not-found-function: Opening input file: Decryption failed,</code> と出ていた) で開けなくなりました。</p>
-
-<h2>対処方法案</h2>
-
-<p><code>(setq epg-gpg-program "gpg1")</code> で古い gnupg を使い続けるという案も考えましたが、今後のことを考えると新しいバージョンを使った方が良いだろうと思ってやめました。</p>
-
-<p><a href="http://www.bookshelf.jp/cgi-bin/goto.cgi?file=auth-ja&amp;node=GnuPG+and+EasyPG+Assistant+Configuration">A. GnuPG および EasyPG アシスタントの設定</a> によると gpg2 は gpg-agent との組み合わせが必須のようだったので、 gpg-agent を使うことにしました。</p>
-
-<h2>対処方法</h2>
-
-<p>端末上で <code>gpg -c hoge.txt</code> や <code>gpg -c hoge.txt.gpg</code> を試してみると <code>pinentry-curses</code> が使われているとわかったので、 <code>brew install pinentry-mac</code> で pinentry-mac をインストールして、 <code>Caveats</code> に出てきたように <code>~/.gnupg/gpg-agent.conf</code> を作成して <code>pinentry-program /usr/local/bin/pinentry-mac</code> という設定を入れたところ、 Emacs 上でも <code>*.gpg</code> ファイルを開くときに pinentry-mac でパスフレーズをきかれるようになって、開けるようになりました。</p>
-
-<p>パスフレーズを入力できるようにするだけなら pinentry の設定だけで gpg-agent の起動は必要ありませんでした。
-パスフレーズを毎回入力する必要があるというのは今までと同じ使い勝手なので、 gpg-agent の起動までは追求しませんでした。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>==&gt; Caveats
-</span><span class='line'>You can now set this as your pinentry program like
-</span><span class='line'>
-</span><span class='line'>~/.gnupg/gpg-agent.conf
-</span><span class='line'>    pinentry-program /usr/local/bin/pinentry-mac
-</span><span class='line'>
-</span><span class='line'>.app bundles were installed.
-</span><span class='line'>Run `brew linkapps pinentry-mac` to symlink these to /Applications.</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>将来の対処方法案</h2>
-
-<p>gpg-agent は 2.1.5 から <code>--allow-emacs-pinentry</code> というオプションが追加されていて、 <a href="http://unix.stackexchange.com/questions/55638/can-emacs-use-gpg-agent-in-a-terminal-at-all">http://unix.stackexchange.com/questions/55638/can-emacs-use-gpg-agent-in-a-terminal-at-all</a> に書かれているように <a href="https://elpa.gnu.org/packages/pinentry.html">https://elpa.gnu.org/packages/pinentry.html</a> を使って、 Emacs 上でパスフレーズを入力できるようになるようなので、またそのように設定を変更するかもしれません。</p>
 ]]></content>
   </entry>
   
