@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-01-08T18:29:16+09:00</updated>
+  <updated>2017-01-14T20:18:54+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,179 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第76回 Ruby関西 勉強会に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-01-14-rubykansai76.html"/>
+    <updated>2017-01-14T17:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubykansai76</id>
+    <content type="html"><![CDATA[<p><a href="https://rubykansai.doorkeeper.jp/events/55398" title="第76回 Ruby関西 勉強会">第76回 Ruby関西 勉強会</a>
+に参加して発表してきました。</p>
+
+<!--more-->
+
+
+<p>以下、そのメモです。</p>
+
+<h2>会場</h2>
+
+<p>ちょっと場所がわかりにくいところでした。
+グランフロントに着いたあと、ちゃんと「タワーB」を目指して、一度9階で乗り換えて18階に上がりました。</p>
+
+<h2>オープニング</h2>
+
+<ul>
+<li>会場案内</li>
+<li>懇親会は適当に集まる感じ</li>
+<li>ネットワークあり</li>
+<li>ustream 中継あり (ライブのみで録画はなし)</li>
+<li>公式タグは rubykansai76</li>
+<li>公式ハッシュタグは <code>#rubykansai</code></li>
+<li>受付はあとで</li>
+</ul>
+
+
+<h2>ゲーム会社でのRuby / Rails活用事例</h2>
+
+<ul>
+<li>スポンサーセッション的なセッション</li>
+<li>Aiming さんは開発も運用もしている</li>
+<li>MessagePack で C++ や C# とやりとり</li>
+<li>共通基盤開発</li>
+<li>インフラ</li>
+<li>運用</li>
+<li>Ruby は開発速度が利点</li>
+<li>実行速度が求められるサーバーは C++ のままのものもあるらしい</li>
+</ul>
+
+
+<h2>Rails 使いがデータ集計でハマりがちな罠</h2>
+
+<ul>
+<li>ActiveRecord は集計には向いていない</li>
+<li>集計に O/R mapping は不要</li>
+<li>サブクエリが入りみだれると ActiveRecord や ARel はつらい</li>
+<li>scope の組合せで DRY にする作戦もうまくいくことがまれでだいたいはカオスになる</li>
+<li>適材適所</li>
+<li>アンチパターン2: 1項目1クエリ作戦</li>
+<li>アンチパターン3: 集計データが text</li>
+<li>正体は YAML, JSON のデータ</li>
+<li>頑張って移行</li>
+<li>SQL は覚えるしかない</li>
+<li>alter table せずに drop して create table しなおして集計し直し</li>
+<li>クエリの分割: 中間集計テーブル</li>
+<li>Q: 集計中に空のテーブルが見えてしまうのでは?</li>
+<li>PostGRESQL, Redshift だと DDL にもトランザクションがきくので大丈夫</li>
+<li>順序が重要</li>
+<li>bricolage: SQL 実行に特化したワークフローエンジン</li>
+<li>Redshift 用</li>
+<li>dry run できるというのが重要</li>
+<li>AWS Redshift の特徴</li>
+<li>PostgreSQL 系の SQL の便利機能</li>
+<li>ウィンドウ関数</li>
+<li>例: <code>rank()</code>, <code>row_number()</code></li>
+<li>WITH 句</li>
+<li>サブクエリの代わり</li>
+<li>ネストが減る</li>
+</ul>
+
+
+<h2>Ruby ボード GR-CITRUS の紹介 #2</h2>
+
+<ul>
+<li>ロボホンが写真をとっていたがとれていない?</li>
+<li>Ruby の話はほとんど出てこない</li>
+<li>GR-CITRUS</li>
+<li>チップに Ruby Inside と刻印されている</li>
+<li>mruby/c という16ビットマイコンなどに向けたさらに省メモリなものがある</li>
+<li>今日は mruby の話</li>
+<li>本題は実装について</li>
+<li>バインドしている mrbgem</li>
+<li>mruby-math: Math.sin</li>
+<li>mruby-numeric-ext: 10.chr, 0.zero?</li>
+<li>独自実装のクラス</li>
+<li>mruby 組込み方法</li>
+<li>クロスコンパイル</li>
+<li>mrbgem の独自追加</li>
+<li>wrbb-v2lib-firm の build_config.rb を使う</li>
+<li>クロスコンパイル方法は Qiita に記事がある</li>
+<li>mrb 実行の仕組み</li>
+<li>コード読み</li>
+</ul>
+
+
+<h2><code>frozen_string_literal</code> の話</h2>
+
+<p>スライドはいつも通り
+<a href="http://slide.rabbit-shocker.org/authors/znz/frozen_string_literal/">Rabbit Slide Show</a>
+(<a href="https://rubygems.org/gems/rabbit-slide-znz-frozen_string_literal">RubyGems</a>),
+<a href="http://www.slideshare.net/znzjp/frozenstringliteral">SlideShare</a>,
+<a href="https://speakerdeck.com/znz/frozen-string-literal-falsehua">Speaker Deck</a>
+にあげています。
+(ソースは
+<a href="https://github.com/znz/rubykansai76-frozen_string_literal">github</a>
+にあげています。)</p>
+
+<h2>Ruby モンキーパッチの世界</h2>
+
+<ul>
+<li>モンキーパッチとは</li>
+<li>CarrierWaveDirect で <code>path/to/file</code>, <code>path/to/to/file</code>, <code>path/to/to/to/file</code> のようになるバグがあったのをモンキーパッチで対応した</li>
+<li>ActiveSupport が <code>NilClass</code> に <code>blank?</code> メソッドを足している</li>
+<li>Refinement</li>
+<li>トップレベルの <code>using</code> は <code>using</code> より下にあれば <code>class</code> などの中も対象</li>
+<li>クラススコープの <code>using</code> は <code>using</code> より下で <code>class</code> に対応する <code>end</code> までが対象</li>
+<li><a href="https://docs.ruby-lang.org/en/trunk/syntax/refinements_rdoc.html">https://docs.ruby-lang.org/en/trunk/syntax/refinements_rdoc.html</a></li>
+<li>Rails での例: <a href="https://github.com/rails/rails/blob/07307a7b9d14b752fc5aef474f3c29585676c9fa/activesupport/lib/active_support/core_ext/enumerable.rb#L117-L135">https://github.com/rails/rails/blob/07307a7b9d14b752fc5aef474f3c29585676c9fa/activesupport/lib/active_support/core_ext/enumerable.rb#L117-L135</a></li>
+</ul>
+
+
+<h2>Rails の有限オートマトン</h2>
+
+<ul>
+<li><a href="https://github.com/amatsuda/stateful_enum" title="stateful_enum">stateful_enum</a></li>
+<li>graphviz や plantuml を使って図を出力できる</li>
+<li>gulp で plantuml の図の自動更新</li>
+<li><code>draw_uml</code> を使って rails 経由で図を表示</li>
+<li>browser sync でブラウザーも自動リロード</li>
+<li><code>draw_erd</code>, <code>draw_smd</code> というのもある</li>
+<li>guard は rspec を流すのに使っていて、重くなるので gulp は開発の初期だけに使うもの用に分けている</li>
+</ul>
+
+
+<h2>告知 (Rails Girls Osaka, OSS Gate Osaka, 関西Ruby会議)</h2>
+
+<ul>
+<li>引き続き ogomr さん</li>
+<li><a href="https://speakerdeck.com/ogom/ibentofalseshao-jie-tomu-ji">イベントの紹介と募集</a></li>
+<li><a href="https://coderdojo-hommachi.doorkeeper.jp/events/56121">CoderDojo 本町 #4</a></li>
+<li><a href="https://railsgirls-osaka.doorkeeper.jp/events/55949">RailsGirls Osaka #4 コーチ希望者募集</a></li>
+<li><a href="https://railsgirls-osaka.doorkeeper.jp/events/55947">RailsGirls Osaka #4</a></li>
+<li><a href="https://oss-gate.doorkeeper.jp/events/56141">OSS Gate Osaka #1</a></li>
+<li><a href="https://rubykansai.github.io/kansai2017/">関西Ruby会議2017</a></li>
+</ul>
+
+
+<h2>Ruby初級者向けレッスン 60回 ─ クラス</h2>
+
+<ul>
+<li><a href="https://github.com/higaki/learn_ruby_kansai_76">https://github.com/higaki/learn_ruby_kansai_76</a></li>
+<li>解答例</li>
+<li><code>to_s</code> で <code>@name</code> なのは <code>name</code> の方が良いのではないかという話</li>
+<li><code>age</code> の実装の話</li>
+<li><code>Mashal.load Marshal.dump</code> の話</li>
+</ul>
+
+
+<h2>クロージング</h2>
+
+<ul>
+<li>懇親会の募集</li>
+<li>Rails Follow-up Osaka の紹介</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[frozen_string_literalをtrueにしていっている]]></title>
@@ -879,50 +1052,6 @@ default gem として複数バージョンの gemspec を持ってしまうこ�
 <p>bundled gem と default gem の違いを実際の動作を元に比べてみました。
 また、 bundler と組み合わせて問題が起きる可能性がある例をみてみました。
 通常の使い方では問題が起きることはないと思いますが、トリビア的に知っておくとおもしろいかもしれません。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[bundled gem と default gem の違い]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-09-10-bundled-gem-and-default-gem.html"/>
-    <updated>2016-09-10T18:55:55+09:00</updated>
-    <id>http://blog.n-z.jp/blog/bundled-gem-and-default-gem</id>
-    <content type="html"><![CDATA[<p>RubyKaigi 2016 の後の移動中に hsbt さんに bundled gem と default gem との違いについて聞いてみた話をまとめてみました。</p>
-
-<!--more-->
-
-
-<h2>違い</h2>
-
-<ul>
-<li>bundled gem は単なる gem で gem uninstall もできる普通の gem</li>
-<li>default gem は
-
-<ul>
-<li>uninstall できない</li>
-<li>bundler の <code>clean_env</code> 環境でも見える</li>
-<li>bundler で別のバージョンを指定してインストールしていれば、通常の bundler の load path の挙動に従って、そちらが使われる</li>
-<li>たとえば ruby 2.3.1 だと <code>lib/ruby/gems/2.3.0/gems/rdoc-4.2.1</code> に <code>bin/rdoc</code> と <code>bin/ri</code> しかなくて他は <code>lib/ruby/2.3.0/rdoc*</code> などの標準添付のところに入っている</li>
-</ul>
-</li>
-</ul>
-
-
-<p>というような違いだと聞きました。</p>
-
-<p>調べてみたところ、他には</p>
-
-<ul>
-<li><code>$(gem env gemdir)/specifications/default</code> に <code>*.gemspec</code> ファイルが入っている</li>
-<li>新しい rubygems だと <code>gem list</code> で <code>json (default: 2.0.2)</code> のように <code>default:</code> がつく</li>
-</ul>
-
-
-<p>という違いがあるようでした。</p>
-
-<h2>続く</h2>
-
-<p><a href="/blog/2016-09-13-bundled-gem-and-default-gem-more.html">bundled gem と default gem の違いの具体例</a>に続きを書きました。</p>
 ]]></content>
   </entry>
   
