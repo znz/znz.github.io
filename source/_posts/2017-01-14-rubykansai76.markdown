@@ -1,0 +1,144 @@
+---
+layout: post
+title: "第76回 Ruby関西 勉強会に参加しました"
+date: 2017-01-14 17:30:00 +0900
+comments: true
+categories: event ruby rubykansai
+---
+[第76回 Ruby関西 勉強会](https://rubykansai.doorkeeper.jp/events/55398 "第76回 Ruby関西 勉強会")
+に参加して発表してきました。
+
+<!--more-->
+
+以下、そのメモです。
+
+## 会場
+
+ちょっと場所がわかりにくいところでした。
+グランフロントに着いたあと、ちゃんと「タワーB」を目指して、一度9階で乗り換えて18階に上がりました。
+
+## オープニング
+
+- 会場案内
+- 懇親会は適当に集まる感じ
+- ネットワークあり
+- ustream 中継あり (ライブのみで録画はなし)
+- 公式タグは rubykansai76
+- 公式ハッシュタグは `#rubykansai`
+- 受付はあとで
+
+## ゲーム会社でのRuby / Rails活用事例
+
+- スポンサーセッション的なセッション
+- Aiming さんは開発も運用もしている
+- MessagePack で C++ や C# とやりとり
+- 共通基盤開発
+- インフラ
+- 運用
+- Ruby は開発速度が利点
+- 実行速度が求められるサーバーは C++ のままのものもあるらしい
+
+## Rails 使いがデータ集計でハマりがちな罠
+
+- ActiveRecord は集計には向いていない
+- 集計に O/R mapping は不要
+- サブクエリが入りみだれると ActiveRecord や ARel はつらい
+- scope の組合せで DRY にする作戦もうまくいくことがまれでだいたいはカオスになる
+- 適材適所
+- アンチパターン2: 1項目1クエリ作戦
+- アンチパターン3: 集計データが text
+- 正体は YAML, JSON のデータ
+- 頑張って移行
+- SQL は覚えるしかない
+- alter table せずに drop して create table しなおして集計し直し
+- クエリの分割: 中間集計テーブル
+- Q: 集計中に空のテーブルが見えてしまうのでは?
+- PostGRESQL, Redshift だと DDL にもトランザクションがきくので大丈夫
+- 順序が重要
+- bricolage: SQL 実行に特化したワークフローエンジン
+- Redshift 用
+- dry run できるというのが重要
+- AWS Redshift の特徴
+- PostgreSQL 系の SQL の便利機能
+- ウィンドウ関数
+- 例: `rank()`, `row_number()`
+- WITH 句
+- サブクエリの代わり
+- ネストが減る
+
+## Ruby ボード GR-CITRUS の紹介 #2
+
+- ロボホンが写真をとっていたがとれていない?
+- Ruby の話はほとんど出てこない
+- GR-CITRUS
+- チップに Ruby Inside と刻印されている
+- mruby/c という16ビットマイコンなどに向けたさらに省メモリなものがある
+- 今日は mruby の話
+- 本題は実装について
+- バインドしている mrbgem
+- mruby-math: Math.sin
+- mruby-numeric-ext: 10.chr, 0.zero?
+- 独自実装のクラス
+- mruby 組込み方法
+- クロスコンパイル
+- mrbgem の独自追加
+- wrbb-v2lib-firm の build_config.rb を使う
+- クロスコンパイル方法は Qiita に記事がある
+- mrb 実行の仕組み
+- コード読み
+
+## `frozen_string_literal` の話
+
+スライドはいつも通り
+[Rabbit Slide Show](http://slide.rabbit-shocker.org/authors/znz/frozen_string_literal/)
+([RubyGems](https://rubygems.org/gems/rabbit-slide-znz-frozen_string_literal)),
+[SlideShare](http://www.slideshare.net/znzjp/frozenstringliteral),
+[Speaker Deck](https://speakerdeck.com/znz/frozen-string-literal-falsehua)
+にあげています。
+(ソースは
+[github](https://github.com/znz/rubykansai76-frozen_string_literal)
+にあげています。)
+
+## Ruby モンキーパッチの世界
+
+- モンキーパッチとは
+- CarrierWaveDirect で `path/to/file`, `path/to/to/file`, `path/to/to/to/file` のようになるバグがあったのをモンキーパッチで対応した
+- ActiveSupport が `NilClass` に `blank?` メソッドを足している
+- Refinement
+- トップレベルの `using` は `using` より下にあれば `class` などの中も対象
+- クラススコープの `using` は `using` より下で `class` に対応する `end` までが対象
+- https://docs.ruby-lang.org/en/trunk/syntax/refinements_rdoc.html
+- Rails での例: https://github.com/rails/rails/blob/07307a7b9d14b752fc5aef474f3c29585676c9fa/activesupport/lib/active_support/core_ext/enumerable.rb#L117-L135
+
+## Rails の有限オートマトン
+
+- [stateful_enum](https://github.com/amatsuda/stateful_enum "stateful_enum")
+- graphviz や plantuml を使って図を出力できる
+- gulp で plantuml の図の自動更新
+- `draw_uml` を使って rails 経由で図を表示
+- browser sync でブラウザーも自動リロード
+- `draw_erd`, `draw_smd` というのもある
+- guard は rspec を流すのに使っていて、重くなるので gulp は開発の初期だけに使うもの用に分けている
+
+## 告知 (Rails Girls Osaka, OSS Gate Osaka, 関西Ruby会議)
+
+- 引き続き ogomr さん
+- [イベントの紹介と募集](https://speakerdeck.com/ogom/ibentofalseshao-jie-tomu-ji)
+- [CoderDojo 本町 #4](https://coderdojo-hommachi.doorkeeper.jp/events/56121)
+- [RailsGirls Osaka #4 コーチ希望者募集](https://railsgirls-osaka.doorkeeper.jp/events/55949)
+- [RailsGirls Osaka #4](https://railsgirls-osaka.doorkeeper.jp/events/55947)
+- [OSS Gate Osaka #1](https://oss-gate.doorkeeper.jp/events/56141)
+- [関西Ruby会議2017](https://rubykansai.github.io/kansai2017/)
+
+## Ruby初級者向けレッスン 60回 ─ クラス
+
+- https://github.com/higaki/learn_ruby_kansai_76
+- 解答例
+- `to_s` で `@name` なのは `name` の方が良いのではないかという話
+- `age` の実装の話
+- `Mashal.load Marshal.dump` の話
+
+## クロージング
+
+- 懇親会の募集
+- Rails Follow-up Osaka の紹介
