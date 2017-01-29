@@ -1,6 +1,6 @@
 ---
 layout: post
-title: " LILO&東海道らぐオフラインミーティング 2017/01/07"
+title: "LILO&東海道らぐオフラインミーティング 2017/01/07"
 date: 2017-01-07 13:20:00 +0900
 comments: true
 categories: lilo event linux
