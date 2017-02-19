@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: golang | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/golang/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2017-02-19T19:01:19+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Go言語でWindowsのnetshラッパーのGUIアプリを作った]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-02-19-golang-windows-gui.html"/>
+    <updated>2017-02-19T19:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/golang-windows-gui</id>
+    <content type="html"><![CDATA[<p>インテリジェントスイッチングハブなどのネットワーク機器の設定をする時に、
+Windows だといちいちコントロールパネルを辿ってアダプター一覧を表示して、
+そこから UAC の権限昇格 (環境によってはパスワード入力が必要) を挟んでプロパティを開いて、
+IPv4 の設定を開いて変更して閉じて行って反映、という作業が大変だったので、
+<code>netsh</code> を呼び出して<a href="https://github.com/znz/winipset">省力化する GUI アプリ</a>を作りました。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>開発環境: go version go1.7.5 darwin/amd64 (Homebrew で入れた go)</li>
+<li>動作対象環境: Windows 7 などの Windows 環境</li>
+</ul>
+
+
+<h2>GUI ツールキットの選定</h2>
+
+<p>開発環境を Windows に入れたくなかった (配布先のユーザーの環境に近い環境にしておきたかった) のと、確実に1バイナリで配布がすみそうということで、
+最終的には <a href="http://qiita.com/alucky0707/items/b066ccd2ff8517cf79fb">WindowsでGo言語でGUIするにはWALKがいいかもしれない</a> の記事をみて <a href="https://github.com/lxn/walk">A Windows GUI toolkit for the Go Programming Language (WALK)</a> に決めました。</p>
+
+<h2>go get walk</h2>
+
+<p>現状は <a href="https://github.com/lxn/walk/issues/237">https://github.com/lxn/walk/issues/237</a> に報告されているように</p>
+
+<pre><code>%  GOPATH=/tmp/g GOOS=windows go get github.com/lxn/walk
+# github.com/lxn/walk
+/tmp/g/src/github.com/lxn/walk/splitterlayout.go:314: undefined: sort.SliceStable
+</code></pre>
+
+<p>というエラーになるので、</p>
+
+<pre><code>% cd $GOPATH/src/github.com/lxn/walk
+% git log -p master
+</code></pre>
+
+<p>で <code>sort.SliceStable</code> が入った直前のコミットを探して、</p>
+
+<pre><code>% git checkout 5c627b7fa8fb66c201b0273609c61c8117e45bb0
+% cd -
+%  GOPATH=/tmp/g GOOS=windows go get github.com/lxn/walk
+</code></pre>
+
+<p>のようにちょっと古い WALK を使っています。</p>
+
+<h2>サンプルなどで動作確認</h2>
+
+<p>Qiita の記事の例を動かして見たり、<code>github.com/lxn/walk</code> の <code>examples</code> を参考にしてどんな感じなのか確かめました。</p>
+
+<p>README などに書いてあるように <code>-ldflags="-H windowsgui"</code> をつけて、</p>
+
+<pre><code>GOOS=windows go build -ldflags="-H windowsgui"
+</code></pre>
+
+<p>でコマンドプロンプトの出ない GUI アプリが作成できました。</p>
+
+<h2>manifest 作成</h2>
+
+<p>walk の README には</p>
+
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;
+    &lt;assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0"&gt;
+        &lt;assemblyIdentity version="1.0.0.0" processorArchitecture="*" name="SomeFunkyNameHere" type="win32"/&gt;
+        &lt;dependency&gt;
+            &lt;dependentAssembly&gt;
+                &lt;assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0" processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*"/&gt;
+            &lt;/dependentAssembly&gt;
+        &lt;/dependency&gt;
+    &lt;/assembly&gt;
+</code></pre>
+
+<p>と書いてありますが、</p>
+
+<p><code>examples</code> 以下から dpiAware の設定も入っている manifest をコピーしてくるのが良さそうです。
+コピーしてくると BOM もついているようです。</p>
+
+<p><code>name="SomeFunkyNameHere"</code> は書き換えた方が良いのかと思ったのですが、
+<code>examples</code> 以下では全て同じだったので、別に書き換えなくても良いようです。</p>
+
+<h2>manifest 変更</h2>
+
+<p>これは後でやったことなのですが、
+<code>netsh</code> で IP アドレスなどの設定を変更するには、
+ローカルの Network Configuration Operators のグループの権限が必要なので、
+<a href="http://www.atmarkit.co.jp/fdotnet/dotnettips/958uacmanifest/uacmanifest.html">常に管理者としてアプリケーションを実行させるには？</a>
+を参考にして、
+自動で UAC の要求をするように以下の設定を追加しました。</p>
+
+<pre><code>    &lt;trustInfo xmlns="urn:schemas-microsoft-com:asm.v2"&gt;
+        &lt;security&gt;
+            &lt;requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3"&gt;
+                &lt;requestedExecutionLevel level="highestAvailable" uiAccess="false" /&gt;
+            &lt;/requestedPrivileges&gt;
+        &lt;/security&gt;
+    &lt;/trustInfo&gt;
+</code></pre>
+
+<p>これでドメイン環境で Administrators 権限が得られなくても、
+自分のアカウントがローカルの Network Configuration Operators グループに所属していれば、
+UAC で自分のアカウントのパスワードを入力すれば IP アドレスの変更ができるようになります。
+(変更ができるのはコントロールパネルの方からでも <code>netsh</code> (を使うこのアプリ) でも。)</p>
+
+<h2>manifest のコンパイル</h2>
+
+<p><code>rsrc</code> を実行するのはビルド側なので GOOS の指定は不要です。</p>
+
+<pre><code>% go get github.com/akavel/rsrc
+% $GOPATH/bin/rsrc -manifest test.manifest -o rsrc.syso
+Manifest ID:  1
+</code></pre>
+
+<p><code>rsrc.syso</code> がある状態で</p>
+
+<pre><code>GOOS=windows go build -ldflags="-H windowsgui"
+</code></pre>
+
+<p>すると作成される <code>exe</code> ファイルのサイズがちょっと増えていました。</p>
+
+<p><code>rsrc.syso</code> ファイルを取り込ませる必要があるので、
+<code>go build test.go</code> などのようにファイル指定での <code>go build</code> は避ける必要があるようです。</p>
+
+<p><a href="http://d.hatena.ne.jp/hake/20150816/p1">Go言語でGUIプログラム on Windows - はけの徒然日記</a> によると
+<code>-ldflags="-s -H windowsgui"</code> で strip をかけてサイズを縮小するという方法もあるようです。</p>
+
+<h2>netsh の実行</h2>
+
+<p><a href="http://www.atmarkit.co.jp/ait/articles/1002/05/news097.html">WindowsのnetshコマンドでTCP/IPのパラメータを設定する</a>
+などを参考にすると以下のコマンドを使えば良いことがわかります。</p>
+
+<ul>
+<li><code>netsh interface ip show interfaces</code></li>
+<li><code>netsh interface ip set address "ローカル エリア接続" dhcp</code></li>
+<li><code>netsh interface ip set address "ローカル エリア接続" static 192.168.20.2 255.255.255.0</code></li>
+</ul>
+
+
+<p><code>show interfaces</code> で一覧を取得して、
+<code>dhcp</code> で DHCP に戻す、
+<code>static</code> で固定 IP アドレス設定です。</p>
+
+<p>ルーターやインテリジェントスイッチングハブに直結して設定する用途を想定しているので、
+ネットマスクは <code>255.255.255.0</code> 固定で、ゲートウェイなどは設定しません。</p>
+
+<p>まず、Go 言語から呼び出す前に、管理者権限のコマンドプロンプトで実行して期待する動作をするのを確認しました。</p>
+
+<p>ただし、DHCP に戻すのは、なぜかイーサネットケーブルを接続した状態じゃないとエラーになって戻せませんでした。
+コントロールパネルだと戻せるので謎挙動です。</p>
+
+<h2>ログ表示</h2>
+
+<p><code>examples/logview</code> が便利そうだったので、そのまま使うことにしました。</p>
+
+<p><code>NewLogView</code> に <code>MainWindow</code> のインスタンスを渡すと、
+自動で一番下に追加されたので、これでいいとおもってそのまま使いました。</p>
+
+<p><code>log.Fatal</code> はプログラムが終了してしまって意味がないので、
+<code>log.Println</code> や <code>log.Printf</code> だけ使いました。</p>
+
+<h2>外部コマンド実行</h2>
+
+<p><a href="http://qiita.com/hnakamur/items/9701f40c1fec83b1cd1f">Goで外部コマンドを実行して出力をリアルタイム表示するサンプル</a>などを参考にして、
+<code>StdoutPipe</code> と <code>StderrPipe</code> を使いました。</p>
+
+<p><a href="https://golang.org/pkg/os/exec/#Cmd.StdoutPipe">https://golang.org/pkg/os/exec/#Cmd.StdoutPipe</a> や <a href="https://golang.org/pkg/os/exec/#Cmd.StderrPipe">https://golang.org/pkg/os/exec/#Cmd.StderrPipe</a> には <code>Wait</code> を呼ぶ前に
+全部 <code>read</code> しろと書いてあるように思うのですが、
+この Qiita の記事のやり方でそれが保証されているかどうかわからなかったのと、
+読み込みの goroutine がちゃんと終了するのかどうかがわからなかったのですが、
+間違っていても、多少メッセージが抜けたり、リソースがリークするだけで
+機能自体に大きな問題はないと判断して、この方法で行くことにしました。</p>
+
+<h2>コマンドの出力の文字コード変換</h2>
+
+<p>コマンドラインの方は UTF-8 のままで大丈夫なのに、
+<code>netsh</code> の出力は CP932 のようだったので、
+<a href="http://kazzna.hatenablog.com/entry/2016/02/05/102827">GolangでShift_JIS(Windows31J)のファイルを読み込み - 来世から頑張る！！</a>などを参考にして、
+<code>golang.org/x/text/encoding/japanese</code> を使って</p>
+
+<pre><code>decoder := japanese.ShiftJIS.NewDecoder()
+scanner := bufio.NewScanner(decoder.Reader(r))
+</code></pre>
+
+<p>のように読み込み側だけ変換を挟むことで解決しました。</p>
+
+<p>後で呼び出すコマンドラインに指定するインターフェイス名の方は、この変換後の UTF-8 の文字列のままで良いので、
+非対称なのが気になります。</p>
+
+<h2>行毎の処理</h2>
+
+<p><a href="http://qiita.com/ikawaha/items/28186d965780fab5533d">Go でファイルを1行ずつ読み込む（csv ファイルも）</a>などを参考にして、
+<code>bufio</code> の <code>Scanner</code> というのを使ってみました。</p>
+
+<h2>外部コマンド実行時のコマンドプロンプト非表示</h2>
+
+<p>そのまま実行してしまうと、
+<code>netsh</code> 起動時にコマンドプロンプトが出てしまうので、
+<a href="http://ch.nicovideo.jp/lunaorbit/blomaga/ar1064613">【プログラミング】非表示にして起動する方法を模索:るなおーびっと！ - ブロマガ</a>などを参考にして、</p>
+
+<pre><code>si.dwFlags = STARTF_USESHOWWINDOW;
+si.wShowWindow = SW_HIDE;
+</code></pre>
+
+<p>を指定すれば良いとわかり、
+<a href="https://golang.org/src/syscall/exec_windows.go">https://golang.org/src/syscall/exec_windows.go</a>
+を見ると
+StartProcess の attr の Sys の HideWindow を true にすれば良さそうとわかりました。</p>
+
+<p>最初、<code>cmd.SysProcAttr.HideWindow = true</code> としてみたら落ちてしまってうまくいかなかったので、
+もう少し調べてみたところ、</p>
+
+<pre><code>cmd.SysProcAttr = &amp;syscall.SysProcAttr{HideWindow :true}
+</code></pre>
+
+<p>でうまくいきました。</p>
+
+<h2>1行入力</h2>
+
+<p>WALK は <code>TextEdit</code> が複数行入力だったので、1行入力はどうするのかと思って調べて見たところ、
+<code>git grep '"EDIT"'</code> で探して見ると <code>"EDIT"</code> というウィンドウクラス名を使っているのは
+<code>TextEdit</code> の他に <code>LineEdit</code> があるとわかったので、
+<code>LineEdit</code> を試して見たところ、
+1行入力でした。</p>
+
+<h2>コンボボックス</h2>
+
+<p>IP アドレスの入力は全て入力しないといけない <code>LineEdit</code> よりも、
+ある程度のプリセットが入っているコンボボックスの方が良いと思って
+さらに調べて見ると、
+<code>ComboBox</code> というのがあったので使って見ましたが、
+HTML の <code>select</code> 要素と同じように選択できるだけで
+入力できるコンボボックスになっていませんでした。</p>
+
+<p><code>git grep "COMBOBOX"</code> で探しても他にはなかったので、
+さらに調べて見ると
+<code>declarative/combobox.go</code> で <code>Editable</code> によって <code>NewComboBox</code> と <code>NewDropDownBox</code> を呼び分けていて、
+デフォルトは <code>false</code> で <code>NewDropDownBox</code> になっていました。</p>
+
+<p>そこで、<code>Editable: true</code> を追加すると、
+望み通りの <code>ComboBox</code> になりました。</p>
+
+<h2>出力処理のクロージャ</h2>
+
+<p>ruby などに慣れていると、用途によって違う一番内側の処理はクロージャで渡したくなるので、
+以下のように <code>func</code> を渡すようにしました。</p>
+
+<p>最終的にコマンド実行周りは以下のようになりました。</p>
+
+<p>標準エラー出力も処理していますが、
+使っている範囲の <code>netsh</code> の呼び出しでは標準エラー出力には何も出てこないようです。</p>
+
+<pre><code>func processLinesShiftJIS(lineProcessor func(string), r io.Reader) {
+        decoder := japanese.ShiftJIS.NewDecoder()
+        scanner := bufio.NewScanner(decoder.Reader(r))
+        for scanner.Scan() {
+                line := scanner.Text()
+                lineProcessor(line)
+        }
+}
+
+func outputStdout(line string) {
+        if line != "" {
+                log.Println("o:", line)
+        }
+}
+
+func outputStderr(line string) {
+        if line != "" {
+                log.Println("e:", line)
+        }
+}
+
+func runCommand(stdoutHandler, stderrHandler func(string), name string, arg ...string) (err error) {
+        cmd := exec.Command(name, arg...)
+        cmd.SysProcAttr = &amp;syscall.SysProcAttr{HideWindow: true}
+        stdout, err := cmd.StdoutPipe()
+        if err != nil {
+                log.Println("StdoutPipe:", err)
+                return
+        }
+        stderr, err := cmd.StderrPipe()
+        if err != nil {
+                log.Println("StderrPipe:", err)
+                return
+        }
+
+        err = cmd.Start()
+        if err != nil {
+                log.Println("Start:", err)
+                return
+        }
+
+        go processLinesShiftJIS(stdoutHandler, stdout)
+        go processLinesShiftJIS(stderrHandler, stderr)
+
+        err = cmd.Wait()
+        if err != nil {
+                log.Println("Wait:", err)
+                return
+        }
+        return nil
+}
+</code></pre>
+
+<h2>配布</h2>
+
+<p>実際に配布して見ると 64 ビット環境ではなかったらしく、
+エラーになってしまったので、
+<code>GOOS=windows GOARCH=386 go build -ldflags="-H windowsgui"</code>
+で作り直した実行ファイルを渡し直して解決しました。</p>
+
+<p>念のため、
+<code>go get</code> も <code>GOARCH=386</code> ありでやり直してからビルドした実行ファイルを渡したのですが、
+<code>go get</code> をし直さなくても
+<code>GOOS=windows GOARCH=386 go build -ldflags="-H windowsgui" -o winipset32.exe</code>
+だけでもエラーなくビルドできるようでした。</p>
+
+<h2>github へのリリース</h2>
+
+<p><code>git tag v0.1.0</code> して <code>git push --tags</code> した後、
+ブラウザーで github の Releases にもあげようとしたところ、
+エラーになったので何度かやり直したのですが、
+Firefox だとうまくアップロードできなくて
+Chrome だとうまくアップロードできました。</p>
+
+<p>Referer などのチェックが入っていて制限しているとダメなのかもしれませんが、
+未調査です。</p>
+
+<p>Chrome に切り替える時に <code>*.exe</code> はダメそうだったので、
+<code>*.zip</code> に切り替えたのですが、その辺りも関係しているのかもしれません。</p>
+
+<p>zip ファイルの作成は 7z コマンドの方が圧縮率が良いので、</p>
+
+<pre><code>7z a winipset_windows_amd64.zip winipset.exe
+7z a winipset_windows_386.zip winipset32.exe
+</code></pre>
+
+<p>で作成しました。</p>
+
+<h2>感想</h2>
+
+<p>Go 言語で Windows の GUI アプリを作って見た感想としては、
+クロスコンパイルや配布がしやすかったのは予想通りで、
+非常によかったです。</p>
+
+<p>WALK という GUI ツールキットも部品のサイズをいちいち指定しなくても、
+良い感じにしてくれるので楽でよかったです。</p>
+
+<p>部品探しやコマンド実行周りはどうしても Windows 固有の知識がないと厳しそうだと思いましたが、
+ツールキット固有の知識が必要になるか、
+OS の薄いラッパーなので OS の知識が必要になるかの差なので、
+まあ仕方がないかなと思いました。</p>
+
+<p><code>log.Fatal</code> を使ってしまった場合など、エラーの時に黙って終了してしまうので、
+用途によっては使いにくいかもしれないと思いました。</p>
+]]></content>
+  </entry>
+  
+</feed>

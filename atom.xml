@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-01-29T19:06:44+09:00</updated>
+  <updated>2017-02-19T19:01:19+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,435 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Go言語でWindowsのnetshラッパーのGUIアプリを作った]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-02-19-golang-windows-gui.html"/>
+    <updated>2017-02-19T19:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/golang-windows-gui</id>
+    <content type="html"><![CDATA[<p>インテリジェントスイッチングハブなどのネットワーク機器の設定をする時に、
+Windows だといちいちコントロールパネルを辿ってアダプター一覧を表示して、
+そこから UAC の権限昇格 (環境によってはパスワード入力が必要) を挟んでプロパティを開いて、
+IPv4 の設定を開いて変更して閉じて行って反映、という作業が大変だったので、
+<code>netsh</code> を呼び出して<a href="https://github.com/znz/winipset">省力化する GUI アプリ</a>を作りました。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>開発環境: go version go1.7.5 darwin/amd64 (Homebrew で入れた go)</li>
+<li>動作対象環境: Windows 7 などの Windows 環境</li>
+</ul>
+
+
+<h2>GUI ツールキットの選定</h2>
+
+<p>開発環境を Windows に入れたくなかった (配布先のユーザーの環境に近い環境にしておきたかった) のと、確実に1バイナリで配布がすみそうということで、
+最終的には <a href="http://qiita.com/alucky0707/items/b066ccd2ff8517cf79fb">WindowsでGo言語でGUIするにはWALKがいいかもしれない</a> の記事をみて <a href="https://github.com/lxn/walk">A Windows GUI toolkit for the Go Programming Language (WALK)</a> に決めました。</p>
+
+<h2>go get walk</h2>
+
+<p>現状は <a href="https://github.com/lxn/walk/issues/237">https://github.com/lxn/walk/issues/237</a> に報告されているように</p>
+
+<pre><code>%  GOPATH=/tmp/g GOOS=windows go get github.com/lxn/walk
+# github.com/lxn/walk
+/tmp/g/src/github.com/lxn/walk/splitterlayout.go:314: undefined: sort.SliceStable
+</code></pre>
+
+<p>というエラーになるので、</p>
+
+<pre><code>% cd $GOPATH/src/github.com/lxn/walk
+% git log -p master
+</code></pre>
+
+<p>で <code>sort.SliceStable</code> が入った直前のコミットを探して、</p>
+
+<pre><code>% git checkout 5c627b7fa8fb66c201b0273609c61c8117e45bb0
+% cd -
+%  GOPATH=/tmp/g GOOS=windows go get github.com/lxn/walk
+</code></pre>
+
+<p>のようにちょっと古い WALK を使っています。</p>
+
+<h2>サンプルなどで動作確認</h2>
+
+<p>Qiita の記事の例を動かして見たり、<code>github.com/lxn/walk</code> の <code>examples</code> を参考にしてどんな感じなのか確かめました。</p>
+
+<p>README などに書いてあるように <code>-ldflags="-H windowsgui"</code> をつけて、</p>
+
+<pre><code>GOOS=windows go build -ldflags="-H windowsgui"
+</code></pre>
+
+<p>でコマンドプロンプトの出ない GUI アプリが作成できました。</p>
+
+<h2>manifest 作成</h2>
+
+<p>walk の README には</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>&lt;?xml version="1.0" encoding="UTF-8" standalone="yes"?&gt;
+</span><span class='line'>    &lt;assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0"&gt;
+</span><span class='line'>        &lt;assemblyIdentity version="1.0.0.0" processorArchitecture="*" name="SomeFunkyNameHere" type="win32"/&gt;
+</span><span class='line'>        &lt;dependency&gt;
+</span><span class='line'>            &lt;dependentAssembly&gt;
+</span><span class='line'>                &lt;assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0" processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*"/&gt;
+</span><span class='line'>            &lt;/dependentAssembly&gt;
+</span><span class='line'>        &lt;/dependency&gt;
+</span><span class='line'>    &lt;/assembly&gt;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>と書いてありますが、</p>
+
+<p><code>examples</code> 以下から dpiAware の設定も入っている manifest をコピーしてくるのが良さそうです。
+コピーしてくると BOM もついているようです。</p>
+
+<p><code>name="SomeFunkyNameHere"</code> は書き換えた方が良いのかと思ったのですが、
+<code>examples</code> 以下では全て同じだったので、別に書き換えなくても良いようです。</p>
+
+<h2>manifest 変更</h2>
+
+<p>これは後でやったことなのですが、
+<code>netsh</code> で IP アドレスなどの設定を変更するには、
+ローカルの Network Configuration Operators のグループの権限が必要なので、
+<a href="http://www.atmarkit.co.jp/fdotnet/dotnettips/958uacmanifest/uacmanifest.html">常に管理者としてアプリケーションを実行させるには？</a>
+を参考にして、
+自動で UAC の要求をするように以下の設定を追加しました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>&lt;trustInfo xmlns="urn:schemas-microsoft-com:asm.v2"&gt;
+</span><span class='line'>  &lt;security&gt;
+</span><span class='line'>      &lt;requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3"&gt;
+</span><span class='line'>          &lt;requestedExecutionLevel level="highestAvailable" uiAccess="false" /&gt;
+</span><span class='line'>      &lt;/requestedPrivileges&gt;
+</span><span class='line'>  &lt;/security&gt;
+</span><span class='line'>&lt;/trustInfo&gt;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>これでドメイン環境で Administrators 権限が得られなくても、
+自分のアカウントがローカルの Network Configuration Operators グループに所属していれば、
+UAC で自分のアカウントのパスワードを入力すれば IP アドレスの変更ができるようになります。
+(変更ができるのはコントロールパネルの方からでも <code>netsh</code> (を使うこのアプリ) でも。)</p>
+
+<h2>manifest のコンパイル</h2>
+
+<p><code>rsrc</code> を実行するのはビルド側なので GOOS の指定は不要です。</p>
+
+<pre><code>% go get github.com/akavel/rsrc
+% $GOPATH/bin/rsrc -manifest test.manifest -o rsrc.syso
+Manifest ID:  1
+</code></pre>
+
+<p><code>rsrc.syso</code> がある状態で</p>
+
+<pre><code>GOOS=windows go build -ldflags="-H windowsgui"
+</code></pre>
+
+<p>すると作成される <code>exe</code> ファイルのサイズがちょっと増えていました。</p>
+
+<p><code>rsrc.syso</code> ファイルを取り込ませる必要があるので、
+<code>go build test.go</code> などのようにファイル指定での <code>go build</code> は避ける必要があるようです。</p>
+
+<p><a href="http://d.hatena.ne.jp/hake/20150816/p1">Go言語でGUIプログラム on Windows - はけの徒然日記</a> によると
+<code>-ldflags="-s -H windowsgui"</code> で strip をかけてサイズを縮小するという方法もあるようです。</p>
+
+<h2>netsh の実行</h2>
+
+<p><a href="http://www.atmarkit.co.jp/ait/articles/1002/05/news097.html">WindowsのnetshコマンドでTCP/IPのパラメータを設定する</a>
+などを参考にすると以下のコマンドを使えば良いことがわかります。</p>
+
+<ul>
+<li><code>netsh interface ip show interfaces</code></li>
+<li><code>netsh interface ip set address "ローカル エリア接続" dhcp</code></li>
+<li><code>netsh interface ip set address "ローカル エリア接続" static 192.168.20.2 255.255.255.0</code></li>
+</ul>
+
+
+<p><code>show interfaces</code> で一覧を取得して、
+<code>dhcp</code> で DHCP に戻す、
+<code>static</code> で固定 IP アドレス設定です。</p>
+
+<p>ルーターやインテリジェントスイッチングハブに直結して設定する用途を想定しているので、
+ネットマスクは <code>255.255.255.0</code> 固定で、ゲートウェイなどは設定しません。</p>
+
+<p>まず、Go 言語から呼び出す前に、管理者権限のコマンドプロンプトで実行して期待する動作をするのを確認しました。</p>
+
+<p>ただし、DHCP に戻すのは、なぜかイーサネットケーブルを接続した状態じゃないとエラーになって戻せませんでした。
+コントロールパネルだと戻せるので謎挙動です。</p>
+
+<h2>ログ表示</h2>
+
+<p><code>examples/logview</code> が便利そうだったので、そのまま使うことにしました。</p>
+
+<p><code>NewLogView</code> に <code>MainWindow</code> のインスタンスを渡すと、
+自動で一番下に追加されたので、これでいいとおもってそのまま使いました。</p>
+
+<p><code>log.Fatal</code> はプログラムが終了してしまって意味がないので、
+<code>log.Println</code> や <code>log.Printf</code> だけ使いました。</p>
+
+<h2>外部コマンド実行</h2>
+
+<p><a href="http://qiita.com/hnakamur/items/9701f40c1fec83b1cd1f">Goで外部コマンドを実行して出力をリアルタイム表示するサンプル</a>などを参考にして、
+<code>StdoutPipe</code> と <code>StderrPipe</code> を使いました。</p>
+
+<p><a href="https://golang.org/pkg/os/exec/#Cmd.StdoutPipe">https://golang.org/pkg/os/exec/#Cmd.StdoutPipe</a> や <a href="https://golang.org/pkg/os/exec/#Cmd.StderrPipe">https://golang.org/pkg/os/exec/#Cmd.StderrPipe</a> には <code>Wait</code> を呼ぶ前に
+全部 <code>read</code> しろと書いてあるように思うのですが、
+この Qiita の記事のやり方でそれが保証されているかどうかわからなかったのと、
+読み込みの goroutine がちゃんと終了するのかどうかがわからなかったのですが、
+間違っていても、多少メッセージが抜けたり、リソースがリークするだけで
+機能自体に大きな問題はないと判断して、この方法で行くことにしました。</p>
+
+<h2>コマンドの出力の文字コード変換</h2>
+
+<p>コマンドラインの方は UTF-8 のままで大丈夫なのに、
+<code>netsh</code> の出力は CP932 のようだったので、
+<a href="http://kazzna.hatenablog.com/entry/2016/02/05/102827">GolangでShift_JIS(Windows31J)のファイルを読み込み - 来世から頑張る！！</a>などを参考にして、
+<code>golang.org/x/text/encoding/japanese</code> を使って</p>
+
+<pre><code>decoder := japanese.ShiftJIS.NewDecoder()
+scanner := bufio.NewScanner(decoder.Reader(r))
+</code></pre>
+
+<p>のように読み込み側だけ変換を挟むことで解決しました。</p>
+
+<p>後で呼び出すコマンドラインに指定するインターフェイス名の方は、この変換後の UTF-8 の文字列のままで良いので、
+非対称なのが気になります。</p>
+
+<h2>行毎の処理</h2>
+
+<p><a href="http://qiita.com/ikawaha/items/28186d965780fab5533d">Go でファイルを1行ずつ読み込む（csv ファイルも）</a>などを参考にして、
+<code>bufio</code> の <code>Scanner</code> というのを使ってみました。</p>
+
+<h2>外部コマンド実行時のコマンドプロンプト非表示</h2>
+
+<p>そのまま実行してしまうと、
+<code>netsh</code> 起動時にコマンドプロンプトが出てしまうので、
+<a href="http://ch.nicovideo.jp/lunaorbit/blomaga/ar1064613">【プログラミング】非表示にして起動する方法を模索:るなおーびっと！ - ブロマガ</a>などを参考にして、</p>
+
+<pre><code>si.dwFlags = STARTF_USESHOWWINDOW;
+si.wShowWindow = SW_HIDE;
+</code></pre>
+
+<p>を指定すれば良いとわかり、
+<a href="https://golang.org/src/syscall/exec_windows.go">https://golang.org/src/syscall/exec_windows.go</a>
+を見ると
+StartProcess の attr の Sys の HideWindow を true にすれば良さそうとわかりました。</p>
+
+<p>最初、<code>cmd.SysProcAttr.HideWindow = true</code> としてみたら落ちてしまってうまくいかなかったので、
+もう少し調べてみたところ、</p>
+
+<pre><code>cmd.SysProcAttr = &amp;syscall.SysProcAttr{HideWindow :true}
+</code></pre>
+
+<p>でうまくいきました。</p>
+
+<h2>1行入力</h2>
+
+<p>WALK は <code>TextEdit</code> が複数行入力だったので、1行入力はどうするのかと思って調べて見たところ、
+<code>git grep '"EDIT"'</code> で探して見ると <code>"EDIT"</code> というウィンドウクラス名を使っているのは
+<code>TextEdit</code> の他に <code>LineEdit</code> があるとわかったので、
+<code>LineEdit</code> を試して見たところ、
+1行入力でした。</p>
+
+<h2>コンボボックス</h2>
+
+<p>IP アドレスの入力は全て入力しないといけない <code>LineEdit</code> よりも、
+ある程度のプリセットが入っているコンボボックスの方が良いと思って
+さらに調べて見ると、
+<code>ComboBox</code> というのがあったので使って見ましたが、
+HTML の <code>select</code> 要素と同じように選択できるだけで
+入力できるコンボボックスになっていませんでした。</p>
+
+<p><code>git grep "COMBOBOX"</code> で探しても他にはなかったので、
+さらに調べて見ると
+<code>declarative/combobox.go</code> で <code>Editable</code> によって <code>NewComboBox</code> と <code>NewDropDownBox</code> を呼び分けていて、
+デフォルトは <code>false</code> で <code>NewDropDownBox</code> になっていました。</p>
+
+<p>そこで、<code>Editable: true</code> を追加すると、
+望み通りの <code>ComboBox</code> になりました。</p>
+
+<h2>出力処理のクロージャ</h2>
+
+<p>ruby などに慣れていると、用途によって違う一番内側の処理はクロージャで渡したくなるので、
+以下のように <code>func</code> を渡すようにしました。</p>
+
+<p>最終的にコマンド実行周りは以下のようになりました。</p>
+
+<p>標準エラー出力も処理していますが、
+使っている範囲の <code>netsh</code> の呼び出しでは標準エラー出力には何も出てこないようです。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>func processLinesShiftJIS(lineProcessor func(string), r io.Reader) {
+</span><span class='line'>        decoder := japanese.ShiftJIS.NewDecoder()
+</span><span class='line'>        scanner := bufio.NewScanner(decoder.Reader(r))
+</span><span class='line'>        for scanner.Scan() {
+</span><span class='line'>                line := scanner.Text()
+</span><span class='line'>                lineProcessor(line)
+</span><span class='line'>        }
+</span><span class='line'>}
+</span><span class='line'>
+</span><span class='line'>func outputStdout(line string) {
+</span><span class='line'>        if line != "" {
+</span><span class='line'>                log.Println("o:", line)
+</span><span class='line'>        }
+</span><span class='line'>}
+</span><span class='line'>
+</span><span class='line'>func outputStderr(line string) {
+</span><span class='line'>        if line != "" {
+</span><span class='line'>                log.Println("e:", line)
+</span><span class='line'>        }
+</span><span class='line'>}
+</span><span class='line'>
+</span><span class='line'>func runCommand(stdoutHandler, stderrHandler func(string), name string, arg ...string) (err error) {
+</span><span class='line'>        cmd := exec.Command(name, arg...)
+</span><span class='line'>        cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+</span><span class='line'>        stdout, err := cmd.StdoutPipe()
+</span><span class='line'>        if err != nil {
+</span><span class='line'>                log.Println("StdoutPipe:", err)
+</span><span class='line'>                return
+</span><span class='line'>        }
+</span><span class='line'>        stderr, err := cmd.StderrPipe()
+</span><span class='line'>        if err != nil {
+</span><span class='line'>                log.Println("StderrPipe:", err)
+</span><span class='line'>                return
+</span><span class='line'>        }
+</span><span class='line'>
+</span><span class='line'>        err = cmd.Start()
+</span><span class='line'>        if err != nil {
+</span><span class='line'>                log.Println("Start:", err)
+</span><span class='line'>                return
+</span><span class='line'>        }
+</span><span class='line'>
+</span><span class='line'>        go processLinesShiftJIS(stdoutHandler, stdout)
+</span><span class='line'>        go processLinesShiftJIS(stderrHandler, stderr)
+</span><span class='line'>
+</span><span class='line'>        err = cmd.Wait()
+</span><span class='line'>        if err != nil {
+</span><span class='line'>                log.Println("Wait:", err)
+</span><span class='line'>                return
+</span><span class='line'>        }
+</span><span class='line'>        return nil
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>配布</h2>
+
+<p>実際に配布して見ると 64 ビット環境ではなかったらしく、
+エラーになってしまったので、
+<code>GOOS=windows GOARCH=386 go build -ldflags="-H windowsgui"</code>
+で作り直した実行ファイルを渡し直して解決しました。</p>
+
+<p>念のため、
+<code>go get</code> も <code>GOARCH=386</code> ありでやり直してからビルドした実行ファイルを渡したのですが、
+<code>go get</code> をし直さなくても
+<code>GOOS=windows GOARCH=386 go build -ldflags="-H windowsgui" -o winipset32.exe</code>
+だけでもエラーなくビルドできるようでした。</p>
+
+<h2>github へのリリース</h2>
+
+<p><code>git tag v0.1.0</code> して <code>git push --tags</code> した後、
+ブラウザーで github の Releases にもあげようとしたところ、
+エラーになったので何度かやり直したのですが、
+Firefox だとうまくアップロードできなくて
+Chrome だとうまくアップロードできました。</p>
+
+<p>Referer などのチェックが入っていて制限しているとダメなのかもしれませんが、
+未調査です。</p>
+
+<p>Chrome に切り替える時に <code>*.exe</code> はダメそうだったので、
+<code>*.zip</code> に切り替えたのですが、その辺りも関係しているのかもしれません。</p>
+
+<p>zip ファイルの作成は 7z コマンドの方が圧縮率が良いので、</p>
+
+<pre><code>7z a winipset_windows_amd64.zip winipset.exe
+7z a winipset_windows_386.zip winipset32.exe
+</code></pre>
+
+<p>で作成しました。</p>
+
+<h2>感想</h2>
+
+<p>Go 言語で Windows の GUI アプリを作って見た感想としては、
+クロスコンパイルや配布がしやすかったのは予想通りで、
+非常によかったです。</p>
+
+<p>WALK という GUI ツールキットも部品のサイズをいちいち指定しなくても、
+良い感じにしてくれるので楽でよかったです。</p>
+
+<p>部品探しやコマンド実行周りはどうしても Windows 固有の知識がないと厳しそうだと思いましたが、
+ツールキット固有の知識が必要になるか、
+OS の薄いラッパーなので OS の知識が必要になるかの差なので、
+まあ仕方がないかなと思いました。</p>
+
+<p><code>log.Fatal</code> を使ってしまった場合など、エラーの時に黙って終了してしまうので、
+用途によっては使いにくいかもしれないと思いました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[関西 Debian 勉強会 + openSUSE Meetup + LILO & 東海道らぐLT大会に参加しました]]></title>
@@ -4290,624 +4719,6 @@ bindings や黒魔術の話のようにある程度は知っているけど実�
 ある程度関わっている るりま (Ruby Reference Manual) の話がしっかり聞けたのが良かったです。</p>
 
 <p>また、作業中は話をちゃんと聞けなかったという問題はあったものの、いくつか pull request を出したり issue を書いたりできたのも良かったです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[RubyKaigi 2016 の 1 日目に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-09-08-rubykaigi-2016.html"/>
-    <updated>2016-09-08T09:49:29+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubykaigi-2016</id>
-    <content type="html"><![CDATA[<p><a href="http://rubykaigi.org/2016" title="RubyKaigi 2016">RubyKaigi 2016</a> の 1 日目に参加したので、そのメモです。</p>
-
-<!--more-->
-
-
-<h2>会場</h2>
-
-<p>「<a href="https://twitter.com/a_matsuda/status/772749215000764417">スピーカーのキャンセルが出たため、初日の朝のキーノートの開始時間が50分遅くなります。</a>」という話があったため、時間に余裕を持って到着できました。</p>
-
-<p>家を出た時は雨は降っていなかったのですが、京都では大雨でした。
-(参考: <a href="https://twitter.com/kakutani/status/773680281689530368">https://twitter.com/kakutani/status/773680281689530368</a> )
-駅から会場までは天井のある通路で繋がっているので、傘なしでも濡れずにたどり着けました。</p>
-
-<p>会場は広くて、メインホールのテーブル席は全席電源つきという非常に便利な感じでした。
-メインホールの座席は座ると前にずれて、立ち上がると後ろに下がる椅子でした。</p>
-
-<h2>Opening</h2>
-
-<ul>
-<li>スタッフのうち、つじたさん、 aaron さん、デカ外人さんの紹介</li>
-<li>電源が各席にある</li>
-<li>メインホールはテーブル席の後ろに椅子だけの席もあるけど、そこも後ろに電源があるらしい</li>
-<li>スポンサーブースにコーヒーとお菓子</li>
-<li>懇親会のチケットが残り数十枚でラストチャンス</li>
-</ul>
-
-
-<h2>Ruby3 Typing</h2>
-
-<ul>
-<li><a href="http://rubykaigi.org/2016/presentations/yukihiro_matz.html" title="Ruby3 Typing - RubyKaigi 2016">Ruby3 Typing - RubyKaigi 2016</a></li>
-<li>日本語のキーノート</li>
-<li>Ruby3</li>
-<li>Performance, Concurrency, Typing</li>
-<li>それぞれ Shyouhei, Ko1, Matz が話をする</li>
-<li>2010s に出てきた言語は静的型言語が多い</li>
-<li>静的型がないので Ruby は死んだなどと言われてしまうこともある</li>
-<li>TypeScript, Flow, Go, Swift</li>
-<li>Microsoft, Facebook, Google, Apple など大企業の言語</li>
-<li>テクノロジー (動的型と静的型のような) は振り子のように行ったり来たりしている</li>
-<li>Smalltalk → Java → Ruby・JavaScript → Swift・Go → ?</li>
-<li>揺り戻しが起きた時に置いて行かれないように (静的型を目指すのではなく) 未来の動的型言語について考える</li>
-<li>型とは何か?</li>
-<li>学術的には型システム入門 (TAPL) とかあるけど</li>
-<li>Duck typing</li>
-<li>動けばいい</li>
-<li><code>log(dst IO, mesg String)</code> のように静的型指定してしまうと例えば <code>StringIO</code> を渡せない</li>
-<li>(スライドのトラブルが発生して、 rabbit 作者によるサポートを受けつつ rabbit を再起動してしまったので、亀がリセットされてしまった。)</li>
-<li>Duck typing は内部構造を気にしなくて良い</li>
-<li>Lower mental cost in development</li>
-<li>Duck typing は未来に対して開かれている</li>
-<li>Duck typing は柔軟性が高い</li>
-<li>&ldquo;Duck&rdquo; (Ruby の型) は nominal type ではない</li>
-<li>&ldquo;Duck&rdquo; は class ではない</li>
-<li>&ldquo;Duck&rdquo; は何か</li>
-<li>&ldquo;Duck&rdquo; は <em>expected</em> behavior (期待される振る舞い)</li>
-<li>期待は私たちの頭の中にある</li>
-<li>class による型はあくまでも近似 (approximation) であり足かせになる</li>
-<li>Go の interface はかなり良い</li>
-<li>Structual Subtyping vs Nominal Subtyping</li>
-<li>Duck typing is awesome!</li>
-<li>DRY (Don&rsquo;t Repeat Yourself) 原則</li>
-<li>冗長性を削ろう</li>
-<li>プログラムを書く時にかかなくていいものは削りたい</li>
-<li>型指定がなくても ruby のプログラムは動いているので必要ない</li>
-<li>むしろ積極的に外すべき</li>
-<li>しかし、動的型言語には欠点 (drawback) がある</li>
-<li>実行してみないとエラーがわからない</li>
-<li>エラーメッセージが親切ではない</li>
-<li>Coverage</li>
-<li>テストし忘れた部分はいつまでも気づかれない</li>
-<li>Less Documentation</li>
-<li>書く人は嬉しいが、読む人は困る</li>
-<li>コメント (rdoc とか) に結局 (型を) かいている</li>
-<li>型は絶対に書きたくない</li>
-<li>柔軟性が減るから</li>
-<li>ユーザーのためにドキュメントは欲しい</li>
-<li>コメントに書く</li>
-<li>型アノテーションを書ける言語もある</li>
-<li>型チェックを含まない型アノテーションはダメなアイデアだと思う</li>
-<li>Mixed/Gradual Typing (一部だけ型指定ができる) is a bad idea</li>
-<li>少なくとも Ruby にとっては。</li>
-<li>ドキュメントは欲しい</li>
-<li>型のある部分とない部分を混ぜたくない</li>
-<li>課題があるということは改善の余地がある</li>
-<li>未来の Ruby はこれをなんとかしたい</li>
-<li>我々はエンジニアなので技術でなんとかしたい</li>
-<li>静的型に型推論を足す</li>
-<li>型推論は素晴らしい</li>
-<li>静的型の柔軟性のなさは型推論とは無関係</li>
-<li>静的型の柔軟性がないという問題が解決しないので別のものが必要</li>
-<li>Static Typing with Duck-Typing として Go の Structual Subtyping は良い線をいっているが、 interface を書きたくない</li>
-<li>そこで型推論をさせてみよう</li>
-<li><code>dst should have rite()</code> を <code>dst should have write()</code> に修正 (また亀が戻った)</li>
-<li>interface を振る舞いから自動生成 : Soft Typing</li>
-<li>型推論された型には名前が付いていない</li>
-<li>名前をつけるのは結構なコスト</li>
-<li>ぼんやりとしたアイデアがぼんやりとしたアイデアのまま実現できるので、具体化する脳の労力が減る</li>
-<li>100% のチェックはできないかもしれない</li>
-<li>80% 程度のコンパイル時チェックでも 0% よりは良い</li>
-<li>dynamic typing に fallback できる</li>
-<li>ad-hoc な型情報も使えるのではないか</li>
-<li>gsub, slice, map を期待した a があったとき、そんなクラスはないのでエラーにできる</li>
-<li>実行時の情報も使えるのではないか</li>
-<li>タイプエラーが起きるようなテストは書かないと思うので、テスト実行時の型情報をとっておいて Type Database としてとっておいて gem として一緒に配布して実行時に使えるのではないか</li>
-<li>Type Database がコード補完などにも使えるのではないか</li>
-<li>まだ構想段階で動いていない</li>
-<li>コンセプト段階</li>
-<li>Ruby3 プロジェクトの一部</li>
-<li>重要なメッセージ : We Care about YOU</li>
-<li>テストがあれば大丈夫という話もあるが</li>
-<li>言語の方でもプログラミング体験を改善したい</li>
-<li>Ruby3 はいつか? わからない</li>
-<li>オープンソースソフトウェア (少なくとも Ruby) にはロードマップや締め切りはない</li>
-<li>目標を作る必要が有る</li>
-<li>ケネディ大統領が月に行くという少し難しい未来を宣言して、のちに実現された</li>
-<li>Soft typing, Ruby3x3, Concurrency</li>
-<li>心の中の目標としては次の東京オリンピックの頃には Ruby3 が出てると良いな</li>
-<li>みなさんからのアイデアや貢献は大歓迎</li>
-<li>前に進み続けたいから (To Keep Moving Forward)</li>
-<li>前に進み続けるためにできることはなんでもしたい</li>
-<li>Happy Hacking!</li>
-<li>質疑応答前に 3 分ほど CM (スポンサーセッション)</li>
-</ul>
-
-
-<h2>Speee さん</h2>
-
-<ul>
-<li>会場アンケート 知っている人 : 6割ぐらい</li>
-<li><a href="http://speee.jp/">http://speee.jp/</a></li>
-<li>現在はほぼ Ruby になった</li>
-<li>OSS への貢献へも増えた</li>
-<li>OSS Gate workshop がよかった</li>
-<li>いろいろなイベントもやっているので興味がある方は <a href="http://speee.connpass.com/">http://speee.connpass.com/</a> の「めんばーになる」</li>
-</ul>
-
-
-<h2>Ruby3 Typing (質疑応答)</h2>
-
-<ul>
-<li>まさかの質問なし?</li>
-<li>joker1007 さん?: 型情報を全く書かずに型推論だけでできる見込みはあるのか?</li>
-<li>伝統的な方法では無理</li>
-<li>ad-hoc なものや実行時の型情報でそこそこ実用的なものになる可能性はある</li>
-<li>まだ実際に動いているコードはないので、実際には無理でしたということで Ruby3 に入らない可能性はある</li>
-<li>誰?: IDE の仕様を参考にできるか?とかいう感じの質問</li>
-<li>現在は完全なものはないので参考にしづらい</li>
-<li>IDE があるので言語仕様はどうでもいいんだということはしたくない</li>
-<li>IDE ありきの言語に Ruby がなることはない</li>
-<li>誰?: (質問はよく聞き取れず)</li>
-<li>リリースマネージャーもしていない</li>
-<li>言語デザイナーをしている</li>
-<li>田中哲さん: 今回の話での Soft Typing という言葉の使い方は既存のアカデミックでの用語とは違うので、新しい言葉を考える必要が有るのではないか</li>
-<li>Diamondback Ruby というものが昔あった (後で聞いた話によると Diamondback Ruby は速度を目的としたもので、OCaml で実装されたものだったらしい)</li>
-<li>Soft Typing という用語はふさわしくないかも</li>
-<li>新しい言葉を考えておきます</li>
-<li><a href="http://togetter.com/li/1021897" title="&quot;型は絶対書きたくない&quot; &quot;Ruby3は東京オリンピックまでに&quot; Rubyの父Matzによる、「楽しいプログラミング体験を届けるために」 #rubykaigi 2016 Keynote - Togetterまとめ">&quot;型は絶対書きたくない&quot; &quot;Ruby3は東京オリンピックまでに&quot; Rubyの父Matzによる、「楽しいプログラミング体験を届けるために」 #rubykaigi 2016 Keynote - Togetterまとめ</a></li>
-</ul>
-
-
-<h2>アナウンスと Intermission</h2>
-
-<ul>
-<li>昼は弁当があるという話</li>
-<li>ベジタリアン用の弁当もあるという話</li>
-<li>英語で翻訳レシーバーの返却についてアナウンス?</li>
-<li>dRuby の slide sponsors が流れていた</li>
-</ul>
-
-
-<h2>dRuby in the last century.</h2>
-
-<ul>
-<li><a href="http://rubykaigi.org/2016/presentations/m_seki.html" title="dRuby in the last century. - RubyKaigi 2016">dRuby in the last century. - RubyKaigi 2016</a></li>
-<li>自己紹介</li>
-<li>前座が Matz</li>
-<li>dRuby の生い立ち, dRuby の紹介, これから</li>
-<li>1999 [ruby-list:15406] 1st dRuby <a href="http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-list/15406">http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-list/15406</a></li>
-<li>2005 最初の本</li>
-<li>2012 (-2014 絶版) 英語の本</li>
-<li>2000 Perl/Ruby Conference (Kyoto) この会場</li>
-<li>同じ会場で同じ話を</li>
-<li>dRuby はオーパーツ (OOPARTS) <a href="https://twitter.com/yugui/status/439412852013551616">https://twitter.com/yugui/status/439412852013551616</a></li>
-<li>Before dRuby (BD)</li>
-<li>BD8: プロセスをわける必然性のある組み込みシステムからの情報を集めるデーモンと情報を可視化するアプリケーション</li>
-<li>BD5: CGI (マイクロサービス的) 時代</li>
-<li>BD1: Ruby &amp; shttpsrv に出会う</li>
-<li>HTTP を小さなアプリに埋め込んでつないで楽しんでいた</li>
-<li>Ruby と Web の世界の翻訳作業が必要な点などが、なんか気に入らない</li>
-<li>Ruby ぽく話したい</li>
-<li>Ruby のように振舞う分散オブジェクト</li>
-<li>RPC ではなく RMI</li>
-<li>Ruby のメソッド呼び出しを socket で拡張</li>
-<li>簡単通信ライブラリではなく、もっと情緒的な (Ruby 的な) ものをめざした</li>
-<li>dRuby ってなに?</li>
-<li>分散オブジェクトシステム, プロセス腰にメソッドが呼べる, プロセス間でオブジェクトが送れる</li>
-<li>デモ</li>
-</ul>
-
-
-<p>端末1 (oso-matz) で irb を起動:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>require 'drb'
-</span><span class='line'>DRb.start_service('druby://localhost:54321', {})
-</span><span class='line'>DRb.uri
-</span><span class='line'>DRb.front</span></code></pre></td></tr></table></div></figure>
-
-
-<p>端末2 (jushi-matz) で irb を起動:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>require 'drb'
-</span><span class='line'>kvs = DRbObject.new_with_uri('druby://localhost:54321')
-</span><span class='line'>kvs['greeting'] = 'Hellow, World.'</span></code></pre></td></tr></table></div></figure>
-
-
-<p>端末1に戻って <code>DRb.front</code> を確認すると <code>{"greeting"=&gt;"Hellow, World."}</code> になっている。</p>
-
-<p>Demo2: 端末2で:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>kvs['outlet'] = $stdout</span></code></pre></td></tr></table></div></figure>
-
-
-<p>(<code>DRb.start_service('druby://localhost:54322')</code> のようにこちら側でも <code>DRb.start_service</code> しておかないと <code>DRb::DRbConnError: DRb::DRbServerNotFound</code> になってうまくいかなかった)</p>
-
-<p>端末1で:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>DRb.front['outlet'].class
-</span><span class='line'>DRb.front['outlet'].puts('Hello, Again.')</span></code></pre></td></tr></table></div></figure>
-
-
-<ul>
-<li>なにがおきた?</li>
-<li><code>$stdout</code> は <code>Marshal.dump</code> 不可能なので自動的に proxy に取り替えた</li>
-<li>永遠に proxy だと値が手に入らないので境界として <code>Marshal.dump</code> を使った</li>
-<li>OOP っぽさ</li>
-<li>オブジェクトが相互に呼びあえること</li>
-<li>block (イテレータ) も同じ仕組みで動く</li>
-</ul>
-
-
-<p>Demo3: Queue:</p>
-
-<p>端末1で:
-(<code>Queue</code> は最近の Ruby では本名は <code>Thread::Queue</code> に変わっていた)</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>queue = Queue.new
-</span><span class='line'>DRb.front['queue'] = queue
-</span><span class='line'>queue.pop
-</span><span class='line'>queue.pop</span></code></pre></td></tr></table></div></figure>
-
-
-<p>端末2で:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>queue = kvs['queue']
-</span><span class='line'>queue.push(1.0)
-</span><span class='line'>queue.push(2.0)</span></code></pre></td></tr></table></div></figure>
-
-
-<ul>
-<li>意図したわけではないが Thread 同期メカニズムがそのまま使えた</li>
-<li>dRuby が向いている用途がある</li>
-<li>Prototyping Twitter</li>
-<li>初期は dRuby/Rinda だったらしい : いまは使っていない</li>
-<li>自分のサービスも dRuby ではじめて最後には使わなくなることがある : 利用されて効率あげる必要がでてくるから</li>
-<li>紹介のまとめ</li>
-<li>これから</li>
-<li>初期の実装に戻したいところがいくつか</li>
-<li>セキュリティっぽいの消したい</li>
-<li>ACL, insecure_method &hellip;</li>
-<li>dRuby は RMI でメソッド呼び出しの拡張</li>
-<li>メソッド呼び出しなので穴だらけで良い</li>
-<li>危ないものは危なく見えるべき</li>
-<li>UnitTest : API のメソッド単位に書くものなのに、テストケースをストーリーレベルで書くべきだと勘違いしていた</li>
-<li>啓蒙する</li>
-<li>まずおもしろがってもらう</li>
-<li>並行処理の勘所に気づいてもらう</li>
-<li>すとうさん</li>
-<li>啓蒙活動に興味を持ったというのは、何か心境の変化があったのか?</li>
-<li>昨年のライブラリを作れば解決するという話にいらっとした</li>
-<li>miyohide さん</li>
-<li>啓蒙活動には、るびまに寄稿をするのが良いという話</li>
-<li><a href="http://togetter.com/li/1021932" title="突然のライブハンズオン！ 20世紀生まれの分散Ruby実装 dRuby #RubyKaigi #RubyKaigiA - Togetterまとめ">突然のライブハンズオン！ 20世紀生まれの分散Ruby実装 dRuby #RubyKaigi #RubyKaigiA - Togetterまとめ</a></li>
-<li><a href="https://speakerdeck.com/m_seki/druby2016" title="dRuby2016">dRuby2016</a></li>
-</ul>
-
-
-<h2>Lunch Break</h2>
-
-<ul>
-<li>11:55頃から</li>
-<li>弁当の写真を撮り忘れてしまった</li>
-<li>食べ終わった後は会場の散策</li>
-<li>懇親会のチェックインもしておいた</li>
-</ul>
-
-
-<h2>Who reordered my code?!</h2>
-
-<ul>
-<li>次の発表で部屋を移動するのが面倒だったのでメインホールにいた</li>
-<li>英語だったのとあまりちゃんと聞けていなかったのでメモなし</li>
-<li><a href="http://rubykaigi.org/2016/presentations/pitr_ch.html" title="Who reordered my code?! - RubyKaigi 2016">Who reordered my code?! - RubyKaigi 2016</a></li>
-<li>質疑応答: 質問なし</li>
-<li><a href="http://togetter.com/li/1021946" title="concurrent-rubyのコアコミッターが語る JRuby + Truffle 並列実行による高速化の試み #RubyKaigi #RubyKaigiA - Togetterまとめ">concurrent-rubyのコアコミッターが語る JRuby + Truffle 並列実行による高速化の試み #RubyKaigi #RubyKaigiA - Togetterまとめ</a></li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>プロジェクターのテストとして<a href="http://amzn.to/2bUWNxg">プログラミングElixir</a>の宣伝を表示</li>
-</ul>
-
-
-<h2>A proposal of new concurrency model for Ruby 3</h2>
-
-<ul>
-<li><a href="http://rubykaigi.org/2016/presentations/ko1.html" title="A proposal of new concurrency model for Ruby 3 - RubyKaigi 2016">A proposal of new concurrency model for Ruby 3 - RubyKaigi 2016</a></li>
-<li>英語で発表</li>
-<li><a href="http://www.atdot.net/~ko1/activities/2016_rubykaigi.pdf">Presentation slide</a></li>
-<li><a href="http://www.atdot.net/~ko1/diary/201609.html#d6">日本語 Script</a></li>
-<li>Concurrent の発表が多い</li>
-<li>Concurrent RubyKaigi</li>
-<li>なぜみんな Concurrency 好きか?</li>
-<li>なぜマルチスレッドプログラムが難しいのかと Guild という新しいアイデアの発表</li>
-<li>Ruby は安全・簡単な方を選んでいる</li>
-<li>data race と race condition の話</li>
-<li><code>Array#concat</code> とマルチスレッドの挙動</li>
-<li>マルチスレッドは難しいという話</li>
-<li>ロックが不十分だとバグるし、多すぎるとパフォーマンスに悪影響</li>
-<li>他の言語での知見</li>
-<li>&ldquo;Guild&rdquo;</li>
-<li>1個の Guild の中で同時に動く Thread は1個だけ</li>
-<li>オブジェクトの共有方法などの話</li>
-<li>Immutable なオブジェクトは共有可能</li>
-<li>数値, Symbol, nil/true/false が徐々に frozen になっていた</li>
-<li>doc/NEWS-2.0.0:  Fixnums, Bignums and Floats are frozen.</li>
-<li>doc/NEWS-2.1.0:  * All symbols are now frozen.</li>
-<li>doc/NEWS-2.2.0:  * nil/true/false objects are frozen. [Feature #8923]</li>
-<li>&ldquo;こんなこともあろうかと&rdquo;</li>
-<li>Guild の説明続き</li>
-<li>パフォーマンスの話とか</li>
-<li>質疑応答</li>
-<li>質問1: 聞き取れず</li>
-<li>質問2: Thread との違い?</li>
-<li>質問3: sekiさん: <code>Array#concat</code> の問題は解決するのか? (ちゃんと聞き取れなかったので、違うかも)</li>
-<li>解決しない</li>
-<li>そもそもできないんだから他の方法を考えるんじゃないか</li>
-<li>間違った使い方ができないような方法を考えましたという話</li>
-<li>質問4: move operation がなんとか (聞き取れず)</li>
-<li>move 操作はパフォーマンスのため</li>
-<li>他にこういうことをやっている人がいるのでは?</li>
-<li>知らない</li>
-<li>質問5: たぶんグローバルデータの話</li>
-<li>Ruby global data のスライドで説明</li>
-<li><a href="http://togetter.com/li/1021975" title="Rubyコアコミッター笹田耕一さん解説 Ruby3のための新しい並列実行モデル Guild #RubyKaigi #RubyKaigiA - Togetterまとめ">Rubyコアコミッター笹田耕一さん解説 Ruby3のための新しい並列実行モデル Guild #RubyKaigi #RubyKaigiA - Togetterまとめ</a></li>
-</ul>
-
-
-<p>ささださんのプレゼンは事前に日本語 Script も公開されていたし、スライドも事前にチェックできたのでよかった。</p>
-
-<p>セッション後の質問を受けていたのを横で聞いていたら、できるだけ 1 Guild 1 Thread で Thread の代わりに Guild を使うようになってほしいという感じらしかった。</p>
-
-<p>スライドでは frozen になったものに Numeric と書いてあったが実際には Rational は frozen ではないのでちょっと違う。</p>
-
-<h2>おやつ休憩</h2>
-
-<ul>
-<li>アナウンス</li>
-<li>スポンサーブースにおやつがデプロイされている</li>
-<li>弁当が少し残っているのでまだお腹が空いているという人はどうぞ</li>
-<li>懇親会受付</li>
-</ul>
-
-
-<h2>Isomorphic web programming in Ruby</h2>
-
-<ul>
-<li>英語はつらいので日本語のセッションということで Room D にきました</li>
-<li>Room D には電源も無線もありませんでした</li>
-<li><a href="http://rubykaigi.org/2016/presentations/youchan.html" title="Isomorphic web programming in Ruby - RubyKaigi 2016">Isomorphic web programming in Ruby - RubyKaigi 2016</a></li>
-<li>昨年の RubyKaigi 2015 では <a href="https://github.com/youchan/hyalite">https://github.com/youchan/hyalite</a> (React のようなものを Ruby で書ける) の話をした</li>
-<li>Menilite というのを作っている</li>
-<li>モデルをサーバーとクライアントで共有する</li>
-<li>(内容とは関係ないけど、亀がうさぎに比べてかなり進んでいるのは、プレゼン開始時に亀の位置がすでに進んでいたからのように見えた)</li>
-<li>デモ</li>
-<li>silica というラッパーコマンド</li>
-<li>まだ new しかサブコマンドがない</li>
-<li>Sinatra と Opal を使ったコードが自動生成</li>
-<li>ネットワークがつらいようなので Gemfile の github を参照しているところを path に書き換えてローカルのを参照するようにして bundle install</li>
-<li>ライブコーディングは時間がなさそうだったので、あらかじめ git の branch を用意しておいた</li>
-<li>しかしライブコーディングをしている</li>
-<li>sinatra-activerecord を使っている</li>
-<li>migration を毎回書くのは面倒なので silica でサポートしたい</li>
-<li><code>git stash -u</code> でライブコーディングした変更を捨ててあらかじめ用意していたものを checkout</li>
-<li>ユーザー追加、サインアップ</li>
-<li>パスワードは BCrypt で暗号化</li>
-<li><code>RUBY_ENGINE</code> による分岐でサーバーサイドだけの処理にする</li>
-<li>signup 部分をライブコーディング</li>
-<li>youchan, topsecret で signup しようとする</li>
-<li><code>BCrypt</code> を typo していて error になったので <code>git stash -u</code> で捨てて、あらかじめ用意していた変更を checkout</li>
-<li>時間がなくなってきたので、この後の変更もどんどん checkout しながら紹介</li>
-<li>ログインしていなかったらログイン画面に飛ばす処理</li>
-<li>ログイン処理</li>
-<li>ユーザーごとにアクセス権を設定</li>
-<li>セッションをクリアしていないので、ログインに失敗した時に前のユーザーのままだった</li>
-<li>デモ終了</li>
-<li>なぜ独自のモデルか</li>
-<li>GUID : データベースで自動生成されるシーケンス番号の ID はクライアントから使いにくい</li>
-<li>access control : すべてのデータがクライアントから見えてしまうとまずい</li>
-<li><a href="http://togetter.com/li/1021990" title="このライブコーディングがすごい！ RubyでIsomorphic Webプログラミングを実現する Menilite 紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ">このライブコーディングがすごい！ RubyでIsomorphic Webプログラミングを実現する Menilite 紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ</a></li>
-</ul>
-
-
-<p>ライブコーディングがあったので、 vim を使ってるとか SKK (AquaSKK?) を使ってるとかそういうところも気になりました。</p>
-
-<h2>Intermission</h2>
-
-<ul>
-<li>メインホールに移動した</li>
-</ul>
-
-
-<h2>Unifying Fixnum and Bignum into Integer</h2>
-
-<ul>
-<li><a href="http://rubykaigi.org/2016/presentations/tanaka_akr.html" title="Unifying Fixnum and Bignum into Integer - RubyKaigi 2016">Unifying Fixnum and Bignum into Integer - RubyKaigi 2016</a></li>
-<li><a href="https://bugs.ruby-lang.org/issues/12005" title="Unify Fixnum and Bignum into Integer">Unify Fixnum and Bignum into Integer</a> で提案された</li>
-<li><code>Fixnum</code> や <code>Bignum</code> という定数は <code>Integer</code> を指すようになる</li>
-<li><code>Fixnum</code> や <code>Bignum</code> という定数を参照しているコードでも <code>NameError</code> は起きない</li>
-<li>C コードで <code>rb_cFixnum</code> や <code>rb_cBignum</code> を参照しているコードはコンパイルエラーになる</li>
-<li>両対応するには <code>RUBY_INTEGER_UNIFICATION</code> マクロで分岐する</li>
-<li>前提として <code>Fixnum</code> と <code>Bignum</code> とは何か</li>
-<li><code>Integer</code> という抽象クラスとそれを継承した <code>Fixnum</code>　と <code>Bignum</code> というクラスがあった</li>
-<li><code>1.class</code> と <code>(2**100).class</code></li>
-<li>Ruby 2.4 では <code>Integer</code> だけになる</li>
-<li><code>Fixnum</code> の範囲は ILP32, LLP64 (Windows など), LP64, JRuby で違った</li>
-<li>portable ではないので基本的には使ってはいけない</li>
-<li>Ruby には仕様がある: <a href="http://www.iso.org/iso/iso_catalogue/catalogue_tc/catalogue_detail.htm?csnumber=59579">ISO/IEC 30170:2012</a>, <a href="http://www.jisc.go.jp/app/pager?%23jps.JPSH0090D:JPSO0020:/JPS/JPSO0090.jsp=&amp;RKKNP_vJISJISNO=X3017">JIS X 3017:2011</a></li>
-<li>Integer の範囲は unbounded</li>
-<li><code>Fixnum</code> と <code>Bignum</code> の定義はしても良い</li>
-<li>Ruby 2.3 も Ruby 2.4 も仕様に準拠</li>
-<li>仕様の記述者は <code>Fixnum</code> と <code>Bignum</code> は実装の詳細と考えて仕様に入れなかったのではないか</li>
-<li>利点</li>
-<li><code>Fixnum</code> と <code>Bignum</code> を間違って使うことがなくなる</li>
-<li>Ruby を勉強するのが簡単になる</li>
-<li>ドキュメントもシンプルになる</li>
-<li>シンプルに簡単にもっと数学的になる</li>
-<li>欠点: 非互換性</li>
-<li><code>Fixnum</code> の間違った使い方の例: <code>lib/rubygems/specification.rb</code>: <code>specification_version.is_a?(Fixnum)</code></li>
-<li>Ruby 2.4 では間違った使い方ができなくなる</li>
-<li><code>obj.is_a?(Fixnum)</code> は <code>obj.is_a?(Integer)</code> の意味になる</li>
-<li>REPL で <code>1.class</code> を実行すると <code>Fixnum</code> になっていたのが <code>Integer</code> になる</li>
-<li>Ruby を学ぶのが簡単になる</li>
-<li>1 が integer というのは誰でも知っている</li>
-<li>1 が <code>Fixnum</code> というのはほとんどの人は知らない (Lisp プログラマーを除く)</li>
-<li>教える側にとっても楽になる</li>
-<li>教科書がシンプルになる</li>
-<li>ドキュメントもシンプルになる</li>
-<li><code>Fixnum#foo</code> と <code>Bignum#foo</code> のドキュメントが重複していた</li>
-<li><code>ri foo</code> も重複して出ていた</li>
-<li>シンプルに簡単にもっと数学的になる</li>
-<li>Ruby レベルの非互換</li>
-<li><code>Fixnum</code> と <code>Bignum</code> が <code>Integer</code> を参照するようになる</li>
-<li><code>NameError</code> は起きない</li>
-<li><code>Fixnum == Bignum</code> が <code>true</code> になる</li>
-<li><code>1.is_a?(Bignum)</code> が <code>true</code> になる</li>
-<li><code>(2**100).is_a?(Fixnum)</code> が <code>true</code> になる</li>
-<li><code>Fixnum</code> と <code>Bignum</code> は少なくとも Ruby 2.3 が EOL になるまで削除しない方が良いと思っている</li>
-<li><code>Fixnum</code> の範囲が隠れる</li>
-<li><code>test/ruby/test_integer_comb.rb</code>: <code>max = 1; max *= 2 while (max-1).class == Fixnum; FIXNUM_MAX = max/2-1</code> が Ruby 2.4 では無限ループに</li>
-<li>推奨される解決策: <code>Fixnum</code> の範囲に依存しない</li>
-<li>CRuby のみの推奨しない解決策: <code>require 'rbconfig/sizeof'; FIXNUM_MIN = -(1 &lt;&lt; (8 * RbConfig::SIZEOF['long'] - 2)); FIXNUM_MAX = (1 &lt;&lt; (8 * RbConfig::SIZEOF['long'] -2)) - 1</code> (<code>rbconfig/sizeof</code> は Ruby 2.1 から)</li>
-<li>JRuby は知らない</li>
-<li>使わない方が良いがどうしても必要ならこういう方法もあるという話</li>
-<li>メタプログラミングや DSL が壊れる</li>
-<li>メタプログラミング</li>
-<li><code>mathn.rb</code> が <code>Fixnum</code> と <code>Bignum</code> に定義</li>
-<li><code>Integer</code> だけに変更</li>
-<li>activesupport <code>NumericWithFormat</code> を prepend</li>
-<li><code>Integer</code> だけに変更</li>
-<li>DSL</li>
-<li>Sequel</li>
-<li><code>add_column :column, Bignum</code></li>
-<li><code>:Bignum</code> というシンボルを使うようになった</li>
-<li>C レベル</li>
-<li>利点: なし</li>
-<li>欠点: 非互換</li>
-<li>Ruby 2.3 での <code>Integer</code> の実装詳細</li>
-<li>Ruby 2.4 での <code>Integer</code> の実装詳細</li>
-<li>クラス階層が変わっただけ</li>
-<li>拡張ライブラリの更新 : <code>rb_class_of(obj) == rb_cFixnum</code> → <code>FIXNUM_P(obj)</code> などの簡単な置き換え</li>
-<li>影響のあった拡張ライブラリ : オブジェクトをダンプ/ロードするようなものがほとんどだった</li>
-<li>ext/json, msgpack, syck, yajl, oj, ox, ruby-gnome2, etc.</li>
-<li>Version Dependencies</li>
-<li>Minor version up (1.3.2 to 1.3.3) が better</li>
-<li>Major version version up (1.3.2 to 2.0.0) は pessimistic (悲観的な) version dependency <code>(~&gt; 1.3)</code> で問題が起きる</li>
-<li>詳細: <a href="https://www.hsbt.org/diary/20160829.html">https://www.hsbt.org/diary/20160829.html</a></li>
-<li>利点のほとんどは初心者向け</li>
-<li>経験を積んだ Ruby プログラマーには大きな問題ではない</li>
-<li>バージョンの非互換の問題</li>
-<li>コミッターは具体的にどう支持していたのかという話</li>
-<li><a href="http://togetter.com/li/1022003" title="Rubyコミッターが語る Ruby2.4にてFixnumとBignumをIntergerに統合する話 #RubyKaigi #RubyKaigiA - Togetterまとめ">Rubyコミッターが語る Ruby2.4にてFixnumとBignumをIntergerに統合する話 #RubyKaigi #RubyKaigiA - Togetterまとめ</a></li>
-<li>発表資料: <a href="http://www.a-k-r.org/d/2016-09.html#a2016_09_08_1">http://www.a-k-r.org/d/2016-09.html#a2016_09_08_1</a></li>
-</ul>
-
-
-<h3>gem の Ruby 本体のバージョン依存関連</h3>
-
-<p>Togetterまとめ によると <a href="http://sue445.hatenablog.com/entry/2016/09/02/121047" title="gemspecにRUBY_VERSIONによるif文書くのは意味がないので今すぐやめるべき">gemspecにRUBY_VERSIONによるif文書くのは意味がないので今すぐやめるべき</a> という話もあるみたいです。</p>
-
-<p>watch している gem だと <a href="https://github.com/sj26/mailcatcher" title="MailCatcher">MailCatcher</a> が間接的に依存している <code>mime-types</code> が 3 になったときに Ruby 2.0 以上が必須になって問題が起きていたということがありました。</p>
-
-<h2>Intermission</h2>
-
-<ul>
-<li>そのままメインホールにいた</li>
-</ul>
-
-
-<h2>Ups and Downs of Ruby Internationalization</h2>
-
-<ul>
-<li><a href="http://rubykaigi.org/2016/presentations/duerst.html" title="Ups and Downs of Ruby Internationalization - RubyKaigi 2016">Ups and Downs of Ruby Internationalization - RubyKaigi 2016</a></li>
-<li>会場アンケート</li>
-<li>A-Z 以外の文字を使っている人</li>
-<li>US-ASCII 以外を使っている人</li>
-<li>UTF-8 以外を使っている人</li>
-<li>Ruby のバージョンと Unicode のバージョン</li>
-<li>2014: 2.2 7.0.0</li>
-<li>2015: 2.3 8.0.0</li>
-<li>2016: 2.4 9.0.0</li>
-<li><code>upcase</code>, <code>downcase</code>, <code>capitalize</code>, <code>swapcase</code></li>
-<li>Ruby 2.3 では US-ASCII 以外の範囲は変換しなかった</li>
-<li>Ruby 2.4 では他の文字も変換する</li>
-<li>使用例</li>
-<li>互換性がない変更が入っているので preview で早めにチェックしてほしいという話</li>
-<li>US-ASCII の範囲に限定したい時は <code>upcase :ascii</code> など</li>
-<li>変換用データは Unicode から</li>
-<li>文字数は保存されない</li>
-<li>不可逆</li>
-<li>コンテキスト依存</li>
-<li>特殊な場合: <code>upcase :turkic</code> の話</li>
-<li>特殊な場合: <code>upcase :lithuanian</code> の話</li>
-<li>特殊な場合: Case folding (大小畳込み) <code>downcase :fold</code></li>
-<li>特殊な場合: Titlecase <code>capitalize</code></li>
-<li>実装詳細の話</li>
-<li>簡単だがとても大きな <code>tr</code> のようなもの</li>
-<li><code>string.c:sym_upcase</code>: <code>String#upcase</code> 相当を呼んでいる</li>
-<li><code>string.c:rb_string_upcase</code>: <code>dup.upcase!</code> 相当</li>
-<li><code>string.c:rb_string_upcase_bang</code>: 実際の変換をしているのはここ</li>
-<li><code>OnigCaseFoldType</code> で変換の種類が決まっている</li>
-<li><code>string.c:rb_str_casemap</code></li>
-<li>UTF-8 以外の encoding に対応する primitive の話</li>
-<li><code>Shift_JIS</code> などの対応は不要?</li>
-<li>Oniguruma/Onigmo は folding のデータを持っているので再利用(?)</li>
-<li><code>enc/unicode/data/9.0.0/casefold.h</code> の話</li>
-<li><code>swapcase</code> は誰も使っていない?</li>
-<li>会場に聞いてみると誰も使っていない感じだった。</li>
-<li>大文字小文字の合成文字で問題がある</li>
-<li>Test-Driven Development</li>
-<li>Data-Driven Testing</li>
-<li>Character Properties</li>
-<li><code>Regexp</code> でほとんど可能</li>
-<li>ある文字の script を得るのは不可能</li>
-<li>Unicode Normalization</li>
-<li>Ruby 2.2 から <code>'string'.unicode_normalize :nfkc</code> がある</li>
-<li><a href="http://www.sw.it.aoyama.ac.jp/2016/pub/RubyKaigi/">http://www.sw.it.aoyama.ac.jp/2016/pub/RubyKaigi/</a> と最後に出ていたようだけどまだ公開されていない?</li>
-<li><a href="http://togetter.com/li/1022019" title="&quot;Who has used swapcase?&quot; Rubyにおける国際化機能のかなしみ #RubyKaigi #RubyKaigiA - Togetterまとめ">&quot;Who has used swapcase?&quot; Rubyにおける国際化機能のかなしみ #RubyKaigi #RubyKaigiA - Togetterまとめ</a></li>
-</ul>
-
-
-<p>具体例に出てくる文字が入力できないし、英語も聞き取れないしで、あんまりメモが取れなかったです。</p>
-
-<h2>見ていなかったセッションなどの Togetter まとめ</h2>
-
-<ul>
-<li><a href="http://togetter.com/li/1021880" title="&quot;この悪天候… 最高のカンファレンス日和！&quot; &quot;会場広い！&quot; &quot;Wi-Fiはやくきてくれーっ！&quot; #RubyKaigi 2016 オープニングまで - Togetterまとめ">&quot;この悪天候… 最高のカンファレンス日和！&quot; &quot;会場広い！&quot; &quot;Wi-Fiはやくきてくれーっ！&quot; #RubyKaigi 2016 オープニングまで - Togetterまとめ</a></li>
-<li><a href="http://togetter.com/li/1021901" title="Ruby on Erlang！！！ errubyの紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ">Ruby on Erlang！！！ errubyの紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ</a></li>
-<li><a href="http://togetter.com/li/1021953" title="DSLで記述できるmRuby製コンテナ haconiwa ！ その開発動機とは #RubyKaigi #RubyKaigiB - Togetterまとめ">DSLで記述できるmRuby製コンテナ haconiwa ！ その開発動機とは #RubyKaigi #RubyKaigiB - Togetterまとめ</a></li>
-<li><a href="http://togetter.com/li/1021974" title="【Unityちゃん】らくらくシェーダコーディング！ mrubyで実装するGLSLジェネレータ #RubyKaigi #RubyKaigiB - Togetterまとめ">【Unityちゃん】らくらくシェーダコーディング！ mrubyで実装するGLSLジェネレータ #RubyKaigi #RubyKaigiB - Togetterまとめ</a></li>
-<li><a href="http://togetter.com/li/1021993" title="JRubyにおけるString実装高速化 Rope 紹介 #RubyKaigi #RubyKaigiA - Togetterまとめ">JRubyにおけるString実装高速化 Rope 紹介 #RubyKaigi #RubyKaigiA - Togetterまとめ</a></li>
-<li><a href="http://togetter.com/li/1022009" title="Windows環境にて如何にしてマルチプロセスサーバを実現するか fluentd・ServerEngine実装の紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ">Windows環境にて如何にしてマルチプロセスサーバを実現するか fluentd・ServerEngine実装の紹介 #RubyKaigi #RubyKaigiB - Togetterまとめ</a></li>
-<li><a href="http://togetter.com/li/1022022" title="【超満員】クックパッド導入事例 Dockerでスケールするジョブキューシステム【登壇者混乱】 #RubyKaigi #RubyKaigiB - Togetterまとめ">【超満員】クックパッド導入事例 Dockerでスケールするジョブキューシステム【登壇者混乱】 #RubyKaigi #RubyKaigiB - Togetterまとめ</a></li>
-</ul>
-
-
-<h2>懇親会</h2>
-
-<p>同じ国立京都国際会館の中のさくらフロアで RubyKaigi 2016 Official Party がありました。</p>
-
-<p>ほとんど<a href="https://github.com/rurema">るりま</a>関連の話をしていただけで終わってしまった感じでした。</p>
 ]]></content>
   </entry>
   
