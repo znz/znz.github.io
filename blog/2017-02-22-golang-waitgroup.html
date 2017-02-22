@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>certbot の renew hook について (その2) - @znz blog</title>
+  <title>Go言語のsync.WaitGroupで出力待ち - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="certbot の renew hook について (その2) Jan 3rd, 2017 1:06 pm | Comments certbot で設定の再読み込みには post-hook よりも renew-hook を使った方が良さそうという話 の続きです。 &hellip;">
+  <meta name="description" content="Go言語のsync.WaitGroupで出力待ち Feb 22nd, 2017 10:22 pm | Comments みんなのGo言語【現場で使える実践テクニック】という本に sync.WaitGroup というのを知ったので使ってみました。 環境 go version go1.8 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-01-03-certbot-renew-hook.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-02-22-golang-waitgroup.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -83,7 +83,7 @@
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">certbot の renew hook について (その2)</h1>
+      <h1 class="entry-title">Go言語のsync.WaitGroupで出力待ち</h1>
       
       <!-- zenback_title_end -->
       
@@ -95,7 +95,7 @@
 
 
 
-<time class='entry-date' datetime='2017-01-03T13:06:39+09:00'><span class='date'><span class='date-month'>Jan</span> <span class='date-day'>3</span><span class='date-suffix'>rd</span>, <span class='date-year'>2017</span></span> <span class='time'>1:06 pm</span></time>
+<time class='entry-date' datetime='2017-02-22T22:22:22+09:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>22</span><span class='date-suffix'>nd</span>, <span class='date-year'>2017</span></span> <span class='time'>10:22 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -108,198 +108,60 @@
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><a href="/blog/2016-11-20-certbot-renew-hook.html">certbot で設定の再読み込みには post-hook よりも renew-hook を使った方が良さそうという話</a> の続きです。</p>
-
-<p>前回の記事の時点では同時に複数証明書が更新される時の挙動が確認できていませんでしたが、
-確認できたので、その説明です。</p>
+<div class="entry-content"><p><a href="http://amzn.to/2l3wZ5L">みんなのGo言語【現場で使える実践テクニック】</a>という本に <code>sync.WaitGroup</code> というのを知ったので使ってみました。</p>
 
 <!--more-->
 
 
-<h2>対象バージョン</h2>
+<h2>環境</h2>
 
 <ul>
-<li><h2>対象バージョン</h2></li>
-<li><p>Ubuntu 14.04.5 LTS (trusty)</p></li>
-<li>letsencrypt 0.9.3</li>
+<li><code>go version go1.8 darwin/amd64</code></li>
 </ul>
 
 
-<h2>RENEWED_DOMAINS の挙動</h2>
+<h2><code>sync.WaitGroup</code> の追加</h2>
 
-<p>pre-hook, post-hook, renew-hook でそれぞれ env を実行して環境変数を記録してみたところ、同時に更新される時は pre-hook, post-hook は 1 回ずつ、 renew-hook はドメインごとに呼ばれることがわかりました。</p>
-
-<p>ドメインに応じてメールサーバーの reload などの処理をする場合は post-hook ではなく renew-hook を使う必要がありそうです。</p>
-
-<p>ドメインなどは置き換えていますが、以下のような出力でした。
-(<code>TMPDIR</code> などが <code>/tmp/user/0</code> になっているのは libpam-tmpdir を設定しているからだと思います。)</p>
-
-<p>pre-hook の env:</p>
+<p>呼び出し側は以下のように追加しました。</p>
 
 <div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
 <span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>TEMPDIR=/tmp/user/0
-</span><span class='line'>HOME=/root
-</span><span class='line'>OLDPWD=/root
-</span><span class='line'>TMPDIR=/tmp/user/0
-</span><span class='line'>LOGNAME=root
-</span><span class='line'>TEMP=/tmp/user/0
-</span><span class='line'>COLUMNS=80
-</span><span class='line'>PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-</span><span class='line'>CERTBOT_AUTO=/home/vpsuser/letsencrypt/letsencrypt-auto
-</span><span class='line'>LANG=ja_JP.UTF-8
-</span><span class='line'>TMP=/tmp/user/0
-</span><span class='line'>SHELL=/bin/sh
-</span><span class='line'>PWD=/
-</span><span class='line'>LINES=24</span></code></pre></td></tr></table></div></figure></notextile></div>
+</pre></td><td class='code'><pre><code class=''><span class='line'>var wg sync.WaitGroup
+</span><span class='line'>wg.Add(2)
+</span><span class='line'>go processLinesShiftJIS(stdoutHandler, stdout, &wg)
+</span><span class='line'>go processLinesShiftJIS(stderrHandler, stderr, &wg)
+</span><span class='line'>wg.Wait()</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<p>post-hook の env:</p>
+<p>呼び出される側では、以下のように最後に <code>wg.Done()</code> を呼ぶようにしました。
+記事を書いていて気づいたのですが、途中で抜ける可能性を考えて、 <code>defer</code> を使った方が良さそうです。</p>
 
 <div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>TEMPDIR=/tmp/user/0
-</span><span class='line'>HOME=/root
-</span><span class='line'>OLDPWD=/root
-</span><span class='line'>RENEWED_LINEAGE=/etc/letsencrypt/live/other.example.net
-</span><span class='line'>TMPDIR=/tmp/user/0
-</span><span class='line'>LOGNAME=root
-</span><span class='line'>TEMP=/tmp/user/0
-</span><span class='line'>COLUMNS=80
-</span><span class='line'>PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-</span><span class='line'>CERTBOT_AUTO=/home/vpsuser/letsencrypt/letsencrypt-auto
-</span><span class='line'>LANG=ja_JP.UTF-8
-</span><span class='line'>TMP=/tmp/user/0
-</span><span class='line'>SHELL=/bin/sh
-</span><span class='line'>PWD=/
-</span><span class='line'>RENEWED_DOMAINS=other.example.net
-</span><span class='line'>LINES=24</span></code></pre></td></tr></table></div></figure></notextile></div>
+</pre></td><td class='code'><pre><code class=''><span class='line'>func processLinesShiftJIS(lineProcessor func(string), r io.Reader, wg *sync.WaitGroup) {
+</span><span class='line'>  // ...処理...
+</span><span class='line'>  wg.Done()
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 
-<p>renew-hook の env:</p>
+<h2>動かなかったコード</h2>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>TEMPDIR=/tmp/user/0
-</span><span class='line'>HOME=/root
-</span><span class='line'>OLDPWD=/root
-</span><span class='line'>RENEWED_LINEAGE=/etc/letsencrypt/live/www.example.com
-</span><span class='line'>TMPDIR=/tmp/user/0
-</span><span class='line'>LOGNAME=root
-</span><span class='line'>TEMP=/tmp/user/0
-</span><span class='line'>COLUMNS=80
-</span><span class='line'>PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-</span><span class='line'>CERTBOT_AUTO=/home/vpsuser/letsencrypt/letsencrypt-auto
-</span><span class='line'>LANG=ja_JP.UTF-8
-</span><span class='line'>TMP=/tmp/user/0
-</span><span class='line'>SHELL=/bin/sh
-</span><span class='line'>PWD=/
-</span><span class='line'>RENEWED_DOMAINS=www.example.com
-</span><span class='line'>LINES=24</span></code></pre></td></tr></table></div></figure></notextile></div>
+<p>最初は <code>func processLinesShiftJIS(lineProcessor func(string), r io.Reader, wg sync.WaitGroup)</code> で受け取って <code>go processLinesShiftJIS(stdoutHandler, stdout, wg)</code> で呼び出していました。</p>
 
+<p>これだと、<code>WaitGroup</code> のコピーで <code>Done()</code> が呼ばれてしまって、元の <code>WaitGroup</code> のカウントが減らずにうまく動きませんでした。</p>
 
-<p>renew-hook 2 回目:</p>
+<p>本に書いてあった例やネットで見つけた例は同じスコープで使っているものばかりだったので
+わからなかったのですが、
+ちゃんとポインタを渡す必要があるようです。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>TEMPDIR=/tmp/user/0
-</span><span class='line'>HOME=/root
-</span><span class='line'>OLDPWD=/root
-</span><span class='line'>RENEWED_LINEAGE=/etc/letsencrypt/live/other.example.net
-</span><span class='line'>TMPDIR=/tmp/user/0
-</span><span class='line'>LOGNAME=root
-</span><span class='line'>TEMP=/tmp/user/0
-</span><span class='line'>COLUMNS=80
-</span><span class='line'>PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-</span><span class='line'>CERTBOT_AUTO=/home/vpsuser/letsencrypt/letsencrypt-auto
-</span><span class='line'>LANG=ja_JP.UTF-8
-</span><span class='line'>TMP=/tmp/user/0
-</span><span class='line'>SHELL=/bin/sh
-</span><span class='line'>PWD=/
-</span><span class='line'>RENEWED_DOMAINS=other.example.net
-</span><span class='line'>LINES=24</span></code></pre></td></tr></table></div></figure></notextile></div>
+<h2>関連コード全体</h2>
 
-
-<h2>hook の例</h2>
-
-<p>hook を cli.ini で設定します。</p>
-
-<div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% cat /etc/letsencrypt/cli.ini
-</span><span class='line'>rsa-key-size = 4096
-</span><span class='line'>pre-hook = /etc/letsencrypt/pre-hook
-</span><span class='line'>post-hook = /etc/letsencrypt/post-hook
-</span><span class='line'>renew-hook = /etc/letsencrypt/renew-hook</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-
-<p>hook の実行ファイルを作成します。
-忘れずに実行属性をつけておく必要があります。</p>
-
-<p>pre-hook と post-hook は呼ばれたことと環境変数の記録だけですが、
-renew-hook は呼ばれたことと環境変数の記録をしつつ、
-apache に証明書の反映と、
-メールサーバーのドメインの時のみ、
-メール関係のデーモンにも反映をしています。
-postfix だけ reload 時に標準出力にメッセージを出していたので、
-捨てています。</p>
+<p>全体としては関係する部分の <a href="https://github.com/znz/winipset/blob/cb4a80ebdaf3c1492bb81f0654424205cf8aa87e/winipset.go">winipset.go</a> を以下のように変更しました。</p>
 
 <div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -328,34 +190,76 @@ postfix だけ reload 時に標準出力にメッセージを出していたの�
 <span class='line-number'>25</span>
 <span class='line-number'>26</span>
 <span class='line-number'>27</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% cat /etc/letsencrypt/pre-hook
-</span><span class='line'>#!/bin/sh
-</span><span class='line'>{
-</span><span class='line'>  date
-</span><span class='line'>  env
-</span><span class='line'>} &gt;&gt; /tmp/pre-hook.env
-</span><span class='line'>% cat /etc/letsencrypt/post-hook
-</span><span class='line'>#!/bin/sh
-</span><span class='line'>{
-</span><span class='line'>  date
-</span><span class='line'>  env
-</span><span class='line'>} &gt;&gt; /tmp/post-hook.env
-</span><span class='line'>% cat /etc/letsencrypt/renew-hook
-</span><span class='line'>#!/bin/sh
-</span><span class='line'>{
-</span><span class='line'>  date
-</span><span class='line'>  env
-</span><span class='line'>} &gt;&gt; /tmp/renew-hook.env
-</span><span class='line'>apachectl graceful
-</span><span class='line'>for domain in $RENEWED_DOMAINS; do
-</span><span class='line'>  case "$domain" in
-</span><span class='line'>    mx*)
-</span><span class='line'>      service postfix reload &gt;/dev/null
-</span><span class='line'>      service dovecot reload
-</span><span class='line'>      ;;
-</span><span class='line'>  esac
-</span><span class='line'>done</span></code></pre></td></tr></table></div></figure></notextile></div>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>func processLinesShiftJIS(lineProcessor func(string), r io.Reader, wg *sync.WaitGroup) {
+</span><span class='line'>  decoder := japanese.ShiftJIS.NewDecoder()
+</span><span class='line'>  scanner := bufio.NewScanner(decoder.Reader(r))
+</span><span class='line'>  for scanner.Scan() {
+</span><span class='line'>      line := scanner.Text()
+</span><span class='line'>      lineProcessor(line)
+</span><span class='line'>  }
+</span><span class='line'>  wg.Done()
+</span><span class='line'>}
+</span><span class='line'>
+</span><span class='line'>func runCommand(stdoutHandler, stderrHandler func(string), name string, arg ...string) (err error) {
+</span><span class='line'>  cmd := exec.Command(name, arg...)
+</span><span class='line'>  cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+</span><span class='line'>  stdout, err := cmd.StdoutPipe()
+</span><span class='line'>  if err != nil {
+</span><span class='line'>      log.Println("StdoutPipe:", err)
+</span><span class='line'>      return
+</span><span class='line'>  }
+</span><span class='line'>  stderr, err := cmd.StderrPipe()
+</span><span class='line'>  if err != nil {
+</span><span class='line'>      log.Println("StderrPipe:", err)
+</span><span class='line'>      return
+</span><span class='line'>  }
+</span><span class='line'>
+</span><span class='line'>  err = cmd.Start()
+</span><span class='line'>  if err != nil {
+</span><span class='line'>      log.Println("Start:", err)
+</span><span class='line'>      return
+</span><span class='line'>  }
+</span><span class='line'>
+</span><span class='line'>  var wg sync.WaitGroup
+</span><span class='line'>  wg.Add(2)
+</span><span class='line'>  go processLinesShiftJIS(stdoutHandler, stdout, &wg)
+</span><span class='line'>  go processLinesShiftJIS(stderrHandler, stderr, &wg)
+</span><span class='line'>  wg.Wait()
+</span><span class='line'>
+</span><span class='line'>  err = cmd.Wait()
+</span><span class='line'>  if err != nil {
+</span><span class='line'>      log.Println("Wait:", err)
+</span><span class='line'>      return
+</span><span class='line'>  }
+</span><span class='line'>  return nil
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure></notextile></div>
 
+
+<h2>同期方法の確認</h2>
+
+<p>この同期方法で問題が起きなかった <code>cmd.Wait()</code> を呼ばないと <code>wg.Done()</code> が呼ばれないということはなかった、という点と、
+出力をちゃんと読んだ後で <code>cmd.Wait()</code> を呼べるようになったという点で、この方法で大丈夫だということがわかりました。</p>
+
+<h2>まとめ</h2>
+
+<p><code>sync.WaitGroup</code> を他の関数へ受け渡す時に失敗してしまうと同期に失敗してしまうことがありましたが、
+簡単に同期が取れて、使いやすい仕組みだと思いました。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -374,12 +278,12 @@ postfix だけ reload 時に標準出力にメッセージを出していたの�
 
 
 
-<time class='entry-date' datetime='2017-01-03T13:06:39+09:00'><span class='date'><span class='date-month'>Jan</span> <span class='date-day'>3</span><span class='date-suffix'>rd</span>, <span class='date-year'>2017</span></span> <span class='time'>1:06 pm</span></time>
+<time class='entry-date' datetime='2017-02-22T22:22:22+09:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>22</span><span class='date-suffix'>nd</span>, <span class='date-year'>2017</span></span> <span class='time'>10:22 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/letsencrypt/'>letsencrypt</a>
+    <a class='category' href='/blog/categories/golang/'>golang</a>
   
 </span>
 
@@ -406,10 +310,8 @@ postfix だけ reload 時に標準出力にメッセージを出していたの�
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2016-12-10-mini-debian-conference-japan-2016.html" title="Previous Post: Mini Debian Conference Japan 2016に参加して発表してきた">&laquo; Mini Debian Conference Japan 2016に参加して発表してきた</a>
+        <a class="basic-alignment left" href="/blog/2017-02-19-golang-windows-gui.html" title="Previous Post: Go言語でWindowsのnetshラッパーのGUIアプリを作った">&laquo; Go言語でWindowsのnetshラッパーのGUIアプリを作った</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2017-01-07-lilo-tokaidolug.html" title="Next Post: LILO&東海道らぐオフラインミーティング 2017/01/07">LILO&東海道らぐオフラインミーティング 2017/01/07 &raquo;</a>
       
     </p>
   </footer>
@@ -544,8 +446,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-01-03-certbot-renew-hook.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2017-01-03-certbot-renew-hook.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-02-22-golang-waitgroup.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-02-22-golang-waitgroup.html';
         var disqus_script = 'embed.js';
       
     (function () {
