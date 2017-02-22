@@ -165,6 +165,8 @@ https://golang.org/pkg/os/exec/#Cmd.StdoutPipe や https://golang.org/pkg/os/exe
 間違っていても、多少メッセージが抜けたり、リソースがリークするだけで
 機能自体に大きな問題はないと判断して、この方法で行くことにしました。
 
+(2017-02-22 追記: [Go言語のsync.WaitGroupで出力待ち](/blog/2017-02-22-golang-waitgroup.html)で解決しました。)
+
 ## コマンドの出力の文字コード変換
 
 コマンドラインの方は UTF-8 のままで大丈夫なのに、
