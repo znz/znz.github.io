@@ -5,6 +5,9 @@ date: 2017-02-22 22:22:22 +0900
 comments: true
 categories: golang
 ---
+[先日作ったアプリ](/blog/2017-02-19-golang-windows-gui.html)で、
+`cmd.Wait()`
+の前に出力待ちができていなくて困っていたのですが、
 [みんなのGo言語【現場で使える実践テクニック】](http://amzn.to/2l3wZ5L)という本に `sync.WaitGroup` というのを知ったので使ってみました。
 
 <!--more-->
