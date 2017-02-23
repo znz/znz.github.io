@@ -4,7 +4,6 @@ require 'octopress-hooks'
 require 'jekyll-sitemap'
 require 'octopress-date-format'
 require './plugins/raw'
-require 'rubypants'
 
 module OctopressFilters
   def self.pre_filter(page)
@@ -17,8 +16,7 @@ module OctopressFilters
   end
   def self.post_filter(page)
     if page.ext.match('html|textile|markdown|md|haml|slim|xml')
-      input = TemplateWrapper::unwrap(page.content)
-      page.content = RubyPants.new(input).to_html
+      page.output = TemplateWrapper::unwrap(page.output)
     end
   end
 
@@ -84,7 +82,7 @@ module OctopressLiquidFilters
   # Replaces relative urls with full urls
   def expand_urls(input, url='')
     url ||= '/'
-    input.gsub /(\s+(href|src)\s*=\s*["|']{1})(\/[^\/>]{1}[^\"'>]*)/ do
+    input.gsub /(\s+(href|src|poster)\s*=\s*["|']{1})(\/[^\/>]{1}[^\"'>]*)/ do
       $1+url+$3
     end
   end
