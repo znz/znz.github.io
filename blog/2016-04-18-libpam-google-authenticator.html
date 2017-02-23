@@ -9,7 +9,7 @@
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="公開鍵認証 + libpam-google-authenticator による二要素認証を特定のユーザーだけ対象に導入する Apr 18th, 2016 9:26 pm | Comments 普通に libpam-google-authenticator を PAM &hellip;">
+  <meta name="description" content="公開鍵認証 + libpam-google-authenticator による二要素認証を特定のユーザーだけ対象に導入する 2016-04-18 (Mon) 9:26 pm | Comments 普通に libpam-google-authenticator を PAM &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -95,7 +95,7 @@
 
 
 
-<time class='entry-date' datetime='2016-04-18T21:26:42+09:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>18</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>9:26 pm</span></time>
+<time class='entry-date' datetime='2016-04-18T21:26:42+09:00'><span class='date'>2016-04-18 (Mon)</span> <span class='time'>9:26 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -136,7 +136,7 @@
 
 <p>ワンタイムパスワードなので、入力している値を見られても困らないし、実際 GitHub などでの入力画面では隠されていないので、 <code>/usr/share/doc/libpam-google-authenticator/README.gz</code> にも書いてある <code>echo_verification_code</code> の設定も追加してエコーバックされるようにしてみました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>/etc/pam.d/sshd</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>/etc/pam.d/sshd</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -147,7 +147,7 @@
 </span><span class='line'>+auth required pam_permit.so
 </span><span class='line'> # Standard Un*x authentication.
 </span><span class='line'>-@include common-auth
-</span><span class='line'>+#@include common-auth</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span><span class='line'>+#@include common-auth</span></code></pre></td></tr></table></div></figure>
 
 
 <h2>sshd の設定</h2>
@@ -157,16 +157,16 @@
 この設定を変更しないと <code>Verification code:</code> の入力プロンプトが出てこなくて、
 認証コードの入力ができません。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>/etc/ssh/sshd_config</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>ChallengeResponseAuthentication yes</span></code></pre></td></tr></table></div></figure></notextile></div>
+<figure class='code'><figcaption><span>/etc/ssh/sshd_config</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>ChallengeResponseAuthentication yes</span></code></pre></td></tr></table></div></figure>
 
 
 <p>最後に適当なグループ (今回は <code>/var/log/</code> のログファイルのグループなどに利用されている <code>adm</code> グループを利用しましたが <code>sudo</code> グループなどでも良いかもしれません) を <code>Match</code> で指定して、そのグループに属するユーザーの時だけ <code>AuthenticationMethods</code> で公開鍵認証と <code>keyboard-interactive</code> 認証の両方を必須にしました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>/etc/ssh/sshd_config</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>/etc/ssh/sshd_config</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 </pre></td><td class='code'><pre><code class=''><span class='line'>Match Group adm
-</span><span class='line'>AuthenticationMethods publickey,keyboard-interactive</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span><span class='line'>AuthenticationMethods publickey,keyboard-interactive</span></code></pre></td></tr></table></div></figure>
 
 
 <h2>トークンを生成しているユーザーだけ有効にする設定</h2>
@@ -183,39 +183,39 @@
 <p><code>pam_exec.so</code> に <code>quiet</code> をつけないと <code>~/.google-authenticator</code> がない場合に毎回 <code>/usr/local/bin/check_google_authenticator.sh failed: exit code 1</code> が出るので、 <code>quiet</code> をつけて抑制するようにしました。
 <code>Authenticated with partial success.</code> というメッセージは <code>ssh</code> が出しているので消せませんでした。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>/etc/pam.d/sshd</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>/etc/pam.d/sshd</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
 </pre></td><td class='code'><pre><code class=''><span class='line'>auth [success=ignore default=2] pam_exec.so quiet /usr/local/bin/check_google_authenticator.sh
 </span><span class='line'>auth [success=1 default=ignore] pam_google_authenticator.so echo_verification_code
 </span><span class='line'>auth requisite pam_deny.so
-</span><span class='line'>auth required pam_permit.so</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span><span class='line'>auth required pam_permit.so</span></code></pre></td></tr></table></div></figure>
 
 
 <p>存在のチェック用スクリプトは <code>pam_exec</code> 経由で実行された時には <code>HOME</code> 環境変数が設定されていなくて、代わりに <code>PAM_USER</code> などが設定されているのを利用して <code>HOME</code> を設定されていなければ設定するようにしました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>/usr/local/bin/check_google_authenticator.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>/usr/local/bin/check_google_authenticator.sh</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 </pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#!/bin/sh</span>
 </span><span class='line'>: <span class="k">${</span><span class="nv">HOME</span><span class="p">:=</span><span class="k">$(</span>getent passwd <span class="s2">&quot;$PAM_USER&quot;</span> <span class="p">|</span> awk -F: <span class="s1">&#39;{print $6}&#39;</span><span class="k">)}</span>
 </span><span class='line'><span class="nb">test</span> -f <span class="s2">&quot;$HOME/.google_authenticator&quot;</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <h2>/etc/pam.d/sshd にまとめる書き方</h2>
 
 <p>発表資料の PDF を確認して気付いたのですが、 <code>[ ]</code> でくくれば空白の入った引数も渡せるので、シェルを経由するようにすれば変数展開付きのコマンドを含められました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>/etc/pam.d/sshd</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>/etc/pam.d/sshd</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
 </pre></td><td class='code'><pre><code class=''><span class='line'>auth [success=ignore default=2] pam_exec.so quiet /bin/sh -c [: ${HOME:=$(getent passwd "$PAM_USER" | awk -F: '{print $6}')}; test -f "$HOME/.google_authenticator"]
 </span><span class='line'>auth [success=1 default=ignore] pam_google_authenticator.so echo_verification_code
 </span><span class='line'>auth requisite pam_deny.so
-</span><span class='line'>auth required pam_permit.so</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span><span class='line'>auth required pam_permit.so</span></code></pre></td></tr></table></div></figure>
 
 
 <h2>google-authenticator コマンドによるトークンの作成</h2>
@@ -251,7 +251,7 @@
 
 
 
-<time class='entry-date' datetime='2016-04-18T21:26:42+09:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>18</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>9:26 pm</span></time>
+<time class='entry-date' datetime='2016-04-18T21:26:42+09:00'><span class='date'>2016-04-18 (Mon)</span> <span class='time'>9:26 pm</span></time>
       
 
 <span class="categories">

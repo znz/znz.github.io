@@ -9,8 +9,8 @@
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="jessie の certbot が 0.9.3 に上がったので設定を変更した Nov 8th, 2016 11:14 pm | Comments jessie の certbot が 0.9.3 に上がって、
-/etc/cron.d/certbot よりも systemd の certbot. &hellip;">
+  <meta name="description" content="jessie の certbot が 0.9.3 に上がったので設定を変更した 2016-11-08 (Tue) 11:14 pm | Comments jessie の certbot が 0.9.3 に上がって、
+/etc/cron.d/certbot よりも systemd の &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -96,7 +96,7 @@
 
 
 
-<time class='entry-date' datetime='2016-11-08T23:14:00+09:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>8</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>11:14 pm</span></time>
+<time class='entry-date' datetime='2016-11-08T23:14:00+09:00'><span class='date'>2016-11-08 (Tue)</span> <span class='time'>11:14 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -122,7 +122,7 @@ reload に post-hook を使うように変えたり、
 <p>今までは <code>/etc/cron.daily/local-letsencrypt</code> で <code>certbot renew</code> を呼び出して、ログを保存して <code>diff</code> を出力して cron からメールを送信させて、
 <code>reload</code> は更新の有無にかかわらず実行していました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -152,14 +152,14 @@ reload に post-hook を使うように変えたり、
 </span><span class='line'><span class="k">fi</span>
 </span><span class='line'>apachectl graceful
 </span><span class='line'>service postfix reload
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <h2>certbot パッケージでインストールされた自動更新の仕組み</h2>
 
 <p><code>/etc/cron.d/certbot</code> は <code>/run/systemd/system</code> をチェックして普通は動かないようになっていました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -183,12 +183,12 @@ reload に post-hook を使うように変えたり、
 </span><span class='line'> <span class="nv">PATH</span><span class="o">=</span>/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 </span><span class='line'>
 </span><span class='line'> <span class="m">0</span> */12 * * * root <span class="nb">test</span> -x /usr/bin/certbot -a <span class="se">\!</span> -d /run/systemd/system <span class="o">&amp;&amp;</span> perl -e <span class="s1">&#39;sleep int(rand(3600))&#39;</span> <span class="o">&amp;&amp;</span> certbot -q renew
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p>systemd の方では、<code>timer</code> から動かすため、有効化されていない <code>certbot.service</code> と、 service を動かすための <code>certbot.timer</code> が入っていました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -228,7 +228,7 @@ reload に post-hook を使うように変えたり、
 </span><span class='line'>
 </span><span class='line'><span class="o">[</span>Install<span class="o">]</span>
 </span><span class='line'><span class="nv">WantedBy</span><span class="o">=</span>timers.target
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p><code>OnCalendar</code> で毎日 00:00:00 と 12:00:00 に動くようになっていました。
@@ -246,11 +246,11 @@ jessie の systemd は対応していないようで、
 <p><code>certbot.service</code> の <code>ExecStart=/usr/bin/certbot -q renew</code> の後に実行したかったので、
 <code>ExecStopPost</code> を使ってみました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 </pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="o">[</span>Service<span class="o">]</span>
 </span><span class='line'><span class="nv">ExecStopPost</span><span class="o">=</span>/bin/bash -c <span class="s2">&quot;diff -u &lt;(cut -d: -f4- /var/log/letsencrypt/letsencrypt.log.1 | egrep -v &#39;^DEBUG&#39;) &lt;(cut -d: -f4- /var/log/letsencrypt/letsencrypt.log | egrep -v &#39;^DEBUG&#39;) | ifne mail -s &#39;Change certbot log&#39; root&quot;</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p>前回のログ (<code>letsencrypt.log.1</code>) と今回のログ (<code>letsencrypt.log</code>) から、必ず差分になってしまう時刻を <code>cut</code> で削って、さらに DEBUG ログの中にも現在日時で変化する部分があったので除外するようにしてから差分をとっています。</p>
@@ -266,13 +266,13 @@ jessie の systemd は対応していないようで、
 
 <p>ついでに <code>rsa-key-size</code> も 2048 から 4096 に変更するようにしました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 </pre></td><td class='code'><pre><code class='sh'><span class='line'>% cat /etc/letsencrypt/cli.ini
 </span><span class='line'>rsa-key-size <span class="o">=</span> 4096
 </span><span class='line'>post-hook <span class="o">=</span> apachectl graceful
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <h2>複数コマンドの post-hook</h2>
@@ -282,7 +282,7 @@ jessie の systemd は対応していないようで、
 というエラーになってうまくいかなかったので、
 <code>/etc/letsencrypt/post-hook</code> に実行ファイルを作って、それを post-hook に指定することにしました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -302,14 +302,14 @@ jessie の systemd は対応していないようで、
 </span><span class='line'> <span class="c">#!/bin/sh</span>
 </span><span class='line'> apachectl graceful
 </span><span class='line'> service postfix reload &gt;/dev/null
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <h2>テスト実行</h2>
 
 <p><code>sudo certbot renew</code> で試しに実行してみたところ、以下のような感じで更新の必要がないときは <code>post-hook</code> は実行されないことが確認できました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -333,7 +333,7 @@ jessie の systemd は対応していないようで、
 </span><span class='line'>  /etc/letsencrypt/live/www.example.org/fullchain.pem <span class="o">(</span>skipped<span class="o">)</span>
 </span><span class='line'>No renewals were attempted.
 </span><span class='line'>No renewals attempted, so not running post-hook
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <h2>まとめ</h2>
@@ -364,7 +364,7 @@ jessie の systemd は対応していないようで、
 
 
 
-<time class='entry-date' datetime='2016-11-08T23:14:00+09:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>8</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>11:14 pm</span></time>
+<time class='entry-date' datetime='2016-11-08T23:14:00+09:00'><span class='date'>2016-11-08 (Tue)</span> <span class='time'>11:14 pm</span></time>
       
 
 <span class="categories">

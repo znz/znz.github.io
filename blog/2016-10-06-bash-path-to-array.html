@@ -9,8 +9,8 @@
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="bash で PATH を配列に分解 Oct 6th, 2016 11:50 pm | Comments zsh だと PATH と同期している配列変数として path があるのですが、
-bash にはそういうものがなくて困ったので、分解する方法を考えてみました。 結論 先に結論を書いておくと、 &hellip;">
+  <meta name="description" content="bash で PATH を配列に分解 2016-10-06 (Thu) 11:50 pm | Comments zsh だと PATH と同期している配列変数として path があるのですが、
+bash にはそういうものがなくて困ったので、分解する方法を考えてみました。 結論 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -96,7 +96,7 @@ bash にはそういうものがなくて困ったので、分解する方法を
 
 
 
-<time class='entry-date' datetime='2016-10-06T23:50:00+09:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>6</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>11:50 pm</span></time>
+<time class='entry-date' datetime='2016-10-06T23:50:00+09:00'><span class='date'>2016-10-06 (Thu)</span> <span class='time'>11:50 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -121,9 +121,9 @@ bash にはそういうものがなくて困ったので、分解する方法を
 
 <p>2016-10-07 追記: 詳細は<a href="/blog/2016-10-07-bash-path-to-array-again.html">続き</a> に書きましたが、改行などに対応できていませんでした。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 </pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> bash -c <span class="s1">&#39;IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p>のように動作確認できます。</p>
@@ -134,7 +134,7 @@ bash にはそういうものがなくて困ったので、分解する方法を
 
 <p><code>-r</code> オプションは <code>read</code> コマンドを使うときの定石ですが、具体的には <code>\:</code> のような並びがあるときに影響がありました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -142,12 +142,12 @@ bash にはそういうものがなくて困ったので、分解する方法を
 </span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot; [1]=&quot;/tmp/foo\\&quot; [2]=&quot;/tmp/bar&quot;)&#39;</span>
 </span><span class='line'><span class="gp">%</span> <span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;/bin:/tmp/foo\:/tmp/bar&quot;</span> bash -c <span class="s1">&#39;IFS=: read -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
 </span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot; [1]=&quot;/tmp/foo:/tmp/bar&quot;)&#39;</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p>実際のパスの挙動は <code>-r</code> がある場合と同じようでした。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -163,18 +163,18 @@ bash にはそういうものがなくて困ったので、分解する方法を
 </span><span class='line'><span class="go">hoge</span>
 </span><span class='line'><span class="gp">%</span> <span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;/bin:/tmp/foo\:/tmp/bar&quot;</span> hoge
 </span><span class='line'><span class="go">hoge</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <h2><code>-d</code> オプション</h2>
 
 <p><code>-d</code> オプションというのもあったので試してみたのですが、そこで完全に読み込み終了になってしまって、期待した動作にはなりませんでした。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 </pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> <span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;/bin:/tmp/foo\:/tmp/bar&quot;</span> bash -c <span class="s1">&#39;read -d : -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
 </span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot;)&#39;</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <h2><code>-a</code> オプション</h2>
@@ -183,7 +183,7 @@ bash にはそういうものがなくて困ったので、分解する方法を
 
 <p><code>-a</code> オプションがないと指定した変数のうち、最後に残り全て入ってしまうようです。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -191,7 +191,7 @@ bash にはそういうものがなくて困ったので、分解する方法を
 </span><span class='line'><span class="go">declare -- path1=&quot;/bin&quot;</span>
 </span><span class='line'><span class="go">declare -- path2=&quot;/tmp/foo\\&quot;</span>
 </span><span class='line'><span class="go">declare -- path3=&quot;/tmp/bar:/tmp/baz&quot;</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <h2>here string</h2>
@@ -213,7 +213,7 @@ bash にはそういうものがなくて困ったので、分解する方法を
 
 <p>セキュリティ上の問題もあるので、普通は設定しないと思うので、対応しなくても問題はないと思いますが、完全に変換したい場合は特別扱いを追加する必要がありそうでした。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -225,7 +225,7 @@ bash にはそういうものがなくて困ったので、分解する方法を
 </span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot; [1]=&quot;&quot; [2]=&quot;/bin&quot;)&#39;</span>
 </span><span class='line'><span class="gp">%</span>  bash -c <span class="s1">&#39;PATH=/bin:; IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
 </span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot;)&#39;</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <h2>まとめ</h2>
@@ -252,7 +252,7 @@ bash にはそういうものがなくて困ったので、分解する方法を
 
 
 
-<time class='entry-date' datetime='2016-10-06T23:50:00+09:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>6</span><span class='date-suffix'>th</span>, <span class='date-year'>2016</span></span> <span class='time'>11:50 pm</span></time>
+<time class='entry-date' datetime='2016-10-06T23:50:00+09:00'><span class='date'>2016-10-06 (Thu)</span> <span class='time'>11:50 pm</span></time>
       
 
 <span class="categories">

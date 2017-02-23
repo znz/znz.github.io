@@ -9,7 +9,7 @@
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Mac OS X で owncloudcmd を使う May 2nd, 2014 10:18 pm | Comments ownCloud のデスクトップクライアントには owncloudcmd というコマンドが含まれています。
+  <meta name="description" content="Mac OS X で owncloudcmd を使う 2014-05-02 (Fri) 10:18 pm | Comments ownCloud のデスクトップクライアントには owncloudcmd というコマンドが含まれています。
 昔は ocsync というコマンドが別途あったようですが、 &hellip;">
   
 
@@ -96,7 +96,7 @@
 
 
 
-<time class='entry-date' datetime='2014-05-02T22:18:39+09:00'><span class='date'><span class='date-month'>May</span> <span class='date-day'>2</span><span class='date-suffix'>nd</span>, <span class='date-year'>2014</span></span> <span class='time'>10:18 pm</span></time>
+<time class='entry-date' datetime='2014-05-02T22:18:39+09:00'><span class='date'>2014-05-02 (Fri)</span> <span class='time'>10:18 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -136,7 +136,7 @@
 
 <p>普通に使おうとすると <code>dyld: Library not loaded: libowncloudsync.0.dylib</code> で起動できません。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -146,14 +146,14 @@
 </span><span class='line'><span class="go">  Referenced from: /Applications/owncloud.app/Contents/MacOS/owncloudcmd</span>
 </span><span class='line'><span class="go">  Reason: image not found</span>
 </span><span class='line'><span class="go">zsh: trace trap  /Applications/owncloud.app/Contents/MacOS/owncloudcmd</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <h3>ライブラリのパス修正</h3>
 
 <p><code>otool -L</code> で確認すると相対パスがまずいとわかります。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -197,7 +197,7 @@
 </span><span class='line'><span class="go"> /usr/local/lib/libqtkeychain.0.3.0.dylib (compatibility version 0.0.0, current version 0.3.0)</span>
 </span><span class='line'><span class="go"> /usr/local/opt/neon/lib/libneon.27.dylib (compatibility version 31.0.0, current version 31.0.0)</span>
 </span><span class='line'><span class="go"> /usr/lib/libstdc++.6.dylib (compatibility version 7.0.0, current version 7.9.0)</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p><code>install_name_tool -add_rpath</code> や <code>install_name_tool -delete_rpath</code> で試行錯誤したのですが、
@@ -207,16 +207,16 @@
 
 <p>まず相対パスを修正しました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 </pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span>  otool -L /Applications/owncloud.app/Contents/MacOS/owncloudcmd | awk <span class="s1">&#39;$1~&quot;^lib&quot;{print &quot;install_name_tool -change &quot; $1 &quot; @executable_path/../MacOS/&quot; $1 &quot; /Applications/owncloud.app/Contents/MacOS/owncloudcmd&quot; }&#39;</span> | sh -e
 </span><span class='line'><span class="gp">%</span>  otool -L /Applications/owncloud.app/Contents/MacOS/owncloudcmd | awk <span class="s1">&#39;$1~&quot;^Qt&quot;{print &quot;install_name_tool -change &quot; $1 &quot; @executable_path/../Frameworks/&quot; $1 &quot; /Applications/owncloud.app/Contents/MacOS/owncloudcmd&quot; }&#39;</span> | sh -e
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p>さらに <code>/usr/local/lib</code> をさしているものがあったのを修正しました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -248,12 +248,12 @@
 </span><span class='line'><span class="gp">%</span>  find /Applications/owncloud.app -name libneon.27.dylib
 </span><span class='line'><span class="go">/Applications/owncloud.app/Contents/MacOS/libneon.27.dylib</span>
 </span><span class='line'><span class="gp">%</span>  install_name_tool -change /usr/local/opt/neon/lib/libneon.27.dylib /Applications/owncloud.app/Contents/MacOS/libneon.27.dylib /Applications/owncloud.app/Contents/MacOS/owncloudcmd
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p>これで余計なメッセージは出ますが、使えるようになりました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -297,7 +297,7 @@
 </span><span class='line'><span class="go">                         Proxy is http://server:port</span>
 </span><span class='line'>
 </span><span class='line'><span class="go">zsh: exit 1     /Applications/owncloud.app/Contents/MacOS/owncloudcmd</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <h2>使い方</h2>
@@ -335,7 +335,7 @@ URL に <code>ownclouds://user:password@example.jp/remote.php/webdav</code> の�
 
 
 
-<time class='entry-date' datetime='2014-05-02T22:18:39+09:00'><span class='date'><span class='date-month'>May</span> <span class='date-day'>2</span><span class='date-suffix'>nd</span>, <span class='date-year'>2014</span></span> <span class='time'>10:18 pm</span></time>
+<time class='entry-date' datetime='2014-05-02T22:18:39+09:00'><span class='date'>2014-05-02 (Fri)</span> <span class='time'>10:18 pm</span></time>
       
 
 <span class="categories">

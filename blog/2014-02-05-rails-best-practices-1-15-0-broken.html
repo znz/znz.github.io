@@ -9,7 +9,7 @@
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="rails_best_practices 1.15.0でtryが壊れた Feb 5th, 2014 10:35 am | Comments 今日の bundle update をしてみたところ、開発環境での devise でのログイン時に devise (3.2.2) lib/devise/ &hellip;">
+  <meta name="description" content="rails_best_practices 1.15.0でtryが壊れた 2014-02-05 (Wed) 10:35 am | Comments 今日の bundle update をしてみたところ、開発環境での devise でのログイン時に devise (3.2.2) lib/devise &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -95,7 +95,7 @@
 
 
 
-<time class='entry-date' datetime='2014-02-05T10:35:06+09:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>5</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>10:35 am</span></time>
+<time class='entry-date' datetime='2014-02-05T10:35:06+09:00'><span class='date'>2014-02-05 (Wed)</span> <span class='time'>10:35 am</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -117,7 +117,7 @@
 
 <p>例外が発生した行は以下の内容で、今まで問題なく動いていたし、特に問題はなさそうだったので、他の gem の影響だということがわかりました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>lib/devise/hooks/csrf_cleaner.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>lib/devise/hooks/csrf_cleaner.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -127,12 +127,12 @@
 </span><span class='line'>    <span class="n">warden</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">try</span><span class="p">(</span><span class="ss">:delete</span><span class="p">,</span> <span class="ss">:_csrf_token</span><span class="p">)</span>
 </span><span class='line'>  <span class="k">end</span>
 </span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p>ソースコードを追いかけるのは難しそうだったので、 better_errors の live shell を使って調査しました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -152,14 +152,14 @@
 </span><span class='line'><span class="go">=&gt; {&quot;session_id&quot;=&gt;&quot;略&quot;, &quot;user_return_to&quot;=&gt;&quot;/&quot;, &quot;_csrf_token&quot;=&gt;&quot;略&quot;, &quot;warden.user.user.key&quot;=&gt;[[8], &quot;$2a$10$略&quot;]}</span>
 </span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.try<span class="o">(</span>:delete, :_csrf_token<span class="o">)</span>
 </span><span class='line'><span class="go">!! #&lt;ArgumentError: wrong number of arguments (2 for 1)&gt;</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p><code>env["warden"]</code> 経由で再現しました。</p>
 
 <p>次に原因を探るために <code>arity</code> を調べました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -185,7 +185,7 @@
 </span><span class='line'><span class="gp">&gt;</span>&gt; env<span class="o">[</span><span class="s2">&quot;warden&quot;</span><span class="o">]</span>.request.session.method<span class="o">(</span><span class="s2">&quot;try&quot;</span><span class="o">)</span>.source_location
 </span><span class='line'><span class="go">=&gt; [&quot;略/rails_best_practices-1.15.0/lib/rails_best_practices/core_ext/object.rb&quot;, 7]</span>
 </span><span class='line'><span class="gp">&gt;</span>&gt;
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p>rails_best_practices 1.15.0 が原因とわかったので issues を確認すると既に同様の現象の報告があったので、<a href="https://github.com/railsbp/rails_best_practices/issues/202#issuecomment-34129010">コメントしておきました</a>。</p>
@@ -207,7 +207,7 @@
 
 
 
-<time class='entry-date' datetime='2014-02-05T10:35:06+09:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>5</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>10:35 am</span></time>
+<time class='entry-date' datetime='2014-02-05T10:35:06+09:00'><span class='date'>2014-02-05 (Wed)</span> <span class='time'>10:35 am</span></time>
       
 
 <span class="categories">

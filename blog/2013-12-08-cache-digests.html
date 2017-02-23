@@ -9,8 +9,8 @@
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Rail 3.2でcache_digestsを使ってみた Dec 8th, 2013 12:00 am | Comments まだ Rails 3.2.16 のままのアプリで cache_digests gem を使って
-fragment cache を導入してみました。 Rails 4.0 &hellip;">
+  <meta name="description" content="Rail 3.2でcache_digestsを使ってみた 2013-12-08 (Sun) 12:00 am | Comments まだ Rails 3.2.16 のままのアプリで cache_digests gem を使って
+fragment cache を導入してみました。 Rails 4. &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -96,7 +96,7 @@ fragment cache を導入してみました。 Rails 4.0 &hellip;">
 
 
 
-<time class='entry-date' datetime='2013-12-08T00:00:00+09:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>8</span><span class='date-suffix'>th</span>, <span class='date-year'>2013</span></span> <span class='time'>12:00 am</span></time>
+<time class='entry-date' datetime='2013-12-08T00:00:00+09:00'><span class='date'>2013-12-08 (Sun)</span> <span class='time'>12:00 am</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -126,11 +126,11 @@ fragment cache を導入してみました。</p>
 
 <p>まず <code>Gemfile</code> に以下の gem の指定を追加してインストールしました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>Gemfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>Gemfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 </pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">gem</span> <span class="s1">&#39;cache_digests&#39;</span>
 </span><span class='line'><span class="n">gem</span> <span class="s1">&#39;dalli&#39;</span><span class="p">,</span> <span class="ss">group</span><span class="p">:</span> <span class="ss">:production</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <h2>環境設定</h2>
@@ -140,18 +140,18 @@ fragment cache を導入してみました。</p>
 ちゃんとキャッシュで来ているかどうかの確認や削除がしやすいように
 保存先はデフォルトの <code>:file_store</code> のままにしています。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>config/environments/development.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>config/environments/development.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 </pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">action_controller</span><span class="o">.</span><span class="n">perform_caching</span> <span class="o">=</span> <span class="kp">true</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p><code>production</code> 環境では <code>dalli</code> を使って <code>memcached</code> に保存するようにしました。
 <code>dalli</code> の設定はこの記事の本題ではないので、
 <code>memcached</code> の設定などは他のサイトを参考にしてください。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>config/environments/production.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>config/environments/production.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 </pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">config</span><span class="o">.</span><span class="n">cache_store</span> <span class="o">=</span> <span class="ss">:dalli_store</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p><code>staging</code> 環境もあったので <code>config/environments/staging.rb</code> にも同様の設定をしました。</p>
@@ -163,11 +163,11 @@ fragment cache を導入してみました。</p>
 <code>app/views/posts/_post.html.haml</code> のような view を使って
 <code>render @comments</code> や <code>render @posts</code> のように使っていたので、</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>app/views/comments/_comment.html.haml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>app/views/comments/_comment.html.haml</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 </pre></td><td class='code'><pre><code class='text'><span class='line'>- cache comment do
 </span><span class='line'>  -# 今までの内容
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p>のように <code>cache comment do ... end</code> で今までの内容をくくるだけでした。
@@ -177,11 +177,11 @@ fragment cache を導入してみました。</p>
 
 <p><code>log/developement.log</code> などを <code>fragment</code> で検索してみると</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>log/developement.log</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>log/developement.log</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 </pre></td><td class='code'><pre><code class='text'><span class='line'>Write fragment views/comments/29-20130905083500/96f0ec0ce36af8132826f3bfbe0079db 0.5ms
 </span><span class='line'>Read fragment views/comments/30-20130905083518/96f0ec0ce36af8132826f3bfbe0079db 0.4ms
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p>などと記録されていて、キャッシュが使われていることが確認できました。</p>
@@ -211,9 +211,9 @@ view のファイルが変更したり、
 <p>さらに以下のように <code>belongs_to</code> に <code>touch: true</code> を付けて、
 コメントが付いた時に <code>post</code> の <code>updated_at</code> も更新されるようにしました。</p>
 
-<div class='bogus-wrapper'><notextile><figure class='code'><figcaption><span>app/models/comment.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>app/models/comment.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 </pre></td><td class='code'><pre><code class='ruby'><span class='line'>  <span class="n">belongs_to</span> <span class="ss">:commentable</span><span class="p">,</span> <span class="ss">polymorphic</span><span class="p">:</span> <span class="kp">true</span><span class="p">,</span> <span class="ss">touch</span><span class="p">:</span> <span class="kp">true</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <h2>キャッシュの完全削除</h2>
@@ -249,7 +249,7 @@ view のファイルが変更したり、
 
 
 
-<time class='entry-date' datetime='2013-12-08T00:00:00+09:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>8</span><span class='date-suffix'>th</span>, <span class='date-year'>2013</span></span> <span class='time'>12:00 am</span></time>
+<time class='entry-date' datetime='2013-12-08T00:00:00+09:00'><span class='date'>2013-12-08 (Sun)</span> <span class='time'>12:00 am</span></time>
       
 
 <span class="categories">
