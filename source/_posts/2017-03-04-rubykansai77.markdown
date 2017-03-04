@@ -1,0 +1,134 @@
+---
+layout: post
+title: "第77回 Ruby関西 勉強会に参加しました"
+date: 2017-03-04 13:00:00 +0900
+comments: true
+categories: event ruby rubykansai
+---
+[第77回 Ruby関西 勉強会](https://rubykansai.doorkeeper.jp/events/58025 "第77回 Ruby関西 勉強会")
+に参加しました。
+
+<!--more-->
+
+以下、そのメモです。
+
+## 会場
+
+- 地図が最初はグランフロントをさしていた。(昨晩直しました。) (doorkeeper のシステムで住所を変えただけど、地図の方は変わらないらしい。)
+- 会場はヒルトンプラザウエストで、ヒルトンプラザイーストとどちらなのかわかりにくい。
+- 工事中が多くて場所がわかっていてもたどり着きにくかったらしい。
+
+## 最適化のやり方
+
+- [あくまのおしごと](http://oke-ya.com/devil.html)の宣伝
+- KEN_ALL.CSV を読み込んで東西南北を含む行をカウントするプログラムを例に
+- 最初に全部読んでメモリ上にのせて `each_line` (メモリ効率を気にするなら元の `open` 中に `f.gets` の方が良さそう)
+- 配列を find せずに Hash を使う
+- 配列に対象行をためていって length をとるのではなく数値でカウント
+- 同じメソッド呼び出しをローカル変数に代入して減らす
+- `sort` から `sort_by`
+- 早すぎる最適化はするべきではない
+- 気をつけるポイント
+- IO はなるべく短く
+- データ構造(もたせ方)を工夫する
+- ループの中でオブジェクトをなるべく作らない
+- 文字列、配列、ハッシュは数値やシンボルとくらべてメモリ消費量が多い点を心得ておく
+- 質疑応答
+- データが大きい時や大きさがわからないときは一気に読まない方が良さそう
+- SQL にあるような何行かごとに処理というのは専用のメソッドはなさそう
+- `/北|南|東|西/` は `/[北南東西]/` の方が良いのではないかというツッコミ
+- 西東京みたいなのは西と東でカウントされるのかという話 - 片方しかカウントされない実装になっていた。
+- カウント対象は限定されているので、ループの中で `||=` で初期化するのではなく `{"北" => 0}'` のように初期値をもつのもあり。 `Hash.new { 0 }` のような方法もあり。
+- 最後にもう一度、[あくまのおしごと](http://oke-ya.com/devil.html)の宣伝
+- [Rubyコードの最適化](https://www.slideshare.net/yalab/ruby-72795596)
+
+## Rails 5.1.0.beta1はどのようにモダンなJavaScript開発を実現しているのか？
+
+- webpacker gem を使ったデモ
+- `bundle exec rails webpacker:install:react`
+- config/webpack/shared.js でビルドする対象を指定
+- bin/webpack-dev-server は localhost:8080 で待ち受ける express のサーバー
+- bin/webpack は public 以下に出力
+- `javascript_pack_tag` の実装確認
+- `dev_server_host` が設定されていればそこから、なければ digest もしくは直接
+- 質疑応答
+- フロントエンドを知らない人は sprockets で良いのではないか
+- sprockets と webpacker の違い
+- deploy するときは? webpacker-dev-server ではなく、 webpack で public 以下に生成する
+- 情報源は? rails guide などにはまだ。 master でもまだ変化が続いている。
+- スタイルシートはコンパイルしてくれないのか? 現状デフォルトで生成される config では対象ではない。 webpack の知識があって設定すれば可能。
+- [Rails 5.1.0.beta1はどのようにモダンなJavaScript開発を実現しているのか？ // Speaker Deck](https://speakerdeck.com/chimame/rails-5-dot-1-0-dot-beta1hadofalseyounimodannajavascriptkai-fa-woshi-xian-siteirufalseka)
+
+## 休憩
+
+- 14:20 まで
+
+## Welcome to tebukuro
+
+- tebukuro とは
+- イベント、チケット管理サービス
+- Shinosaka.rb のプロダクト
+- なぜ tebukuro
+- 既存サービスへの不満
+- 使っているもの
+- rails
+- postgresql
+- node.js など
+- CI: Wercker から Jenkins に移行中
+- 開発環境は docker compose
+- 本番環境も docker
+- Dcoker を使う理由
+- コンテナ指向でシンプルに保てる
+- どの環境でも動作する
+- スケーラブル: コンテナ単位で可能
+- GCP
+- なぜOSSなのか
+- 開発方法も他のOSSと同じ
+- OSS開発の敷居をさげるための素振りもできる
+- 英語の勉強もできちゃう
+- もう一つのねらい
+- betaやalphaのライブラリを積極的に採用
+- バグを踏んでライブラリへのPRチャンスを作る
+- PRとはいかずともissue報告はできる
+- 目指すコミュニティ
+- https://github.com/shinosakarb/tebukuro
+
+## Create React App ではじめる Rails の SPA
+
+- ライブコーディング
+- 実装を見ると `.html` が `index.html` より優先されるっぽい
+- RFC とかは単語が一般的すぎて見つけられなかったというコネタ
+- (後で https://www.rfc-editor.org/retrieve/bulk/ からダウンロードして txt ファイルを index.html で検索してみたけど、書いてなさそうだった。調べていた時に思い出したけど IIS は index ではなかった (確認したら default だった) ので RFC に書かれている可能性は低そう)
+- yarn は yarnpkg コマンドの方が主流になるかもしれないらしい
+- react-router-dom
+- 公式サイトは v4 系のドキュメントになっている
+- webpack も公式サイトは 2 系のドキュメントになっていて 1 系はではないらしい
+- react-router-dom が beta7 になっていて、公式サイトのデモが beta6 では動かなかった。
+- 時間がなかったので、 OAuth との組み合わせは完成版でデモ
+
+## Rubyのオススメの機能７選
+
+- [Ruby のオススメの機能７選](http://qiita.com/cuzic/items/a265f140fdff289d5c07)
+- `Enumerator.new`
+- `Object#tap`
+- `Float::INFINITY`
+- `Enumerable#each_slice`
+- `Array#shelljoin`
+- (単純に実行するだけなら複数引数の `system` などを使った方が良さそうと思っていたけど、多段 ssh とかの時には確かに良さそう。)
+- `SecureRandom.hex`
+- Flip Flop 演算子
+- 質疑応答
+- 配列に `with_index(1)` は使えないので、`each.with_index(1)` にする必要がある
+- `each_with_index` だと初期値を指定できないので、この場合は使えない
+
+## Ruby初級者向けレッスン --- ブロック
+
+初心者の人は少なかった。
+告知タイミングなどの問題で、スタッフの人が多かった。
+
+追加して `self` が欲しい時は `Array#<<` とか `Hash#update` とか。
+
+## クロージング
+
+- [Rails Follow-up Osaka #7](https://rails-follow-up-osaka.doorkeeper.jp/events/58097)
+- [関西Ruby会議2017 CFP](https://rubykansai.doorkeeper.jp/events/57723)募集中
