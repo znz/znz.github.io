@@ -4,7 +4,7 @@
   <title><![CDATA[Category: gpg | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/gpg/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-03-19T22:34:51+09:00</updated>
+  <updated>2017-03-23T21:39:39+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,121 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[pinentry-emacsを使ってみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-03-23-pinentry-emacs.html"/>
+    <updated>2017-03-23T20:30:13+09:00</updated>
+    <id>http://blog.n-z.jp/blog/pinentry-emacs</id>
+    <content type="html"><![CDATA[<p><code>gpg-agent</code> で <code>--allow-emacs-pinentry</code> が使えない gnupg2 の環境で、
+<a href="https://github.com/ecraven/pinentry-emacs">https://github.com/ecraven/pinentry-emacs</a> を使ってみました。</p>
+
+<!--more-->
+
+
+<h2>動作確認環境</h2>
+
+<ul>
+<li>macOS Sierra 10.12.3</li>
+<li>GNU Emacs 25.1.1</li>
+<li>gnupg2 2.0.30_3 (Homebrew で入れたもの)</li>
+</ul>
+
+
+<h2>注意事項</h2>
+
+<p><a href="https://github.com/ecraven/pinentry-emacs/blob/7c384a65eaaa37d38dbbb4e4ca89a094b498d811/README.org#emacs">README.org の末尾</a>にも
+「This is probably totally insecure, and your passphrase may be leaked! Use at your own risk!」と書いてありますが、
+<code>read-passwd</code> した文字列をそのまま <code>emacsclient</code> に返して、シェルスクリプトでそのまま扱っているので、
+全く安全ではありません。</p>
+
+<p>他の <code>pinentry</code> が使える時は避けることをオススメします。</p>
+
+<h2>別の方法</h2>
+
+<p><code>gnupg</code> が 2.1.5 以降なら <code>--allow-emacs-pinentry</code> というオプションがあるので、
+<a href="https://elpa.gnu.org/packages/pinentry.html">https://elpa.gnu.org/packages/pinentry.html</a> と組み合わせて使うことをオススメします。
+(<code>elpa</code> の説明によると <code>pinentry</code> も 0.9.5 以上が必要のようです。)
+この方法は別途試してまた記事を書く予定です。</p>
+
+<p>今回の環境では、
+<a href="https://github.com/Homebrew/homebrew-core/blob/328a89b492b600686be41b6b69b93d7c88fb8b89/Formula/gnupg2.rb">Homebrew の gnupg2</a>
+が 2.0.30 で 2.1.5 未満なので使えませんでした。</p>
+
+<p>macOS 上なら Emacs 上で入力するよりも
+<a href="/blog/2016-08-20-mac-easypg-gpg2.html">OS X の Emacs で EasyPG が gpg2 で Opening input file: Decryption failed, になったので対処した</a>記事に書いた
+<code>pinentry-mac</code> を使うのがオススメです。</p>
+
+<h2>設定</h2>
+
+<h3>gpg-agent の設定</h3>
+
+<p><code>~/.gnupg/gpg-agent.conf</code> がなければ作成して、以下の設定を入れておきます。</p>
+
+<pre><code>pinentry-program /path/to/github.com/ecraven/pinentry-emacs/pinentry-emacs
+</code></pre>
+
+<h3>emacs の設定</h3>
+
+<p>README.org に書いてあるように <code>~/.emacs.d/init.el</code> に</p>
+
+<pre><code>(defun pinentry-emacs (desc prompt ok error)
+  (let ((str (read-passwd (concat (replace-regexp-in-string "%22" "\"" (replace-regexp-in-string "%0A" "\n" desc)) prompt ": "))))
+    str))
+</code></pre>
+
+<p>を追加しておきます。</p>
+
+<p><code>emacsclient</code> コマンドで <code>pinentry-emacs</code> 関数を呼んでいるので、
+<code>(server-start)</code> も (README.org には書いていませんが) 必要です。</p>
+
+<h2>動作確認</h2>
+
+<p>Emacs の中で <code>*.gpg</code> ファイルを開いてみたり、
+端末上でパスフレーズの必要な <code>gpg</code> コマンドを実行してみたりして、
+<code>(server-start)</code> した Emacs の mini buffer でパスフレーズがきかれるのを確認します。</p>
+
+<h2>fallback 動作</h2>
+
+<p><code>emacsclient</code> の呼び出しが <code>sed</code> に <a href="https://github.com/ecraven/pinentry-emacs/blob/7c384a65eaaa37d38dbbb4e4ca89a094b498d811/pinentry-emacs#L24">pipe されている</a> ので、
+<a href="https://github.com/ecraven/pinentry-emacs/pull/5">Fix fallback when emacsclient failed</a>
+のパッチをあてないと fallback してくれないようです。
+(取り込まれたらブロク記事を書こうと思っていたのですが、取り込まれないようなのでもう書くことにしました。)</p>
+
+<p>さらに別途 <code>pinentry-emacs</code> ディレクトリにパスを通しておくか、
+<code>pinentry-emacs</code> ファイルの先頭で <code>PATH=$PATH:$(dirname "$0")</code> などとしてパスを通さないと
+<code>lukspinentry</code> の実行に失敗して fallback してくれません。</p>
+
+<p>さらに、端末上で <code>gpg</code> コマンドを実行したとしても、
+<code>pinentry</code> プログラムは <code>gpg-agent</code> から起動される
+(プログラム間の関係は <a href="http://miniconf.debian.or.jp/assets/files/gnupg-now.html">http://miniconf.debian.or.jp/assets/files/gnupg-now.html</a> の GnuPG programs (2) 参照)
+ので、
+<code>tty</code> が「<code>not a tty</code>」を返すらしく、
+<code>pinentry-curses --ttyname not a tty</code>
+が実行されていて fallback もうまくいきません。</p>
+
+<p>なので、
+fallback 動作は期待せず、
+パッチもあてず、
+<code>pinentry-emacs</code> を使うなら
+必ず Emacs は起動しておく、
+という運用が良さそうです。</p>
+
+<h2>まとめ</h2>
+
+<p><code>pinentry-emacs</code> を試してみましたが、
+制限事項も多く、
+修正も期待できないため、
+別のもっと良い <code>pinentry</code> が使える場合は、
+他のものを使うことをオススメします。</p>
+
+<p>他の手段がない時の最終手段としては、知っておいても良いのではないかと思いました。</p>
+
+<p>ちなみに自分の環境では、
+<code>pinentry-mac</code> に戻してしまっていて、
+<code>pinentry-emacs</code> は使っていません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[OS X の Emacs で EasyPG が gpg2 で Opening input file: Decryption failed, になったので対処した]]></title>
