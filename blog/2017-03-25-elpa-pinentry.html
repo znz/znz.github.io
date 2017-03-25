@@ -5,12 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>@znz blog</title>
+  <title>elpaのpinentry.elを試してみた - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Emacs の easypg と gnupg 2 で Opening input file: Decryption failed, になることの対処として、
-ELPA の pinentry.el を試してみました。 ">
+  <meta name="description" content="elpaのpinentry.elを試してみた 2017-03-25 (Sat) 12:57 pm | Comments Emacs の easypg と gnupg 2 で Opening input file: Decryption failed, になることの対処として、
+ELPA の &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +19,7 @@ ELPA の pinentry.el を試してみました。 ">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-03-25-elpa-pinentry.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,15 +76,18 @@ ELPA の pinentry.el を試してみました。 ">
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2017-03-25-elpa-pinentry.html">elpaのpinentry.elを試してみた</a></h1>
+      
+      <!-- zenback_title_begin -->
+      
+      <h1 class="entry-title">elpaのpinentry.elを試してみた</h1>
+      
+      <!-- zenback_title_end -->
+      
     
     
       <p class="meta">
@@ -95,384 +98,304 @@ ELPA の pinentry.el を試してみました。 ">
 
 <time class='entry-date' datetime='2017-03-25T12:57:57+09:00'><span class='date'>2017-03-25 (Sat)</span> <span class='time'>12:57 pm</span></time>
         
-           | <a href="/blog/2017-03-25-elpa-pinentry.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2017-03-25-elpa-pinentry.html">Comments</a>
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>Emacs の easypg と gnupg 2 で <code>Opening input file: Decryption failed,</code> になることの対処として、
+
+<!-- zenback_body_begin -->
+
+<div class="entry-content"><p>Emacs の easypg と gnupg 2 で <code>Opening input file: Decryption failed,</code> になることの対処として、
 <a href="https://elpa.gnu.org/packages/pinentry.html">ELPA の pinentry.el</a> を試してみました。</p>
 
+<!--more-->
+
+
+<h2>動作確認環境</h2>
+
+<p>デフォルトの gpg コマンドが gnupg 2 になっている Debian 系の環境で安定版がリリースされているものということで、
+yakkety を使いました。</p>
+
+<ul>
+<li>Ubuntu 16.10 (yakkety)</li>
+<li>gnupg 2.1.15-1ubuntu6</li>
+<li>pinentry-curses 0.9.7-5 (をリビルドしたもの)</li>
+<li>emacs24 24.5+1-6ubuntu3</li>
+<li>pinentry-0.1.el, 2015-Jun-12, 15.8kB</li>
+</ul>
+
+
+<h2>結果</h2>
+
+<p>先に結果を書いておくと、
+そのままだと動きませんでした。</p>
+
+<p><code>pinentry</code> を <code>--disable-pinentry-emacs --disable-inside-emacs</code> なしでリビルドして試すとうまくいきました。</p>
+
+<h2>設定反映</h2>
+
+<p>パッケージを入れ替えたり、
+<code>~/.gnupg/gpg-agent.conf</code> を書き換えた後は、
+<code>gpg-connect-agent killagent /bye</code> で <code>gpg-agent</code> を終了させました。
+<code>pkill gpg-agent</code> でも同じようですが、
+<code>gpg-connect-agent</code> の方が正式な手順のようです。
+<code>gpgconf --kill gpg-agent</code> でも終了できるようです。</p>
+
+<h2>オリジナルパッケージでの挙動</h2>
+
+<p><code>~/.gnupg/gpg-agent.conf</code> に <code>allow-emacs-pinentry</code> を追加すると Emacs の中どころか、
+コマンドライン直接でも使えなくなりました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% cat ~/.gnupg/gpg-agent.conf
+</span><span class='line'>allow-emacs-pinentry
+</span><span class='line'>log-file /tmp/gpg-agent.log</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のように <code>log-file</code> も指定してみると <code>gpg -c hoge</code> で暗号化したファイルを復号しようとしたときは</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% gpg hoge.gpg
+</span><span class='line'>gpg: AES暗号化済みデータ
+</span><span class='line'>gpg: エージェントに問題: サポートされていません
+</span><span class='line'>gpg: 1 個のパスフレーズで暗号化
+</span><span class='line'>gpg: 復号に失敗しました: 秘密鍵がありません</span></code></pre></td></tr></table></div></figure>
+
+
+<p>となって、ログには</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>2017-03-25 13:XX:XX gpg-agent[XXXXX] gpg-agent (GnuPG) 2.1.15 started
+</span><span class='line'>2017-03-25 13:XX:XX gpg-agent[XXXXX] command 'GET_PASSPHRASE' failed: サポートされていません &lt;Pinentry&gt;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>と出ていました。</p>
+
+<p>公開鍵で暗号化したファイルを復号しようとしたときには</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% gpg fuga.gpg
+</span><span class='line'>gpg: 2048-ビットRSA鍵, ID XXXXXXXXXXXXXXXX, 日付2017-03-24に暗号化されました
+</span><span class='line'>      "test@example.com"
+</span><span class='line'>gpg: 公開鍵の復号に失敗しました: サポートされていません
+</span><span class='line'>gpg: 復号に失敗しました: 秘密鍵がありません</span></code></pre></td></tr></table></div></figure>
+
+
+<p>となって、ログには</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>2017-03-25 13:XX:XX gpg-agent[XXXXX] gpg-agent (GnuPG) 2.1.15 started
+</span><span class='line'>2017-03-25 13:XX:XX gpg-agent[XXXXX] failed to unprotect the secret key: サポートされていません
+</span><span class='line'>2017-03-25 13:XX:XX gpg-agent[XXXXX] failed to read the secret key
+</span><span class='line'>2017-03-25 13:XX:XX gpg-agent[XXXXX] command 'PKDECRYPT' failed: サポートされていません &lt;Pinentry&gt;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>と出ていました。</p>
+
+<h2>パッケージのリビルド</h2>
+
+<p>変更点としては <code>debian/rules</code> の <code>--disable-pinentry-emacs --disable-inside-emacs</code> を外して <code>pinentry-curses</code> を入れ替えただけですが、
+全体の手順もメモしておきます。</p>
+
+<ul>
+<li><code>apt-get source pinentry-curses</code></li>
+<li><code>sudo apt-get build-dep pinentry</code></li>
+<li><code>sudo apt-get install devscripts</code></li>
+<li><code>cd pinentry-0.9.7</code></li>
+<li><code>vi debian/rules</code> で <code>SHARED_CONFIGS = --disable-rpath --without-libcap --disable-pinentry-emacs --disable-inside-emacs</code> を <code>SHARED_CONFIGS = --disable-rpath --without-libcap</code> に変更</li>
+<li><code>debuild -uc -us -rfakeroot</code></li>
+<li><code>cd ..</code></li>
+<li><code>sudo dpkg -i pinentry-curses_0.9.7-5_amd64.deb</code></li>
+</ul>
+
+
+<h2>Emacs の設定</h2>
+
+<p><code>M-x package-install RET pinentry RET</code> などで <code>pinentry.el</code> をインストールしておきます。</p>
+
+<p><a href="https://elpa.gnu.org/packages/pinentry.html">GNU ELPA - pinentry</a> の説明にはありませんが、
+<code>INSIDE_EMACS</code> 環境変数も設定しないと <code>pinentry-curses</code> に Emacs を開いている端末を乗っ取られて操作できなくなってしまいました。
+(<code>pkill pinentry</code> で復帰できました。 <code>gpg-agent</code> も終了させたり <code>C-l</code> で再描画も必要かもしれません。)</p>
+
+<p><code>INSIDE_EMACS</code> 環境変数は <code>M-x shell</code> では <code>Emacsのバージョン,comint</code> に自動で設定されるようなので、
+<code>pinentry.el</code> はそういう環境での使用を前提として作られたのかもしれません。</p>
+
+<p><code>(package-initialize)</code> は <code>(pinentry-start)</code> を呼ぶのに必要だったので追加しています。
+起動後に <code>M-x pinentry-start</code> する時には <code>M-x package-initialize</code> は必要なかったので、
+初期化の順番の問題なのだと思います。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% cat ~/.emacs.d/init.el
+</span><span class='line'>(setenv "INSIDE_EMACS" "t")
+</span><span class='line'>(package-initialize)
+</span><span class='line'>(pinentry-start)</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>pinentry.el の動作</h2>
+
+<p>共通鍵で暗号化した <code>hoge.gpg</code> を開こうとするとミニバッファで</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>パスフレーズを入力:</span></code></pre></td></tr></table></div></figure>
+
+
+<p>と聞いてきて、間違ったパスフレーズを入力すると <code>Opening input file: Decryption failed,</code> になりました。</p>
+
+<p>正しいパスフレーズを入力すると開けました。
+編集して保存は新しいパスフレーズをきいてきました。
+保存した時のパスフレーズがキャッシュされているらしく、
+<code>C-x C-v</code> (<code>find-alternate-file</code>) での開き直しはパスフレーズ入力なしでできました。</p>
+
+<p>公開鍵で暗号化した <code>fuga.gpg</code> を開こうとするとミニバッファで</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>OpenPGPの秘密鍵のロックを解除するためにパスフレーズを入力してください:
+</span><span class='line'>"test@example.com"
+</span><span class='line'>2048ビットRSA鍵, ID XXXXXXXXXXXXXXXX,
+</span><span class='line'>作成日付 2017-03-24 (主鍵ID YYYYYYYYYYYYYYYY).:</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のようにきいてきました。</p>
+
+<p>何も入力せずに <code>RET</code> を押すと <code>Opening input file: Decryption failed,</code> になりました。
+パスフレーズを 3 回間違えても <code>Opening input file: Decryption failed,</code> になりました。</p>
+
+<p>正しいパスフレーズを入力すると開けました。
+編集して保存や <code>C-x C-v</code> (<code>find-alternate-file</code>) での開き直しもパスフレーズ入力なしでできました。</p>
+
+<h2>パスフレーズの入力漏れに注意</h2>
+
+<p>オリジナルの <code>pinentry-curses</code> でも発生した問題です。</p>
+
+<p>パスフレーズを入力せずに <code>RET</code> を押してしまうと <code>Opening input file: Decryption failed,</code> になった後、
+再度開こうとしてもパスフレーズをきいてこなくて、
+すぐに <code>Opening input file: Decryption failed,</code> になるようになってしまいました。
+間違ったパスフレーズの場合は再度きいてくるので、
+普通はそのまま <code>RET</code> は避けるようにして、
+やってしまったら <code>gpg-connect-agent killagent /bye</code> などで <code>gpg-agent</code> を再起動するのが良さそうです。</p>
+
+<p><code>gpg hoge.gpg</code> で直接空欄で OK を押してしまったときも再度きいてこなくなってすぐに</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% gpg hoge.gpg
+</span><span class='line'>gpg: AES暗号化済みデータ
+</span><span class='line'>gpg: gcry_kdf_derive failed: 無効なデータです
+</span><span class='line'>gpg: 1 個のパスフレーズで暗号化
+</span><span class='line'>gpg: 復号に失敗しました: 秘密鍵がありません</span></code></pre></td></tr></table></div></figure>
+
+
+<p>になるようになってしまったので、
+<code>pinentry.el</code> に限らず注意した方が良さそうです。</p>
+
+<h2>Debian パッケージで disable されている理由</h2>
+
+<p>debian/changelog には</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>pinentry (0.9.5-2) unstable; urgency=medium
+</span><span class='line'>
+</span><span class='line'>  * disable emacs and emacs-fallback until we get a better description of
+</span><span class='line'>    them in the upstream documentation</span></code></pre></td></tr></table></div></figure>
+
+
+<p>と書いてあって、
+意図的に無効にされているようです。</p>
+
+<p>経緯としては
+<a href="https://bugs.gnupg.org/gnupg/issue2034">https://bugs.gnupg.org/gnupg/issue2034</a>
+や
+<a href="https://bugs.debian.org/854797">https://bugs.debian.org/854797</a>
+をみるのが良さそうです。</p>
+
+<p>upstream のドキュメント不足ということで、
+ちゃんとドキュメントがあれば再度有効にしてもらえそうですが、
+英語ドキュメントが書ける人じゃないと根本的な解決は難しそうです。</p>
+
+<h2>まとめ</h2>
+
+<p>現状の Debian や Ubuntu では <code>pinentry.el</code> をそのまま使うことは難しそうです。</p>
+
+<p>この記事に書いたように自前でリビルドしてセキュリティアップデートなどがあれば頑張ってリビルドし直すようにするか、
+<a href="/blog/2017-03-23-pinentry-emacs.html">pinentry-emacsを使ってみた</a>記事に書いたように、
+セキュリティや Emacs の外での使い勝手などを犠牲にして <code>pinentry-emacs</code> を使うか、
+ということになりそうです。</p>
+
+<p>現状で一番良い方法は Emacs のミニバッファでの入力は諦めて、
+GUI のダイアログが出てくる <code>pinentry</code> を使うことのようなので、
+<code>ssh</code> で入った先の <code>emacs</code> で完結しないといけないなどの制限がなければ、
+手元の Emacs と GUI の <code>pinentry</code> を組み合わせて、
+リモートのファイルは TRAMP 経由で開く、
+というのが良いのかもしれません。</p>
 </div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2017-03-25-elpa-pinentry.html">続きを読む &rarr;</a>
-    </footer>
-  
+
+<!-- zenback_body_end -->
 
 
-    </article>
-  
-  
-    <article>
+
+  <footer>
+    <p class="meta">
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2017-03-23-pinentry-emacs.html">pinentry-emacsを使ってみた</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2017-03-23T20:30:13+09:00'><span class='date'>2017-03-23 (Thu)</span> <span class='time'>8:30 pm</span></time>
-        
-           | <a href="/blog/2017-03-23-pinentry-emacs.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2017-03-23-pinentry-emacs.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><code>gpg-agent</code> で <code>--allow-emacs-pinentry</code> が使えない gnupg2 の環境で、
-<a href="https://github.com/ecraven/pinentry-emacs">https://github.com/ecraven/pinentry-emacs</a> を使ってみました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2017-03-23-pinentry-emacs.html">続きを読む &rarr;</a>
-    </footer>
   
 
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
 
-    </article>
-  
-  
-    <article>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2017-03-19-kansai-debian-meeting.html">第 121 回関西 Debian 勉強会 (10 周年記念会) に参加しました</a></h1>
-    
-    
-      <p class="meta">
-        
 
 
 
 
-<time class='entry-date' datetime='2017-03-19T13:30:00+09:00'><span class='date'>2017-03-19 (Sun)</span> <span class='time'>1:30 pm</span></time>
-        
-           | <a href="/blog/2017-03-19-kansai-debian-meeting.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2017-03-19-kansai-debian-meeting.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="https://wiki.debian.org/KansaiDebianMeeting/20170319" title="第 121 回 関西 Debian 勉強会 (10 周年記念会)">第 121 回 関西 Debian 勉強会 (10 周年記念会)</a>
-に参加しました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2017-03-19-kansai-debian-meeting.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
+<time class='entry-date' datetime='2017-03-25T12:57:57+09:00'><span class='date'>2017-03-25 (Sat)</span> <span class='time'>12:57 pm</span></time>
       
-  <header>
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/emacs/'>emacs</a>, <a class='category' href='/blog/categories/gpg/'>gpg</a>
+  
+</span>
+
+
+    </p>
     
-      <h1 class="entry-title"><a href="/blog/2017-03-04-rubykansai77.html">第77回 Ruby関西 勉強会に参加しました</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2017-03-04T13:00:00+09:00'><span class='date'>2017-03-04 (Sat)</span> <span class='time'>1:00 pm</span></time>
-        
-           | <a href="/blog/2017-03-04-rubykansai77.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2017-03-04-rubykansai77.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="https://rubykansai.doorkeeper.jp/events/58025" title="第77回 Ruby関西 勉強会">第77回 Ruby関西 勉強会</a>
-に参加しました。</p>
-
+      <div class="sharing">
+  
+  
+  
+  
 </div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2017-03-04-rubykansai77.html">続きを読む &rarr;</a>
-    </footer>
-  
 
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
     
-      <h1 class="entry-title"><a href="/blog/2017-02-25-oss-gate-workshop.html">OSS Gate大阪ワークショップ2017-02-25に参加した</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2017-02-25T23:59:59+09:00'><span class='date'>2017-02-25 (Sat)</span> <span class='time'>11:59 pm</span></time>
-        
-           | <a href="/blog/2017-02-25-oss-gate-workshop.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2017-02-25-oss-gate-workshop.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="https://oss-gate.doorkeeper.jp/events/56141" title="OSS Gate大阪ワークショップ2017-02-25">OSS Gate大阪ワークショップ2017-02-25</a>にメンターとして参加しました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2017-02-25-oss-gate-workshop.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2017-02-22-golang-waitgroup.html">Go言語のsync.WaitGroupで出力待ち</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2017-02-22T22:22:22+09:00'><span class='date'>2017-02-22 (Wed)</span> <span class='time'>10:22 pm</span></time>
-        
-           | <a href="/blog/2017-02-22-golang-waitgroup.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2017-02-22-golang-waitgroup.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="/blog/2017-02-19-golang-windows-gui.html">先日作ったアプリ</a>で、
-<code>cmd.Wait()</code>
-の前に出力待ちができていなくて困っていたのですが、
-<a href="http://amzn.to/2l3wZ5L">みんなのGo言語【現場で使える実践テクニック】</a>という本に <code>sync.WaitGroup</code> というのを知ったので使ってみました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2017-02-22-golang-waitgroup.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2017-02-19-golang-windows-gui.html">Go言語でWindowsのnetshラッパーのGUIアプリを作った</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2017-02-19T19:00:00+09:00'><span class='date'>2017-02-19 (Sun)</span> <span class='time'>7:00 pm</span></time>
-        
-           | <a href="/blog/2017-02-19-golang-windows-gui.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2017-02-19-golang-windows-gui.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>インテリジェントスイッチングハブなどのネットワーク機器の設定をする時に、
-Windows だといちいちコントロールパネルを辿ってアダプター一覧を表示して、
-そこから UAC の権限昇格 (環境によってはパスワード入力が必要) を挟んでプロパティを開いて、
-IPv4 の設定を開いて変更して閉じて行って反映、という作業が大変だったので、
-<code>netsh</code> を呼び出して<a href="https://github.com/znz/winipset">省力化する GUI アプリ</a>を作りました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2017-02-19-golang-windows-gui.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2017-01-29-kansai4cjointsession.html">関西 Debian 勉強会 + openSUSE Meetup + LILO & 東海道らぐLT大会に参加しました</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2017-01-29T13:00:00+09:00'><span class='date'>2017-01-29 (Sun)</span> <span class='time'>1:00 pm</span></time>
-        
-           | <a href="/blog/2017-01-29-kansai4cjointsession.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2017-01-29-kansai4cjointsession.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="https://opensuseja.connpass.com/event/47907/" title="関西 Debian 勉強会 + openSUSE Meetup + LILO &amp; 東海道らぐLT大会">関西 Debian 勉強会 + openSUSE Meetup + LILO &amp; 東海道らぐLT大会</a>
-に参加しました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2017-01-29-kansai4cjointsession.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2017-01-14-rubykansai76.html">第76回 Ruby関西 勉強会に参加しました</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2017-01-14T17:30:00+09:00'><span class='date'>2017-01-14 (Sat)</span> <span class='time'>5:30 pm</span></time>
-        
-           | <a href="/blog/2017-01-14-rubykansai76.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2017-01-14-rubykansai76.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="https://rubykansai.doorkeeper.jp/events/55398" title="第76回 Ruby関西 勉強会">第76回 Ruby関西 勉強会</a>
-に参加して発表してきました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2017-01-14-rubykansai76.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2017-01-08-frozen-string-literal.html">frozen_string_literalをtrueにしていっている</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2017-01-08T17:35:03+09:00'><span class='date'>2017-01-08 (Sun)</span> <span class='time'>5:35 pm</span></time>
-        
-           | <a href="/blog/2017-01-08-frozen-string-literal.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2017-01-08-frozen-string-literal.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="https://www.ruby-lang.org/ja/documentation/repository-guide/">Ruby の trunk</a> で最近は <code>frozen_string_literal</code> を <code>true</code> に変更するというコミットをしていっています。
-(<a href="https://svn.ruby-lang.org/cgi-bin/viewvc.cgi?revision=53141&amp;view=revision" title="Revision 53141">Revision 53141</a> で <code>frozen_string_literal: false</code> として magic comment 自体は追加されています。)</p>
-
-<p>その時にちょっと確認に手間取った変更があったので、そのメモです。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2017-01-08-frozen-string-literal.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  <div class="pagination">
-    
-      <a class="prev" href="/posts/2">&larr; Older</a>
-    
-    <a href="/blog/archives">Blog Archives</a>
-    
-  </div>
-  <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
 <!-- footer -->
 <ins class="adsbygoogle"
      style="display:inline-block;width:728px;height:90px"
@@ -482,7 +405,29 @@ IPv4 の設定を開いて変更して閉じて行って反映、という作業
 (adsbygoogle = window.adsbygoogle || []).push({});
 </script>
 
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2017-03-23-pinentry-emacs.html" title="Previous Post: pinentry-emacsを使ってみた">&laquo; pinentry-emacsを使ってみた</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+<section>
+  <!-- X:S ZenBackWidget --><div id="zenback-widget-loader"></div><script type="text/javascript">!function(d,i){if(!d.getElementById(i)){var r=Math.ceil((new Date()*1)*Math.random());var j=d.createElement("script");j.id=i;j.async=true;j.src="//w.zenback.jp/v1/?base_uri=http%3A//blog.n-z.jp/&nsid=122901358100652638%3A%3A122901381991399941&rand="+r;d.body.appendChild(j);}}(document,"zenback-widget-js");</script><!-- X:E ZenBackWidget -->
+
+</section>
+
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+  </section>
+
+</div>
+
 <aside class="sidebar">
   
     <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
@@ -582,6 +527,7 @@ Hatena.BookmarkWidget.load();
   
 </aside>
 
+
     </div>
   </div>
   <footer role="contentinfo"><p>
@@ -596,7 +542,10 @@ Hatena.BookmarkWidget.load();
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-03-25-elpa-pinentry.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-03-25-elpa-pinentry.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
