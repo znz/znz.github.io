@@ -51,3 +51,4 @@ Run `brew linkapps pinentry-mac` to symlink these to /Applications.
 ## 将来の対処方法案
 
 gpg-agent は 2.1.5 から `--allow-emacs-pinentry` というオプションが追加されていて、 http://unix.stackexchange.com/questions/55638/can-emacs-use-gpg-agent-in-a-terminal-at-all に書かれているように https://elpa.gnu.org/packages/pinentry.html を使って、 Emacs 上でパスフレーズを入力できるようになるようなので、またそのように設定を変更するかもしれません。
+(2017-03-27 追記: [elpaのpinentry.elを試してみた](/blog/2017-03-25-elpa-pinentry.html) という記事を書きました。)

@@ -31,6 +31,7 @@ https://github.com/ecraven/pinentry-emacs を使ってみました。
 https://elpa.gnu.org/packages/pinentry.html と組み合わせて使うことをオススメします。
 (`elpa` の説明によると `pinentry` も 0.9.5 以上が必要のようです。)
 この方法は別途試してまた記事を書く予定です。
+(2017-03-27 追記: [elpaのpinentry.elを試してみた](/blog/2017-03-25-elpa-pinentry.html) という記事を書きました。)
 
 今回の環境では、
 [Homebrew の gnupg2](https://github.com/Homebrew/homebrew-core/blob/328a89b492b600686be41b6b69b93d7c88fb8b89/Formula/gnupg2.rb)
