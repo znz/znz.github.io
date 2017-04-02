@@ -1,0 +1,192 @@
+---
+layout: post
+title: "DNS CAA を設定した"
+date: 2017-04-02 15:07:30 +0900
+comments: true
+categories: security
+---
+以前から存在は知っていただけで、利点は少ないと思って設定していなかった [DNS CAA](https://tools.ietf.org/html/rfc6844) ですが、
+[スラドのDNSのCAAリソース・レコード、使っていますか?](https://it.srad.jp/story/17/03/17/0644247/) で
+2017年9月8日以降確認が必須化される (CAA レコードの設定は必須ではない) ということを知って、
+気になっていたのでいくつかのドメインで設定しました。
+
+<!--more-->
+
+## 環境
+
+- DNS サーバー : bind 9.9.5
+
+CAA リソースレコードを設定するのは BIND や NSD ならどのバージョンでも良くて、
+PowerDNS なら 4 以上、 Knot DNS なら 2.2.0 以上が対応しているようです。
+
+不自由な DNS サーバーを使っている場合、
+少なくとも Google Cloud DNS と DNSimple は対応しているようです。
+他のサービスは確認できた範囲では対応していませんでした。
+
+## 影響範囲
+
+基本的には CA が証明書を発行するときにチェックするだけなので、
+DNS の TTL の期間は CA を乗り換えられなくなる、というだけのはずです。
+
+変えたくなった時も、
+DNSSEC のロールオーバーのような面倒な切り替え作業も必要なくて、
+レコードを変更するだけですむはずです。
+
+DANE のように DNSSEC が必須ということもないので、導入も簡単です。
+
+ちょっと調べただけだとわかりにくかったのですが、
+`example.com` ドメインに CAA レコードを設定するだけで `www.example.com` などのサブドメインに対して有効になります。
+
+## DNS レコード設定
+
+[CAA Record Generator](https://sslmate.com/labs/caa/) で雛形を作成します。
+
+使い回したかったので `Domain name:` に `@` と入れたところ、設定例には `@.` で出てきてしまうので、あとで `@` だけに置き換えました。
+
+最近は Let's Encrypt だけ使っていて、Let's Encrypt は Wildcard に対応していないので、
+Non-Wildcard の方だけにチェックを入れました。
+
+Send incident reports to (email or URL) は optional なので入れなくても良いのですが、
+http サーバーを用意するのは大変そうで、メールなら簡単に設定できるので、
+メインの公開しているアドレスを設定しました。
+以下の例では `foo@example.com` に置き換えています。
+RFC などを確認すればわかるのですが、入力欄のラベルでは明記していないので間違えそうになりますが、
+メールアドレスを設定するときは `mailto:` をつけて `mailto:foo@example.com` のように URL にする必要があります。
+
+すると以下のようになりました。
+
+```
+Standard BIND Zone File
+For BIND ≥9.9.6, PowerDNS ≥4.0.0, NSD ≥4.0.1, Knot DNS ≥2.2.0
+
+@.	IN	CAA	0 issue "letsencrypt.org"
+@.	IN	CAA	0 issuewild ";"
+@.	IN	CAA	0 iodef "mailto:foo@example.com"
+Legacy Zone File (RFC 3597 Syntax)
+For BIND <9.9.6, NSD <4.0.1
+
+@.	IN	TYPE257	\# 22 000569737375656C657473656E63727970742E6F7267
+@.	IN	TYPE257	\# 12 0009697373756577696C643B
+@.	IN	TYPE257	\# 29 0005696F6465666D61696C746F3A666F6F406578616D706C652E636F6D
+Generic
+For Google Cloud DNS, DNSimple
+
+0 issue "letsencrypt.org"
+0 issuewild ";"
+0 iodef "mailto:foo@example.com"
+```
+
+使っている DNS サーバーは 9.9.5 で Legacy Zone File (RFC 3597 Syntax) の書き方の方を使う必要があったので、
+Standard BIND Zone File の内容をコメントとして残しておいて、
+以下のように設定しました。
+
+```
+; DNS CAA
+;@      IN      CAA     0 issue "letsencrypt.org"
+;@      IN      CAA     0 issuewild ";"
+;@      IN      CAA     0 iodef "mailto:foo@example.com"
+@       IN      TYPE257 \# 22 000569737375656C657473656E63727970742E6F7267
+@       IN      TYPE257 \# 12 0009697373756577696C643B
+@       IN      TYPE257 \# 29 0005696F6465666D61696C746F3A666F6F406578616D706C652E636F6D
+```
+
+## SSL Server Test
+
+[SSL Server Test](https://www.ssllabs.com/ssltest/analyze.html) で確認すると
+DNS CAA が No から Yes になって、
+
+```
+issuewild: ;
+iodef: mailto:foo@example.com
+issue: letsencrypt.org
+```
+
+と出ていました。
+
+## 失敗テスト
+
+https をまだ使っていないドメインも持っていたので、すべて拒否する設定をして、
+ちゃんと失敗するかどうかを試してみました。
+
+zone ファイルには以下の設定を追加しました。
+
+```
+; DNS CAA
+;@      IN      CAA     0 issue ";"
+;@      IN      CAA     0 iodef "mailto:foo@example.com"
+@       IN      TYPE257 \# 8 000569737375653B
+@       IN      TYPE257 \# 29 0005696F6465666D61696C746F3A666F6F406578616D706C652E636F6D
+```
+
+certbot では以下のようになって、ちゃんと CAA レコードによる失敗になりました。
+Let's Encrypt の CA のソースの
+[validateChallengeAndCAA](https://github.com/letsencrypt/boulder/blob/8adf9d41cf0ddc141693d51f8ea01ac29d97aec0/va/va.go#L498-L515)
+をみると CAA のチェック結果よりもチャレンジの失敗を優先しているようで、
+チャレンジは成功する状態で試さないと CAA のエラーは確認できませんでした。
+
+```
+% sudo certbot certonly --webroot -w /srv/www/xxxxxxxx.example.net/htdocs -d xxxxxxxx.example.net
+                       ┌───────────────────────────────────────────────                                                                        │ Saving debug log to /var/log/letsencrypt/letsencrypt.log             │
+                       │ Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org      │
+                       │ Obtaining a new certificate                                          │
+                       │ Performing the following challenges:                                 │
+                       │ http-01 challenge for xxxxxxxx.example.net                           │
+                       │ Using the webroot path /srv/www/xxxxxxxx.example.net/htdocs for all  │
+                       │ unmatched domains.                                                   │
+                       │ Waiting for verification...                                          │
+                       │ Cleaning up challenges                                               │
+                       │                                                                      │
+                       │                                                                      │
+                       │                                                                      │
+                       │                                                                      │
+                       │                                                                      │
+                       │                                                                      │
+                       │                                                                      │
+                       │                                                                      │
+                       │                                                                      │
+                       │                                                                      │
+                       │                                                                      │
+                       └───────────────────────────────────────────────
+Failed authorization procedure. xxxxxxxx.example.net (http-01): urn:acme:error:connection :: The server could not connec
+t to the client to verify the domain :: CAA record for xxxxxxxx.example.net prevents issuance
+
+IMPORTANT NOTES:
+ - The following errors were reported by the server:
+
+   Domain: xxxxxxxx.example.net
+   Type:   connection
+   Detail: CAA record for xxxxxxxx.example.net prevents issuance
+
+   To fix these errors, please make sure that your domain name was
+   entered correctly and the DNS A record(s) for that domain
+   contain(s) the right IP address. Additionally, please check that
+   your computer has a publicly routable IP address and that no
+   firewalls are preventing the server from communicating with the
+   client. If you're using the webroot plugin, you should also verify
+   that you are serving files from the webroot path you provided.
+```
+
+メールは届かなかったので、もうちょっと調べてみると、
+letsencrypt/boulder のソースを見ても iodef に対して何か送信しているようなコードはなく、
+https://forums.he.net/index.php?topic=3550.0 に「currently optional/not yet supported by LE」という書き込みもあったので、
+現状の Let's Encrypt では iodef には対応してなさそうです。
+
+## まとめ
+
+現状ではすべての CA が対応しているわけではないので、利点は少ないかもしれませんが、
+意図していない CA から証明書が発行される可能性が減るので、ちょっと安全になったと思いました。
+(DNSSEC も設定すれば、より安全なのですが、利点よりも運用の手間の方がかかると思って導入していません。)
+
+iodef 対応などはまだまだ不十分のようですが、
+ちゃんと通知が来るようになれば (ほぼないと思いますが) 攻撃が検知できて面白そうです。
+
+それから、新しいリソースレコードということで、既存の TXT レコードを流用している SPF と違って、
+不自由な DNS サービスを使っていると設定という問題もあるので、ドメインによっては導入が難しそうです。
+(SPF といえば RFC7208 で SPF リソースレコードタイプはいらなくなっているようです。
+`named-checkconf -z` で `found SPF/TXT record but no SPF/SPF record found, add matching type SPF record` と出て来るので気にはなってしまうのですが。)
+
+## 参考サイト
+
+- [DNS CAA とは：SSL | DigiCert](https://rms-digicert.ne.jp/howto/basis/caa.html)
+- [DNS Certification Authority Authorization (CAA) | GMOグローバルサインブログ](https://jp.globalsign.com/blog/2013/caa.html)
+- [DNSサーバのCAA設定 - Apache 2.4系でHTTP/2対応サーバを構築してみるテスト。](https://http2.try-and-test.net/dns_caa.html)
