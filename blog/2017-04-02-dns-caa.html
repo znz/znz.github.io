@@ -5,13 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>distnotedの暴走が止まるというCocoa Emacsのinline patch修正版を使ってみた - @znz blog</title>
+  <title>DNS CAA を設定した - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="distnotedの暴走が止まるというCocoa Emacsのinline patch修正版を使ってみた 2013-12-27 (Fri) 11:00 pm | Comments launchdでdistnotedを定期的に終了させる
-話のコメントで
-Emacs. &hellip;">
+  <meta name="description" content="DNS CAA を設定した 2017-04-02 (Sun) 3:07 pm | Comments 以前から存在は知っていただけで、利点は少ないと思って設定していなかった DNS CAA ですが、
+スラドのDNSのCAAリソース・レコード、使っていますか? で &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -20,7 +19,7 @@ Emacs. &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-12-27-emacs-inline-patch.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-04-02-dns-caa.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -85,7 +84,7 @@ Emacs. &hellip;">
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">distnotedの暴走が止まるというCocoa Emacsのinline patch修正版を使ってみた</h1>
+      <h1 class="entry-title">DNS CAA を設定した</h1>
       
       <!-- zenback_title_end -->
       
@@ -97,7 +96,7 @@ Emacs. &hellip;">
 
 
 
-<time class='entry-date' datetime='2013-12-27T23:00:00+09:00'><span class='date'>2013-12-27 (Fri)</span> <span class='time'>11:00 pm</span></time>
+<time class='entry-date' datetime='2017-04-02T15:07:30+09:00'><span class='date'>2017-04-02 (Sun)</span> <span class='time'>3:07 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -110,29 +109,61 @@ Emacs. &hellip;">
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><a href="/blog/2013-11-13-killall-distnoted-periodically.html">launchdでdistnotedを定期的に終了させる</a>
-話のコメントで
-<a href="https://gist.github.com/anonymous/8142555">Emacs.appでインラインパッチを当てた時にdistnotedが暴走しなくなる</a>
-修正を教えてもらったので、
-試してみました。</p>
-
-<p>2014-01-29追記:
-コメントにあるようにまだ問題があったので、続きとして
-<a href="/blog/2014-01-29-emacs-distnoted-patch.html">emacsやdistnotedを安定させるパッチをhomebrewで適用した</a>
-話を書きました。</p>
+<div class="entry-content"><p>以前から存在は知っていただけで、利点は少ないと思って設定していなかった <a href="https://tools.ietf.org/html/rfc6844">DNS CAA</a> ですが、
+<a href="https://it.srad.jp/story/17/03/17/0644247/">スラドのDNSのCAAリソース・レコード、使っていますか?</a> で
+2017年9月8日以降確認が必須化される (CAA レコードの設定は必須ではない) ということを知って、
+気になっていたのでいくつかのドメインで設定しました。</p>
 
 <!--more-->
 
 
-<h2>homebrew で適用するパッチの変更</h2>
+<h2>環境</h2>
 
-<p>適用法としては
-<code>brew edit emacs</code>
-で以下のように変更して、
-<code>brew reinstall emacs</code>
-で再インストールしました。</p>
+<ul>
+<li>DNS サーバー : bind 9.9.5</li>
+</ul>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+
+<p>CAA リソースレコードを設定するのは BIND や NSD ならどのバージョンでも良くて、
+PowerDNS なら 4 以上、 Knot DNS なら 2.2.0 以上が対応しているようです。</p>
+
+<p>不自由な DNS サーバーを使っている場合、
+少なくとも Google Cloud DNS と DNSimple は対応しているようです。
+他のサービスは確認できた範囲では対応していませんでした。</p>
+
+<h2>影響範囲</h2>
+
+<p>基本的には CA が証明書を発行するときにチェックするだけなので、
+DNS の TTL の期間は CA を乗り換えられなくなる、というだけのはずです。</p>
+
+<p>変えたくなった時も、
+DNSSEC のロールオーバーのような面倒な切り替え作業も必要なくて、
+レコードを変更するだけですむはずです。</p>
+
+<p>DANE のように DNSSEC が必須ということもないので、導入も簡単です。</p>
+
+<p>ちょっと調べただけだとわかりにくかったのですが、
+<code>example.com</code> ドメインに CAA レコードを設定するだけで <code>www.example.com</code> などのサブドメインに対して有効になります。</p>
+
+<h2>DNS レコード設定</h2>
+
+<p><a href="https://sslmate.com/labs/caa/">CAA Record Generator</a> で雛形を作成します。</p>
+
+<p>使い回したかったので <code>Domain name:</code> に <code>@</code> と入れたところ、設定例には <code>@.</code> で出てきてしまうので、あとで <code>@</code> だけに置き換えました。</p>
+
+<p>最近は Let&rsquo;s Encrypt だけ使っていて、Let&rsquo;s Encrypt は Wildcard に対応していないので、
+Non-Wildcard の方だけにチェックを入れました。</p>
+
+<p>Send incident reports to (email or URL) は optional なので入れなくても良いのですが、
+http サーバーを用意するのは大変そうで、メールなら簡単に設定できるので、
+メインの公開しているアドレスを設定しました。
+以下の例では <code>foo@example.com</code> に置き換えています。
+RFC などを確認すればわかるのですが、入力欄のラベルでは明記していないので間違えそうになりますが、
+メールアドレスを設定するときは <code>mailto:</code> をつけて <code>mailto:foo@example.com</code> のように URL にする必要があります。</p>
+
+<p>すると以下のようになりました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -145,28 +176,92 @@ Emacs. &hellip;">
 <span class='line-number'>11</span>
 <span class='line-number'>12</span>
 <span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gh">diff --git a/Library/Formula/emacs.rb b/Library/Formula/emacs.rb</span>
-</span><span class='line'><span class="gh">index 712c3d1..5ce4ce2 100644</span>
-</span><span class='line'><span class="gd">--- a/Library/Formula/emacs.rb</span>
-</span><span class='line'><span class="gi">+++ b/Library/Formula/emacs.rb</span>
-</span><span class='line'><span class="gu">@@ -47,7 +47,7 @@ class Emacs &lt; Formula</span>
-</span><span class='line'>     # &quot;--japanese&quot; option:
-</span><span class='line'>     # to apply a patch from MacEmacsJP for Japanese input methods
-</span><span class='line'>     if build.include? &quot;cocoa&quot; and build.include? &quot;japanese&quot;
-</span><span class='line'><span class="gd">-      p[:p0].push(&quot;http://sourceforge.jp/projects/macemacsjp/svn/view/inline_patch/trunk/emacs-inline.patch?view=co&amp;revision=583&amp;root=macemacsjp&amp;pathrev=583&quot;)</span>
-</span><span class='line'><span class="gi">+      p[:p0].push(&quot;https://gist.github.com/anonymous/8142555/raw/d67ad1dc814579d125afbd18de3a62ba69895601/emacs-inline.patch&quot;)</span>
-</span><span class='line'>     end
-</span><span class='line'>     p
-</span><span class='line'>   end unless build.head?
-</span></code></pre></td></tr></table></div></figure>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Standard BIND Zone File
+</span><span class='line'>For BIND ≥9.9.6, PowerDNS ≥4.0.0, NSD ≥4.0.1, Knot DNS ≥2.2.0
+</span><span class='line'>
+</span><span class='line'>@.    IN  CAA 0 issue "letsencrypt.org"
+</span><span class='line'>@.    IN  CAA 0 issuewild ";"
+</span><span class='line'>@.    IN  CAA 0 iodef "mailto:foo@example.com"
+</span><span class='line'>Legacy Zone File (RFC 3597 Syntax)
+</span><span class='line'>For BIND &lt;9.9.6, NSD &lt;4.0.1
+</span><span class='line'>
+</span><span class='line'>@.    IN  TYPE257 \# 22 000569737375656C657473656E63727970742E6F7267
+</span><span class='line'>@.    IN  TYPE257 \# 12 0009697373756577696C643B
+</span><span class='line'>@.    IN  TYPE257 \# 29 0005696F6465666D61696C746F3A666F6F406578616D706C652E636F6D
+</span><span class='line'>Generic
+</span><span class='line'>For Google Cloud DNS, DNSimple
+</span><span class='line'>
+</span><span class='line'>0 issue "letsencrypt.org"
+</span><span class='line'>0 issuewild ";"
+</span><span class='line'>0 iodef "mailto:foo@example.com"</span></code></pre></td></tr></table></div></figure>
 
 
-<h2>元のパッチからの変更点</h2>
+<p>使っている DNS サーバーは 9.9.5 で Legacy Zone File (RFC 3597 Syntax) の書き方の方を使う必要があったので、
+Standard BIND Zone File の内容をコメントとして残しておいて、
+以下のように設定しました。</p>
 
-<p>元の sourceforge.jp のパッチとの差分をとってみると、
-以下のメソッド呼び出しが変わっているだけでした。</p>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>; DNS CAA
+</span><span class='line'>;@      IN      CAA     0 issue "letsencrypt.org"
+</span><span class='line'>;@      IN      CAA     0 issuewild ";"
+</span><span class='line'>;@      IN      CAA     0 iodef "mailto:foo@example.com"
+</span><span class='line'>@       IN      TYPE257 \# 22 000569737375656C657473656E63727970742E6F7267
+</span><span class='line'>@       IN      TYPE257 \# 12 0009697373756577696C643B
+</span><span class='line'>@       IN      TYPE257 \# 29 0005696F6465666D61696C746F3A666F6F406578616D706C652E636F6D</span></code></pre></td></tr></table></div></figure>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+
+<h2>SSL Server Test</h2>
+
+<p><a href="https://www.ssllabs.com/ssltest/analyze.html">SSL Server Test</a> で確認すると
+DNS CAA が No から Yes になって、</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>issuewild: ;
+</span><span class='line'>iodef: mailto:foo@example.com
+</span><span class='line'>issue: letsencrypt.org</span></code></pre></td></tr></table></div></figure>
+
+
+<p>と出ていました。</p>
+
+<h2>失敗テスト</h2>
+
+<p>https をまだ使っていないドメインも持っていたので、すべて拒否する設定をして、
+ちゃんと失敗するかどうかを試してみました。</p>
+
+<p>zone ファイルには以下の設定を追加しました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>; DNS CAA
+</span><span class='line'>;@      IN      CAA     0 issue ";"
+</span><span class='line'>;@      IN      CAA     0 iodef "mailto:foo@example.com"
+</span><span class='line'>@       IN      TYPE257 \# 8 000569737375653B
+</span><span class='line'>@       IN      TYPE257 \# 29 0005696F6465666D61696C746F3A666F6F406578616D706C652E636F6D</span></code></pre></td></tr></table></div></figure>
+
+
+<p>certbot では以下のようになって、ちゃんと CAA レコードによる失敗になりました。
+Let&rsquo;s Encrypt の CA のソースの
+<a href="https://github.com/letsencrypt/boulder/blob/8adf9d41cf0ddc141693d51f8ea01ac29d97aec0/va/va.go#L498-L515">validateChallengeAndCAA</a>
+をみると CAA のチェック結果よりもチャレンジの失敗を優先しているようで、
+チャレンジは成功する状態で試さないと CAA のエラーは確認できませんでした。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -179,28 +274,100 @@ Emacs. &hellip;">
 <span class='line-number'>11</span>
 <span class='line-number'>12</span>
 <span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gh">diff --git a/emacs-inline.patch.sfjp b/emacs-inline.patch.gist</span>
-</span><span class='line'><span class="gh">index 52f2052..d67ad1d 100644</span>
-</span><span class='line'><span class="gd">--- a/emacs-inline.patch.sfjp</span>
-</span><span class='line'><span class="gi">+++ b/emacs-inline.patch.gist</span>
-</span><span class='line'><span class="gu">@@ -1015,7 +1015,7 @@ diff -r -N -p ../emacs-24.3.org/src/nsterm.m src/nsterm.m</span>
-</span><span class='line'>                                                name: nil object: nil]; */
-</span><span class='line'> +   [[NSDistributedNotificationCenter defaultCenter] addObserver: NSApp
-</span><span class='line'> +                    selector: @selector (changeInputMethod:)
-</span><span class='line'><span class="gd">-+                          name: @&quot;AppleSelectedInputSourcesChangedNotification&quot; object: nil];</span>
-</span><span class='line'><span class="gi">++                          name: @&quot;AppleSelectedInputSourcesChangedNotification&quot; object: nil suspensionBehavior:NSNotificationSuspensionBehaviorDeliverImmediately];</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% sudo certbot certonly --webroot -w /srv/www/xxxxxxxx.example.net/htdocs -d xxxxxxxx.example.net
+</span><span class='line'>                       ┌───────────────────────────────────────────────                                                                        │ Saving debug log to /var/log/letsencrypt/letsencrypt.log             │
+</span><span class='line'>                       │ Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org      │
+</span><span class='line'>                       │ Obtaining a new certificate                                          │
+</span><span class='line'>                       │ Performing the following challenges:                                 │
+</span><span class='line'>                       │ http-01 challenge for xxxxxxxx.example.net                           │
+</span><span class='line'>                       │ Using the webroot path /srv/www/xxxxxxxx.example.net/htdocs for all  │
+</span><span class='line'>                       │ unmatched domains.                                                   │
+</span><span class='line'>                       │ Waiting for verification...                                          │
+</span><span class='line'>                       │ Cleaning up challenges                                               │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       └───────────────────────────────────────────────
+</span><span class='line'>Failed authorization procedure. xxxxxxxx.example.net (http-01): urn:acme:error:connection :: The server could not connec
+</span><span class='line'>t to the client to verify the domain :: CAA record for xxxxxxxx.example.net prevents issuance
 </span><span class='line'>
-</span><span class='line'>     dpyinfo = xzalloc (sizeof *dpyinfo);
+</span><span class='line'>IMPORTANT NOTES:
+</span><span class='line'> - The following errors were reported by the server:
 </span><span class='line'>
-</span></code></pre></td></tr></table></div></figure>
+</span><span class='line'>   Domain: xxxxxxxx.example.net
+</span><span class='line'>   Type:   connection
+</span><span class='line'>   Detail: CAA record for xxxxxxxx.example.net prevents issuance
+</span><span class='line'>
+</span><span class='line'>   To fix these errors, please make sure that your domain name was
+</span><span class='line'>   entered correctly and the DNS A record(s) for that domain
+</span><span class='line'>   contain(s) the right IP address. Additionally, please check that
+</span><span class='line'>   your computer has a publicly routable IP address and that no
+</span><span class='line'>   firewalls are preventing the server from communicating with the
+</span><span class='line'>   client. If you're using the webroot plugin, you should also verify
+</span><span class='line'>   that you are serving files from the webroot path you provided.</span></code></pre></td></tr></table></div></figure>
 
+
+<p>メールは届かなかったので、もうちょっと調べてみると、
+letsencrypt/boulder のソースを見ても iodef に対して何か送信しているようなコードはなく、
+<a href="https://forums.he.net/index.php?topic=3550.0">https://forums.he.net/index.php?topic=3550.0</a> に「currently optional/not yet supported by LE」という書き込みもあったので、
+現状の Let&rsquo;s Encrypt では iodef には対応してなさそうです。</p>
 
 <h2>まとめ</h2>
 
-<p>使ってみて問題がなければ sourceforge.jp の方に取り込んでもらうのが良さそうです。</p>
+<p>現状ではすべての CA が対応しているわけではないので、利点は少ないかもしれませんが、
+意図していない CA から証明書が発行される可能性が減るので、ちょっと安全になったと思いました。
+(DNSSEC も設定すれば、より安全なのですが、利点よりも運用の手間の方がかかると思って導入していません。)</p>
 
-<p>しばらく使ってみた感じだと distnoted のメモリ使用量が増えていっても、
-一度 Emacs.app を終了すると distnoted のメモリ使用量が一気に減るようになりました。</p>
+<p>iodef 対応などはまだまだ不十分のようですが、
+ちゃんと通知が来るようになれば (ほぼないと思いますが) 攻撃が検知できて面白そうです。</p>
+
+<p>それから、新しいリソースレコードということで、既存の TXT レコードを流用している SPF と違って、
+不自由な DNS サービスを使っていると設定という問題もあるので、ドメインによっては導入が難しそうです。
+(SPF といえば RFC7208 で SPF リソースレコードタイプはいらなくなっているようです。
+<code>named-checkconf -z</code> で <code>found SPF/TXT record but no SPF/SPF record found, add matching type SPF record</code> と出て来るので気にはなってしまうのですが。)</p>
+
+<h2>参考サイト</h2>
+
+<ul>
+<li><a href="https://rms-digicert.ne.jp/howto/basis/caa.html">DNS CAA とは：SSL | DigiCert</a></li>
+<li><a href="https://jp.globalsign.com/blog/2013/caa.html">DNS Certification Authority Authorization (CAA) | GMOグローバルサインブログ</a></li>
+<li><a href="https://http2.try-and-test.net/dns_caa.html">DNSサーバのCAA設定 - Apache 2.4系でHTTP/2対応サーバを構築してみるテスト。</a></li>
+</ul>
+
 </div>
 
 <!-- zenback_body_end -->
@@ -219,12 +386,12 @@ Emacs. &hellip;">
 
 
 
-<time class='entry-date' datetime='2013-12-27T23:00:00+09:00'><span class='date'>2013-12-27 (Fri)</span> <span class='time'>11:00 pm</span></time>
+<time class='entry-date' datetime='2017-04-02T15:07:30+09:00'><span class='date'>2017-04-02 (Sun)</span> <span class='time'>3:07 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/emacs/'>emacs</a>, <a class='category' href='/blog/categories/mavericks/'>mavericks</a>, <a class='category' href='/blog/categories/osx/'>osx</a>
+    <a class='category' href='/blog/categories/security/'>security</a>
   
 </span>
 
@@ -251,10 +418,8 @@ Emacs. &hellip;">
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-12-26-rubymotion-mokumoku-osaka.html" title="Previous Post: 第 6 回 RubyMotion もくもく会 in Osaka に参加した">&laquo; 第 6 回 RubyMotion もくもく会 in Osaka に参加した</a>
+        <a class="basic-alignment left" href="/blog/2017-03-25-elpa-pinentry.html" title="Previous Post: elpaのpinentry.elを試してみた">&laquo; elpaのpinentry.elを試してみた</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-12-28-rubymotion-error.html" title="Next Post: RubyMotionのOSXアプリの起動エラー">RubyMotionのOSXアプリの起動エラー &raquo;</a>
       
     </p>
   </footer>
@@ -389,8 +554,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-12-27-emacs-inline-patch.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-12-27-emacs-inline-patch.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-04-02-dns-caa.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-04-02-dns-caa.html';
         var disqus_script = 'embed.js';
       
     (function () {

@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-03-27T23:06:17+09:00</updated>
+  <updated>2017-04-02T17:32:29+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,273 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[DNS CAA を設定した]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-04-02-dns-caa.html"/>
+    <updated>2017-04-02T15:07:30+09:00</updated>
+    <id>http://blog.n-z.jp/blog/dns-caa</id>
+    <content type="html"><![CDATA[<p>以前から存在は知っていただけで、利点は少ないと思って設定していなかった <a href="https://tools.ietf.org/html/rfc6844">DNS CAA</a> ですが、
+<a href="https://it.srad.jp/story/17/03/17/0644247/">スラドのDNSのCAAリソース・レコード、使っていますか?</a> で
+2017年9月8日以降確認が必須化される (CAA レコードの設定は必須ではない) ということを知って、
+気になっていたのでいくつかのドメインで設定しました。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>DNS サーバー : bind 9.9.5</li>
+</ul>
+
+
+<p>CAA リソースレコードを設定するのは BIND や NSD ならどのバージョンでも良くて、
+PowerDNS なら 4 以上、 Knot DNS なら 2.2.0 以上が対応しているようです。</p>
+
+<p>不自由な DNS サーバーを使っている場合、
+少なくとも Google Cloud DNS と DNSimple は対応しているようです。
+他のサービスは確認できた範囲では対応していませんでした。</p>
+
+<h2>影響範囲</h2>
+
+<p>基本的には CA が証明書を発行するときにチェックするだけなので、
+DNS の TTL の期間は CA を乗り換えられなくなる、というだけのはずです。</p>
+
+<p>変えたくなった時も、
+DNSSEC のロールオーバーのような面倒な切り替え作業も必要なくて、
+レコードを変更するだけですむはずです。</p>
+
+<p>DANE のように DNSSEC が必須ということもないので、導入も簡単です。</p>
+
+<p>ちょっと調べただけだとわかりにくかったのですが、
+<code>example.com</code> ドメインに CAA レコードを設定するだけで <code>www.example.com</code> などのサブドメインに対して有効になります。</p>
+
+<h2>DNS レコード設定</h2>
+
+<p><a href="https://sslmate.com/labs/caa/">CAA Record Generator</a> で雛形を作成します。</p>
+
+<p>使い回したかったので <code>Domain name:</code> に <code>@</code> と入れたところ、設定例には <code>@.</code> で出てきてしまうので、あとで <code>@</code> だけに置き換えました。</p>
+
+<p>最近は Let&rsquo;s Encrypt だけ使っていて、Let&rsquo;s Encrypt は Wildcard に対応していないので、
+Non-Wildcard の方だけにチェックを入れました。</p>
+
+<p>Send incident reports to (email or URL) は optional なので入れなくても良いのですが、
+http サーバーを用意するのは大変そうで、メールなら簡単に設定できるので、
+メインの公開しているアドレスを設定しました。
+以下の例では <code>foo@example.com</code> に置き換えています。
+RFC などを確認すればわかるのですが、入力欄のラベルでは明記していないので間違えそうになりますが、
+メールアドレスを設定するときは <code>mailto:</code> をつけて <code>mailto:foo@example.com</code> のように URL にする必要があります。</p>
+
+<p>すると以下のようになりました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Standard BIND Zone File
+</span><span class='line'>For BIND ≥9.9.6, PowerDNS ≥4.0.0, NSD ≥4.0.1, Knot DNS ≥2.2.0
+</span><span class='line'>
+</span><span class='line'>@.    IN  CAA 0 issue "letsencrypt.org"
+</span><span class='line'>@.    IN  CAA 0 issuewild ";"
+</span><span class='line'>@.    IN  CAA 0 iodef "mailto:foo@example.com"
+</span><span class='line'>Legacy Zone File (RFC 3597 Syntax)
+</span><span class='line'>For BIND &lt;9.9.6, NSD &lt;4.0.1
+</span><span class='line'>
+</span><span class='line'>@.    IN  TYPE257 \# 22 000569737375656C657473656E63727970742E6F7267
+</span><span class='line'>@.    IN  TYPE257 \# 12 0009697373756577696C643B
+</span><span class='line'>@.    IN  TYPE257 \# 29 0005696F6465666D61696C746F3A666F6F406578616D706C652E636F6D
+</span><span class='line'>Generic
+</span><span class='line'>For Google Cloud DNS, DNSimple
+</span><span class='line'>
+</span><span class='line'>0 issue "letsencrypt.org"
+</span><span class='line'>0 issuewild ";"
+</span><span class='line'>0 iodef "mailto:foo@example.com"</span></code></pre></td></tr></table></div></figure>
+
+
+<p>使っている DNS サーバーは 9.9.5 で Legacy Zone File (RFC 3597 Syntax) の書き方の方を使う必要があったので、
+Standard BIND Zone File の内容をコメントとして残しておいて、
+以下のように設定しました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>; DNS CAA
+</span><span class='line'>;@      IN      CAA     0 issue "letsencrypt.org"
+</span><span class='line'>;@      IN      CAA     0 issuewild ";"
+</span><span class='line'>;@      IN      CAA     0 iodef "mailto:foo@example.com"
+</span><span class='line'>@       IN      TYPE257 \# 22 000569737375656C657473656E63727970742E6F7267
+</span><span class='line'>@       IN      TYPE257 \# 12 0009697373756577696C643B
+</span><span class='line'>@       IN      TYPE257 \# 29 0005696F6465666D61696C746F3A666F6F406578616D706C652E636F6D</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>SSL Server Test</h2>
+
+<p><a href="https://www.ssllabs.com/ssltest/analyze.html">SSL Server Test</a> で確認すると
+DNS CAA が No から Yes になって、</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>issuewild: ;
+</span><span class='line'>iodef: mailto:foo@example.com
+</span><span class='line'>issue: letsencrypt.org</span></code></pre></td></tr></table></div></figure>
+
+
+<p>と出ていました。</p>
+
+<h2>失敗テスト</h2>
+
+<p>https をまだ使っていないドメインも持っていたので、すべて拒否する設定をして、
+ちゃんと失敗するかどうかを試してみました。</p>
+
+<p>zone ファイルには以下の設定を追加しました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>; DNS CAA
+</span><span class='line'>;@      IN      CAA     0 issue ";"
+</span><span class='line'>;@      IN      CAA     0 iodef "mailto:foo@example.com"
+</span><span class='line'>@       IN      TYPE257 \# 8 000569737375653B
+</span><span class='line'>@       IN      TYPE257 \# 29 0005696F6465666D61696C746F3A666F6F406578616D706C652E636F6D</span></code></pre></td></tr></table></div></figure>
+
+
+<p>certbot では以下のようになって、ちゃんと CAA レコードによる失敗になりました。
+Let&rsquo;s Encrypt の CA のソースの
+<a href="https://github.com/letsencrypt/boulder/blob/8adf9d41cf0ddc141693d51f8ea01ac29d97aec0/va/va.go#L498-L515">validateChallengeAndCAA</a>
+をみると CAA のチェック結果よりもチャレンジの失敗を優先しているようで、
+チャレンジは成功する状態で試さないと CAA のエラーは確認できませんでした。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% sudo certbot certonly --webroot -w /srv/www/xxxxxxxx.example.net/htdocs -d xxxxxxxx.example.net
+</span><span class='line'>                       ┌───────────────────────────────────────────────                                                                        │ Saving debug log to /var/log/letsencrypt/letsencrypt.log             │
+</span><span class='line'>                       │ Starting new HTTPS connection (1): acme-v01.api.letsencrypt.org      │
+</span><span class='line'>                       │ Obtaining a new certificate                                          │
+</span><span class='line'>                       │ Performing the following challenges:                                 │
+</span><span class='line'>                       │ http-01 challenge for xxxxxxxx.example.net                           │
+</span><span class='line'>                       │ Using the webroot path /srv/www/xxxxxxxx.example.net/htdocs for all  │
+</span><span class='line'>                       │ unmatched domains.                                                   │
+</span><span class='line'>                       │ Waiting for verification...                                          │
+</span><span class='line'>                       │ Cleaning up challenges                                               │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       │                                                                      │
+</span><span class='line'>                       └───────────────────────────────────────────────
+</span><span class='line'>Failed authorization procedure. xxxxxxxx.example.net (http-01): urn:acme:error:connection :: The server could not connec
+</span><span class='line'>t to the client to verify the domain :: CAA record for xxxxxxxx.example.net prevents issuance
+</span><span class='line'>
+</span><span class='line'>IMPORTANT NOTES:
+</span><span class='line'> - The following errors were reported by the server:
+</span><span class='line'>
+</span><span class='line'>   Domain: xxxxxxxx.example.net
+</span><span class='line'>   Type:   connection
+</span><span class='line'>   Detail: CAA record for xxxxxxxx.example.net prevents issuance
+</span><span class='line'>
+</span><span class='line'>   To fix these errors, please make sure that your domain name was
+</span><span class='line'>   entered correctly and the DNS A record(s) for that domain
+</span><span class='line'>   contain(s) the right IP address. Additionally, please check that
+</span><span class='line'>   your computer has a publicly routable IP address and that no
+</span><span class='line'>   firewalls are preventing the server from communicating with the
+</span><span class='line'>   client. If you're using the webroot plugin, you should also verify
+</span><span class='line'>   that you are serving files from the webroot path you provided.</span></code></pre></td></tr></table></div></figure>
+
+
+<p>メールは届かなかったので、もうちょっと調べてみると、
+letsencrypt/boulder のソースを見ても iodef に対して何か送信しているようなコードはなく、
+<a href="https://forums.he.net/index.php?topic=3550.0">https://forums.he.net/index.php?topic=3550.0</a> に「currently optional/not yet supported by LE」という書き込みもあったので、
+現状の Let&rsquo;s Encrypt では iodef には対応してなさそうです。</p>
+
+<h2>まとめ</h2>
+
+<p>現状ではすべての CA が対応しているわけではないので、利点は少ないかもしれませんが、
+意図していない CA から証明書が発行される可能性が減るので、ちょっと安全になったと思いました。
+(DNSSEC も設定すれば、より安全なのですが、利点よりも運用の手間の方がかかると思って導入していません。)</p>
+
+<p>iodef 対応などはまだまだ不十分のようですが、
+ちゃんと通知が来るようになれば (ほぼないと思いますが) 攻撃が検知できて面白そうです。</p>
+
+<p>それから、新しいリソースレコードということで、既存の TXT レコードを流用している SPF と違って、
+不自由な DNS サービスを使っていると設定という問題もあるので、ドメインによっては導入が難しそうです。
+(SPF といえば RFC7208 で SPF リソースレコードタイプはいらなくなっているようです。
+<code>named-checkconf -z</code> で <code>found SPF/TXT record but no SPF/SPF record found, add matching type SPF record</code> と出て来るので気にはなってしまうのですが。)</p>
+
+<h2>参考サイト</h2>
+
+<ul>
+<li><a href="https://rms-digicert.ne.jp/howto/basis/caa.html">DNS CAA とは：SSL | DigiCert</a></li>
+<li><a href="https://jp.globalsign.com/blog/2013/caa.html">DNS Certification Authority Authorization (CAA) | GMOグローバルサインブログ</a></li>
+<li><a href="https://http2.try-and-test.net/dns_caa.html">DNSサーバのCAA設定 - Apache 2.4系でHTTP/2対応サーバを構築してみるテスト。</a></li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[elpaのpinentry.elを試してみた]]></title>
@@ -3474,139 +3741,6 @@ bash の組み込みコマンドだけでいけそうです。</p>
 
 <p>入力データに改行がないとわかっているなら <code>-d $'\0'</code> などは省略できるので、
 入力データの性質に応じて適度に手を抜きつつ処理をするのが良いのではないでしょうか。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[bash で PATH を配列に分解]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-10-06-bash-path-to-array.html"/>
-    <updated>2016-10-06T23:50:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/bash-path-to-array</id>
-    <content type="html"><![CDATA[<p>zsh だと <code>PATH</code> と同期している配列変数として <code>path</code> があるのですが、
-bash にはそういうものがなくて困ったので、分解する方法を考えてみました。</p>
-
-<!--more-->
-
-
-<h2>結論</h2>
-
-<p>先に結論を書いておくと、最終的には <code>IFS=: read -r -a path &lt;&lt;&lt;"$PATH"</code> という方法で分解できました。</p>
-
-<p>2016-10-07 追記: 詳細は<a href="http://blog.n-z.jp/blog/2016-10-07-bash-path-to-array-again.html">続き</a> に書きましたが、改行などに対応できていませんでした。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> bash -c <span class="s1">&#39;IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>のように動作確認できます。</p>
-
-<p>declare で表示というのは <a href="http://yonchu.hatenablog.com/entry/2013/07/09/230656" title="シェルスクリプトのデバッグは typeset または declare を使うと良いかも - よんちゅBlog">シェルスクリプトのデバッグは typeset または declare を使うと良いかも - よんちゅBlog</a> を参考にしました。</p>
-
-<h2><code>-r</code> オプション</h2>
-
-<p><code>-r</code> オプションは <code>read</code> コマンドを使うときの定石ですが、具体的には <code>\:</code> のような並びがあるときに影響がありました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> <span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;/bin:/tmp/foo\:/tmp/bar&quot;</span> bash -c <span class="s1">&#39;IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
-</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot; [1]=&quot;/tmp/foo\\&quot; [2]=&quot;/tmp/bar&quot;)&#39;</span>
-</span><span class='line'><span class="gp">%</span> <span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;/bin:/tmp/foo\:/tmp/bar&quot;</span> bash -c <span class="s1">&#39;IFS=: read -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
-</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot; [1]=&quot;/tmp/foo:/tmp/bar&quot;)&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>実際のパスの挙動は <code>-r</code> がある場合と同じようでした。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> mkdir /tmp/foo<span class="se">\\</span>
-</span><span class='line'><span class="gp">%</span> <span class="nb">echo echo </span>hoge &gt; /tmp/foo<span class="se">\\</span>/hoge
-</span><span class='line'><span class="gp">%</span> chmod +x /tmp/foo<span class="se">\\</span>/hoge
-</span><span class='line'><span class="gp">%</span> <span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;/bin:/tmp/foo\:/tmp/bar&quot;</span> bash -c <span class="s1">&#39;IFS=: read -a path &lt;&lt;&lt;&quot;$PATH&quot;; for p in &quot;${path[@]}&quot;; do test -x &quot;$p/hoge&quot; &amp;&amp; &quot;$p/hoge&quot;; done&#39;</span>
-</span><span class='line'><span class="go">PATH=&quot;/bin:/tmp/foo\:/tmp/bar&quot; bash -c &#39;IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; for p in &quot;${path[@]}&quot;; do test -x &quot;$p/hoge&quot; &amp;&amp; &quot;$p/hoge&quot;; done&#39;</span>
-</span><span class='line'><span class="go">hoge</span>
-</span><span class='line'><span class="gp">%</span> <span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;/bin:/tmp/foo\:/tmp/bar&quot;</span> hoge
-</span><span class='line'><span class="go">hoge</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2><code>-d</code> オプション</h2>
-
-<p><code>-d</code> オプションというのもあったので試してみたのですが、そこで完全に読み込み終了になってしまって、期待した動作にはなりませんでした。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> <span class="nv">PATH</span><span class="o">=</span><span class="s2">&quot;/bin:/tmp/foo\:/tmp/bar&quot;</span> bash -c <span class="s1">&#39;read -d : -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
-</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot;)&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2><code>-a</code> オプション</h2>
-
-<p><code>-a</code> オプションはこのように複数の変数を指定する代わりにひとつの変数を指定して配列を代入してくれるオプションでした。</p>
-
-<p><code>-a</code> オプションがないと指定した変数のうち、最後に残り全て入ってしまうようです。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="go">PATH=&quot;/bin:/tmp/foo\:/tmp/bar:/tmp/baz&quot; bash -c &#39;IFS=: read -r path1 path2 path3 &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path1 path2 path3&#39;</span>
-</span><span class='line'><span class="go">declare -- path1=&quot;/bin&quot;</span>
-</span><span class='line'><span class="go">declare -- path2=&quot;/tmp/foo\\&quot;</span>
-</span><span class='line'><span class="go">declare -- path3=&quot;/tmp/bar:/tmp/baz&quot;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>here string</h2>
-
-<p><code>&lt;&lt;&lt;word</code> は <code>echo word |</code> のようなもので、標準入力に <code>word</code> を渡してくれる機能です。</p>
-
-<h2>IFS</h2>
-
-<p><code>read</code> などの単語区切りです。
-デフォルトは空白、タブ、改行です。</p>
-
-<p>ずっと変えてしまうと影響が大きすぎるので、 <code>read</code> の行だけ変更するようにしています。</p>
-
-<p>また、このやり方を使うことで空白の入ったディレクトリを含むパスもうまく扱えます。</p>
-
-<h2>カレントディレクトリを表す空のパスの扱い</h2>
-
-<p>頭や途中に入った空文字列 (カレントディレクトリを表す) は扱えたのですが、末尾にある場合はうまくいきませんでした。</p>
-
-<p>セキュリティ上の問題もあるので、普通は設定しないと思うので、対応しなくても問題はないと思いますが、完全に変換したい場合は特別扱いを追加する必要がありそうでした。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span>  bash -c <span class="s1">&#39;PATH=:/bin; IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
-</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;&quot; [1]=&quot;/bin&quot;)&#39;</span>
-</span><span class='line'><span class="gp">%</span>  bash -c <span class="s1">&#39;PATH=/bin::/bin; IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
-</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot; [1]=&quot;&quot; [2]=&quot;/bin&quot;)&#39;</span>
-</span><span class='line'><span class="gp">%</span>  bash -c <span class="s1">&#39;PATH=/bin:; IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH&quot;; declare -p path&#39;</span>
-</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot;)&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>まとめ</h2>
-
-<p>zsh には元から <code>path</code> があるし、 <code>/bin/sh</code> には配列がないので bash 限定ではありますが、
-<code>IFS=: read -r -a path &lt;&lt;&lt;"$PATH"</code> で実用上問題なく変換できるということがわかったので、必要な時には使うと良いのではないでしょうか。</p>
-
-<p>2016-10-07 追記: 末尾の空文字列や改行に対応した<a href="http://blog.n-z.jp/blog/2016-10-07-bash-path-to-array-again.html">続き</a>を書きました。</p>
 ]]></content>
   </entry>
   
