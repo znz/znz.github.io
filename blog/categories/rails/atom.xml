@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rails | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rails/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-04-16T19:51:30+09:00</updated>
+  <updated>2017-04-17T00:14:11+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,177 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[mastodonにpull requestを送った話と開発環境構築の話]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-04-16-contribute-mastodon.html"/>
+    <updated>2017-04-16T22:43:41+09:00</updated>
+    <id>http://blog.n-z.jp/blog/contribute-mastodon</id>
+    <content type="html"><![CDATA[<p>最近流行っている mastodon に pull request を送ったので、
+その環境構築などの話です。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>macOS Sierra 10.12.4</li>
+<li>VirtualBox 5.1.18</li>
+<li>Vagrant 1.9.3</li>
+<li>vagrant-hostsupdater 1.0.2</li>
+<li><a href="https://github.com/tootsuite/mastodon">https://github.com/tootsuite/mastodon</a> の master</li>
+</ul>
+
+
+<h2>起動まで</h2>
+
+<p><a href="https://github.com/tootsuite/mastodon#development-with-vagrant">Development with Vagrant</a> からリンクされている
+<a href="https://github.com/tootsuite/documentation/blob/master/Running-Mastodon/Vagrant-guide.md">Vagrant guide</a> を参考にして、
+環境を構築しました。</p>
+
+<p>初回起動 (<code>vagrant up</code>) 時は <code>vagrant-hostsupdater</code> での <code>sudo</code> に続けて実行されるので気づかなかったのですが、
+2 回目に <code>vagrant up</code> した時に <code>/etc/exports</code> の変更のためにも <code>sudo</code> が実行されているのに気づきました。</p>
+
+<pre><code>git clone https://github.com/tootsuite/mastodon
+cd mastodon
+vagrant plugin install vagrant-hostsupdater
+vagrant up
+</code></pre>
+
+<h2>初期アカウント設定</h2>
+
+<p>初期アカウントはメールアドレスが <code>admin@mastodon.dev</code> でパスワードが <code>mastodonadmin</code> と書いてあるのですが、入れなかったので、</p>
+
+<pre><code>cd /vagrant
+rails c
+User.all
+</code></pre>
+
+<p>で確認してみると、メールアドレスが <code>admin@localhost:3000</code> になっていました。
+そこで、そのまま <code>rails c</code> の中で、</p>
+
+<pre><code>u=User.first
+u.email="admin@mastodon.dev"
+u.save!
+</code></pre>
+
+<p>で修正しました。</p>
+
+<p>こんな感じで何か引っかかった時は rails の知識がないと辛そうです。</p>
+
+<h2>いろいろ動作確認</h2>
+
+<p>80 番ポートから 3000 番ポートへのポートフォワーディングは
+Vagrantfile で設定しているので、
+ホスト側から <code>http://mastodon.dev</code> は見えるのですが、
+<code>vagrant ssh</code> で入ったゲスト側では <code>curl http://mastodon.dev</code> ではなく
+<code>curl http://localhost:3000</code> や <code>curl http://mastodon.dev:3000</code> などのように
+ポート番号をつける必要がありました。</p>
+
+<h2>ストリーミング API</h2>
+
+<p>Vagrantfile を見ればわかるのですが、
+rails server が <code>rails s -d -b 0.0.0.0</code> で動いているところにポートフォワーディングしているだけなので、
+streaming API は使えませんでした。</p>
+
+<p>最初、実装されていないのかと勘違いしてしまったのですが、
+実装されていると聞いたので、よくみてみると
+<code>streaming/index.js</code> で rails 外のところに実装されていました。</p>
+
+<p><code>npm run start</code> で起動すればゲストの中なら 4000 番ポートで使えるようになったので、
+ストリーミング API を使いたい場合は一工夫必要そうです。</p>
+
+<h2>メール</h2>
+
+<p>メールは <code>http://mastodon.dev/letter_opener</code> に溜まっていました。
+mailcatcher と違って、再起動しても残っていました。</p>
+
+<h2>環境の更新</h2>
+
+<p>最新の状態にするために master の変更に追随する必要がありますが、
+<code>vagrant ssh</code> で入った中で <code>cd /vagrant</code> した状態で <code>git pull</code> するとパーミッションの関係でうまくいかないようだったので、
+ホスト側で <code>git pull</code> する方が安全なようです。</p>
+
+<p><code>yarn install</code> などでファイルが書き換わっていると、その変更を元に戻しておく必要もあるかもしれません。</p>
+
+<p><code>git pull</code> した後は、Gemfile なども書き換わっていた時は</p>
+
+<pre><code>vagrant ssh
+cd /vagrant
+bundle install
+yarn install
+rails db:migrate
+rails assets:precompile
+pkill -f puma
+export $(cat ".env.vagrant" | xargs)
+rails s -d -b 0.0.0.0
+</code></pre>
+
+<p>のような感じで <code>bundle install</code> と起動している rails server の停止と Vagrantfile の <code>$start</code> の処理をすると良さそうです。</p>
+
+<p>パーミッションの問題で <code>yarn install</code> がうまくいかなかった時は <code>node_modules</code> を削除すると良さそうです。
+ゲスト側だとうまくいかなかったら、ホスト側で消すなどの工夫が必要そうです。</p>
+
+<h2>pull requests</h2>
+
+<p><code>vagrant up</code> する前に Vagrantfile を確認していたところ、
+<code>PATH</code> にカレントディレクトリを追加していたので、
+<a href="https://github.com/tootsuite/mastodon/pull/1779">Remove current directory from PATH</a>
+で削除する pull request を送りました。</p>
+
+<p>そして、管理画面をみていたところ、title が並んでいてなんだこれ、と思ったので、
+<a href="https://github.com/tootsuite/mastodon/pull/1785">翻訳の更新の pull request</a>
+を送りました。</p>
+
+<p><code>I18n.t</code> の最後の単語は翻訳がないときのデフォルトとしても使われるので、
+そのことも考慮した単語を選んだ方が良さそうに思いましたが、
+yaml ファイルをみていると title にしたい気持ちもわからなくはなかったので、
+悩ましいところです。</p>
+
+<h2>翻訳もれ?</h2>
+
+<p>テスト環境なので短いパスワードでもいいかと思って、テストアカウントを登録する時に短いパスワードを入れてみたところ、
+<code>translation missing: ja.activerecord.errors.models.user.attributes.password.too_short</code>
+と出てきて調べてみると <code>config/locales/doorkeeper.fr.yml</code> にだけ <code>too_short</code> の翻訳があって何かおかしいと思って、
+よく調べてみると、
+rails-i18n gem に翻訳が入っている、 rails デフォルトのエラーメッセージだとわかったので、
+<a href="https://github.com/tootsuite/mastodon/issues/1790">rails-i18n gem の追加リクエスト</a> を出しました。</p>
+
+<h2>i18n-tasks</h2>
+
+<p>前回の翻訳の更新は目視で比較して追加したのですが、
+rails-i18n gem について調べているときに
+i18n-tasks gem というのが入っていると気づいたので、
+次はそれを使ってみました。</p>
+
+<p><code>i18n-tasks health</code> でチェックできるのですが、デフォルトだと全言語が対象で、出過ぎなので、
+<code>i18n-tasks health -l ja</code> で日本語だけに絞って表示しました。</p>
+
+<p>そして <code>i18n-tasks add-missing -l ja</code> で <code>config/locales/ja.yml</code> に英語のまま追加され、
+<code>git diff</code> で何が追加されたか確認して翻訳していきました。</p>
+
+<p><code>i18n-tasks find '*.reset_password'</code> や <code>i18n-tasks find admin.accounts.reset_password</code> のようにして、どこで使われているのか確認して、
+実際に表示させて確認しつつ翻訳しました。</p>
+
+<p>affected_accounts は one と other で<a href="https://railsguides.jp/i18n.html#%E8%A4%87%E6%95%B0%E5%BD%A2%E5%8C%96">複数形化</a>していたのですが、
+日本語にすると同じだと思ったので、
+一段階浅くして共通の翻訳を使うように変更しました。</p>
+
+<p><code>i1n-tasks add-missing -l ja</code> をした時に引用符がちょっとへんこうされてしまったのですが、
+それもそのまま変更点として含めて、
+<a href="https://github.com/tootsuite/mastodon/pull/1923">Add missing Japanese translations</a>
+として pull request を送りました。</p>
+
+<p><code>i18n-tasks unused -l ja</code> は本当に消して良いかどうかが不安だったので、
+手をつけていません。</p>
+
+<h2>まとめ</h2>
+
+<p>vagrant で簡単に mastodon の開発環境を構築できました。
+ただしストリーミング API はそのままだと対応していないので注意が必要そうです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[React On Rails の react-webpack-rails-tutorial を Dokku で試してみた]]></title>
@@ -533,84 +704,6 @@ end
 <p>というメッセージが出るので、メッセージ通り
 <code>rails generate doorkeeper:application_scopes &amp;&amp; rake db:migrate</code>
 で追加しました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[capistrano 3.3.3 が依存している capistrano-stats について]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-12-01-capistrano-stats.html"/>
-    <updated>2014-12-01T21:33:21+09:00</updated>
-    <id>http://blog.n-z.jp/blog/capistrano-stats</id>
-    <content type="html"><![CDATA[<p>capistrano が 3.3.3 にあがって
-<a href="https://github.com/capistrano/stats">capistrano-stats</a>
-という gem に依存するようになりました。
-これは <code>metrics.capistranorb.com:1200</code> にバージョン情報などを送信して
-capistrano のサポートの改善に役立てようとするもののようです。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>capistrano 3.3.3</li>
-<li>capistrano-stats 1.0.3</li>
-</ul>
-
-
-<h2>Capfile locked</h2>
-
-<p>capistrano-stats とは関係ないですが、
-<code>Capfile locked at 3.2.1, but 3.3.3 is loaded</code>
-と出るときは <code>config/deploy.rb</code> の最初の方にある
-<code>lock '3.2.1'</code>
-という行を
-<code>lock '3.3.3'</code>
-に書き換えれば OK です。</p>
-
-<h2>capistrano-stats 1.0.3 の挙動</h2>
-
-<p>初回実行時に
-<code>Do you want to enable statistics? (y/N):</code>
-ときかれて、
-そのまま Enter か <code>n</code> を入力すると ruby や capistrano のバージョンは送信されなくなるのですが、
-(少なくとも私の) 期待に反して
-<code>metrics.capistranorb.com:1200</code>
-への送信自体は発生するようになっています。</p>
-
-<h2>何が問題か</h2>
-
-<p>全く送信してほしくない場合にも通信が発生したり、
-firewall で塞がれている場合にエラーになったり
-という問題があります。</p>
-
-<h2>一時的に無効にするには?</h2>
-
-<p><code>CAPISTRANO_METRICS=localhost:1200 bundle exec cap default</code>
-のように環境変数 <code>CAPISTRANO_METRICS</code> で送っても無視されるところに送信すれば良さそうです。</p>
-
-<h2>完全に無効にするには?</h2>
-
-<p>pull request 1 の
-<a href="https://github.com/capistrano/stats/pull/1" title="Honor the users privacy decision and do not send UDP packets if he does not want to send metrics">Honor the users privacy decision and do not send UDP packets if he does not want to send metrics</a>
-にあるように</p>
-
-<pre><code class="ruby">Rake::Task['metrics:collect'].clear_actions
-</code></pre>
-
-<p>を <code>config/deploy.rb</code> に追加すると送信されなくなりました。</p>
-
-<h2>今後</h2>
-
-<p><a href="https://github.com/capistrano/stats/pull/2" title="Allow users to opt-out of sending the UDP ping and improve error handling when the sendto syscall fails">Allow users to opt-out of sending the UDP ping and improve error handling when the sendto syscall fails</a>
-という pull request が続きで出ているので、
-将来のバージョンでは全く送信しない選択肢が用意されるかもしれません。</p>
-
-<h2>2014-12-13 追記</h2>
-
-<p>その後、
-capistrano 3.3.4 と capistrano-stats 1.1.0 にあがって、
-デフォルトの N を 2 回は全く送信しないようになりました。</p>
 ]]></content>
   </entry>
   
