@@ -5,13 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Rails 4.1 で jQuery Raty を使ってみた - @znz blog</title>
+  <title>mastodonのAPIをcurlで試してみた - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Rails 4.1 で jQuery Raty を使ってみた 2014-08-09 (Sat) 7:37 pm | Comments Rails で星を使った評価付けを使いたかったので、
-jQuery プラグインを探してみたところ、
-jQuery Raty &hellip;">
+  <meta name="description" content="mastodonのAPIをcurlで試してみた 2017-04-17 (Mon) 1:24 am | Comments curl で mastodon の開発環境を使って API を試してみたメモです。 mastodonのAPIをcurlで試してみたと同じ内容です。 確認環境 mastodon &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -20,7 +18,7 @@ jQuery Raty &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-08-09-jquery-raty.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-04-17-mastodon-api-curl.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -85,7 +83,7 @@ jQuery Raty &hellip;">
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">Rails 4.1 で jQuery Raty を使ってみた</h1>
+      <h1 class="entry-title">mastodonのAPIをcurlで試してみた</h1>
       
       <!-- zenback_title_end -->
       
@@ -97,7 +95,7 @@ jQuery Raty &hellip;">
 
 
 
-<time class='entry-date' datetime='2014-08-09T19:37:53+09:00'><span class='date'>2014-08-09 (Sat)</span> <span class='time'>7:37 pm</span></time>
+<time class='entry-date' datetime='2017-04-17T01:24:42+09:00'><span class='date'>2017-04-17 (Mon)</span> <span class='time'>1:24 am</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -110,174 +108,142 @@ jQuery Raty &hellip;">
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p>Rails で星を使った評価付けを使いたかったので、
-jQuery プラグインを探してみたところ、
-<a href="http://wbotelhos.com/raty" title="jQuery Raty">jQuery Raty</a>
-というのが良さそうだったので使ってみました。</p>
+<div class="entry-content"><p>curl で <a href="/blog/2017-04-16-contribute-mastodon.html">mastodon の開発環境</a>を使って API を試してみたメモです。</p>
 
-<!--more-->
+<p><a href="http://qiita.com/znz/items/c924cd4e9d5e50e50058">mastodonのAPIをcurlで試してみた</a>と同じ内容です。</p>
 
+<h2>確認環境</h2>
 
-<h2>対象バージョン</h2>
+<p><a href="/blog/2017-04-16-contribute-mastodon.html">mastodon の開発環境</a>の通りですが、簡単に説明しておくと</p>
 
 <ul>
-<li>jQuery Raty v2.7.0</li>
-<li>Ruby on Rails 4.1.4</li>
-<li>Ruby 2.1.2</li>
+<li><code>git clone https://github.com/tootsuite/mastodon</code></li>
+<li><code>cd mastodon</code></li>
+<li><code>vagrant up</code></li>
+<li><code>vagrant ssh</code></li>
 </ul>
 
 
-<h2>うまくいかなかった方法</h2>
+<p>した後、初期アカウントのメールアドレスを修正した環境を想定しています。</p>
 
-<p><a href="http://rubygems.org/" title="RubyGems.org">RubyGems.org</a>
-の方には古いバージョンしかなさそうだったので、
-<a href="https://rails-assets.org/" title="Rails Assets">Rails Assets</a>
-で最新バージョンを使おうと思い、
-<code>Gemfile</code> に以下の設定をしたのですが、
-<code>raty</code> のディレクトリ配置が特殊なのか、
-うまくいきませんでした。</p>
+<h2>Create App</h2>
 
-<figure class='code'><figcaption><span>Gemfile</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<p>クライアント名を決めてスコープを決めて作成します。
+クライアント名は同じ名前でも作成できるようです。(Twitter は名前がかぶると作成できなかったはず。)
+複数のスコープを指定する時はスペース区切りです。
+リダイレクト先がなければ <code>urn:ietf:wg:oauth:2.0:oob</code> にしておけば良いようです。
+ウェブサイトがあればその URL も設定しておきます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">source</span> <span class="s1">&#39;https://rails-assets.org&#39;</span>
-</span><span class='line'><span class="n">gem</span> <span class="s1">&#39;rails-assets-raty&#39;</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ CLIENT_NAME</span><span class="o">=</span><span class="s2">&quot;Test Client&quot;</span>
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl -X POST -d <span class="s2">&quot;client_name=$CLIENT_NAME&amp;redirect_uris=${REDIRECT_URIS:-urn:ietf:wg:oauth:2.0:oob}&amp;scopes=${SCOPES:-read write follow}&amp;website=$WEBSITE&quot;</span> http://localhost:3000/api/v1/apps<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;id&quot;</span>:16,<span class="s2">&quot;redirect_uri&quot;</span>:<span class="s2">&quot;urn:ietf:wg:oauth:2.0:oob&quot;</span>,<span class="s2">&quot;client_id&quot;</span>:<span class="s2">&quot;ce06ac1d988d7f26f067dc7ea639e41523ec8135e48cceabb7cd0fd8c1413c65&quot;</span>,<span class="s2">&quot;client_secret&quot;</span>:<span class="s2">&quot;be04a4f2ca2cd5d9a1cc1314d03a15f811be7f64005483b003447cc3e35e7749&quot;</span><span class="o">}</span>0
 </span></code></pre></td></tr></table></div></figure>
 
 
-<h3>development 環境では動いた方法</h3>
+<p><code>echo</code> をつけているのは終了ステータスの確認と応答に改行がつかないことの対処です。</p>
 
-<p>以下のように書くことで development 環境では動いたのですが、
-capistrano で deploy した先では画像が表示されていませんでした。</p>
+<p>この応答のうち、<code>client_id</code> と <code>client_secret</code> が必要なので、保存しておきます。</p>
 
-<figure class='code'><figcaption><span>app/assets/stylesheets/raty.css.scss</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="o">//=</span> <span class="nt">require</span> <span class="nt">raty</span><span class="o">/</span><span class="nt">lib</span><span class="o">/</span><span class="nt">jquery</span><span class="nc">.raty</span>
-</span></code></pre></td></tr></table></div></figure>
+<h2>アカウントと紐付け</h2>
 
+<p>保存しておいた <code>client_id</code> と <code>client_secret</code> と、対象のサーバーに登録しているアカウントのメールアドレスとパスワードが必要です。</p>
 
+<p>スコープは Create App の時に <code>read</code> のみ以外を指定した場合には、ここにも指定しないと <code>read</code> 権限のみになってしまうようです。
+Create App の時に指定していなかったスコープは指定できないようです。(<code>{"error":"invalid_scope","error_description":"The requested scope is invalid, unknown, or malformed."}</code> になる。)
+<code>/api/v1/apps</code> は <code>scopes</code> (複数形) ですが、<code>/oauth/token</code> では <code>scope</code> (単数形) なので注意が必要そうです。</p>
 
-
-<figure class='code'><figcaption><span>app/assets/javascripts/raty.js.coffee.erb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
 <span class='line-number'>5</span>
 <span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>#= require raty/lib/jquery.raty
-</span><span class='line'> $ -&gt;
-</span><span class='line'>   $(&#39;.raty&#39;).raty
-</span><span class='line'>     cancel   : true
-</span><span class='line'>    cancelOff: &#39;&lt;%= image_path(&#39;raty/lib/images/cancel-off.png&#39;) %&gt;&#39;
-</span><span class='line'>    cancelOn : &#39;&lt;%= image_path(&#39;raty/lib/images/cancel-on.png&#39;) %&gt;&#39;
-</span><span class='line'>    starHalf : &#39;&lt;%= image_path(&#39;raty/lib/images/star-half.png&#39;) %&gt;&#39;
-</span><span class='line'>    starOff  : &#39;&lt;%= image_path(&#39;raty/lib/images/star-off.png&#39;) %&gt;&#39;
-</span><span class='line'>    starOn   : &#39;&lt;%= image_path(&#39;raty/lib/images/star-on.png&#39;) %&gt;&#39;
-</span><span class='line'>    click: (score, event) -&gt;
-</span><span class='line'>      raty = $(event.target).parent()
-</span><span class='line'>      $(raty.data(&#39;field&#39;)).val(score)
-</span><span class='line'>    score: -&gt;
-</span><span class='line'>      $($(this).data(&#39;field&#39;)).val()
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ CLIENT_ID</span><span class="o">=</span>ce06ac1d988d7f26f067dc7ea639e41523ec8135e48cceabb7cd0fd8c1413c65
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ CLIENT_SECRET</span><span class="o">=</span>be04a4f2ca2cd5d9a1cc1314d03a15f811be7f64005483b003447cc3e35e7749
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ YOUR_EMAIL</span><span class="o">=</span>admin@mastodon.dev
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ YOUR_PASSWORD</span><span class="o">=</span>mastodonadmin
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl -X POST -d <span class="s2">&quot;client_id=$CLIENT_ID&amp;client_secret=$CLIENT_SECRET&amp;grant_type=password&amp;username=$YOUR_EMAIL&amp;password=$YOUR_PASSWORD&amp;scope=${SCOPES:-read write follow}&quot;</span> -sS http://localhost:3000/oauth/token<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;access_token&quot;</span>:<span class="s2">&quot;96efc1d5e78e6bd9497915cbdc9a464d584e934414d3db1e1d68b2370f8b698c&quot;</span>,<span class="s2">&quot;token_type&quot;</span>:<span class="s2">&quot;bearer&quot;</span>,<span class="s2">&quot;scope&quot;</span>:<span class="s2">&quot;read write follow&quot;</span>,<span class="s2">&quot;created_at&quot;</span>:1492358391<span class="o">}</span>0
 </span></code></pre></td></tr></table></div></figure>
 
 
-<h2>うまくいった方法</h2>
+<h2>API 呼び出し</h2>
 
-<p><code>vendor/assets/stylesheets/jquery.raty.css</code> と
-<code>vendor/assets/javascripts/jquery.raty.js</code> に
-ダウンロードしたファイルをおいて、
-<code>assets</code> も以下のように書き換えました。
-画像も <code>vendor/assets/images/raty</code> においてもうまくいかなかったので、
-<code>vendor/assets/images/raty</code> におきました。</p>
+<p>ほとんどの API 呼び出しにはアクセストークンが必要です。
+Create App や public タイムラインの取得などのように必要ないものもあります。</p>
 
-<p>Web フォントは今回は使っていないので、
-考慮していません。
-<code>starType</code> を <code>i</code> に変更しない限り使われないはずなので、
-Web フォントを配置しなくても問題ないと思います。</p>
-
-<figure class='code'><figcaption><span>app/assets/stylesheets/raty.css.scss</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='css'><span class='line'><span class="o">//=</span> <span class="nt">require</span> <span class="nt">jquery</span><span class="nc">.raty</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ ACCESS_TOKEN</span><span class="o">=</span>96efc1d5e78e6bd9497915cbdc9a464d584e934414d3db1e1d68b2370f8b698c
 </span></code></pre></td></tr></table></div></figure>
 
 
+<h2>アカウント情報の取得</h2>
+
+<p><code>/api/v1/accounts/verify_credentials</code> でアクセストークンに紐づいているアカウントの情報を取得できます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl --header <span class="s2">&quot;Authorization: Bearer $ACCESS_TOKEN&quot;</span> -sS http://localhost:3000/api/v1/accounts/verify_credentials<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;id&quot;</span>:1,<span class="s2">&quot;username&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;acct&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;display_name&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;locked&quot;</span>:false,<span class="s2">&quot;created_at&quot;</span>:<span class="s2">&quot;2017-04-14T04:04:40.299Z&quot;</span>,<span class="s2">&quot;followers_count&quot;</span>:0,<span class="s2">&quot;following_count&quot;</span>:1,<span class="s2">&quot;statuses_count&quot;</span>:26,<span class="s2">&quot;note&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;url&quot;</span>:<span class="s2">&quot;http://mastodon.dev/@admin&quot;</span>,<span class="s2">&quot;avatar&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;avatar_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;header&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span>,<span class="s2">&quot;header_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span><span class="o">}</span>0
+</span></code></pre></td></tr></table></div></figure>
 
 
-<figure class='code'><figcaption><span>app/assets/javascripts/raty.js.coffee.erb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<h2>情報更新</h2>
+
+<p><code>/oauth/token</code> で scope を指定していなかった場合、 <code>{"error":"This action is outside the authorized scopes"}</code> になって更新できませんでした。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl -X PATCH -d <span class="s2">&quot;display_name=Admin&quot;</span> --header <span class="s2">&quot;Authorization: Bearer $ACCESS_TOKEN&quot;</span> -sS http://localhost:3000/api/v1/accounts/update_credentials<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;id&quot;</span>:1,<span class="s2">&quot;username&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;acct&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;display_name&quot;</span>:<span class="s2">&quot;Admin&quot;</span>,<span class="s2">&quot;locked&quot;</span>:false,<span class="s2">&quot;created_at&quot;</span>:<span class="s2">&quot;2017-04-14T04:04:40.299Z&quot;</span>,<span class="s2">&quot;followers_count&quot;</span>:0,<span class="s2">&quot;following_count&quot;</span>:1,<span class="s2">&quot;statuses_count&quot;</span>:27,<span class="s2">&quot;note&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;url&quot;</span>:<span class="s2">&quot;http://mastodon.dev/@admin&quot;</span>,<span class="s2">&quot;avatar&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;avatar_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;header&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span>,<span class="s2">&quot;header_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span><span class="o">}</span>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>トゥート!</h2>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl -X POST -d <span class="s2">&quot;status=test message&quot;</span> --header <span class="s2">&quot;Authorization: Bearer $ACCESS_TOKEN&quot;</span> -sS http://localhost:3000/api/v1/statuses<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;id&quot;</span>:30,<span class="s2">&quot;created_at&quot;</span>:<span class="s2">&quot;2017-04-16T16:00:55.054Z&quot;</span>,<span class="s2">&quot;in_reply_to_id&quot;</span>:null,<span class="s2">&quot;in_reply_to_account_id&quot;</span>:null,<span class="s2">&quot;sensitive&quot;</span>:null,<span class="s2">&quot;spoiler_text&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;visibility&quot;</span>:<span class="s2">&quot;public&quot;</span>,<span class="s2">&quot;application&quot;</span>:<span class="o">{</span><span class="s2">&quot;name&quot;</span>:<span class="s2">&quot;Test Client&quot;</span>,<span class="s2">&quot;website&quot;</span>:<span class="s2">&quot;&quot;</span><span class="o">}</span>,<span class="s2">&quot;account&quot;</span>:<span class="o">{</span><span class="s2">&quot;id&quot;</span>:1,<span class="s2">&quot;username&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;acct&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;display_name&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;locked&quot;</span>:false,<span class="s2">&quot;created_at&quot;</span>:<span class="s2">&quot;2017-04-14T04:04:40.299Z&quot;</span>,<span class="s2">&quot;followers_count&quot;</span>:0,<span class="s2">&quot;following_count&quot;</span>:1,<span class="s2">&quot;statuses_count&quot;</span>:27,<span class="s2">&quot;note&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;url&quot;</span>:<span class="s2">&quot;http://mastodon.dev/@admin&quot;</span>,<span class="s2">&quot;avatar&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;avatar_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;header&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span>,<span class="s2">&quot;header_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span><span class="o">}</span>,<span class="s2">&quot;media_attachments&quot;</span>:<span class="o">[]</span>,<span class="s2">&quot;mentions&quot;</span>:<span class="o">[]</span>,<span class="s2">&quot;tags&quot;</span>:<span class="o">[]</span>,<span class="s2">&quot;uri&quot;</span>:<span class="s2">&quot;tag:mastodon.dev,2017-04-16:objectId=30:objectType=Status&quot;</span>,<span class="s2">&quot;content&quot;</span>:<span class="s2">&quot;&lt;p&gt;test message&lt;/p&gt;&quot;</span>,<span class="s2">&quot;url&quot;</span>:<span class="s2">&quot;http://mastodon.dev/@admin/30&quot;</span>,<span class="s2">&quot;reblogs_count&quot;</span>:0,<span class="s2">&quot;favourites_count&quot;</span>:0,<span class="s2">&quot;reblog&quot;</span>:null,<span class="s2">&quot;favourited&quot;</span>:false,<span class="s2">&quot;reblogged&quot;</span>:false<span class="o">}</span>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>タイムライン取得</h2>
+
+<p><code>curl -v --header "Authorization: Bearer $ACCESS_TOKEN" -sS http://localhost:3000/api/v1/timelines/home</code> などでタイムラインを取得できます。(<code>timelines</code> は複数形)</p>
+
+<p>Link ヘッダーに <code>Link: &lt;http://localhost:3000/api/v1/timelines/home?max_id=7&gt;; rel="next", &lt;http://localhost:3000/api/v1/timelines/home?since_id=30&gt;; rel="prev"</code> のように書いてあって、 <code>next</code> で過去に辿っていけて、 <code>prev</code> で新しいトゥートを取得できるようです。
+ただし <code>prev</code> は時間をあけて試すと間が抜けていたので、全部取得する用途には向いていないようです。
+<code>next</code> の方は確認していませんが、過去に遡るという挙動を考えると、間が抜けることはないのではないかと思っています。</p>
+
+<h2>エラーの例</h2>
+
+<p>パラメーターなどが間違っている時は JSON でエラーが返ってくるのですが、URL を間違えた時は空白のレスポンスが返ってくるので、知らないと悩みそうです。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
 <span class='line-number'>5</span>
 <span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>#= require jquery.raty
-</span><span class='line'> $ -&gt;
-</span><span class='line'>   $(&#39;.raty&#39;).raty
-</span><span class='line'>     cancel   : true
-</span><span class='line'>    cancelOff: &#39;&lt;%= image_path(&#39;raty/cancel-off.png&#39;) %&gt;&#39;
-</span><span class='line'>    cancelOn : &#39;&lt;%= image_path(&#39;raty/cancel-on.png&#39;) %&gt;&#39;
-</span><span class='line'>    starHalf : &#39;&lt;%= image_path(&#39;raty/star-half.png&#39;) %&gt;&#39;
-</span><span class='line'>    starOff  : &#39;&lt;%= image_path(&#39;raty/star-off.png&#39;) %&gt;&#39;
-</span><span class='line'>    starOn   : &#39;&lt;%= image_path(&#39;raty/star-on.png&#39;) %&gt;&#39;
-</span><span class='line'>    click: (score, event) -&gt;
-</span><span class='line'>      raty = $(event.target).parent()
-</span><span class='line'>      $(raty.data(&#39;field&#39;)).val(score)
-</span><span class='line'>    score: -&gt;
-</span><span class='line'>      $($(this).data(&#39;field&#39;)).val()
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl -X POST -d <span class="s2">&quot;client_name=$CLIENT_NAME&amp;redirect_uris=${REDIRECT_URIS:-urn:ietf:wg:oauth:2.0:oob}&amp;scopes=${SCOPES:-read write follow}&amp;website=$WEBSITE&quot;</span> http://localhost:3000/api/v1/apps<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;error&quot;</span>:<span class="s2">&quot;Validation failed: Name can&#39;t be blank&quot;</span><span class="o">}</span>0
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl --header <span class="s2">&quot;Authorization: Bearer ACCESS_TOKEN_HERE&quot;</span> -sS http://localhost:3000/api/v1/accounts/verify_credentials<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;error&quot;</span>:<span class="s2">&quot;The access token is invalid&quot;</span><span class="o">}</span>0
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl --header <span class="s2">&quot;Authorization: Bearer $ACCESS_TOKEN&quot;</span> -sS http://localhost:3000/api/v1/timeline/home<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'>0
 </span></code></pre></td></tr></table></div></figure>
 
 
-<h2>フォームでの使用例</h2>
+<h2>参考</h2>
 
-<p>bootstrap 3.2.0 の <code>form-horizontal</code> を使っているので、
-slim で以下のように使っています。</p>
-
-<figure class='code'><figcaption><span>_form.html.slim</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='text'><span class='line'>.form-group
-</span><span class='line'>  = f.label :readability, class: &quot;control-label col-md-2&quot;
-</span><span class='line'>  .col-md-10
-</span><span class='line'>    .raty.form-control data-field=&#39;#book_report_readability&#39;
-</span><span class='line'>    = f.hidden_field :readability, class: &quot;form-control&quot;
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>show での使用例</h2>
-
-<p>以下のように <code>raty</code> の星を使って表示しています。</p>
-
-<figure class='code'><figcaption><span>app/helpers/raty_helper.rb</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">module</span> <span class="nn">RatyHelper</span>
-</span><span class='line'>  <span class="k">def</span> <span class="nf">raty_stars</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">max</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
-</span><span class='line'>    <span class="p">(</span>
-</span><span class='line'>      <span class="n">image_tag</span><span class="p">(</span><span class="s1">&#39;raty/star-on.png&#39;</span><span class="p">,</span> <span class="ss">alt</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="o">*</span> <span class="n">n</span> <span class="o">+</span>
-</span><span class='line'>      <span class="n">image_tag</span><span class="p">(</span><span class="s1">&#39;raty/star-off.png&#39;</span><span class="p">,</span> <span class="ss">alt</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">max</span><span class="o">-</span><span class="n">n</span><span class="p">)</span>
-</span><span class='line'>      <span class="p">)</span><span class="o">.</span><span class="n">html_safe</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
+<ul>
+<li><a href="https://github.com/tootsuite/documentation/blob/eb32fc9738de44878697754431565260be89c17f/Using-the-API/API.md">参照時点の API のドキュメント</a> (<a href="https://github.com/tootsuite/documentation/blob/master/Using-the-API/API.md">最新</a>)</li>
+<li><a href="https://github.com/tootsuite/documentation/blob/eb32fc9738de44878697754431565260be89c17f/Using-the-API/Testing-with-cURL.md">参照時点の Testing the API with cURL</a> (<a href="https://github.com/tootsuite/documentation/blob/master/Using-the-API/Testing-with-cURL.md">最新</a>)</li>
+</ul>
 
 </div>
 
@@ -297,12 +263,12 @@ slim で以下のように使っています。</p>
 
 
 
-<time class='entry-date' datetime='2014-08-09T19:37:53+09:00'><span class='date'>2014-08-09 (Sat)</span> <span class='time'>7:37 pm</span></time>
+<time class='entry-date' datetime='2017-04-17T01:24:42+09:00'><span class='date'>2017-04-17 (Mon)</span> <span class='time'>1:24 am</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/jquery/'>jquery</a>, <a class='category' href='/blog/categories/rails/'>rails</a>
+    <a class='category' href='/blog/categories/mastodon/'>mastodon</a>
   
 </span>
 
@@ -329,10 +295,8 @@ slim で以下のように使っています。</p>
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2014-08-06-docker-volume.html" title="Previous Post: boot2docker で VM のファイルをコンテナやホストと共有する">&laquo; boot2docker で VM のファイルをコンテナやホストと共有する</a>
+        <a class="basic-alignment left" href="/blog/2017-04-16-contribute-mastodon.html" title="Previous Post: mastodonにpull requestを送った話と開発環境構築の話">&laquo; mastodonにpull requestを送った話と開発環境構築の話</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2014-08-11-openssh-arcfour256.html" title="Next Post: vagrantなどのローカルへのssh接続のみarcfour256で高速化する">vagrantなどのローカルへのssh接続のみarcfour256で高速化する &raquo;</a>
       
     </p>
   </footer>
@@ -470,8 +434,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-08-09-jquery-raty.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2014-08-09-jquery-raty.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-04-17-mastodon-api-curl.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-04-17-mastodon-api-curl.html';
         var disqus_script = 'embed.js';
       
     (function () {

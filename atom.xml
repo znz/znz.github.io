@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-04-17T00:14:11+09:00</updated>
+  <updated>2017-04-17T01:32:28+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,151 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[mastodonのAPIをcurlで試してみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-04-17-mastodon-api-curl.html"/>
+    <updated>2017-04-17T01:24:42+09:00</updated>
+    <id>http://blog.n-z.jp/blog/mastodon-api-curl</id>
+    <content type="html"><![CDATA[<p>curl で <a href="http://blog.n-z.jp/blog/2017-04-16-contribute-mastodon.html">mastodon の開発環境</a>を使って API を試してみたメモです。</p>
+
+<p><a href="http://qiita.com/znz/items/c924cd4e9d5e50e50058">mastodonのAPIをcurlで試してみた</a>と同じ内容です。</p>
+
+<h2>確認環境</h2>
+
+<p><a href="http://blog.n-z.jp/blog/2017-04-16-contribute-mastodon.html">mastodon の開発環境</a>の通りですが、簡単に説明しておくと</p>
+
+<ul>
+<li><code>git clone https://github.com/tootsuite/mastodon</code></li>
+<li><code>cd mastodon</code></li>
+<li><code>vagrant up</code></li>
+<li><code>vagrant ssh</code></li>
+</ul>
+
+
+<p>した後、初期アカウントのメールアドレスを修正した環境を想定しています。</p>
+
+<h2>Create App</h2>
+
+<p>クライアント名を決めてスコープを決めて作成します。
+クライアント名は同じ名前でも作成できるようです。(Twitter は名前がかぶると作成できなかったはず。)
+複数のスコープを指定する時はスペース区切りです。
+リダイレクト先がなければ <code>urn:ietf:wg:oauth:2.0:oob</code> にしておけば良いようです。
+ウェブサイトがあればその URL も設定しておきます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ CLIENT_NAME</span><span class="o">=</span><span class="s2">&quot;Test Client&quot;</span>
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl -X POST -d <span class="s2">&quot;client_name=$CLIENT_NAME&amp;redirect_uris=${REDIRECT_URIS:-urn:ietf:wg:oauth:2.0:oob}&amp;scopes=${SCOPES:-read write follow}&amp;website=$WEBSITE&quot;</span> http://localhost:3000/api/v1/apps<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;id&quot;</span>:16,<span class="s2">&quot;redirect_uri&quot;</span>:<span class="s2">&quot;urn:ietf:wg:oauth:2.0:oob&quot;</span>,<span class="s2">&quot;client_id&quot;</span>:<span class="s2">&quot;ce06ac1d988d7f26f067dc7ea639e41523ec8135e48cceabb7cd0fd8c1413c65&quot;</span>,<span class="s2">&quot;client_secret&quot;</span>:<span class="s2">&quot;be04a4f2ca2cd5d9a1cc1314d03a15f811be7f64005483b003447cc3e35e7749&quot;</span><span class="o">}</span>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>echo</code> をつけているのは終了ステータスの確認と応答に改行がつかないことの対処です。</p>
+
+<p>この応答のうち、<code>client_id</code> と <code>client_secret</code> が必要なので、保存しておきます。</p>
+
+<h2>アカウントと紐付け</h2>
+
+<p>保存しておいた <code>client_id</code> と <code>client_secret</code> と、対象のサーバーに登録しているアカウントのメールアドレスとパスワードが必要です。</p>
+
+<p>スコープは Create App の時に <code>read</code> のみ以外を指定した場合には、ここにも指定しないと <code>read</code> 権限のみになってしまうようです。
+Create App の時に指定していなかったスコープは指定できないようです。(<code>{"error":"invalid_scope","error_description":"The requested scope is invalid, unknown, or malformed."}</code> になる。)
+<code>/api/v1/apps</code> は <code>scopes</code> (複数形) ですが、<code>/oauth/token</code> では <code>scope</code> (単数形) なので注意が必要そうです。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ CLIENT_ID</span><span class="o">=</span>ce06ac1d988d7f26f067dc7ea639e41523ec8135e48cceabb7cd0fd8c1413c65
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ CLIENT_SECRET</span><span class="o">=</span>be04a4f2ca2cd5d9a1cc1314d03a15f811be7f64005483b003447cc3e35e7749
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ YOUR_EMAIL</span><span class="o">=</span>admin@mastodon.dev
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ YOUR_PASSWORD</span><span class="o">=</span>mastodonadmin
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl -X POST -d <span class="s2">&quot;client_id=$CLIENT_ID&amp;client_secret=$CLIENT_SECRET&amp;grant_type=password&amp;username=$YOUR_EMAIL&amp;password=$YOUR_PASSWORD&amp;scope=${SCOPES:-read write follow}&quot;</span> -sS http://localhost:3000/oauth/token<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;access_token&quot;</span>:<span class="s2">&quot;96efc1d5e78e6bd9497915cbdc9a464d584e934414d3db1e1d68b2370f8b698c&quot;</span>,<span class="s2">&quot;token_type&quot;</span>:<span class="s2">&quot;bearer&quot;</span>,<span class="s2">&quot;scope&quot;</span>:<span class="s2">&quot;read write follow&quot;</span>,<span class="s2">&quot;created_at&quot;</span>:1492358391<span class="o">}</span>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>API 呼び出し</h2>
+
+<p>ほとんどの API 呼び出しにはアクセストークンが必要です。
+Create App や public タイムラインの取得などのように必要ないものもあります。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ ACCESS_TOKEN</span><span class="o">=</span>96efc1d5e78e6bd9497915cbdc9a464d584e934414d3db1e1d68b2370f8b698c
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>アカウント情報の取得</h2>
+
+<p><code>/api/v1/accounts/verify_credentials</code> でアクセストークンに紐づいているアカウントの情報を取得できます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl --header <span class="s2">&quot;Authorization: Bearer $ACCESS_TOKEN&quot;</span> -sS http://localhost:3000/api/v1/accounts/verify_credentials<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;id&quot;</span>:1,<span class="s2">&quot;username&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;acct&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;display_name&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;locked&quot;</span>:false,<span class="s2">&quot;created_at&quot;</span>:<span class="s2">&quot;2017-04-14T04:04:40.299Z&quot;</span>,<span class="s2">&quot;followers_count&quot;</span>:0,<span class="s2">&quot;following_count&quot;</span>:1,<span class="s2">&quot;statuses_count&quot;</span>:26,<span class="s2">&quot;note&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;url&quot;</span>:<span class="s2">&quot;http://mastodon.dev/@admin&quot;</span>,<span class="s2">&quot;avatar&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;avatar_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;header&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span>,<span class="s2">&quot;header_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span><span class="o">}</span>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>情報更新</h2>
+
+<p><code>/oauth/token</code> で scope を指定していなかった場合、 <code>{"error":"This action is outside the authorized scopes"}</code> になって更新できませんでした。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl -X PATCH -d <span class="s2">&quot;display_name=Admin&quot;</span> --header <span class="s2">&quot;Authorization: Bearer $ACCESS_TOKEN&quot;</span> -sS http://localhost:3000/api/v1/accounts/update_credentials<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;id&quot;</span>:1,<span class="s2">&quot;username&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;acct&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;display_name&quot;</span>:<span class="s2">&quot;Admin&quot;</span>,<span class="s2">&quot;locked&quot;</span>:false,<span class="s2">&quot;created_at&quot;</span>:<span class="s2">&quot;2017-04-14T04:04:40.299Z&quot;</span>,<span class="s2">&quot;followers_count&quot;</span>:0,<span class="s2">&quot;following_count&quot;</span>:1,<span class="s2">&quot;statuses_count&quot;</span>:27,<span class="s2">&quot;note&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;url&quot;</span>:<span class="s2">&quot;http://mastodon.dev/@admin&quot;</span>,<span class="s2">&quot;avatar&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;avatar_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;header&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span>,<span class="s2">&quot;header_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span><span class="o">}</span>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>トゥート!</h2>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl -X POST -d <span class="s2">&quot;status=test message&quot;</span> --header <span class="s2">&quot;Authorization: Bearer $ACCESS_TOKEN&quot;</span> -sS http://localhost:3000/api/v1/statuses<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;id&quot;</span>:30,<span class="s2">&quot;created_at&quot;</span>:<span class="s2">&quot;2017-04-16T16:00:55.054Z&quot;</span>,<span class="s2">&quot;in_reply_to_id&quot;</span>:null,<span class="s2">&quot;in_reply_to_account_id&quot;</span>:null,<span class="s2">&quot;sensitive&quot;</span>:null,<span class="s2">&quot;spoiler_text&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;visibility&quot;</span>:<span class="s2">&quot;public&quot;</span>,<span class="s2">&quot;application&quot;</span>:<span class="o">{</span><span class="s2">&quot;name&quot;</span>:<span class="s2">&quot;Test Client&quot;</span>,<span class="s2">&quot;website&quot;</span>:<span class="s2">&quot;&quot;</span><span class="o">}</span>,<span class="s2">&quot;account&quot;</span>:<span class="o">{</span><span class="s2">&quot;id&quot;</span>:1,<span class="s2">&quot;username&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;acct&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;display_name&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;locked&quot;</span>:false,<span class="s2">&quot;created_at&quot;</span>:<span class="s2">&quot;2017-04-14T04:04:40.299Z&quot;</span>,<span class="s2">&quot;followers_count&quot;</span>:0,<span class="s2">&quot;following_count&quot;</span>:1,<span class="s2">&quot;statuses_count&quot;</span>:27,<span class="s2">&quot;note&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;url&quot;</span>:<span class="s2">&quot;http://mastodon.dev/@admin&quot;</span>,<span class="s2">&quot;avatar&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;avatar_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;header&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span>,<span class="s2">&quot;header_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span><span class="o">}</span>,<span class="s2">&quot;media_attachments&quot;</span>:<span class="o">[]</span>,<span class="s2">&quot;mentions&quot;</span>:<span class="o">[]</span>,<span class="s2">&quot;tags&quot;</span>:<span class="o">[]</span>,<span class="s2">&quot;uri&quot;</span>:<span class="s2">&quot;tag:mastodon.dev,2017-04-16:objectId=30:objectType=Status&quot;</span>,<span class="s2">&quot;content&quot;</span>:<span class="s2">&quot;&lt;p&gt;test message&lt;/p&gt;&quot;</span>,<span class="s2">&quot;url&quot;</span>:<span class="s2">&quot;http://mastodon.dev/@admin/30&quot;</span>,<span class="s2">&quot;reblogs_count&quot;</span>:0,<span class="s2">&quot;favourites_count&quot;</span>:0,<span class="s2">&quot;reblog&quot;</span>:null,<span class="s2">&quot;favourited&quot;</span>:false,<span class="s2">&quot;reblogged&quot;</span>:false<span class="o">}</span>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>タイムライン取得</h2>
+
+<p><code>curl -v --header "Authorization: Bearer $ACCESS_TOKEN" -sS http://localhost:3000/api/v1/timelines/home</code> などでタイムラインを取得できます。(<code>timelines</code> は複数形)</p>
+
+<p>Link ヘッダーに <code>Link: &lt;http://localhost:3000/api/v1/timelines/home?max_id=7&gt;; rel="next", &lt;http://localhost:3000/api/v1/timelines/home?since_id=30&gt;; rel="prev"</code> のように書いてあって、 <code>next</code> で過去に辿っていけて、 <code>prev</code> で新しいトゥートを取得できるようです。
+ただし <code>prev</code> は時間をあけて試すと間が抜けていたので、全部取得する用途には向いていないようです。
+<code>next</code> の方は確認していませんが、過去に遡るという挙動を考えると、間が抜けることはないのではないかと思っています。</p>
+
+<h2>エラーの例</h2>
+
+<p>パラメーターなどが間違っている時は JSON でエラーが返ってくるのですが、URL を間違えた時は空白のレスポンスが返ってくるので、知らないと悩みそうです。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl -X POST -d <span class="s2">&quot;client_name=$CLIENT_NAME&amp;redirect_uris=${REDIRECT_URIS:-urn:ietf:wg:oauth:2.0:oob}&amp;scopes=${SCOPES:-read write follow}&amp;website=$WEBSITE&quot;</span> http://localhost:3000/api/v1/apps<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;error&quot;</span>:<span class="s2">&quot;Validation failed: Name can&#39;t be blank&quot;</span><span class="o">}</span>0
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl --header <span class="s2">&quot;Authorization: Bearer ACCESS_TOKEN_HERE&quot;</span> -sS http://localhost:3000/api/v1/accounts/verify_credentials<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;error&quot;</span>:<span class="s2">&quot;The access token is invalid&quot;</span><span class="o">}</span>0
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl --header <span class="s2">&quot;Authorization: Bearer $ACCESS_TOKEN&quot;</span> -sS http://localhost:3000/api/v1/timeline/home<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>参考</h2>
+
+<ul>
+<li><a href="https://github.com/tootsuite/documentation/blob/eb32fc9738de44878697754431565260be89c17f/Using-the-API/API.md">参照時点の API のドキュメント</a> (<a href="https://github.com/tootsuite/documentation/blob/master/Using-the-API/API.md">最新</a>)</li>
+<li><a href="https://github.com/tootsuite/documentation/blob/eb32fc9738de44878697754431565260be89c17f/Using-the-API/Testing-with-cURL.md">参照時点の Testing the API with cURL</a> (<a href="https://github.com/tootsuite/documentation/blob/master/Using-the-API/Testing-with-cURL.md">最新</a>)</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[mastodonにpull requestを送った話と開発環境構築の話]]></title>
@@ -3547,188 +3692,6 @@ jessie の systemd は対応していないようで、
 (<code>webroot</code> プラグインを使っているので使っていませんが、
 <code>standalone</code> プラグインを使っているのなら <code>pre-hook</code> で <code>stop</code> して <code>post-hook</code> で <code>start</code> するとか、
 <code>renew-hook</code> で更新されたドメインに応じて必要な時だけ <code>postfix reload</code> するとか)</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第75回 Ruby関西 勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-11-05-rubykansai75.html"/>
-    <updated>2016-11-05T13:26:28+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubykansai75</id>
-    <content type="html"><![CDATA[<p><a href="https://rubykansai.doorkeeper.jp/events/52902" title="第75回 Ruby関西 勉強会">第75回 Ruby関西 勉強会</a>
-に参加して発表してきました。</p>
-
-<p>今回は (ustream) 中継はありませんでした。</p>
-
-<!--more-->
-
-
-<p>以下、そのメモです。</p>
-
-<h2>オープニング</h2>
-
-<ul>
-<li>会場の電源とかの話とか</li>
-<li>最初の発表者の紹介とか</li>
-</ul>
-
-
-<h2>機械学習概論</h2>
-
-<ul>
-<li>サンプルコードもないので Ruby とは全く関係のない話</li>
-<li>機械学習入門書の入門 (挫折しないために)</li>
-<li>「Machine Learning: A Probabilistic Perspective」は1000ページ超え</li>
-<li>機械学習手法の大分類: 教師あり学習, 教師なし学習, 半教師あり学習, 強化学習</li>
-<li>入門書で取り上げられる割合: 教師あり学習:9割, 教師なし学習:1割, 半教師あり学習:0割, 強化学習:0割</li>
-<li>入門書で取り上げられる割合: 教師あり学習:9割のうち: パラメトリック:9割, ノンパレメトリック:1割</li>
-<li>なので、この発表では教師あり学習・パラメトリックの話</li>
-<li>パラメトリック推定</li>
-<li><code>y=f(x)</code> となる <code>f</code> を見つけること</li>
-<li>パラメータ <code>θ</code> を持つ何らかの特定の関数群(集合) <code>f(x, θ)</code> の中で <code>y=f(x, θ)</code> と最も近似できるような <code>θ</code> を探す</li>
-<li>ベイズの定理</li>
-<li>最尤推定</li>
-<li>種々の推定</li>
-<li>MAP 推定</li>
-<li>点推定しない</li>
-<li>共役事前分布</li>
-<li>おすすめのマイルストーン</li>
-<li>tinyurl.com/ruby-boshu</li>
-<li>13:50 までの予定が 14:13 までになっていた。</li>
-<li>質疑応答</li>
-<li>14:16 までだった。</li>
-</ul>
-
-
-<h2>懇親会募集</h2>
-
-<ul>
-<li>8名?</li>
-</ul>
-
-
-<h2>Ruby 2.4.0 の主な非互換</h2>
-
-<p>発表しました。</p>
-
-<iframe src="https://slide.rabbit-shocker.org/authors/znz/rubykansai75-ruby24/viewer.html"
-        width="640" height="524"
-        frameborder="0"
-        marginwidth="0"
-        marginheight="0"
-        scrolling="no"
-        style="border: 1px solid #ccc; border-width: 1px 1px 0; margin-bottom: 5px"
-        allowfullscreen> </iframe>
-
-
-<div style="margin-bottom: 5px">
-  <a href="https://slide.rabbit-shocker.org/authors/znz/rubykansai75-ruby24/" title="Ruby 2.4.0 の主な非互換">Ruby 2.4.0 の主な非互換</a>
-</div>
-
-
-<ul>
-<li>質問は特になかった。</li>
-<li>14:38 までだった。</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>14:45頃まで</li>
-<li>発表者ということで k-of.jp で配る予定のステッカーをもらった。</li>
-</ul>
-
-
-<h2>さよならsprockets</h2>
-
-<ul>
-<li>いかに Qiita は sprockets を捨てるに至ったか</li>
-<li>前半:技術選定の話, 後半:さよならsprockets</li>
-<li>技術マネジメントの話</li>
-<li>(個人的な) 普遍的な要求: 学習コスパがいい, 撤退しやすい, 速い</li>
-<li>作るものの特性によって変わる要求</li>
-<li>SoR (System of Record), SoE (System of Engagement)</li>
-<li>さよなら sprockets</li>
-<li>sprockets のおさらい</li>
-<li>sprockets の問題点</li>
-<li>sprockets は SoE を支援する gem</li>
-<li>利点: Rails との統合が進んでいる, ハッシュダイジェスト埋め込みは便利</li>
-<li>良いところは残しつつ、もっと高速にトライ・アンド・エラーできるようにしたい</li>
-<li>browserify-rails</li>
-<li>sprockets + ES6 modules ができる</li>
-<li>脱 sprockets のための経由地</li>
-<li>JS が小さいうちはここで快適に暮らしてもいい</li>
-<li>気合いで ES6 modules 化</li>
-<li>browserify v.s. webpack</li>
-<li>webpack はなんでもできすぎて撤退しづらくなりそう → browserify を採用した</li>
-<li>(世の中的には webpack が主流になりつつある)</li>
-<li>ビルドタスクを書く</li>
-<li>全部 npm-scripts に書く (Grant gulp は使わない)</li>
-<li>ワンライナーに納まらない場合は Node.js スクリプトを書く</li>
-<li>Tips: npm-scripts 用シェル芸</li>
-<li><code>((a &amp;&amp; (b &amp; c &amp; wait)) &amp; d &amp; wait) &amp;&amp; e</code></li>
-<li>マニフェストファイル: 開発環境では admin.js で本番環境では admin-xxxxx.min.js</li>
-<li>開発環境: watchify</li>
-<li>非同期ビルドの問題</li>
-<li>CSSのビルドが微妙にかかるので反映されていないことがある</li>
-<li>コンパイル中は sleep する Rack ミドルウェアを追加して解決</li>
-<li>移行の結果何が変わった?</li>
-<li>デプロイ速度が4分速くなった</li>
-<li>開発時の待ち時間がかなり速くなった</li>
-<li>開発にすべての npm パッケージを使えるようになった</li>
-<li>15:25 までだった。</li>
-<li>質疑応答は特になし</li>
-</ul>
-
-
-<h2>社内勉強会で読んだ本とか</h2>
-
-<ul>
-<li>15:27 から</li>
-<li>Rails5 リリースノート</li>
-<li>The Twelve-Factor App</li>
-<li>The Rails Doctrine</li>
-<li>Domain Driven Design Quickly</li>
-<li>メタプログラミング Ruby 第2版</li>
-<li>15:37 まで</li>
-<li><a href="http://www.slideshare.net/ShinsukeKuroki/ss-68228347" title="社内勉強会で読んだ本とか">社内勉強会で読んだ本とか</a></li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>15:50頃まで</li>
-</ul>
-
-
-<h2>mruby 初級者向けレッスン</h2>
-
-<ul>
-<li><a href="http://qiita.com/ogomr/items/04f2734bfef0a5ef082c" title="Ruby Miniature Book">Ruby Miniature Book</a></li>
-<li><a href="http://qiita.com/ogomr/items/ca0c6cb5450bf6f86652" title="mruby on GR-CITRUS">mruby on GR-CITRUS</a></li>
-<li><a href="https://github.com/ogom/crione">https://github.com/ogom/crione</a></li>
-<li>16:57 まで</li>
-<li>質疑応答</li>
-<li>16:59 まで</li>
-</ul>
-
-
-<h2>告知タイム / クロージング</h2>
-
-<ul>
-<li>k-of.jp の手伝い募集</li>
-<li>KansaiRubyKaigi 2017 開催決定</li>
-<li>2017-05-27 に大阪産業創造館で</li>
-<li>これもスタッフの募集予定</li>
-<li>発表者やスポンサーも時期が来れば募集予定</li>
-<li><a href="http://qiita.com/advent-calendar/2016/shinosakarb" title="Shinosaka.rb Advent Calendar 2016">Shinosaka.rb Advent Calendar 2016</a></li>
-<li><a href="http://rubykansai.github.io/kansai-ruby-community/" title="関西 Ruby コミュニティー 紹介">関西 Ruby コミュニティー 紹介</a></li>
-<li><a href="http://www.coderdojo.jp/">http://www.coderdojo.jp/</a></li>
-<li>17:17 終了</li>
-</ul>
-
 ]]></content>
   </entry>
   

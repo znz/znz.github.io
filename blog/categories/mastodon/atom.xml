@@ -4,7 +4,7 @@
   <title><![CDATA[Category: mastodon | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/mastodon/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-04-17T00:14:11+09:00</updated>
+  <updated>2017-04-17T01:32:28+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,122 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[mastodonのAPIをcurlで試してみた]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-04-17-mastodon-api-curl.html"/>
+    <updated>2017-04-17T01:24:42+09:00</updated>
+    <id>http://blog.n-z.jp/blog/mastodon-api-curl</id>
+    <content type="html"><![CDATA[<p>curl で <a href="/blog/2017-04-16-contribute-mastodon.html">mastodon の開発環境</a>を使って API を試してみたメモです。</p>
+
+<p><a href="http://qiita.com/znz/items/c924cd4e9d5e50e50058">mastodonのAPIをcurlで試してみた</a>と同じ内容です。</p>
+
+<h2>確認環境</h2>
+
+<p><a href="/blog/2017-04-16-contribute-mastodon.html">mastodon の開発環境</a>の通りですが、簡単に説明しておくと</p>
+
+<ul>
+<li><code>git clone https://github.com/tootsuite/mastodon</code></li>
+<li><code>cd mastodon</code></li>
+<li><code>vagrant up</code></li>
+<li><code>vagrant ssh</code></li>
+</ul>
+
+
+<p>した後、初期アカウントのメールアドレスを修正した環境を想定しています。</p>
+
+<h2>Create App</h2>
+
+<p>クライアント名を決めてスコープを決めて作成します。
+クライアント名は同じ名前でも作成できるようです。(Twitter は名前がかぶると作成できなかったはず。)
+複数のスコープを指定する時はスペース区切りです。
+リダイレクト先がなければ <code>urn:ietf:wg:oauth:2.0:oob</code> にしておけば良いようです。
+ウェブサイトがあればその URL も設定しておきます。</p>
+
+<pre><code class="bash">vagrant@mastodon:~$ CLIENT_NAME="Test Client"
+vagrant@mastodon:~$ curl -X POST -d "client_name=$CLIENT_NAME&amp;redirect_uris=${REDIRECT_URIS:-urn:ietf:wg:oauth:2.0:oob}&amp;scopes=${SCOPES:-read write follow}&amp;website=$WEBSITE" http://localhost:3000/api/v1/apps; echo $?
+{"id":16,"redirect_uri":"urn:ietf:wg:oauth:2.0:oob","client_id":"ce06ac1d988d7f26f067dc7ea639e41523ec8135e48cceabb7cd0fd8c1413c65","client_secret":"be04a4f2ca2cd5d9a1cc1314d03a15f811be7f64005483b003447cc3e35e7749"}0
+</code></pre>
+
+<p><code>echo</code> をつけているのは終了ステータスの確認と応答に改行がつかないことの対処です。</p>
+
+<p>この応答のうち、<code>client_id</code> と <code>client_secret</code> が必要なので、保存しておきます。</p>
+
+<h2>アカウントと紐付け</h2>
+
+<p>保存しておいた <code>client_id</code> と <code>client_secret</code> と、対象のサーバーに登録しているアカウントのメールアドレスとパスワードが必要です。</p>
+
+<p>スコープは Create App の時に <code>read</code> のみ以外を指定した場合には、ここにも指定しないと <code>read</code> 権限のみになってしまうようです。
+Create App の時に指定していなかったスコープは指定できないようです。(<code>{"error":"invalid_scope","error_description":"The requested scope is invalid, unknown, or malformed."}</code> になる。)
+<code>/api/v1/apps</code> は <code>scopes</code> (複数形) ですが、<code>/oauth/token</code> では <code>scope</code> (単数形) なので注意が必要そうです。</p>
+
+<pre><code class="bash">vagrant@mastodon:~$ CLIENT_ID=ce06ac1d988d7f26f067dc7ea639e41523ec8135e48cceabb7cd0fd8c1413c65
+vagrant@mastodon:~$ CLIENT_SECRET=be04a4f2ca2cd5d9a1cc1314d03a15f811be7f64005483b003447cc3e35e7749
+vagrant@mastodon:~$ YOUR_EMAIL=admin@mastodon.dev
+vagrant@mastodon:~$ YOUR_PASSWORD=mastodonadmin
+vagrant@mastodon:~$ curl -X POST -d "client_id=$CLIENT_ID&amp;client_secret=$CLIENT_SECRET&amp;grant_type=password&amp;username=$YOUR_EMAIL&amp;password=$YOUR_PASSWORD&amp;scope=${SCOPES:-read write follow}" -sS http://localhost:3000/oauth/token; echo $?
+{"access_token":"96efc1d5e78e6bd9497915cbdc9a464d584e934414d3db1e1d68b2370f8b698c","token_type":"bearer","scope":"read write follow","created_at":1492358391}0
+</code></pre>
+
+<h2>API 呼び出し</h2>
+
+<p>ほとんどの API 呼び出しにはアクセストークンが必要です。
+Create App や public タイムラインの取得などのように必要ないものもあります。</p>
+
+<pre><code class="bash">vagrant@mastodon:~$ ACCESS_TOKEN=96efc1d5e78e6bd9497915cbdc9a464d584e934414d3db1e1d68b2370f8b698c
+</code></pre>
+
+<h2>アカウント情報の取得</h2>
+
+<p><code>/api/v1/accounts/verify_credentials</code> でアクセストークンに紐づいているアカウントの情報を取得できます。</p>
+
+<pre><code class="bash">vagrant@mastodon:~$ curl --header "Authorization: Bearer $ACCESS_TOKEN" -sS http://localhost:3000/api/v1/accounts/verify_credentials; echo $?
+{"id":1,"username":"admin","acct":"admin","display_name":"","locked":false,"created_at":"2017-04-14T04:04:40.299Z","followers_count":0,"following_count":1,"statuses_count":26,"note":"","url":"http://mastodon.dev/@admin","avatar":"http://localhost:3000/avatars/original/missing.png","avatar_static":"http://localhost:3000/avatars/original/missing.png","header":"http://localhost:3000/headers/original/missing.png","header_static":"http://localhost:3000/headers/original/missing.png"}0
+</code></pre>
+
+<h2>情報更新</h2>
+
+<p><code>/oauth/token</code> で scope を指定していなかった場合、 <code>{"error":"This action is outside the authorized scopes"}</code> になって更新できませんでした。</p>
+
+<pre><code class="bash">vagrant@mastodon:~$ curl -X PATCH -d "display_name=Admin" --header "Authorization: Bearer $ACCESS_TOKEN" -sS http://localhost:3000/api/v1/accounts/update_credentials; echo $?
+{"id":1,"username":"admin","acct":"admin","display_name":"Admin","locked":false,"created_at":"2017-04-14T04:04:40.299Z","followers_count":0,"following_count":1,"statuses_count":27,"note":"","url":"http://mastodon.dev/@admin","avatar":"http://localhost:3000/avatars/original/missing.png","avatar_static":"http://localhost:3000/avatars/original/missing.png","header":"http://localhost:3000/headers/original/missing.png","header_static":"http://localhost:3000/headers/original/missing.png"}0
+</code></pre>
+
+<h2>トゥート!</h2>
+
+<pre><code class="bash">vagrant@mastodon:~$ curl -X POST -d "status=test message" --header "Authorization: Bearer $ACCESS_TOKEN" -sS http://localhost:3000/api/v1/statuses; echo $?
+{"id":30,"created_at":"2017-04-16T16:00:55.054Z","in_reply_to_id":null,"in_reply_to_account_id":null,"sensitive":null,"spoiler_text":"","visibility":"public","application":{"name":"Test Client","website":""},"account":{"id":1,"username":"admin","acct":"admin","display_name":"","locked":false,"created_at":"2017-04-14T04:04:40.299Z","followers_count":0,"following_count":1,"statuses_count":27,"note":"","url":"http://mastodon.dev/@admin","avatar":"http://localhost:3000/avatars/original/missing.png","avatar_static":"http://localhost:3000/avatars/original/missing.png","header":"http://localhost:3000/headers/original/missing.png","header_static":"http://localhost:3000/headers/original/missing.png"},"media_attachments":[],"mentions":[],"tags":[],"uri":"tag:mastodon.dev,2017-04-16:objectId=30:objectType=Status","content":"&lt;p&gt;test message&lt;/p&gt;","url":"http://mastodon.dev/@admin/30","reblogs_count":0,"favourites_count":0,"reblog":null,"favourited":false,"reblogged":false}0
+</code></pre>
+
+<h2>タイムライン取得</h2>
+
+<p><code>curl -v --header "Authorization: Bearer $ACCESS_TOKEN" -sS http://localhost:3000/api/v1/timelines/home</code> などでタイムラインを取得できます。(<code>timelines</code> は複数形)</p>
+
+<p>Link ヘッダーに <code>Link: &lt;http://localhost:3000/api/v1/timelines/home?max_id=7&gt;; rel="next", &lt;http://localhost:3000/api/v1/timelines/home?since_id=30&gt;; rel="prev"</code> のように書いてあって、 <code>next</code> で過去に辿っていけて、 <code>prev</code> で新しいトゥートを取得できるようです。
+ただし <code>prev</code> は時間をあけて試すと間が抜けていたので、全部取得する用途には向いていないようです。
+<code>next</code> の方は確認していませんが、過去に遡るという挙動を考えると、間が抜けることはないのではないかと思っています。</p>
+
+<h2>エラーの例</h2>
+
+<p>パラメーターなどが間違っている時は JSON でエラーが返ってくるのですが、URL を間違えた時は空白のレスポンスが返ってくるので、知らないと悩みそうです。</p>
+
+<pre><code class="bash">vagrant@mastodon:~$ curl -X POST -d "client_name=$CLIENT_NAME&amp;redirect_uris=${REDIRECT_URIS:-urn:ietf:wg:oauth:2.0:oob}&amp;scopes=${SCOPES:-read write follow}&amp;website=$WEBSITE" http://localhost:3000/api/v1/apps; echo $?
+{"error":"Validation failed: Name can't be blank"}0
+vagrant@mastodon:~$ curl --header "Authorization: Bearer ACCESS_TOKEN_HERE" -sS http://localhost:3000/api/v1/accounts/verify_credentials; echo $?
+{"error":"The access token is invalid"}0
+vagrant@mastodon:~$ curl --header "Authorization: Bearer $ACCESS_TOKEN" -sS http://localhost:3000/api/v1/timeline/home; echo $?
+0
+</code></pre>
+
+<h2>参考</h2>
+
+<ul>
+<li><a href="https://github.com/tootsuite/documentation/blob/eb32fc9738de44878697754431565260be89c17f/Using-the-API/API.md">参照時点の API のドキュメント</a> (<a href="https://github.com/tootsuite/documentation/blob/master/Using-the-API/API.md">最新</a>)</li>
+<li><a href="https://github.com/tootsuite/documentation/blob/eb32fc9738de44878697754431565260be89c17f/Using-the-API/Testing-with-cURL.md">参照時点の Testing the API with cURL</a> (<a href="https://github.com/tootsuite/documentation/blob/master/Using-the-API/Testing-with-cURL.md">最新</a>)</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[mastodonにpull requestを送った話と開発環境構築の話]]></title>

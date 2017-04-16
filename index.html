@@ -9,8 +9,7 @@
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="最近流行っている mastodon に pull request を送ったので、
-その環境構築などの話です。 ">
+  <meta name="description" content="curl で mastodon の開発環境を使って API を試してみたメモです。 mastodonのAPIをcurlで試してみたと同じ内容です。 確認環境 mastodon の開発環境の通りですが、簡単に説明しておくと git clone https://github.com/tootsuite &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -78,6 +77,174 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2017-04-17-mastodon-api-curl.html">mastodonのAPIをcurlで試してみた</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2017-04-17T01:24:42+09:00'><span class='date'>2017-04-17 (Mon)</span> <span class='time'>1:24 am</span></time>
+        
+           | <a href="/blog/2017-04-17-mastodon-api-curl.html#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp/blog/2017-04-17-mastodon-api-curl.html">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>curl で <a href="/blog/2017-04-16-contribute-mastodon.html">mastodon の開発環境</a>を使って API を試してみたメモです。</p>
+
+<p><a href="http://qiita.com/znz/items/c924cd4e9d5e50e50058">mastodonのAPIをcurlで試してみた</a>と同じ内容です。</p>
+
+<h2>確認環境</h2>
+
+<p><a href="/blog/2017-04-16-contribute-mastodon.html">mastodon の開発環境</a>の通りですが、簡単に説明しておくと</p>
+
+<ul>
+<li><code>git clone https://github.com/tootsuite/mastodon</code></li>
+<li><code>cd mastodon</code></li>
+<li><code>vagrant up</code></li>
+<li><code>vagrant ssh</code></li>
+</ul>
+
+
+<p>した後、初期アカウントのメールアドレスを修正した環境を想定しています。</p>
+
+<h2>Create App</h2>
+
+<p>クライアント名を決めてスコープを決めて作成します。
+クライアント名は同じ名前でも作成できるようです。(Twitter は名前がかぶると作成できなかったはず。)
+複数のスコープを指定する時はスペース区切りです。
+リダイレクト先がなければ <code>urn:ietf:wg:oauth:2.0:oob</code> にしておけば良いようです。
+ウェブサイトがあればその URL も設定しておきます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ CLIENT_NAME</span><span class="o">=</span><span class="s2">&quot;Test Client&quot;</span>
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl -X POST -d <span class="s2">&quot;client_name=$CLIENT_NAME&amp;redirect_uris=${REDIRECT_URIS:-urn:ietf:wg:oauth:2.0:oob}&amp;scopes=${SCOPES:-read write follow}&amp;website=$WEBSITE&quot;</span> http://localhost:3000/api/v1/apps<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;id&quot;</span>:16,<span class="s2">&quot;redirect_uri&quot;</span>:<span class="s2">&quot;urn:ietf:wg:oauth:2.0:oob&quot;</span>,<span class="s2">&quot;client_id&quot;</span>:<span class="s2">&quot;ce06ac1d988d7f26f067dc7ea639e41523ec8135e48cceabb7cd0fd8c1413c65&quot;</span>,<span class="s2">&quot;client_secret&quot;</span>:<span class="s2">&quot;be04a4f2ca2cd5d9a1cc1314d03a15f811be7f64005483b003447cc3e35e7749&quot;</span><span class="o">}</span>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>echo</code> をつけているのは終了ステータスの確認と応答に改行がつかないことの対処です。</p>
+
+<p>この応答のうち、<code>client_id</code> と <code>client_secret</code> が必要なので、保存しておきます。</p>
+
+<h2>アカウントと紐付け</h2>
+
+<p>保存しておいた <code>client_id</code> と <code>client_secret</code> と、対象のサーバーに登録しているアカウントのメールアドレスとパスワードが必要です。</p>
+
+<p>スコープは Create App の時に <code>read</code> のみ以外を指定した場合には、ここにも指定しないと <code>read</code> 権限のみになってしまうようです。
+Create App の時に指定していなかったスコープは指定できないようです。(<code>{"error":"invalid_scope","error_description":"The requested scope is invalid, unknown, or malformed."}</code> になる。)
+<code>/api/v1/apps</code> は <code>scopes</code> (複数形) ですが、<code>/oauth/token</code> では <code>scope</code> (単数形) なので注意が必要そうです。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ CLIENT_ID</span><span class="o">=</span>ce06ac1d988d7f26f067dc7ea639e41523ec8135e48cceabb7cd0fd8c1413c65
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ CLIENT_SECRET</span><span class="o">=</span>be04a4f2ca2cd5d9a1cc1314d03a15f811be7f64005483b003447cc3e35e7749
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ YOUR_EMAIL</span><span class="o">=</span>admin@mastodon.dev
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ YOUR_PASSWORD</span><span class="o">=</span>mastodonadmin
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl -X POST -d <span class="s2">&quot;client_id=$CLIENT_ID&amp;client_secret=$CLIENT_SECRET&amp;grant_type=password&amp;username=$YOUR_EMAIL&amp;password=$YOUR_PASSWORD&amp;scope=${SCOPES:-read write follow}&quot;</span> -sS http://localhost:3000/oauth/token<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;access_token&quot;</span>:<span class="s2">&quot;96efc1d5e78e6bd9497915cbdc9a464d584e934414d3db1e1d68b2370f8b698c&quot;</span>,<span class="s2">&quot;token_type&quot;</span>:<span class="s2">&quot;bearer&quot;</span>,<span class="s2">&quot;scope&quot;</span>:<span class="s2">&quot;read write follow&quot;</span>,<span class="s2">&quot;created_at&quot;</span>:1492358391<span class="o">}</span>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>API 呼び出し</h2>
+
+<p>ほとんどの API 呼び出しにはアクセストークンが必要です。
+Create App や public タイムラインの取得などのように必要ないものもあります。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ ACCESS_TOKEN</span><span class="o">=</span>96efc1d5e78e6bd9497915cbdc9a464d584e934414d3db1e1d68b2370f8b698c
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>アカウント情報の取得</h2>
+
+<p><code>/api/v1/accounts/verify_credentials</code> でアクセストークンに紐づいているアカウントの情報を取得できます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl --header <span class="s2">&quot;Authorization: Bearer $ACCESS_TOKEN&quot;</span> -sS http://localhost:3000/api/v1/accounts/verify_credentials<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;id&quot;</span>:1,<span class="s2">&quot;username&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;acct&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;display_name&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;locked&quot;</span>:false,<span class="s2">&quot;created_at&quot;</span>:<span class="s2">&quot;2017-04-14T04:04:40.299Z&quot;</span>,<span class="s2">&quot;followers_count&quot;</span>:0,<span class="s2">&quot;following_count&quot;</span>:1,<span class="s2">&quot;statuses_count&quot;</span>:26,<span class="s2">&quot;note&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;url&quot;</span>:<span class="s2">&quot;http://mastodon.dev/@admin&quot;</span>,<span class="s2">&quot;avatar&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;avatar_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;header&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span>,<span class="s2">&quot;header_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span><span class="o">}</span>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>情報更新</h2>
+
+<p><code>/oauth/token</code> で scope を指定していなかった場合、 <code>{"error":"This action is outside the authorized scopes"}</code> になって更新できませんでした。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl -X PATCH -d <span class="s2">&quot;display_name=Admin&quot;</span> --header <span class="s2">&quot;Authorization: Bearer $ACCESS_TOKEN&quot;</span> -sS http://localhost:3000/api/v1/accounts/update_credentials<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;id&quot;</span>:1,<span class="s2">&quot;username&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;acct&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;display_name&quot;</span>:<span class="s2">&quot;Admin&quot;</span>,<span class="s2">&quot;locked&quot;</span>:false,<span class="s2">&quot;created_at&quot;</span>:<span class="s2">&quot;2017-04-14T04:04:40.299Z&quot;</span>,<span class="s2">&quot;followers_count&quot;</span>:0,<span class="s2">&quot;following_count&quot;</span>:1,<span class="s2">&quot;statuses_count&quot;</span>:27,<span class="s2">&quot;note&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;url&quot;</span>:<span class="s2">&quot;http://mastodon.dev/@admin&quot;</span>,<span class="s2">&quot;avatar&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;avatar_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;header&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span>,<span class="s2">&quot;header_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span><span class="o">}</span>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>トゥート!</h2>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl -X POST -d <span class="s2">&quot;status=test message&quot;</span> --header <span class="s2">&quot;Authorization: Bearer $ACCESS_TOKEN&quot;</span> -sS http://localhost:3000/api/v1/statuses<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;id&quot;</span>:30,<span class="s2">&quot;created_at&quot;</span>:<span class="s2">&quot;2017-04-16T16:00:55.054Z&quot;</span>,<span class="s2">&quot;in_reply_to_id&quot;</span>:null,<span class="s2">&quot;in_reply_to_account_id&quot;</span>:null,<span class="s2">&quot;sensitive&quot;</span>:null,<span class="s2">&quot;spoiler_text&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;visibility&quot;</span>:<span class="s2">&quot;public&quot;</span>,<span class="s2">&quot;application&quot;</span>:<span class="o">{</span><span class="s2">&quot;name&quot;</span>:<span class="s2">&quot;Test Client&quot;</span>,<span class="s2">&quot;website&quot;</span>:<span class="s2">&quot;&quot;</span><span class="o">}</span>,<span class="s2">&quot;account&quot;</span>:<span class="o">{</span><span class="s2">&quot;id&quot;</span>:1,<span class="s2">&quot;username&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;acct&quot;</span>:<span class="s2">&quot;admin&quot;</span>,<span class="s2">&quot;display_name&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;locked&quot;</span>:false,<span class="s2">&quot;created_at&quot;</span>:<span class="s2">&quot;2017-04-14T04:04:40.299Z&quot;</span>,<span class="s2">&quot;followers_count&quot;</span>:0,<span class="s2">&quot;following_count&quot;</span>:1,<span class="s2">&quot;statuses_count&quot;</span>:27,<span class="s2">&quot;note&quot;</span>:<span class="s2">&quot;&quot;</span>,<span class="s2">&quot;url&quot;</span>:<span class="s2">&quot;http://mastodon.dev/@admin&quot;</span>,<span class="s2">&quot;avatar&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;avatar_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/avatars/original/missing.png&quot;</span>,<span class="s2">&quot;header&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span>,<span class="s2">&quot;header_static&quot;</span>:<span class="s2">&quot;http://localhost:3000/headers/original/missing.png&quot;</span><span class="o">}</span>,<span class="s2">&quot;media_attachments&quot;</span>:<span class="o">[]</span>,<span class="s2">&quot;mentions&quot;</span>:<span class="o">[]</span>,<span class="s2">&quot;tags&quot;</span>:<span class="o">[]</span>,<span class="s2">&quot;uri&quot;</span>:<span class="s2">&quot;tag:mastodon.dev,2017-04-16:objectId=30:objectType=Status&quot;</span>,<span class="s2">&quot;content&quot;</span>:<span class="s2">&quot;&lt;p&gt;test message&lt;/p&gt;&quot;</span>,<span class="s2">&quot;url&quot;</span>:<span class="s2">&quot;http://mastodon.dev/@admin/30&quot;</span>,<span class="s2">&quot;reblogs_count&quot;</span>:0,<span class="s2">&quot;favourites_count&quot;</span>:0,<span class="s2">&quot;reblog&quot;</span>:null,<span class="s2">&quot;favourited&quot;</span>:false,<span class="s2">&quot;reblogged&quot;</span>:false<span class="o">}</span>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>タイムライン取得</h2>
+
+<p><code>curl -v --header "Authorization: Bearer $ACCESS_TOKEN" -sS http://localhost:3000/api/v1/timelines/home</code> などでタイムラインを取得できます。(<code>timelines</code> は複数形)</p>
+
+<p>Link ヘッダーに <code>Link: &lt;http://localhost:3000/api/v1/timelines/home?max_id=7&gt;; rel="next", &lt;http://localhost:3000/api/v1/timelines/home?since_id=30&gt;; rel="prev"</code> のように書いてあって、 <code>next</code> で過去に辿っていけて、 <code>prev</code> で新しいトゥートを取得できるようです。
+ただし <code>prev</code> は時間をあけて試すと間が抜けていたので、全部取得する用途には向いていないようです。
+<code>next</code> の方は確認していませんが、過去に遡るという挙動を考えると、間が抜けることはないのではないかと思っています。</p>
+
+<h2>エラーの例</h2>
+
+<p>パラメーターなどが間違っている時は JSON でエラーが返ってくるのですが、URL を間違えた時は空白のレスポンスが返ってくるので、知らないと悩みそうです。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl -X POST -d <span class="s2">&quot;client_name=$CLIENT_NAME&amp;redirect_uris=${REDIRECT_URIS:-urn:ietf:wg:oauth:2.0:oob}&amp;scopes=${SCOPES:-read write follow}&amp;website=$WEBSITE&quot;</span> http://localhost:3000/api/v1/apps<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;error&quot;</span>:<span class="s2">&quot;Validation failed: Name can&#39;t be blank&quot;</span><span class="o">}</span>0
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl --header <span class="s2">&quot;Authorization: Bearer ACCESS_TOKEN_HERE&quot;</span> -sS http://localhost:3000/api/v1/accounts/verify_credentials<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'><span class="o">{</span><span class="s2">&quot;error&quot;</span>:<span class="s2">&quot;The access token is invalid&quot;</span><span class="o">}</span>0
+</span><span class='line'>vagrant@mastodon:~<span class="nv">$ </span>curl --header <span class="s2">&quot;Authorization: Bearer $ACCESS_TOKEN&quot;</span> -sS http://localhost:3000/api/v1/timeline/home<span class="p">;</span> <span class="nb">echo</span> <span class="nv">$?</span>
+</span><span class='line'>0
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>参考</h2>
+
+<ul>
+<li><a href="https://github.com/tootsuite/documentation/blob/eb32fc9738de44878697754431565260be89c17f/Using-the-API/API.md">参照時点の API のドキュメント</a> (<a href="https://github.com/tootsuite/documentation/blob/master/Using-the-API/API.md">最新</a>)</li>
+<li><a href="https://github.com/tootsuite/documentation/blob/eb32fc9738de44878697754431565260be89c17f/Using-the-API/Testing-with-cURL.md">参照時点の Testing the API with cURL</a> (<a href="https://github.com/tootsuite/documentation/blob/master/Using-the-API/Testing-with-cURL.md">最新</a>)</li>
+</ul>
+
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -427,44 +594,6 @@ IPv4 の設定を開いて変更して閉じて行って反映、という作業
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2017-01-29-kansai4cjointsession.html">関西 Debian 勉強会 + openSUSE Meetup + LILO & 東海道らぐLT大会に参加しました</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2017-01-29T13:00:00+09:00'><span class='date'>2017-01-29 (Sun)</span> <span class='time'>1:00 pm</span></time>
-        
-           | <a href="/blog/2017-01-29-kansai4cjointsession.html#disqus_thread"
-             data-disqus-identifier="http://blog.n-z.jp/blog/2017-01-29-kansai4cjointsession.html">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="https://opensuseja.connpass.com/event/47907/" title="関西 Debian 勉強会 + openSUSE Meetup + LILO &amp; 東海道らぐLT大会">関西 Debian 勉強会 + openSUSE Meetup + LILO &amp; 東海道らぐLT大会</a>
-に参加しました。</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2017-01-29-kansai4cjointsession.html">続きを読む &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/posts/2">&larr; Older</a>
@@ -523,6 +652,10 @@ Hatena.BookmarkWidget.load();
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2017-04-17-mastodon-api-curl.html">mastodonのAPIをcurlで試してみた</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2017-04-16-contribute-mastodon.html">mastodonにpull requestを送った話と開発環境構築の話</a>
       </li>
     
@@ -538,15 +671,11 @@ Hatena.BookmarkWidget.load();
         <a href="/blog/2017-03-23-pinentry-emacs.html">pinentry-emacsを使ってみた</a>
       </li>
     
-      <li class="post">
-        <a href="/blog/2017-03-19-kansai-debian-meeting.html">第 121 回関西 Debian 勉強会 (10 周年記念会) に参加しました</a>
-      </li>
-    
   </ul>
 </section>
 <section>
   <h1>Tag Cloud</h1>
-    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 101.18811881188118%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 110.6930693069307%'>amagasakirb(18)</a> <a href='/blog/categories/ansible' style='font-size: 105.34653465346534%'>ansible(9)</a> <a href='/blog/categories/anyenv' style='font-size: 100.5940594059406%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 100.5940594059406%'>authorization(1)</a> <a href='/blog/categories/backup' style='font-size: 100.5940594059406%'>backup(1)</a> <a href='/blog/categories/bash' style='font-size: 101.18811881188118%'>bash(2)</a> <a href='/blog/categories/book' style='font-size: 101.18811881188118%'>book(2)</a> <a href='/blog/categories/boot2docker' style='font-size: 102.97029702970298%'>boot2docker(5)</a> <a href='/blog/categories/bootstrap' style='font-size: 100.5940594059406%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 100.5940594059406%'>bts(1)</a> <a href='/blog/categories/capistrano' style='font-size: 100.5940594059406%'>capistrano(1)</a> <a href='/blog/categories/ccollect' style='font-size: 100.5940594059406%'>ccollect(1)</a> <a href='/blog/categories/cdr' style='font-size: 101.78217821782178%'>cdr(3)</a> <a href='/blog/categories/certification' style='font-size: 100.5940594059406%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 101.18811881188118%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 101.78217821782178%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 123.76237623762376%'>debian(40)</a> <a href='/blog/categories/devise' style='font-size: 103.56435643564356%'>devise(6)</a> <a href='/blog/categories/dkms' style='font-size: 100.5940594059406%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 110.6930693069307%'>docker(18)</a> <a href='/blog/categories/dokku' style='font-size: 105.34653465346534%'>dokku(9)</a> <a href='/blog/categories/doorkeeper' style='font-size: 102.37623762376238%'>doorkeeper(4)</a> <a href='/blog/categories/drb' style='font-size: 100.5940594059406%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 100.5940594059406%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 106.53465346534654%'>emacs(11)</a> <a href='/blog/categories/event' style='font-size: 155.24752475247524%'>event(93)</a> <a href='/blog/categories/fluentd' style='font-size: 100.5940594059406%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 102.37623762376238%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 101.18811881188118%'>ghq(2)</a> <a href='/blog/categories/git' style='font-size: 102.97029702970298%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 104.15841584158416%'>github(7)</a> <a href='/blog/categories/go' style='font-size: 100.5940594059406%'>go(1)</a> <a href='/blog/categories/golang' style='font-size: 101.18811881188118%'>golang(2)</a> <a href='/blog/categories/gpg' style='font-size: 102.37623762376238%'>gpg(4)</a> <a href='/blog/categories/haml' style='font-size: 100.5940594059406%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 101.78217821782178%'>heroku(3)</a> <a href='/blog/categories/homebrew' style='font-size: 104.15841584158416%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 101.78217821782178%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 101.78217821782178%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 100.5940594059406%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 100.5940594059406%'>irb(1)</a> <a href='/blog/categories/irc' style='font-size: 101.18811881188118%'>irc(2)</a> <a href='/blog/categories/isbn' style='font-size: 100.5940594059406%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 102.37623762376238%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 100.5940594059406%'>jenkins(1)</a> <a href='/blog/categories/jquery' style='font-size: 100.5940594059406%'>jquery(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 101.18811881188118%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 100.5940594059406%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 101.78217821782178%'>jus(3)</a> <a href='/blog/categories/k-of' style='font-size: 102.97029702970298%'>k-of(5)</a> <a href='/blog/categories/kansaidebian' style='font-size: 102.97029702970298%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 100.5940594059406%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 100.5940594059406%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 102.37623762376238%'>land-of-lisp(4)</a> <a href='/blog/categories/letsencrypt' style='font-size: 107.12871287128714%'>letsencrypt(12)</a> <a href='/blog/categories/lilo' style='font-size: 105.34653465346534%'>lilo(9)</a> <a href='/blog/categories/linux' style='font-size: 123.16831683168317%'>linux(39)</a> <a href='/blog/categories/live' style='font-size: 102.37623762376238%'>live(4)</a> <a href='/blog/categories/ll' style='font-size: 101.18811881188118%'>ll(2)</a> <a href='/blog/categories/lxc' style='font-size: 100.5940594059406%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.78217821782178%'>lxcjp(3)</a> <a href='/blog/categories/mail' style='font-size: 100.5940594059406%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 101.18811881188118%'>mailman(2)</a> <a href='/blog/categories/mastodon' style='font-size: 100.5940594059406%'>mastodon(1)</a> <a href='/blog/categories/mavericks' style='font-size: 102.37623762376238%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 100.5940594059406%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 100.5940594059406%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 100.5940594059406%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 101.18811881188118%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 100.5940594059406%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 102.37623762376238%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 103.56435643564356%'>octopress(6)</a> <a href='/blog/categories/omniauth' style='font-size: 101.18811881188118%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 101.18811881188118%'>openssl(2)</a> <a href='/blog/categories/oss-gate' style='font-size: 100.5940594059406%'>oss-gate(1)</a> <a href='/blog/categories/osx' style='font-size: 117.82178217821783%'>osx(30)</a> <a href='/blog/categories/owncloud' style='font-size: 101.18811881188118%'>owncloud(2)</a> <a href='/blog/categories/packer' style='font-size: 100.5940594059406%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 100.5940594059406%'>passenger(1)</a> <a href='/blog/categories/peco' style='font-size: 100.5940594059406%'>peco(1)</a> <a href='/blog/categories/postfix' style='font-size: 101.18811881188118%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 101.78217821782178%'>postgresql(3)</a> <a href='/blog/categories/pundit' style='font-size: 100.5940594059406%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 100.5940594059406%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 101.78217821782178%'>r(3)</a> <a href='/blog/categories/rabbit' style='font-size: 101.18811881188118%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 123.16831683168317%'>rails(39)</a> <a href='/blog/categories/ransack' style='font-size: 100.5940594059406%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 102.37623762376238%'>rbenv(4)</a> <a href='/blog/categories/react' style='font-size: 100.5940594059406%'>react(1)</a> <a href='/blog/categories/redmine' style='font-size: 101.18811881188118%'>redmine(2)</a> <a href='/blog/categories/rspec' style='font-size: 100.5940594059406%'>rspec(1)</a> <a href='/blog/categories/rsyslog' style='font-size: 100.5940594059406%'>rsyslog(1)</a> <a href='/blog/categories/rubima' style='font-size: 100.5940594059406%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(101)</a> <a href='/blog/categories/rubykaigi' style='font-size: 100.5940594059406%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 108.31683168316832%'>rubykansai(14)</a> <a href='/blog/categories/rubymotion' style='font-size: 110.6930693069307%'>rubymotion(18)</a> <a href='/blog/categories/security' style='font-size: 103.56435643564356%'>security(6)</a> <a href='/blog/categories/shell' style='font-size: 103.56435643564356%'>shell(6)</a> <a href='/blog/categories/slim' style='font-size: 100.5940594059406%'>slim(1)</a> <a href='/blog/categories/ssh' style='font-size: 101.18811881188118%'>ssh(2)</a> <a href='/blog/categories/sylpheed' style='font-size: 100.5940594059406%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 100.5940594059406%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 102.37623762376238%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 117.82178217821783%'>ubuntu(30)</a> <a href='/blog/categories/upstart' style='font-size: 101.18811881188118%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 100.5940594059406%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 105.34653465346534%'>vagrant(9)</a> <a href='/blog/categories/vagrantcloud' style='font-size: 101.18811881188118%'>vagrantcloud(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 101.18811881188118%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 100.5940594059406%'>weechat(1)</a> <a href='/blog/categories/windows' style='font-size: 100.5940594059406%'>windows(1)</a> <a href='/blog/categories/yaml' style='font-size: 100.5940594059406%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.18811881188118%'>zabbix(2)</a> <a href='/blog/categories/zsh' style='font-size: 107.72277227722772%'>zsh(13)</a> </span>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 101.18811881188118%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 110.6930693069307%'>amagasakirb(18)</a> <a href='/blog/categories/ansible' style='font-size: 105.34653465346534%'>ansible(9)</a> <a href='/blog/categories/anyenv' style='font-size: 100.5940594059406%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 100.5940594059406%'>authorization(1)</a> <a href='/blog/categories/backup' style='font-size: 100.5940594059406%'>backup(1)</a> <a href='/blog/categories/bash' style='font-size: 101.18811881188118%'>bash(2)</a> <a href='/blog/categories/book' style='font-size: 101.18811881188118%'>book(2)</a> <a href='/blog/categories/boot2docker' style='font-size: 102.97029702970298%'>boot2docker(5)</a> <a href='/blog/categories/bootstrap' style='font-size: 100.5940594059406%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 100.5940594059406%'>bts(1)</a> <a href='/blog/categories/capistrano' style='font-size: 100.5940594059406%'>capistrano(1)</a> <a href='/blog/categories/ccollect' style='font-size: 100.5940594059406%'>ccollect(1)</a> <a href='/blog/categories/cdr' style='font-size: 101.78217821782178%'>cdr(3)</a> <a href='/blog/categories/certification' style='font-size: 100.5940594059406%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 101.18811881188118%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 101.78217821782178%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 123.76237623762376%'>debian(40)</a> <a href='/blog/categories/devise' style='font-size: 103.56435643564356%'>devise(6)</a> <a href='/blog/categories/dkms' style='font-size: 100.5940594059406%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 110.6930693069307%'>docker(18)</a> <a href='/blog/categories/dokku' style='font-size: 105.34653465346534%'>dokku(9)</a> <a href='/blog/categories/doorkeeper' style='font-size: 102.37623762376238%'>doorkeeper(4)</a> <a href='/blog/categories/drb' style='font-size: 100.5940594059406%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 100.5940594059406%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 106.53465346534654%'>emacs(11)</a> <a href='/blog/categories/event' style='font-size: 155.24752475247524%'>event(93)</a> <a href='/blog/categories/fluentd' style='font-size: 100.5940594059406%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 102.37623762376238%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 101.18811881188118%'>ghq(2)</a> <a href='/blog/categories/git' style='font-size: 102.97029702970298%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 104.15841584158416%'>github(7)</a> <a href='/blog/categories/go' style='font-size: 100.5940594059406%'>go(1)</a> <a href='/blog/categories/golang' style='font-size: 101.18811881188118%'>golang(2)</a> <a href='/blog/categories/gpg' style='font-size: 102.37623762376238%'>gpg(4)</a> <a href='/blog/categories/haml' style='font-size: 100.5940594059406%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 101.78217821782178%'>heroku(3)</a> <a href='/blog/categories/homebrew' style='font-size: 104.15841584158416%'>homebrew(7)</a> <a href='/blog/categories/html5' style='font-size: 101.78217821782178%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 101.78217821782178%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 100.5940594059406%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 100.5940594059406%'>irb(1)</a> <a href='/blog/categories/irc' style='font-size: 101.18811881188118%'>irc(2)</a> <a href='/blog/categories/isbn' style='font-size: 100.5940594059406%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 102.37623762376238%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 100.5940594059406%'>jenkins(1)</a> <a href='/blog/categories/jquery' style='font-size: 100.5940594059406%'>jquery(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 101.18811881188118%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 100.5940594059406%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 101.78217821782178%'>jus(3)</a> <a href='/blog/categories/k-of' style='font-size: 102.97029702970298%'>k-of(5)</a> <a href='/blog/categories/kansaidebian' style='font-size: 102.97029702970298%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 100.5940594059406%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 100.5940594059406%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 102.37623762376238%'>land-of-lisp(4)</a> <a href='/blog/categories/letsencrypt' style='font-size: 107.12871287128714%'>letsencrypt(12)</a> <a href='/blog/categories/lilo' style='font-size: 105.34653465346534%'>lilo(9)</a> <a href='/blog/categories/linux' style='font-size: 123.16831683168317%'>linux(39)</a> <a href='/blog/categories/live' style='font-size: 102.37623762376238%'>live(4)</a> <a href='/blog/categories/ll' style='font-size: 101.18811881188118%'>ll(2)</a> <a href='/blog/categories/lxc' style='font-size: 100.5940594059406%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.78217821782178%'>lxcjp(3)</a> <a href='/blog/categories/mail' style='font-size: 100.5940594059406%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 101.18811881188118%'>mailman(2)</a> <a href='/blog/categories/mastodon' style='font-size: 101.18811881188118%'>mastodon(2)</a> <a href='/blog/categories/mavericks' style='font-size: 102.37623762376238%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 100.5940594059406%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 100.5940594059406%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 100.5940594059406%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 101.18811881188118%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 100.5940594059406%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 102.37623762376238%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 103.56435643564356%'>octopress(6)</a> <a href='/blog/categories/omniauth' style='font-size: 101.18811881188118%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 101.18811881188118%'>openssl(2)</a> <a href='/blog/categories/oss-gate' style='font-size: 100.5940594059406%'>oss-gate(1)</a> <a href='/blog/categories/osx' style='font-size: 117.82178217821783%'>osx(30)</a> <a href='/blog/categories/owncloud' style='font-size: 101.18811881188118%'>owncloud(2)</a> <a href='/blog/categories/packer' style='font-size: 100.5940594059406%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 100.5940594059406%'>passenger(1)</a> <a href='/blog/categories/peco' style='font-size: 100.5940594059406%'>peco(1)</a> <a href='/blog/categories/postfix' style='font-size: 101.18811881188118%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 101.78217821782178%'>postgresql(3)</a> <a href='/blog/categories/pundit' style='font-size: 100.5940594059406%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 100.5940594059406%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 101.78217821782178%'>r(3)</a> <a href='/blog/categories/rabbit' style='font-size: 101.18811881188118%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 123.16831683168317%'>rails(39)</a> <a href='/blog/categories/ransack' style='font-size: 100.5940594059406%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 102.37623762376238%'>rbenv(4)</a> <a href='/blog/categories/react' style='font-size: 100.5940594059406%'>react(1)</a> <a href='/blog/categories/redmine' style='font-size: 101.18811881188118%'>redmine(2)</a> <a href='/blog/categories/rspec' style='font-size: 100.5940594059406%'>rspec(1)</a> <a href='/blog/categories/rsyslog' style='font-size: 100.5940594059406%'>rsyslog(1)</a> <a href='/blog/categories/rubima' style='font-size: 100.5940594059406%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(101)</a> <a href='/blog/categories/rubykaigi' style='font-size: 100.5940594059406%'>rubykaigi(1)</a> <a href='/blog/categories/rubykansai' style='font-size: 108.31683168316832%'>rubykansai(14)</a> <a href='/blog/categories/rubymotion' style='font-size: 110.6930693069307%'>rubymotion(18)</a> <a href='/blog/categories/security' style='font-size: 103.56435643564356%'>security(6)</a> <a href='/blog/categories/shell' style='font-size: 103.56435643564356%'>shell(6)</a> <a href='/blog/categories/slim' style='font-size: 100.5940594059406%'>slim(1)</a> <a href='/blog/categories/ssh' style='font-size: 101.18811881188118%'>ssh(2)</a> <a href='/blog/categories/sylpheed' style='font-size: 100.5940594059406%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 100.5940594059406%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 102.37623762376238%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 117.82178217821783%'>ubuntu(30)</a> <a href='/blog/categories/upstart' style='font-size: 101.18811881188118%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 100.5940594059406%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 105.34653465346534%'>vagrant(9)</a> <a href='/blog/categories/vagrantcloud' style='font-size: 101.18811881188118%'>vagrantcloud(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 101.18811881188118%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 100.5940594059406%'>weechat(1)</a> <a href='/blog/categories/windows' style='font-size: 100.5940594059406%'>windows(1)</a> <a href='/blog/categories/yaml' style='font-size: 100.5940594059406%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.18811881188118%'>zabbix(2)</a> <a href='/blog/categories/zsh' style='font-size: 107.72277227722772%'>zsh(13)</a> </span>
 </section>
 
 <section>
