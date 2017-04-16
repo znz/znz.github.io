@@ -96,7 +96,7 @@ vagrant@mastodon:~$ curl -X POST -d "status=test message" --header "Authorizatio
 `curl -v --header "Authorization: Bearer $ACCESS_TOKEN" -sS http://localhost:3000/api/v1/timelines/home` などでタイムラインを取得できます。(`timelines` は複数形)
 
 Link ヘッダーに `Link: <http://localhost:3000/api/v1/timelines/home?max_id=7>; rel="next", <http://localhost:3000/api/v1/timelines/home?since_id=30>; rel="prev"` のように書いてあって、 `next` で過去に辿っていけて、 `prev` で新しいトゥートを取得できるようです。
-ただし `prev` は時間をあけて試すと間が抜けていたので、全部取得する用途には向いていないようです。
+ただし `prev` は (ローカルの開発環境ではなく普通の公開サーバーで) 時間をあけて試すと間が抜けていたので、全部取得する用途には向いていないようです。
 `next` の方は確認していませんが、過去に遡るという挙動を考えると、間が抜けることはないのではないかと思っています。
 
 ## エラーの例
