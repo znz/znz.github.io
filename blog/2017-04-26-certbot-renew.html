@@ -5,12 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>pinentry-emacsを使ってみた - @znz blog</title>
+  <title>cronでcertbot renewの--force-renewalを使用してはいけない - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="pinentry-emacsを使ってみた 2017-03-23 (Thu) 8:30 pm | Comments gpg-agent で --allow-emacs-pinentry が使えない gnupg2 の環境で、
-https://github.com/ecraven/pinentry- &hellip;">
+  <meta name="description" content="cronでcertbot renewの--force-renewalを使用してはいけない 2017-04-26 (Wed) 7:30 pm | Comments タイトルで言いたいことはすべてですが、 cronで定期実行する certbot renew で --force-renewal &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +18,7 @@ https://github.com/ecraven/pinentry- &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-03-23-pinentry-emacs.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-04-26-certbot-renew.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -84,7 +83,7 @@ https://github.com/ecraven/pinentry- &hellip;">
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">pinentry-emacsを使ってみた</h1>
+      <h1 class="entry-title">cronでcertbot renewの--force-renewalを使用してはいけない</h1>
       
       <!-- zenback_title_end -->
       
@@ -96,7 +95,7 @@ https://github.com/ecraven/pinentry- &hellip;">
 
 
 
-<time class='entry-date' datetime='2017-03-23T20:30:13+09:00'><span class='date'>2017-03-23 (Thu)</span> <span class='time'>8:30 pm</span></time>
+<time class='entry-date' datetime='2017-04-26T19:30:00+09:00'><span class='date'>2017-04-26 (Wed)</span> <span class='time'>7:30 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -109,118 +108,102 @@ https://github.com/ecraven/pinentry- &hellip;">
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><code>gpg-agent</code> で <code>--allow-emacs-pinentry</code> が使えない gnupg2 の環境で、
-<a href="https://github.com/ecraven/pinentry-emacs">https://github.com/ecraven/pinentry-emacs</a> を使ってみました。</p>
+<div class="entry-content"><p>タイトルで言いたいことはすべてですが、 <code>cron</code>で定期実行する <code>certbot renew</code> で <code>--force-renewal</code> オプションは使わない方が良いという話です。</p>
 
 <!--more-->
 
 
-<h2>動作確認環境</h2>
+<h2><code>--force-renewal</code> とは?</h2>
 
-<ul>
-<li>macOS Sierra 10.12.3</li>
-<li>GNU Emacs 25.1.1</li>
-<li>gnupg2 2.0.30_3 (Homebrew で入れたもの)</li>
-</ul>
+<p><code>certbot</code> の <code>renew</code> サブコマンドは、標準で期限切れが近い (30 日未満) の証明書だけを自動で更新してくれる便利なサブコマンドです。
+期限切れが近い証明書がなければ letsencrypt のサーバーへのアクセスがなく、余計な負荷をかけないので、1日2回実行が推奨されています。</p>
 
+<p><code>--force-renewal</code> をつけると有効期限に関係なく更新が実行されます。</p>
 
-<h2>注意事項</h2>
+<h2>悪い設定例</h2>
 
-<p><a href="https://github.com/ecraven/pinentry-emacs/blob/7c384a65eaaa37d38dbbb4e4ca89a094b498d811/README.org#emacs">README.org の末尾</a>にも
-「This is probably totally insecure, and your passphrase may be leaked! Use at your own risk!」と書いてありますが、
-<code>read-passwd</code> した文字列をそのまま <code>emacsclient</code> に返して、シェルスクリプトでそのまま扱っているので、
-全く安全ではありません。</p>
+<p>例えば <a href="http://cloud-news.sakura.ad.jp/2017/04/24/mastodon-startupscript-update/" title="スタートアップスクリプト「Mastodon」の更新のお知らせ・旧スクリプトを使用して作成されたインスタンス向けの作業のお願い | さくらのクラウドニュース">スタートアップスクリプト「Mastodon」の更新のお知らせ・旧スクリプトを使用して作成されたインスタンス向けの作業のお願い | さくらのクラウドニュース</a> に書いてある</p>
 
-<p>他の <code>pinentry</code> が使える時は避けることをオススメします。</p>
+<pre><code>echo "0 5 1 * * root /usr/local/certbot/certbot-auto renew --webroot --webroot-path /home/mastodon/live/public --force-renew &amp;&amp; /bin/systemctl reload nginx postfix" &gt; /etc/cron.d/certbot-auto
+</code></pre>
 
-<h2>別の方法</h2>
+<p>という設定だと毎月 1 日の 5:00 に更新するという設定になっています。</p>
 
-<p><code>gnupg</code> が 2.1.5 以降なら <code>--allow-emacs-pinentry</code> というオプションがあるので、
-<a href="https://elpa.gnu.org/packages/pinentry.html">https://elpa.gnu.org/packages/pinentry.html</a> と組み合わせて使うことをオススメします。
-(<code>elpa</code> の説明によると <code>pinentry</code> も 0.9.5 以上が必要のようです。)
-この方法は別途試してまた記事を書く予定です。
-(2017-03-27 追記: <a href="/blog/2017-03-25-elpa-pinentry.html">elpaのpinentry.elを試してみた</a> という記事を書きました。)</p>
+<h2>letsencrypt へのサーバーの負荷の問題</h2>
 
-<p>今回の環境では、
-<a href="https://github.com/Homebrew/homebrew-core/blob/328a89b492b600686be41b6b69b93d7c88fb8b89/Formula/gnupg2.rb">Homebrew の gnupg2</a>
-が 2.0.30 で 2.1.5 未満なので使えませんでした。</p>
+<h3>回数の問題</h3>
 
-<p>macOS 上なら Emacs 上で入力するよりも
-<a href="/blog/2016-08-20-mac-easypg-gpg2.html">OS X の Emacs で EasyPG が gpg2 で Opening input file: Decryption failed, になったので対処した</a>記事に書いた
-<code>pinentry-mac</code> を使うのがオススメです。</p>
+<p>letsencrypt の証明書の有効期限は 90 日なので、 <code>--force-renewal</code> がなければ 2 ヶ月ごとに letsencrypt のサーバーへのアクセスが発生するのに対して、上記の例だと毎月アクセスが発生して、 letsencrypt のサーバーへの負荷は 2 倍になります。</p>
 
-<h2>設定</h2>
+<h3>固定時刻の問題</h3>
 
-<h3>gpg-agent の設定</h3>
+<p>また 5:00 固定なので、同じ設定をしているサーバーが増えれば同時にアクセスが発生するのもよくない設定です。</p>
 
-<p><code>~/.gnupg/gpg-agent.conf</code> がなければ作成して、以下の設定を入れておきます。</p>
+<h2>更新失敗時の問題</h2>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>pinentry-program /path/to/github.com/ecraven/pinentry-emacs/pinentry-emacs</span></code></pre></td></tr></table></div></figure>
+<p>マシンが起動していなくて <code>cron</code> が動かなかったとか、何らかの理由で証明書の更新に失敗した場合、毎月 1 回しか実行しない場合は 2,3 回しか更新のタイミングがないので、すべて失敗して証明書の期限切れになる可能性が高いです。</p>
 
+<p>それに対して毎日 2 回実行している場合、失敗しても少なくとも 29 日の間再実行され続けるので、少なくとも 58 回はチャンスがあります。
+(更新タイミング次第で 59 回になりそうです。計算が間違ってなければ。)</p>
 
-<h3>emacs の設定</h3>
+<h2>Debian パッケージの certbot の例</h2>
 
-<p>README.org に書いてあるように <code>~/.emacs.d/init.el</code> に</p>
+<p>Debian の certbot パッケージでは</p>
+
+<pre><code>0 */12 * * * root test -x /usr/bin/certbot -a \! -d /run/systemd/system &amp;&amp; perl -e 'sleep int(rand(3600))' &amp;&amp; certbot -q renew
+</code></pre>
+
+<p>という設定になっていて、 (systemd 環境でなければ) perl によるランダムスリープを入れて時間がばらけるようになっています。</p>
+
+<p>systemd 環境では以下のように <code>ExecStartPre</code> でランダムスリープするようになっています。</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>(defun pinentry-emacs (desc prompt ok error)
-</span><span class='line'>  (let ((str (read-passwd (concat (replace-regexp-in-string "%22" "\"" (replace-regexp-in-string "%0A" "\n" desc)) prompt ": "))))
-</span><span class='line'>    str))</span></code></pre></td></tr></table></div></figure>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% cat /lib/systemd/system/certbot.timer
+</span><span class='line'>[Unit]
+</span><span class='line'>Description=Run certbot twice daily
+</span><span class='line'>
+</span><span class='line'>[Timer]
+</span><span class='line'>OnCalendar=*-*-* 00,12:00:00
+</span><span class='line'>Persistent=true
+</span><span class='line'>
+</span><span class='line'>[Install]
+</span><span class='line'>WantedBy=timers.target
+</span><span class='line'>%  cat /lib/systemd/system/certbot.service
+</span><span class='line'>[Unit]
+</span><span class='line'>Description=Certbot
+</span><span class='line'>Documentation=file:///usr/share/doc/python-certbot-doc/html/index.html
+</span><span class='line'>Documentation=https://letsencrypt.readthedocs.io/en/latest/
+</span><span class='line'>[Service]
+</span><span class='line'>Type=oneshot
+</span><span class='line'>ExecStartPre=/usr/bin/perl -e 'sleep int(rand(3600))'
+</span><span class='line'>ExecStart=/usr/bin/certbot -q renew
+</span><span class='line'>PrivateTmp=true</span></code></pre></td></tr></table></div></figure>
 
-
-<p>を追加しておきます。</p>
-
-<p><code>emacsclient</code> コマンドで <code>pinentry-emacs</code> 関数を呼んでいるので、
-<code>(server-start)</code> も (README.org には書いていませんが) 必要です。</p>
-
-<h2>動作確認</h2>
-
-<p>Emacs の中で <code>*.gpg</code> ファイルを開いてみたり、
-端末上でパスフレーズの必要な <code>gpg</code> コマンドを実行してみたりして、
-<code>(server-start)</code> した Emacs の mini buffer でパスフレーズがきかれるのを確認します。</p>
-
-<h2>fallback 動作</h2>
-
-<p><code>emacsclient</code> の呼び出しが <code>sed</code> に <a href="https://github.com/ecraven/pinentry-emacs/blob/7c384a65eaaa37d38dbbb4e4ca89a094b498d811/pinentry-emacs#L24">pipe されている</a> ので、
-<a href="https://github.com/ecraven/pinentry-emacs/pull/5">Fix fallback when emacsclient failed</a>
-のパッチをあてないと fallback してくれないようです。
-(取り込まれたらブロク記事を書こうと思っていたのですが、取り込まれないようなのでもう書くことにしました。)</p>
-
-<p>さらに別途 <code>pinentry-emacs</code> ディレクトリにパスを通しておくか、
-<code>pinentry-emacs</code> ファイルの先頭で <code>PATH=$PATH:$(dirname "$0")</code> などとしてパスを通さないと
-<code>lukspinentry</code> の実行に失敗して fallback してくれません。</p>
-
-<p>さらに、端末上で <code>gpg</code> コマンドを実行したとしても、
-<code>pinentry</code> プログラムは <code>gpg-agent</code> から起動される
-(プログラム間の関係は <a href="http://miniconf.debian.or.jp/assets/files/gnupg-now.html">http://miniconf.debian.or.jp/assets/files/gnupg-now.html</a> の GnuPG programs (2) 参照)
-ので、
-<code>tty</code> が「<code>not a tty</code>」を返すらしく、
-<code>pinentry-curses --ttyname not a tty</code>
-が実行されていて fallback もうまくいきません。</p>
-
-<p>なので、
-fallback 動作は期待せず、
-パッチもあてず、
-<code>pinentry-emacs</code> を使うなら
-必ず Emacs は起動しておく、
-という運用が良さそうです。</p>
 
 <h2>まとめ</h2>
 
-<p><code>pinentry-emacs</code> を試してみましたが、
-制限事項も多く、
-修正も期待できないため、
-別のもっと良い <code>pinentry</code> が使える場合は、
-他のものを使うことをオススメします。</p>
+<p><code>--force-renewal</code> 付きで少ない回数の <code>certbot renew</code> を実行するのは欠点しかありません。</p>
 
-<p>他の手段がない時の最終手段としては、知っておいても良いのではないかと思いました。</p>
-
-<p>ちなみに自分の環境では、
-<code>pinentry-mac</code> に戻してしまっていて、
-<code>pinentry-emacs</code> は使っていません。</p>
+<p>公式に推奨されているように <code>certbot renew</code> を <code>--force-renewal</code> なしで複数回実行する方が良いでしょう。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -239,12 +222,12 @@ fallback 動作は期待せず、
 
 
 
-<time class='entry-date' datetime='2017-03-23T20:30:13+09:00'><span class='date'>2017-03-23 (Thu)</span> <span class='time'>8:30 pm</span></time>
+<time class='entry-date' datetime='2017-04-26T19:30:00+09:00'><span class='date'>2017-04-26 (Wed)</span> <span class='time'>7:30 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/emacs/'>emacs</a>, <a class='category' href='/blog/categories/gpg/'>gpg</a>
+    <a class='category' href='/blog/categories/letsencrypt/'>letsencrypt</a>
   
 </span>
 
@@ -271,10 +254,8 @@ fallback 動作は期待せず、
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2017-03-19-kansai-debian-meeting.html" title="Previous Post: 第 121 回関西 Debian 勉強会 (10 周年記念会) に参加しました">&laquo; 第 121 回関西 Debian 勉強会 (10 周年記念会) に参加しました</a>
+        <a class="basic-alignment left" href="/blog/2017-04-23-kansai-debian-meeting.html" title="Previous Post: 第 122 回関西 Debian 勉強会に参加しました">&laquo; 第 122 回関西 Debian 勉強会に参加しました</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2017-03-25-elpa-pinentry.html" title="Next Post: elpaのpinentry.elを試してみた">elpaのpinentry.elを試してみた &raquo;</a>
       
     </p>
   </footer>
@@ -412,8 +393,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-03-23-pinentry-emacs.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2017-03-23-pinentry-emacs.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-04-26-certbot-renew.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-04-26-certbot-renew.html';
         var disqus_script = 'embed.js';
       
     (function () {

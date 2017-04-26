@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-04-23T19:55:13+09:00</updated>
+  <updated>2017-04-26T19:53:04+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,110 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[cronでcertbot renewの--force-renewalを使用してはいけない]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-04-26-certbot-renew.html"/>
+    <updated>2017-04-26T19:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/certbot-renew</id>
+    <content type="html"><![CDATA[<p>タイトルで言いたいことはすべてですが、 <code>cron</code>で定期実行する <code>certbot renew</code> で <code>--force-renewal</code> オプションは使わない方が良いという話です。</p>
+
+<!--more-->
+
+
+<h2><code>--force-renewal</code> とは?</h2>
+
+<p><code>certbot</code> の <code>renew</code> サブコマンドは、標準で期限切れが近い (30 日未満) の証明書だけを自動で更新してくれる便利なサブコマンドです。
+期限切れが近い証明書がなければ letsencrypt のサーバーへのアクセスがなく、余計な負荷をかけないので、1日2回実行が推奨されています。</p>
+
+<p><code>--force-renewal</code> をつけると有効期限に関係なく更新が実行されます。</p>
+
+<h2>悪い設定例</h2>
+
+<p>例えば <a href="http://cloud-news.sakura.ad.jp/2017/04/24/mastodon-startupscript-update/" title="スタートアップスクリプト「Mastodon」の更新のお知らせ・旧スクリプトを使用して作成されたインスタンス向けの作業のお願い | さくらのクラウドニュース">スタートアップスクリプト「Mastodon」の更新のお知らせ・旧スクリプトを使用して作成されたインスタンス向けの作業のお願い | さくらのクラウドニュース</a> に書いてある</p>
+
+<pre><code>echo "0 5 1 * * root /usr/local/certbot/certbot-auto renew --webroot --webroot-path /home/mastodon/live/public --force-renew &amp;&amp; /bin/systemctl reload nginx postfix" &gt; /etc/cron.d/certbot-auto
+</code></pre>
+
+<p>という設定だと毎月 1 日の 5:00 に更新するという設定になっています。</p>
+
+<h2>letsencrypt へのサーバーの負荷の問題</h2>
+
+<h3>回数の問題</h3>
+
+<p>letsencrypt の証明書の有効期限は 90 日なので、 <code>--force-renewal</code> がなければ 2 ヶ月ごとに letsencrypt のサーバーへのアクセスが発生するのに対して、上記の例だと毎月アクセスが発生して、 letsencrypt のサーバーへの負荷は 2 倍になります。</p>
+
+<h3>固定時刻の問題</h3>
+
+<p>また 5:00 固定なので、同じ設定をしているサーバーが増えれば同時にアクセスが発生するのもよくない設定です。</p>
+
+<h2>更新失敗時の問題</h2>
+
+<p>マシンが起動していなくて <code>cron</code> が動かなかったとか、何らかの理由で証明書の更新に失敗した場合、毎月 1 回しか実行しない場合は 2,3 回しか更新のタイミングがないので、すべて失敗して証明書の期限切れになる可能性が高いです。</p>
+
+<p>それに対して毎日 2 回実行している場合、失敗しても少なくとも 29 日の間再実行され続けるので、少なくとも 58 回はチャンスがあります。
+(更新タイミング次第で 59 回になりそうです。計算が間違ってなければ。)</p>
+
+<h2>Debian パッケージの certbot の例</h2>
+
+<p>Debian の certbot パッケージでは</p>
+
+<pre><code>0 */12 * * * root test -x /usr/bin/certbot -a \! -d /run/systemd/system &amp;&amp; perl -e 'sleep int(rand(3600))' &amp;&amp; certbot -q renew
+</code></pre>
+
+<p>という設定になっていて、 (systemd 環境でなければ) perl によるランダムスリープを入れて時間がばらけるようになっています。</p>
+
+<p>systemd 環境では以下のように <code>ExecStartPre</code> でランダムスリープするようになっています。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% cat /lib/systemd/system/certbot.timer
+</span><span class='line'>[Unit]
+</span><span class='line'>Description=Run certbot twice daily
+</span><span class='line'>
+</span><span class='line'>[Timer]
+</span><span class='line'>OnCalendar=*-*-* 00,12:00:00
+</span><span class='line'>Persistent=true
+</span><span class='line'>
+</span><span class='line'>[Install]
+</span><span class='line'>WantedBy=timers.target
+</span><span class='line'>%  cat /lib/systemd/system/certbot.service
+</span><span class='line'>[Unit]
+</span><span class='line'>Description=Certbot
+</span><span class='line'>Documentation=file:///usr/share/doc/python-certbot-doc/html/index.html
+</span><span class='line'>Documentation=https://letsencrypt.readthedocs.io/en/latest/
+</span><span class='line'>[Service]
+</span><span class='line'>Type=oneshot
+</span><span class='line'>ExecStartPre=/usr/bin/perl -e 'sleep int(rand(3600))'
+</span><span class='line'>ExecStart=/usr/bin/certbot -q renew
+</span><span class='line'>PrivateTmp=true</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p><code>--force-renewal</code> 付きで少ない回数の <code>certbot renew</code> を実行するのは欠点しかありません。</p>
+
+<p>公式に推奨されているように <code>certbot renew</code> を <code>--force-renewal</code> なしで複数回実行する方が良いでしょう。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第 122 回関西 Debian 勉強会に参加しました]]></title>
@@ -3475,62 +3579,6 @@ ssh の鍵の変更は面倒なだけでした。</p>
 
 
 <p>に変更する必要がありました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[certbot の renew hook について]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-11-20-certbot-renew-hook.html"/>
-    <updated>2016-11-20T14:52:31+09:00</updated>
-    <id>http://blog.n-z.jp/blog/certbot-renew-hook</id>
-    <content type="html"><![CDATA[<p>certbot で設定の再読み込みには post-hook よりも renew-hook を使った方が良さそうでした。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Debian GNU/Linux 8.6 (jessie)</li>
-<li>certbot 0.9.3-1~bpo8+1</li>
-</ul>
-
-
-<h2>hook の指定方法について</h2>
-
-<p><code>certbot renew --pre-hook "service nginx stop" --post-hook "service nginx start"</code> のように <code>certbot</code> コマンドの引数で直接指定するか、 <code>/etc/letsencrypt/cli.ini</code> または <code>$XDG_CONFIG_HOME/letsencrypt/cli.ini</code> (<code>$XDG_CONFIG_HOME</code> が設定されていなければ <code>~/.config/letsencrypt/cli.ini</code>) に <code>renew-hook = service nginx reload</code> のように <code>--</code> を省いたオプション名で ini ファイルに指定する方法があるようです。(<code>ini</code> ファイルは <code>--config cli.ini</code> または <code>-c cli.ini</code> のようにコマンドラインで指定も可能)</p>
-
-<h2>pre-hook, post-hook について</h2>
-
-<p><code>pre-hook</code> と <code>post-hook</code> は standalone プラグインを使っている時に、 <code>certbot</code> の Web サーバーが 80 番ポートを使えるようにするために、通常の Web サーバーを止める用途に適しているようです。</p>
-
-<p>そのため、<code>--dry-run</code> の時でも呼ばれるようです。</p>
-
-<p>使用例:
-<code>certbot renew --pre-hook "service nginx stop" --post-hook "service nginx start"</code></p>
-
-<h2>renew-hook について</h2>
-
-<p><code>renew-hook</code> は証明書の更新が成功するごとに呼ばれるので、証明書の再読み込みに適しているようです。</p>
-
-<p>環境変数 <code>RENEWED_LINEAGE</code> に <code>/etc/letsencrypt/live/www.example.com</code> のような証明書の場所へのパスが、
-環境変数 <code>RENEWED_DOMAINS</code> に <code>www.example.com example.com</code> のようにスペース区切りの更新されたドメインのリストが渡ってくるようです。</p>
-
-<p>証明書の更新ごとに呼ばれるようなので、たまたま同じタイミングで <code>www.example.com</code> と <code>other.example.net</code> の更新が起こったとして、
-証明書の作成の時に <code>-d</code> を同時に指定して同じ証明書の SAN (Subject Alternative Name) に入っているなら、
-<code>RENEWED_DOMAINS</code> に並んでいて、
-別々に証明書を作成していれば <code>renew-hook</code> が別々に呼ばれました。</p>
-
-<p>(2017-01-03 追記: <code>post-hook</code> は 1 回しか呼ばれませんでした。詳細は<a href="http://blog.n-z.jp/blog/2017-01-03-certbot-renew-hook.html">certbot の renew hook について (その2)</a>を参照)</p>
-
-<h2>renew-hook のすすめ</h2>
-
-<p>以上の違いから、
-<code>webroot</code> プラグインを使っている時の証明書の自動再読み込みには
-<code>post-hook</code> ではなく <code>renew-hook</code> を使うのがおすすめです。</p>
-
-<p>Web 上で <code>post-hook</code> を使っている例の方が多いのは、
-<code>renew-hook</code> の方が後から実装されたからではないかと思います。</p>
 ]]></content>
   </entry>
   
