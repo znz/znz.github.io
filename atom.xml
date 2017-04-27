@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-04-26T19:53:04+09:00</updated>
+  <updated>2017-04-27T20:07:29+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,51 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[homebrewの更新はbrew upgrade --cleanupだけでよくなっている]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-04-27-homebrew-upgrade-cleanup.html"/>
+    <updated>2017-04-27T20:00:48+09:00</updated>
+    <id>http://blog.n-z.jp/blog/homebrew-upgrade-cleanup</id>
+    <content type="html"><![CDATA[<p>Homebrew のパッケージの更新に昔は <code>brew update</code>; <code>brew upgrade</code>; <code>brew cleanup</code> と 3 コマンドを使っていましたが、今は <code>brew upgrade --cleanup</code> だけでよくなっています。</p>
+
+<!--more-->
+
+
+<h2>確認バージョン</h2>
+
+<ul>
+<li>Homebrew 1.1.13</li>
+</ul>
+
+
+<h2><code>brew update</code></h2>
+
+<p>Debian 系で使われている <code>apt</code> の <code>sudo apt-get update</code> に相当するパッケージ情報を更新するサブコマンドです。
+基本的には <code>git</code> で更新しているだけなので、こけたら <code>git</code> コマンドを直接使ってなおす必要がありそうです。</p>
+
+<p>今は他のサブコマンドを実行した時に情報が古ければ自動で更新されるので不要になっています。</p>
+
+<h2><code>brew upgrade</code></h2>
+
+<p>パッケージを更新するサブコマンドです。</p>
+
+<p>古いバージョンも残るので、 <code>gem update</code> に近いような気がします。</p>
+
+<h2><code>brew cleanup</code></h2>
+
+<p>古いバージョンを消したり、ダウンロードしたファイルのキャッシュを消したりします。</p>
+
+<p><code>brew upgrade --cleanup</code> のように <code>upgrade</code> サブコマンドに <code>--cleanup</code> オプションをつけると <code>upgrade</code> 中に削除してくれるようです。
+(例えば 2 個更新があった時に、更新、削除、更新、削除になる。)</p>
+
+<p>後から <code>brew cleanup</code> するのと違って <code>upgrade</code> 中に削除してくれるので、何が削除されたのかの確認はしにくくなったり、問題が起きた時に戻しにくくなったりという欠点はありますが、一時的に空き容量が減るのが緩やかになったり、消し忘れがなくなるなどの利点があると思います。</p>
+
+<h2>まとめ</h2>
+
+<p><code>brew update</code>; <code>brew upgrade</code>; <code>brew cleanup</code> と 3 コマンドを連続で使っている人は、 <code>brew upgrade --cleanup</code> だけに置き換えると便利です。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[cronでcertbot renewの--force-renewalを使用してはいけない]]></title>
@@ -3352,233 +3397,6 @@ ID が運転免許証しかなかったので、日本人とだけにしてお�
 前回会ったのがいつだったか忘れるぐらい久しぶりに会った人もいて、
 全体としては楽しかったので、
 参加して良かったと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[sshでed25519鍵を使うようにした]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-12-04-ssh-ed25519.html"/>
-    <updated>2016-12-04T14:25:40+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ssh-ed25519</id>
-    <content type="html"><![CDATA[<p>ssh で使っている鍵が RSA 2048 ビットでちょっと古くなってきているということもあり、
-OpenSSH 6.5 で追加された ed25519 鍵に更新することにしました。</p>
-
-<!--more-->
-
-
-<h2>鍵の種類</h2>
-
-<p><a href="http://jnst.hateblo.jp/entry/2014/12/15/200542" title="GitHubでEd25519鍵をつかう">GitHubでEd25519鍵をつかう</a>
-の説明が詳しいですが、他のサイトでも調べた情報によると</p>
-
-<ul>
-<li>RSA の 2048 ビットが今の <code>ssh-keygen</code> でのデフォルトなので主流</li>
-<li>RSA や ECDSA は <code>ssh-keygen</code> に <code>-b</code> でビット数が指定できる</li>
-<li>ECDSA の 521 ビットは 512 の間違いではない</li>
-<li>ed25519はビット数が指定出来ない</li>
-<li>OpenSSH のssh-keygenは1024bitのDSA鍵しか作れない (<a href="http://d.hatena.ne.jp/hnw/20140705" title="GitHubユーザーのSSH鍵6万個を調べてみた">GitHubユーザーのSSH鍵6万個を調べてみた</a>)</li>
-<li>DSA 鍵は弱いので使うべきではない</li>
-<li>ed25519はECDSAより署名生成/検証のパフォーマンスが良い</li>
-</ul>
-
-
-<p>などの情報がありました。</p>
-
-<p>ビット数で悩まなくて良いのと、パフォーマンスが良いという情報があったので、
-ed25519 を使うことにしました。</p>
-
-<h2>主な環境</h2>
-
-<p>OpenSSH のバージョンは <code>ssh -V</code> で調べました。</p>
-
-<ul>
-<li>OS X El Captitan 10.11.6 の OpenSSH_6.9p1, LibreSSL 2.1.8</li>
-<li>Ubuntu 14.04.5 LTS (trusty) の OpenSSH_6.6.1p1 Ubuntu-2ubuntu2.8, OpenSSL 1.0.1f 6 Jan 2014</li>
-<li>Debian GNU/Linux 8.6 (jessie) の OpenSSH_6.7p1 Debian-5+deb8u3, OpenSSL 1.0.1t  3 May 2016</li>
-</ul>
-
-
-<h2>バージョン情報</h2>
-
-<p>Debian は <a href="https://packages.debian.org/openssh-server">https://packages.debian.org/openssh-server</a> によると wheezy (oldstable) は 1:6.0p1-4+deb7u6 で対応してなさそう (wheezy-backports が 1:6.6p1-4~bpo70+1 なので backports を使えば対応できそう) で、
-jessie (stable) は 1:6.7p1-5+deb8u3 なので、今の安定版以降なら問題なく ed25519 が使えそうです。</p>
-
-<p>Ubuntu は <a href="http://packages.ubuntu.com/openssh-server">http://packages.ubuntu.com/openssh-server</a> によると precise (12.04LTS) が 1:5.9p1-5ubuntu1.10 で対応してなさそうでしたが、
-trusty (14.04LTS) が 1:6.6p1-2ubuntu2.8 で、
-現在主流のバージョンでは問題なく使えそうでした。</p>
-
-<h2>鍵生成</h2>
-
-<p>vagrant 環境で鍵を生成して比較してみたところ、
-ed25519 は公開鍵が RSA と比べてかなり短いことがわかりました。
-ついでに比較してみたところ、 ECDSA よりも短いということがわかりました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-<span class='line-number'>51</span>
-<span class='line-number'>52</span>
-<span class='line-number'>53</span>
-<span class='line-number'>54</span>
-<span class='line-number'>55</span>
-<span class='line-number'>56</span>
-<span class='line-number'>57</span>
-<span class='line-number'>58</span>
-<span class='line-number'>59</span>
-<span class='line-number'>60</span>
-<span class='line-number'>61</span>
-<span class='line-number'>62</span>
-<span class='line-number'>63</span>
-<span class='line-number'>64</span>
-<span class='line-number'>65</span>
-<span class='line-number'>66</span>
-<span class='line-number'>67</span>
-<span class='line-number'>68</span>
-<span class='line-number'>69</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>%  ssh-keygen -t ed25519
-</span><span class='line'>Generating public/private ed25519 key pair.
-</span><span class='line'>Enter file in which to save the key (/home/vagrant/.ssh/id_ed25519):
-</span><span class='line'>Enter passphrase (empty for no passphrase):
-</span><span class='line'>Enter same passphrase again:
-</span><span class='line'>Your identification has been saved in /home/vagrant/.ssh/id_ed25519.
-</span><span class='line'>Your public key has been saved in /home/vagrant/.ssh/id_ed25519.pub.
-</span><span class='line'>The key fingerprint is:
-</span><span class='line'>SHA256:tlGs9kP67mLZzd9lh1/UJY2R/vZc1Q1GA9gyADsRGlw vagrant@yakkety64
-</span><span class='line'>The key's randomart image is:
-</span><span class='line'>+--[ED25519 256]--+
-</span><span class='line'>|   ...Eo.. o.o+. |
-</span><span class='line'>|    .o o .+ . += |
-</span><span class='line'>|    . o   oo oo.=|
-</span><span class='line'>|       . o    ..*|
-</span><span class='line'>|        S .    .+|
-</span><span class='line'>|       o *     o+|
-</span><span class='line'>|        oooo  .oB|
-</span><span class='line'>|        +...o  +*|
-</span><span class='line'>|       . ++  .. o|
-</span><span class='line'>+----[SHA256]-----+
-</span><span class='line'>%  cat ~/.ssh/id_ed25519.pub
-</span><span class='line'>ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGvN6KKrqsvbFOfLclK/fYIDye6Lms7NhOn0yYNkjMza vagrant@yakkety64
-</span><span class='line'>%  ssh-keygen -t ecdsa
-</span><span class='line'>Generating public/private ecdsa key pair.
-</span><span class='line'>Enter file in which to save the key (/home/vagrant/.ssh/id_ecdsa):
-</span><span class='line'>Enter passphrase (empty for no passphrase):
-</span><span class='line'>Enter same passphrase again:
-</span><span class='line'>Your identification has been saved in /home/vagrant/.ssh/id_ecdsa.
-</span><span class='line'>Your public key has been saved in /home/vagrant/.ssh/id_ecdsa.pub.
-</span><span class='line'>The key fingerprint is:
-</span><span class='line'>SHA256:DebC1pOk6EEL5MVGP0PIziMdAmzgmqAYJl/C14DuSOM vagrant@yakkety64
-</span><span class='line'>The key's randomart image is:
-</span><span class='line'>+---[ECDSA 256]---+
-</span><span class='line'>|=..=+..          |
-</span><span class='line'>|.*o.*=           |
-</span><span class='line'>|=+=*+.= +        |
-</span><span class='line'>|B*o*=+ O +       |
-</span><span class='line'>|Boo.+.= S .      |
-</span><span class='line'>|.E.. o . .       |
-</span><span class='line'>|    .            |
-</span><span class='line'>|                 |
-</span><span class='line'>|                 |
-</span><span class='line'>+----[SHA256]-----+
-</span><span class='line'>%  cat ~/.ssh/id_ecdsa.pub
-</span><span class='line'>ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCQeG28rZh/SX9MBfKsnltv+hpr41CAT4CZZ9YsmsjVRdb3iKsYq4K4SNwfiVGNaIjKAcuDnaJbk50zOoa8V/Tc= vagrant@yakkety64
-</span><span class='line'>%  ssh-keygen
-</span><span class='line'>Generating public/private rsa key pair.
-</span><span class='line'>Enter file in which to save the key (/home/vagrant/.ssh/id_rsa):
-</span><span class='line'>Enter passphrase (empty for no passphrase):
-</span><span class='line'>Enter same passphrase again:
-</span><span class='line'>Your identification has been saved in /home/vagrant/.ssh/id_rsa.
-</span><span class='line'>Your public key has been saved in /home/vagrant/.ssh/id_rsa.pub.
-</span><span class='line'>The key fingerprint is:
-</span><span class='line'>SHA256:sR7WZK2npMgv8lRZrhofejURfuEs04VJv0quu3xtLiw vagrant@yakkety64
-</span><span class='line'>The key's randomart image is:
-</span><span class='line'>+---[RSA 2048]----+
-</span><span class='line'>|           ..o   |
-</span><span class='line'>|          ..+..  |
-</span><span class='line'>|        ..+=.o.  |
-</span><span class='line'>|         X=.=  . |
-</span><span class='line'>|        S ==o .  |
-</span><span class='line'>|     . = =o= .   |
-</span><span class='line'>|      = =..oo.   |
-</span><span class='line'>|    ...*.oE.+ o  |
-</span><span class='line'>|     o+oo == +.  |
-</span><span class='line'>+----[SHA256]-----+
-</span><span class='line'>%  cat ~/.ssh/id_rsa.pub
-</span><span class='line'>ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCnSyvz7oShBRgD8q91eG4WtdJ83cPJfQAtSKEiE8ELHhqRulL6liPz/jqqpMjQpp/3e3QS8OoxGnuXGgHdkly4cd2UdnWxqbz4oN6ig64rYK/ZshQp5FyKb5L3Ksr+3mkhzxPHQVbSZWa8YoaCEzbteVbdFTXUMO/HFPFTL9s2HHyJoDlzUT0XdyovN6WQ2SEbx6pLudsvhZiaiqrPEHLl4ltq33tGcIMFjeu8XvW3d8jTmuAw0KrL7U3bD20n0xsKj9XBigew9K0PjJQ6QKyNUpXXB94jWv+hpkatHlw0NJm/XUQiHDtWaMCTRB8KDSrFarRbYL5ErfHuCePmYerR vagrant@yakkety64</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>サービスに登録</h2>
-
-<p>二要素認証の時はちょっと楽しい面もありましたが、
-ssh の鍵の変更は面倒なだけでした。</p>
-
-<p>GitHub, BitBucket, Heroku など、試したところはすべて ed25519 の公開鍵に対応していました。</p>
-
-<h2>IdentityFile 更新</h2>
-
-<p><code>~/.ssh/config</code> で余計な鍵を試さないように</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>IdentitiesOnly yes
-</span><span class='line'>IdentityFile ~/.ssh/id_rsa</span></code></pre></td></tr></table></div></figure>
-
-
-<p>のような設定を入れている場合は</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>IdentitiesOnly yes
-</span><span class='line'>IdentityFile ~/.ssh/id_ed25519</span></code></pre></td></tr></table></div></figure>
-
-
-<p>に変更する必要がありました。</p>
 ]]></content>
   </entry>
   

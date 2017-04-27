@@ -4,7 +4,7 @@
   <title><![CDATA[Category: homebrew | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/homebrew/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-04-26T19:53:04+09:00</updated>
+  <updated>2017-04-27T20:07:29+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,51 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[homebrewの更新はbrew upgrade --cleanupだけでよくなっている]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-04-27-homebrew-upgrade-cleanup.html"/>
+    <updated>2017-04-27T20:00:48+09:00</updated>
+    <id>http://blog.n-z.jp/blog/homebrew-upgrade-cleanup</id>
+    <content type="html"><![CDATA[<p>Homebrew のパッケージの更新に昔は <code>brew update</code>; <code>brew upgrade</code>; <code>brew cleanup</code> と 3 コマンドを使っていましたが、今は <code>brew upgrade --cleanup</code> だけでよくなっています。</p>
+
+<!--more-->
+
+
+<h2>確認バージョン</h2>
+
+<ul>
+<li>Homebrew 1.1.13</li>
+</ul>
+
+
+<h2><code>brew update</code></h2>
+
+<p>Debian 系で使われている <code>apt</code> の <code>sudo apt-get update</code> に相当するパッケージ情報を更新するサブコマンドです。
+基本的には <code>git</code> で更新しているだけなので、こけたら <code>git</code> コマンドを直接使ってなおす必要がありそうです。</p>
+
+<p>今は他のサブコマンドを実行した時に情報が古ければ自動で更新されるので不要になっています。</p>
+
+<h2><code>brew upgrade</code></h2>
+
+<p>パッケージを更新するサブコマンドです。</p>
+
+<p>古いバージョンも残るので、 <code>gem update</code> に近いような気がします。</p>
+
+<h2><code>brew cleanup</code></h2>
+
+<p>古いバージョンを消したり、ダウンロードしたファイルのキャッシュを消したりします。</p>
+
+<p><code>brew upgrade --cleanup</code> のように <code>upgrade</code> サブコマンドに <code>--cleanup</code> オプションをつけると <code>upgrade</code> 中に削除してくれるようです。
+(例えば 2 個更新があった時に、更新、削除、更新、削除になる。)</p>
+
+<p>後から <code>brew cleanup</code> するのと違って <code>upgrade</code> 中に削除してくれるので、何が削除されたのかの確認はしにくくなったり、問題が起きた時に戻しにくくなったりという欠点はありますが、一時的に空き容量が減るのが緩やかになったり、消し忘れがなくなるなどの利点があると思います。</p>
+
+<h2>まとめ</h2>
+
+<p><code>brew update</code>; <code>brew upgrade</code>; <code>brew cleanup</code> と 3 コマンドを連続で使っている人は、 <code>brew upgrade --cleanup</code> だけに置き換えると便利です。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[brew pin でバグのあるバージョンを避ける例]]></title>
@@ -420,32 +465,6 @@ admin グループに書き込み可能で作成してからインストール�
 <pre><code>sudo install -d -g admin -m 775 /usr/share/ansible
 pip install ansible
 </code></pre>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[homebrew の reinstall で使われるオプションの保存場所]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-09-13-homebrew-used-options.html"/>
-    <updated>2013-09-13T21:58:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/homebrew-used-options</id>
-    <content type="html"><![CDATA[<p><a href="/blog/2013-09-08-rabbiter-on-mac.html">rabbiter の記事</a>
-で、
-「一度 <code>--with-curl-ca-bundle</code> 付きでインストールした後だと、以下のようにオプションなしの reinstall でもオプションが付くようです。」
-と書きましたが、そのオプションがどこに保存されているのかを調べました。</p>
-
-<!--more-->
-
-
-<p>実際に調べるのはソースをたどったりして結構大変だったのですが、
-最終的に
-<code>/usr/local/Cellar/glib-networking/2.36.2/INSTALL_RECEIPT.json</code>
-に <code>used_options</code> というキーで保存されているということがわかりました。</p>
-
-<p><code>Cellar</code> はインストールしたファイルの実体が入るところなので、
-あらかじめダミーの <code>INSTALL_RECEIPT.json</code> を用意しておいて
-オプションなしの <code>brew reinstall</code> の時に使われるオプションを
-埋め込んでおくという用途に使うのには向いていないということが
-わかりました。</p>
 ]]></content>
   </entry>
   
