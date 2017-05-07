@@ -88,7 +88,7 @@ categories: lilo event linux
 - facebook のチェックインなどに使われている
 - overpass turbo
 - f4map - 延暦寺
-- https://k-sakanoshita.github.io/OSM_AccessMap/index.html というのを作った
+- [OSM Access Map](https://www.netfort.gr.jp/~saka/accessmap/) というのを作った
 - 道路のみの画像を保存できる
 - 道路の区別は実データを元にご意見募集中
 - ゼンリンが地図グッズを売っている http://www.zenrin.co.jp/goods/matimati/item/
