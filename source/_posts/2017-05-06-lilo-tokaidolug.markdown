@@ -159,3 +159,7 @@ categories: lilo event linux
 <div style="margin-bottom: 5px">
   <a href="https://slide.rabbit-shocker.org/authors/znz/lilo-20170506/" title="lilo.linux.or.jp の話 (2017年5月)">lilo.linux.or.jp の話 (2017年5月)</a>
 </div>
+
+## Togetter まとめ
+
+[LILO&amp;東海道らぐオフラインミーティング 2017/05/06の記録 - Togetterまとめ](https://togetter.com/li/1107707)にまとめられているようです。
