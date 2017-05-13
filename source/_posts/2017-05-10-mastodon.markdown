@@ -1,0 +1,77 @@
+---
+layout: post
+title: "DDD.rb #11 (Rails with React) (Mastodon のコードリーディング) に参加しました"
+date: 2017-05-10 23:59:59 +0900
+comments: true
+categories: event mastodon
+---
+[DDD.rb #11 (Rails with React)](https://dddrb.doorkeeper.jp/events/60099 "DDD.rb #11 (Rails with React)") という Mastodon のコードリーディングに参加したので、そのメモです。
+
+インストールがほとんどでコードリーディングはほとんどできなかったので、大まかな読み方の話だけで、あまり突っ込んだ話はありませんでした。
+
+<!--more-->
+
+## メモ
+
+- 次回は [DDD.rb #12 RDRA for DDD ワークショップ！ - DDD.rb | Doorkeeper](https://dddrb.doorkeeper.jp/events/60238 "DDD.rb #12 RDRA for DDD ワークショップ！ - DDD.rb | Doorkeeper") (RDRA はラドラと読むらしい)
+- [マストドン評判とは！SNS初心者が安全にMastodonを楽しむ方法](http://motokase.com/mastodon-matome/ "マストドン評判とは！SNS初心者が安全にMastodonを楽しむ方法")の最初の方が参考になる
+- ローカルで起動するには [docs/Running-Mastodon/Development-guide.md](https://github.com/tootsuite/mastodon/blob/e2491680e696d2c285a798ec4c66b26d2748df66/docs/Running-Mastodon/Development-guide.md) のリンク先の [Development guide](https://github.com/tootsuite/documentation/blob/master/Running-Mastodon/Development-guide.md) を参照
+- vagrant も手軽
+- 開発環境のメールは https://github.com/ryanb/letter_opener を使っている
+- master だと jquery-rails が消えている
+- master だと .foreman と Procfile.dev で streaming のサーバーなども起動する
+- 今の master は cld3 でエラーになりやすい
+- 基本的に v1.3.3 のタグで試そうという話に
+- react のルーティングは `./app/assets/javascripts/components/containers/mastodon.jsx` をみる
+- `<Route path='getting-started' component={GettingStarted} />` とか
+- 翻訳が難しい話 (連合とか未収載とか)
+- docker を使うなら docker-compose.yml を直接書き換える代わりに docker-compose.override.yml が使える
+
+### getElementById
+
+- HTML ソースに `<script id='initial-state' type='application/json'>` がある
+- `getElementById` で検索
+- `app/assets/javascripts/components/containers/mastodon.jsx` に `const initialState = JSON.parse(document.getElementById("initial-state").textContent);` とある
+
+### react のソースの読み方
+
+- react のページのざっくりとした見分け方は HTML ソースがやけに少ないときは react (登録ページなど devise 由来のページは react を使っていない)
+- `data-react-class` がついてるところに差し込まれている
+- react のルーティングは `./app/assets/javascripts/components/containers/mastodon.jsx` をみる
+- `<Route path='getting-started' component={GettingStarted} />` とか
+- `localhost:3000/web/` は残して `localhost:3000/web/getting-started` を開くと出てくる
+- `<Route path='blocks' component={Blocks} />` は `import Blocks from '../features/blocks';` なので `app/assets/javascripts/components/features/blocks/index.jsx` にある
+
+### ストリーミングは?
+
+- `app/assets/javascripts/components/api.jsx` にクライアントがある
+- `axios` (アクシオス) を使っている
+- `Authorization` で `Bearer` トークンを渡している
+
+- サーバー側は `streaming/index.js` にある (トップ直下)
+- `import WebSocket from 'ws'`
+- nginx などで受けて rails と振り分けられてここにくるので `wss` ではなく `ws` のみ
+
+### storybook とは?
+
+- 直下に storybook ディレクトリがあるのでその話題
+- 動くスタイルガイド?
+
+### その他
+
+- `app/controllers/auth` に `devise` 関連
+- `User` と `Account` が別にある
+- `app/controllers/api` に API 関連
+
+### `package.json`
+
+- `chai` はいろいろなものを入れる必要がある
+- rails を使う人はよく使っているらしい
+- `sinon` もテストのライブラリでスタブを使いたいからではないか
+
+### ActionCable
+
+- actioncable という node (npm) のモジュールがある
+- 開発元は https://github.com/rails/rails/blob/master/actioncable/package.json らしい
+- サーバー側とクライアント側で同じ名前なので紛らわしい
+- npm の方の actioncable はあまり情報がない
