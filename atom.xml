@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-05-07T22:22:52+09:00</updated>
+  <updated>2017-05-13T21:40:42+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,108 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[DDD.rb #11 (Rails with React) (Mastodon のコードリーディング) に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-05-10-mastodon.html"/>
+    <updated>2017-05-10T23:59:59+09:00</updated>
+    <id>http://blog.n-z.jp/blog/mastodon</id>
+    <content type="html"><![CDATA[<p><a href="https://dddrb.doorkeeper.jp/events/60099" title="DDD.rb #11 (Rails with React)">DDD.rb #11 (Rails with React)</a> という Mastodon のコードリーディングに参加したので、そのメモです。</p>
+
+<p>インストールがほとんどでコードリーディングはほとんどできなかったので、大まかな読み方の話だけで、あまり突っ込んだ話はありませんでした。</p>
+
+<!--more-->
+
+
+<h2>メモ</h2>
+
+<ul>
+<li>次回は <a href="https://dddrb.doorkeeper.jp/events/60238" title="DDD.rb #12 RDRA for DDD ワークショップ！ - DDD.rb | Doorkeeper">DDD.rb #12 RDRA for DDD ワークショップ！ - DDD.rb | Doorkeeper</a> (RDRA はラドラと読むらしい)</li>
+<li><a href="http://motokase.com/mastodon-matome/" title="マストドン評判とは！SNS初心者が安全にMastodonを楽しむ方法">マストドン評判とは！SNS初心者が安全にMastodonを楽しむ方法</a>の最初の方が参考になる</li>
+<li>ローカルで起動するには <a href="https://github.com/tootsuite/mastodon/blob/e2491680e696d2c285a798ec4c66b26d2748df66/docs/Running-Mastodon/Development-guide.md">docs/Running-Mastodon/Development-guide.md</a> のリンク先の <a href="https://github.com/tootsuite/documentation/blob/master/Running-Mastodon/Development-guide.md">Development guide</a> を参照</li>
+<li>vagrant も手軽</li>
+<li>開発環境のメールは <a href="https://github.com/ryanb/letter_opener">https://github.com/ryanb/letter_opener</a> を使っている</li>
+<li>master だと jquery-rails が消えている</li>
+<li>master だと .foreman と Procfile.dev で streaming のサーバーなども起動する</li>
+<li>今の master は cld3 でエラーになりやすい</li>
+<li>基本的に v1.3.3 のタグで試そうという話に</li>
+<li>react のルーティングは <code>./app/assets/javascripts/components/containers/mastodon.jsx</code> をみる</li>
+<li><code>&lt;Route path='getting-started' component={GettingStarted} /&gt;</code> とか</li>
+<li>翻訳が難しい話 (連合とか未収載とか)</li>
+<li>docker を使うなら docker-compose.yml を直接書き換える代わりに docker-compose.override.yml が使える</li>
+</ul>
+
+
+<h3>getElementById</h3>
+
+<ul>
+<li>HTML ソースに <code>&lt;script id='initial-state' type='application/json'&gt;</code> がある</li>
+<li><code>getElementById</code> で検索</li>
+<li><code>app/assets/javascripts/components/containers/mastodon.jsx</code> に <code>const initialState = JSON.parse(document.getElementById("initial-state").textContent);</code> とある</li>
+</ul>
+
+
+<h3>react のソースの読み方</h3>
+
+<ul>
+<li>react のページのざっくりとした見分け方は HTML ソースがやけに少ないときは react (登録ページなど devise 由来のページは react を使っていない)</li>
+<li><code>data-react-class</code> がついてるところに差し込まれている</li>
+<li>react のルーティングは <code>./app/assets/javascripts/components/containers/mastodon.jsx</code> をみる</li>
+<li><code>&lt;Route path='getting-started' component={GettingStarted} /&gt;</code> とか</li>
+<li><code>localhost:3000/web/</code> は残して <code>localhost:3000/web/getting-started</code> を開くと出てくる</li>
+<li><code>&lt;Route path='blocks' component={Blocks} /&gt;</code> は <code>import Blocks from '../features/blocks';</code> なので <code>app/assets/javascripts/components/features/blocks/index.jsx</code> にある</li>
+</ul>
+
+
+<h3>ストリーミングは?</h3>
+
+<ul>
+<li><code>app/assets/javascripts/components/api.jsx</code> にクライアントがある</li>
+<li><code>axios</code> (アクシオス) を使っている</li>
+<li><p><code>Authorization</code> で <code>Bearer</code> トークンを渡している</p></li>
+<li><p>サーバー側は <code>streaming/index.js</code> にある (トップ直下)</p></li>
+<li><code>import WebSocket from 'ws'</code></li>
+<li>nginx などで受けて rails と振り分けられてここにくるので <code>wss</code> ではなく <code>ws</code> のみ</li>
+</ul>
+
+
+<h3>storybook とは?</h3>
+
+<ul>
+<li>直下に storybook ディレクトリがあるのでその話題</li>
+<li>動くスタイルガイド?</li>
+</ul>
+
+
+<h3>その他</h3>
+
+<ul>
+<li><code>app/controllers/auth</code> に <code>devise</code> 関連</li>
+<li><code>User</code> と <code>Account</code> が別にある</li>
+<li><code>app/controllers/api</code> に API 関連</li>
+</ul>
+
+
+<h3><code>package.json</code></h3>
+
+<ul>
+<li><code>chai</code> はいろいろなものを入れる必要がある</li>
+<li>rails を使う人はよく使っているらしい</li>
+<li><code>sinon</code> もテストのライブラリでスタブを使いたいからではないか</li>
+</ul>
+
+
+<h3>ActionCable</h3>
+
+<ul>
+<li>actioncable という node (npm) のモジュールがある</li>
+<li>開発元は <a href="https://github.com/rails/rails/blob/master/actioncable/package.json">https://github.com/rails/rails/blob/master/actioncable/package.json</a> らしい</li>
+<li>サーバー側とクライアント側で同じ名前なので紛らわしい</li>
+<li>npm の方の actioncable はあまり情報がない</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ LILO&東海道らぐオフラインミーティング 2017/05/06]]></title>
@@ -3220,276 +3322,6 @@ OS の薄いラッパーなので OS の知識が必要になるかの差なの�
 <li>懇親会の募集</li>
 <li>Rails Follow-up Osaka の紹介</li>
 </ul>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[frozen_string_literalをtrueにしていっている]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-01-08-frozen-string-literal.html"/>
-    <updated>2017-01-08T17:35:03+09:00</updated>
-    <id>http://blog.n-z.jp/blog/frozen-string-literal</id>
-    <content type="html"><![CDATA[<p><a href="https://www.ruby-lang.org/ja/documentation/repository-guide/">Ruby の trunk</a> で最近は <code>frozen_string_literal</code> を <code>true</code> に変更するというコミットをしていっています。
-(<a href="https://svn.ruby-lang.org/cgi-bin/viewvc.cgi?revision=53141&amp;view=revision" title="Revision 53141">Revision 53141</a> で <code>frozen_string_literal: false</code> として magic comment 自体は追加されています。)</p>
-
-<p>その時にちょっと確認に手間取った変更があったので、そのメモです。</p>
-
-<!--more-->
-
-
-<h2>lib/fileutils.rb</h2>
-
-<p>確認に手間取ったのは <a href="https://svn.ruby-lang.org/cgi-bin/viewvc.cgi?revision=57275&amp;view=revision" title="Revision 57275">Revision 57275</a> の <code>lib/fileutils.rb</code> の変更です。</p>
-
-<h2>freeze の削除</h2>
-
-<p>まず最初は <code>.freeze</code> を削除した変更です。</p>
-
-<p><code>frozen_string_literal: true</code> にすれば <code>"文字列リテラル".freeze</code> の <code>.freeze</code> は不要になるはずと思ったのですが、実行してみてちゃんと <code>frozen?</code> が <code>true</code> になるのかと <code>--dump=insns</code> で disasm の結果をみて確認しました。</p>
-
-<p>該当部分の変更は以下の通りです。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gu">@@ -1432,9 +1432,9 @@ def join(dir, base)</span>
-</span><span class='line'>     end
-</span><span class='line'>
-</span><span class='line'>     if File::ALT_SEPARATOR
-</span><span class='line'><span class="gd">-      DIRECTORY_TERM = &quot;(?=[/#{Regexp.quote(File::ALT_SEPARATOR)}]|\\z)&quot;.freeze</span>
-</span><span class='line'><span class="gi">+      DIRECTORY_TERM = &quot;(?=[/#{Regexp.quote(File::ALT_SEPARATOR)}]|\\z)&quot;</span>
-</span><span class='line'>     else
-</span><span class='line'><span class="gd">-      DIRECTORY_TERM = &quot;(?=/|\\z)&quot;.freeze</span>
-</span><span class='line'><span class="gi">+      DIRECTORY_TERM = &quot;(?=/|\\z)&quot;</span>
-</span><span class='line'>     end
-</span><span class='line'>     SYSCASE = File::FNM_SYSCASE.nonzero? ? &quot;-i&quot; : &quot;&quot;
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>文字列補間がある場合は <code>freeze</code> の呼び出しが減っていました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> cat /tmp/a.rb
-</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">true</span>
-</span><span class='line'><span class="go">ALT_SEPARATOR = &#39;\\&#39;</span>
-</span><span class='line'><span class="go">p &quot;(?=[/#{Regexp.quote(ALT_SEPARATOR)}]|\\z)&quot;.freeze.frozen?</span>
-</span><span class='line'><span class="gp">%</span> cat /tmp/b.rb
-</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">true</span>
-</span><span class='line'><span class="go">ALT_SEPARATOR = &#39;\\&#39;</span>
-</span><span class='line'><span class="go">p &quot;(?=[/#{Regexp.quote(ALT_SEPARATOR)}]|\\z)&quot;.frozen?</span>
-</span><span class='line'><span class="gp">%</span> ruby /tmp/a.rb
-</span><span class='line'><span class="go">true</span>
-</span><span class='line'><span class="gp">%</span> ruby /tmp/b.rb
-</span><span class='line'><span class="go">true</span>
-</span><span class='line'><span class="gp">%</span> diff -u &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/a.rb<span class="o">)</span> &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/b.rb<span class="o">)</span>
-</span><span class='line'><span class="go">--- /proc/self/fd/11    2017-01-08 17:43:38.532932848 +0900</span>
-</span><span class='line'><span class="go">+++ /proc/self/fd/13    2017-01-08 17:43:38.532932848 +0900</span>
-</span><span class='line'><span class="go">@@ -1,4 +1,4 @@</span>
-</span><span class='line'><span class="go">-== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/a.rb&gt;=====================================</span>
-</span><span class='line'><span class="go">+== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/b.rb&gt;=====================================</span>
-</span><span class='line'><span class="go"> 0000 trace            1                                               (   2)</span>
-</span><span class='line'><span class="go"> 0002 putobject        &quot;\\&quot;</span>
-</span><span class='line'><span class="go"> 0004 putspecialobject 3</span>
-</span><span class='line'><span class="go">@@ -17,7 +17,6 @@</span>
-</span><span class='line'><span class="go"> 0031 putobject        &quot;]|\\z)&quot;</span>
-</span><span class='line'><span class="go"> 0033 concatstrings    3</span>
-</span><span class='line'><span class="go"> 0035 freezestring     nil</span>
-</span><span class='line'><span class="go">-0037 opt_send_without_block &lt;callinfo!mid:freeze, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
-</span><span class='line'><span class="go">-0040 opt_send_without_block &lt;callinfo!mid:frozen?, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
-</span><span class='line'><span class="go">-0043 opt_send_without_block &lt;callinfo!mid:p, argc:1, FCALL|ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
-</span><span class='line'><span class="go">-0046 leave</span>
-</span><span class='line'><span class="go">+0037 opt_send_without_block &lt;callinfo!mid:frozen?, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
-</span><span class='line'><span class="go">+0040 opt_send_without_block &lt;callinfo!mid:p, argc:1, FCALL|ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
-</span><span class='line'><span class="go">+0043 leave</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>文字列補間がない場合は <code>opt_str_freeze</code> (<code>freeze</code> が再定義されていたら呼ぶ) から <code>putobject</code> (単純にスタックにプッシュするだけ) に変わっていました。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> cat /tmp/1.rb
-</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">false</span>
-</span><span class='line'><span class="go">p &#39;&#39;.freeze.frozen?</span>
-</span><span class='line'><span class="gp">%</span> cat /tmp/2.rb
-</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">true</span>
-</span><span class='line'><span class="go">p &#39;&#39;.freeze.frozen?</span>
-</span><span class='line'><span class="gp">%</span> cat /tmp/3.rb
-</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">true</span>
-</span><span class='line'><span class="go">p &#39;&#39;.frozen?</span>
-</span><span class='line'><span class="gp">%</span> ruby /tmp/1.rb
-</span><span class='line'><span class="go">true</span>
-</span><span class='line'><span class="gp">%</span> ruby /tmp/2.rb
-</span><span class='line'><span class="go">true</span>
-</span><span class='line'><span class="gp">%</span> ruby /tmp/3.rb
-</span><span class='line'><span class="go">true</span>
-</span><span class='line'><span class="gp">%</span> diff -u &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/1.rb<span class="o">)</span> &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/2.rb<span class="o">)</span>
-</span><span class='line'><span class="go">--- /proc/self/fd/11    2017-01-08 17:52:25.569282848 +0900</span>
-</span><span class='line'><span class="go">+++ /proc/self/fd/13    2017-01-08 17:52:25.569282848 +0900</span>
-</span><span class='line'><span class="go">@@ -1,4 +1,4 @@</span>
-</span><span class='line'><span class="go">-== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/1.rb&gt;=====================================</span>
-</span><span class='line'><span class="go">+== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/2.rb&gt;=====================================</span>
-</span><span class='line'><span class="go"> 0000 trace            1                                               (   2)</span>
-</span><span class='line'><span class="go"> 0002 putself</span>
-</span><span class='line'><span class="go"> 0003 opt_str_freeze   &quot;&quot;</span>
-</span><span class='line'><span class="gp">%</span> diff -u &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/1.rb<span class="o">)</span> &lt;<span class="o">(</span>ruby --dump<span class="o">=</span>insns /tmp/3.rb<span class="o">)</span>
-</span><span class='line'><span class="go">--- /proc/self/fd/11    2017-01-08 17:52:27.952090848 +0900</span>
-</span><span class='line'><span class="go">+++ /proc/self/fd/13    2017-01-08 17:52:27.952090848 +0900</span>
-</span><span class='line'><span class="go">@@ -1,7 +1,7 @@</span>
-</span><span class='line'><span class="go">-== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/1.rb&gt;=====================================</span>
-</span><span class='line'><span class="go">+== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/3.rb&gt;=====================================</span>
-</span><span class='line'><span class="go"> 0000 trace            1                                               (   2)</span>
-</span><span class='line'><span class="go"> 0002 putself</span>
-</span><span class='line'><span class="go">-0003 opt_str_freeze   &quot;&quot;</span>
-</span><span class='line'><span class="go">+0003 putobject        &quot;&quot;</span>
-</span><span class='line'><span class="go"> 0005 opt_send_without_block &lt;callinfo!mid:frozen?, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
-</span><span class='line'><span class="go"> 0008 opt_send_without_block &lt;callinfo!mid:p, argc:1, FCALL|ARGS_SIMPLE&gt;, &lt;callcache&gt;</span>
-</span><span class='line'><span class="go"> 0011 leave</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>String.new への変更</h2>
-
-<p>同じコミットの <code>compare_stream</code> の変更は一通り目視確認していた時には <code>&lt;&lt;</code> による破壊的変更ではないので見落としていて、 <code>make install</code> を実行したら引っかかったので気づいたのですが、 <code>File#read</code> にバッファとして文字列を渡していることによる破壊的変更でした。</p>
-
-<p>該当部分の変更は以下の通りです。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='diff'><span class='line'><span class="gu">@@ -735,8 +735,8 @@ def compare_file(a, b)</span>
-</span><span class='line'>   #
-</span><span class='line'>   def compare_stream(a, b)
-</span><span class='line'>     bsize = fu_stream_blksize(a, b)
-</span><span class='line'><span class="gd">-    sa = &quot;&quot;</span>
-</span><span class='line'><span class="gd">-    sb = &quot;&quot;</span>
-</span><span class='line'><span class="gi">+    sa = String.new(capacity: bsize)</span>
-</span><span class='line'><span class="gi">+    sb = String.new(capacity: bsize)</span>
-</span><span class='line'>     begin
-</span><span class='line'>       a.read(bsize, sa)
-</span><span class='line'>       b.read(bsize, sb)
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>変更候補として</p>
-
-<ul>
-<li><code>"".dup</code> にする (文字列のエンコーディングがソースエンコーディング (この場合は UTF-8) になる)</li>
-<li><code>String.new</code> にする (文字列のエンコーディングが ASCII-8BIT になる)</li>
-</ul>
-
-
-<p>がありましたが、エンコーディングはどちらでも良かったのと、
-ここではバッファサイズとして <code>bsize</code> バイトが望ましいという情報が別途存在していたので、
-ruby 2.4.0 からの新機能の <code>String.new(capacity: size)</code> を使うことにしました。</p>
-
-<p>エンコーディングの違いは以下のように確認できます。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> cat /tmp/a.rb
-</span><span class='line'><span class="gp">#</span> frozen_string_literal: <span class="nb">true</span>
-</span><span class='line'><span class="go">p &quot;&quot;.dup.frozen?</span>
-</span><span class='line'><span class="go">p &quot;&quot;.dup.encoding</span>
-</span><span class='line'><span class="go">p String.new.frozen?</span>
-</span><span class='line'><span class="go">p String.new.encoding</span>
-</span><span class='line'><span class="gp">%</span> ruby /tmp/a.rb
-</span><span class='line'><span class="go">false</span>
-</span><span class='line'><span class="gp">#</span>&lt;Encoding:UTF-8&gt;
-</span><span class='line'><span class="go">false</span>
-</span><span class='line'><span class="gp">#</span>&lt;Encoding:ASCII-8BIT&gt;
-</span></code></pre></td></tr></table></div></figure>
 
 ]]></content>
   </entry>

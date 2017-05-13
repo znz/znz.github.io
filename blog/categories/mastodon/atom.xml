@@ -4,7 +4,7 @@
   <title><![CDATA[Category: mastodon | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/mastodon/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-05-07T22:22:52+09:00</updated>
+  <updated>2017-05-13T21:40:42+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,108 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[DDD.rb #11 (Rails with React) (Mastodon のコードリーディング) に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-05-10-mastodon.html"/>
+    <updated>2017-05-10T23:59:59+09:00</updated>
+    <id>http://blog.n-z.jp/blog/mastodon</id>
+    <content type="html"><![CDATA[<p><a href="https://dddrb.doorkeeper.jp/events/60099" title="DDD.rb #11 (Rails with React)">DDD.rb #11 (Rails with React)</a> という Mastodon のコードリーディングに参加したので、そのメモです。</p>
+
+<p>インストールがほとんどでコードリーディングはほとんどできなかったので、大まかな読み方の話だけで、あまり突っ込んだ話はありませんでした。</p>
+
+<!--more-->
+
+
+<h2>メモ</h2>
+
+<ul>
+<li>次回は <a href="https://dddrb.doorkeeper.jp/events/60238" title="DDD.rb #12 RDRA for DDD ワークショップ！ - DDD.rb | Doorkeeper">DDD.rb #12 RDRA for DDD ワークショップ！ - DDD.rb | Doorkeeper</a> (RDRA はラドラと読むらしい)</li>
+<li><a href="http://motokase.com/mastodon-matome/" title="マストドン評判とは！SNS初心者が安全にMastodonを楽しむ方法">マストドン評判とは！SNS初心者が安全にMastodonを楽しむ方法</a>の最初の方が参考になる</li>
+<li>ローカルで起動するには <a href="https://github.com/tootsuite/mastodon/blob/e2491680e696d2c285a798ec4c66b26d2748df66/docs/Running-Mastodon/Development-guide.md">docs/Running-Mastodon/Development-guide.md</a> のリンク先の <a href="https://github.com/tootsuite/documentation/blob/master/Running-Mastodon/Development-guide.md">Development guide</a> を参照</li>
+<li>vagrant も手軽</li>
+<li>開発環境のメールは <a href="https://github.com/ryanb/letter_opener">https://github.com/ryanb/letter_opener</a> を使っている</li>
+<li>master だと jquery-rails が消えている</li>
+<li>master だと .foreman と Procfile.dev で streaming のサーバーなども起動する</li>
+<li>今の master は cld3 でエラーになりやすい</li>
+<li>基本的に v1.3.3 のタグで試そうという話に</li>
+<li>react のルーティングは <code>./app/assets/javascripts/components/containers/mastodon.jsx</code> をみる</li>
+<li><code>&lt;Route path='getting-started' component={GettingStarted} /&gt;</code> とか</li>
+<li>翻訳が難しい話 (連合とか未収載とか)</li>
+<li>docker を使うなら docker-compose.yml を直接書き換える代わりに docker-compose.override.yml が使える</li>
+</ul>
+
+
+<h3>getElementById</h3>
+
+<ul>
+<li>HTML ソースに <code>&lt;script id='initial-state' type='application/json'&gt;</code> がある</li>
+<li><code>getElementById</code> で検索</li>
+<li><code>app/assets/javascripts/components/containers/mastodon.jsx</code> に <code>const initialState = JSON.parse(document.getElementById("initial-state").textContent);</code> とある</li>
+</ul>
+
+
+<h3>react のソースの読み方</h3>
+
+<ul>
+<li>react のページのざっくりとした見分け方は HTML ソースがやけに少ないときは react (登録ページなど devise 由来のページは react を使っていない)</li>
+<li><code>data-react-class</code> がついてるところに差し込まれている</li>
+<li>react のルーティングは <code>./app/assets/javascripts/components/containers/mastodon.jsx</code> をみる</li>
+<li><code>&lt;Route path='getting-started' component={GettingStarted} /&gt;</code> とか</li>
+<li><code>localhost:3000/web/</code> は残して <code>localhost:3000/web/getting-started</code> を開くと出てくる</li>
+<li><code>&lt;Route path='blocks' component={Blocks} /&gt;</code> は <code>import Blocks from '../features/blocks';</code> なので <code>app/assets/javascripts/components/features/blocks/index.jsx</code> にある</li>
+</ul>
+
+
+<h3>ストリーミングは?</h3>
+
+<ul>
+<li><code>app/assets/javascripts/components/api.jsx</code> にクライアントがある</li>
+<li><code>axios</code> (アクシオス) を使っている</li>
+<li><p><code>Authorization</code> で <code>Bearer</code> トークンを渡している</p></li>
+<li><p>サーバー側は <code>streaming/index.js</code> にある (トップ直下)</p></li>
+<li><code>import WebSocket from 'ws'</code></li>
+<li>nginx などで受けて rails と振り分けられてここにくるので <code>wss</code> ではなく <code>ws</code> のみ</li>
+</ul>
+
+
+<h3>storybook とは?</h3>
+
+<ul>
+<li>直下に storybook ディレクトリがあるのでその話題</li>
+<li>動くスタイルガイド?</li>
+</ul>
+
+
+<h3>その他</h3>
+
+<ul>
+<li><code>app/controllers/auth</code> に <code>devise</code> 関連</li>
+<li><code>User</code> と <code>Account</code> が別にある</li>
+<li><code>app/controllers/api</code> に API 関連</li>
+</ul>
+
+
+<h3><code>package.json</code></h3>
+
+<ul>
+<li><code>chai</code> はいろいろなものを入れる必要がある</li>
+<li>rails を使う人はよく使っているらしい</li>
+<li><code>sinon</code> もテストのライブラリでスタブを使いたいからではないか</li>
+</ul>
+
+
+<h3>ActionCable</h3>
+
+<ul>
+<li>actioncable という node (npm) のモジュールがある</li>
+<li>開発元は <a href="https://github.com/rails/rails/blob/master/actioncable/package.json">https://github.com/rails/rails/blob/master/actioncable/package.json</a> らしい</li>
+<li>サーバー側とクライアント側で同じ名前なので紛らわしい</li>
+<li>npm の方の actioncable はあまり情報がない</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[mastodonのAPIをcurlで試してみた]]></title>
