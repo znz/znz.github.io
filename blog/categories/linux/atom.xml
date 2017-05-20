@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-05-13T21:40:42+09:00</updated>
+  <updated>2017-05-20T15:03:18+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,285 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[OpenSSH の ~/.ssh/config の見直しをした]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-05-20-openssh-config.html"/>
+    <updated>2017-05-20T14:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/openssh-config</id>
+    <content type="html"><![CDATA[<p>最新の man を参考にしながら OpenSSH の <code>~/.ssh/config</code> の設定を見直してみたので、使っている設定項目についてまとめてみました。</p>
+
+<!--more-->
+
+
+<h2>確認バージョン</h2>
+
+<p>全て確認したわけではないですが、古いのや新しいのを確認したいときはこの辺りを使いました。</p>
+
+<ul>
+<li>Debian GNU/Linux 8.7 (jessie) の OpenSSH_6.7p1 Debian-5+deb8u3, OpenSSL 1.0.1t  3 May 2016</li>
+<li>archlinux の OpenSSH_7.5p1, OpenSSL 1.1.0e  16 Feb 2017</li>
+</ul>
+
+
+<h2>参考</h2>
+
+<p><a href="https://euske.github.io/openssh-jman/ssh_config.html">https://euske.github.io/openssh-jman/ssh_config.html</a> の日本語訳や <code>man ssh_config</code> で英語のマニュアルを確認したりしました。</p>
+
+<h2>優先順位</h2>
+
+<ol>
+<li>コマンドラインオプション</li>
+<li>ユーザごとの設定ファイル <code>~/.ssh/config</code></li>
+<li>システム全体にわたる (system-wide) 設定ファイル <code>/etc/ssh/ssh_config</code></li>
+</ol>
+
+
+<p>の順番で最初に見つかった設定が使われます。</p>
+
+<p>設定ファイルは <code>Host</code> の行で区切られていて、設定ファイルの中でも前に見つかったものが優先されるので、ホストごとの設定をファイルの先頭の方に、全体的な設定を末尾の方に書くことを想定しているようです。</p>
+
+<h2>Host</h2>
+
+<p><code>Host</code> または <code>Match</code> は設定ファイルの区切りです。</p>
+
+<p>コマンドラインで指定されたホスト名にマッチするので、<code>ssh localhost</code> の時には <code>Host localhost</code> の設定が使われて <code>Host 127.0.0.1</code> や <code>Host ::1</code> の設定は使われません。</p>
+
+<h2>CheckHostIP</h2>
+
+<p>同じホスト名なのに IP アドレスが変わる可能性がある場合に <code>CheckHostIP no</code> にしておくと <code>known_hosts</code> に IP アドレスが記録されないようになります。</p>
+
+<p>DNS を工夫して LAN 内では直接、外からはルーターのポートフォワーディング経由で接続できるようにしている場合など、接続の仕方によって変わる場合や、 GitHub などのようにホスト鍵はそのままで IP アドレスが変わることがあるサービスを使っている時に使うと良いと思います。</p>
+
+<h2>Ciphers</h2>
+
+<p><a href="/blog/2014-08-11-openssh-arcfour256.html">vagrantなどのローカルへのssh接続のみarcfour256で高速化する</a>ということをしていたこともありましたが、<a href="https://srad.jp/comment/2875861">https://srad.jp/comment/2875861</a> のリンク先の <a href="http://www.openssh.com/txt/release-7.1">http://www.openssh.com/txt/release-7.1</a> に</p>
+
+<pre><code>Future deprecation notice
+=========================
+
+We plan on retiring more legacy cryptography in the next release
+including:
+
+ * Refusing all RSA keys smaller than 1024 bits (the current minimum
+   is 768 bits)
+
+ * Several ciphers will be disabled by default: blowfish-cbc,
+   cast128-cbc, all arcfour variants and the rijndael-cbc aliases
+   for AES.
+
+ * MD5-based HMAC algorithms will be disabled by default.
+
+This list reflects our current intentions, but please check the final
+release notes for OpenSSH 7.2 when it is released.
+</code></pre>
+
+<p>と書いてあって、 <a href="http://www.openssh.com/txt/release-7.2">http://www.openssh.com/txt/release-7.2</a> には</p>
+
+<pre><code>Potentially-incompatible changes
+================================
+
+This release disables a number of legacy cryptographic algorithms
+by default in ssh:
+
+ * Several ciphers blowfish-cbc, cast128-cbc, all arcfour variants
+   and the rijndael-cbc aliases for AES.
+
+ * MD5-based and truncated HMAC algorithms.
+
+These algorithms are already disabled by default in sshd.
+</code></pre>
+
+<p>となっていて arcfour 系はデフォルトでは使われないようになったようなので、 arcfour 系はもうあまり使わない方が良さそうです。</p>
+
+<p>OpenSSH_7.5p1 で <code>ssh -Q cipher</code> を確認しても残っていますが、サーバー側で無効になっていると結局使えないので、将来的には使えないものと考えて良さそうです。</p>
+
+<p>速度を気にするなら <a href="http://blog.uu59.org/2014-04-12-ssh-ciphers.html">OpenSSH 6.6p1の各cipherのスループットを計測した</a> を参考にして実際に計測するのが良さそうです。</p>
+
+<p>試した感じだと <code>chacha20-poly1305@openssh.com</code> が遅くて <code>aes*-ctr</code> 系と <code>aes*-gcm@openssh.com</code> 系はそんなに違いがない感じだったので、速度を気にする場合は</p>
+
+<pre><code>Ciphers aes128-ctr,aes192-ctr,aes256-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com
+</code></pre>
+
+<p>ぐらいでいいのではないかと思いました。(セキュリティを優先するならビット数が多い方を前に持ってくると良いと思います。)</p>
+
+<h2>ControlMaster, ControlPath, ControlPersist</h2>
+
+<p>デフォルトの <code>ControlMaster no</code> のまま、使いたい Host だけ <code>ControlMaster auto</code> を設定する方法と、末尾の <code>Host *</code> でデフォルトを <code>ControlMaster auto</code> にしてしまって不要な Host や設定していると問題が起きる Host だけ <code>ControlMaster no</code> を設定する方法があると思います。</p>
+
+<p><code>ControlPath</code> は XDG Base Directory Specification の <code>XDG_CACHE_HOME</code> を参考にして <code>$HOME/.cache</code> を使って <code>ControlPath ~/.cache/ssh,%r,%h,%p,sock</code> にしています。(区切りはどの OS でも問題が起きにくそうなのとホスト名の中の <code>.</code> と区別できるように、ということで <code>,</code> にしています。)</p>
+
+<p><code>ControlPersist</code>は OpenSSH 5.6 で、存在を知った当時はまだ対応していない OS の方が多かったので、使っていませんでしたが、せっかくなので <code>ControlPersist 10</code> に設定してみました。</p>
+
+<h2>DynamicForward</h2>
+
+<p>SOCKS proxy 機能です。</p>
+
+<p>ブラウザーの接続元 IP アドレスを変えてテストしたい時に使うことがあったので、</p>
+
+<pre><code>Host hoge hoge-proxy
+HostName FQDNかIPアドレス
+# ...その他の設定...
+
+Host hoge-proxy
+DynamicForward 1088
+</code></pre>
+
+<p>のように、<code>ssh hoge-proxy</code> で有効になるように設定していることもありましたが、滅多に使わないので、コマンドラインで <code>-D 1080</code> のように明示的に指定して使うことの方が多くなりました。</p>
+
+<h2>ExitOnForwardFailure</h2>
+
+<p>ポートフォワーディングを設定しているのにポートフォワーディングされていないことの方が、ポートフォワーディングを設定している先に多重に接続できなくて困ることより多かったので、 <code>ExitOnForwardFailure yes</code> で有効にしています。</p>
+
+<h2>FingerprintHash</h2>
+
+<p>サーバー側の OpenSSH が古い時に <code>ssh-keygen -l -f /etc/ssh/ssh_host_ecdsa_key.pub</code> などの結果が md5 固定なので、クライアントの OpenSSH が新しい時に <code>ssh -o FingerprintHash=md5</code> で md5 に変更して照合しています。</p>
+
+<p>サーバー側が新しくて、クライアントが古い時に md5 の fingerprint を出すのは <code>ssh-keygen -l -E md5 -f /etc/ssh/ssh_host_ecdsa_key.pub</code> などのようです。</p>
+
+<p>おまけの情報として、簡単に fingerprint の照合をするのに、適当なエディターにコピペして検索して全体がハイライトされるのを確認するという方法があります。
+ダウンロードしたファイルのハッシュの確認にも同じ方法を使っています。</p>
+
+<h2>ForwardAgent, ForwardX11</h2>
+
+<p>セキュリティリスクがあるので、必要な時はコマンドラインで明示的に <code>-A</code> や <code>-X</code> で使うようにしています。</p>
+
+<h2>HashKnownHosts</h2>
+
+<p>不便さの方が大きい (IP アドレスも追加されているかどうか確認しにくいなど) と感じているので、 <code>HashKnownHosts no</code> で無効にしています。</p>
+
+<h2>HostKeyAlias</h2>
+
+<p>多段 SSH の時などに使っています。</p>
+
+<h2>HostName</h2>
+
+<pre><code>Host hoge hoge.example.com
+HostName hoge.example.com
+</code></pre>
+
+<p>のようにして、 FQDN の代わりに短いホスト名で接続できるようにしたり、 <code>HostName IPアドレス</code> で IP アドレスを直接指定したり、よく使っています。</p>
+
+<h2>IdentitiesOnly, IdentityFile</h2>
+
+<p><code>IdentitiesOnly yes</code> と <code>IdentityFile</code> をセットで使って特定の鍵を使うように指定できます。
+<code>IdentityFile</code> のみだと <code>ssh-agent</code> に登録されている全ての鍵を試してしまうので、普通は <code>IdentitiesOnly yes</code> とセットにして使うと思います。</p>
+
+<p>GitHub や Heroku などのように鍵でユーザーが区別されるサービスで複数ユーザーを使い分ける時には必須だと思います。</p>
+
+<h2>LocalCommand, PermitLocalCommand</h2>
+
+<p>あまり使うことはなさそうですが、不用意に出力を伴うコマンドを設定していると、内部的に ssh を使うコマンドが謎の失敗をする原因になることがあります。</p>
+
+<h2>LocalForward</h2>
+
+<p>IRC bouncer に接続するのに</p>
+
+<pre><code>LocalForward 6665 127.0.0.1:6665
+LocalForward 6666 127.0.0.1:6666
+LocalForward 6667 127.0.0.1:6667
+</code></pre>
+
+<p>という感じで使っていましたが、 TCP over TCP はあまりよくないということで、今は OpenVPN を使うようになったので、使っていません。</p>
+
+<h2>NoHostAuthenticationForLocalhost</h2>
+
+<p>仮想環境への接続で問題が起きたことがあるので <code>NoHostAuthenticationForLocalhost yes</code> にしています。</p>
+
+<h2>Port</h2>
+
+<p>ポート番号を変更している Host の設定によく使います。
+明示的に <code>Port 22</code> を書いていることもあります。</p>
+
+<h2>ProxyCommand, ProxyJump</h2>
+
+<p>gateway を経由して target に接続するのに</p>
+
+<pre><code>Host target
+HostKeyAlias target.example.com
+Hostname target.example.com
+ProxyCommand ssh gateway.example.com nc -w 330 target.example.com 22
+</code></pre>
+
+<p>のように使っていました。</p>
+
+<p>このような場合に OpenSSH 7.3 以降だと <code>ProxyJump</code> という設定が使えそうです。</p>
+
+<p>今はそういう接続が必要な Host がないので使っていません。</p>
+
+<h2>RequestTTY</h2>
+
+<p><a href="http://dokku.viewdocs.io/dokku/" title="Dokku">Dokku</a> のように常に有効にしていた方が便利な Host に <code>RequestTTY yes</code> を指定しています。</p>
+
+<p>たとえば dokku の vagrant 環境用の設定全体は以下のようにしています。</p>
+
+<pre><code> Host dokku dokku.me
+ User dokku
+ HostName 10.0.0.2
+ Port 22
+ UserKnownHostsFile /dev/null
+ StrictHostKeyChecking no
+ PasswordAuthentication no
+ #IdentityFile ~/.vagrant.d/insecure_private_key
+ IdentityFile ~/.ssh/id_rsa
+ IdentitiesOnly yes
+ LogLevel FATAL
+ RequestTTY yes
+</code></pre>
+
+<h2>ServerAliveInterval</h2>
+
+<p>接続が切れた時にタイムアウトしてくれる設定です。
+昔 Debian には <code>ProtocolKeepAlives</code> という設定がありましたが、今は <code>ServerAliveInterval</code> がどの OS でも使えます。
+<code>ServerAliveInterval 300</code> や <code>ServerAliveInterval 30</code> を設定しています。</p>
+
+<h2>StrictHostKeyChecking</h2>
+
+<p>vagrant 環境など、ローカルの接続でホスト鍵も変わる可能性のある Host で <code>StrictHostKeyChecking no</code> にしています。</p>
+
+<h2>Tunnel, TunnelDevice</h2>
+
+<p>ssh のプロセスに与える権限が大きくなりすぎてしまうので使いにくいと思って使っていません。
+代わりにトンネルには OpenVPN を使っています。</p>
+
+<h2>UpdateHostKeys</h2>
+
+<p>OpenSSH 6.8 以降のサーバーとクライアントだと複数のホスト鍵を受け取れるようになるようなので <code>UpdateHostKeys ask</code> にしておくと良さそうです。</p>
+
+<p>試してみると、たとえば <code>ecdsa-sha2-nistp256</code> のホスト鍵だけ <code>known_hosts</code> に登録されているホストに接続する時に</p>
+
+<pre><code>% ssh localhost
+vagrant@localhost's password:
+Learned new hostkey: RSA SHA256:+sjb9SQChXBlm/pZDyl8ORJQb4wP16eeKDqUvDli5wU
+Learned new hostkey: ED25519 SHA256:rvlZW3lRcN86oPu19ym032zhuzVLz37E88A3VX2fVHE
+Accept updated hostkeys? (yes/no): yes
+</code></pre>
+
+<p>のように RSA のホスト鍵と ED25519 のホスト鍵も <code>known_hosts</code> に登録するかどうかきいてきました。
+(試した範囲では DSA の鍵は追加されませんでした。)</p>
+
+<p>サーバー側が古いバージョンでも特に何も悪影響はなさそうなので、クライアントが OpenSSH 6.8 以降ならデフォルトで有効にしても良さそうです。
+(クライアントが古いとエラーになるので、バージョンが古いうちから書いておくことはできない。)</p>
+
+<p><code>ssh_config</code> の説明に書いてあるように <code>ControlPersist</code> を有効にしていると <code>UpdateHostKeys</code> は無効になるようです。</p>
+
+<h2>User</h2>
+
+<p><code>ssh user@host</code> で指定する代わりに <code>~/.ssh/config</code> で <code>User</code> を設定することが多いです。</p>
+
+<h2>UserKnownHostsFile</h2>
+
+<p>ローカルの仮想環境は <code>UserKnownHostsFile /dev/null</code> で事実上無効にしたり、<code>UserKnownHostsFile ~/.ssh/known_hosts.d/hoge.known_hosts</code> のように個別ファイルにして調べる行数を減らして速くしたりしています。</p>
+
+<h2>VerifyHostKeyDNS</h2>
+
+<p><a href="https://devcenter.heroku.com/articles/git-repository-ssh-fingerprints#verifying-with-dns" title="Verifying with DNS">Verifying with DNS</a> に書いてあるように <code>heroku.com</code> は SSHFP リソースレコードが設定されているようなので、 <code>VerifyHostKeyDNS yes</code> にしています。</p>
+
+<h2>まとめ</h2>
+
+<p><code>ServerAliveInterval</code> のように以前設定を見直したときにどの環境でも使えるようになっていたものもありましたが、 <code>ControlPersist</code> のように以前は使えない環境もあったけど、今はどこでも使える設定があったり、 <code>UpdateHostKeys</code> のようにまだ使えない環境もある設定もあったりするので、たまに気が向いたときに設定の見直しをするのはお勧めだと思いました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ LILO&東海道らぐオフラインミーティング 2017/05/06]]></title>
@@ -549,131 +828,6 @@ No renewals attempted, so not running post-hook
 (<code>webroot</code> プラグインを使っているので使っていませんが、
 <code>standalone</code> プラグインを使っているのなら <code>pre-hook</code> で <code>stop</code> して <code>post-hook</code> で <code>start</code> するとか、
 <code>renew-hook</code> で更新されたドメインに応じて必要な時だけ <code>postfix reload</code> するとか)</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[bash で PATH を配列に分解の続き]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-10-07-bash-path-to-array-again.html"/>
-    <updated>2016-10-07T21:39:31+09:00</updated>
-    <id>http://blog.n-z.jp/blog/bash-path-to-array-again</id>
-    <content type="html"><![CDATA[<p>zsh だと <code>PATH</code> と同期している配列変数として <code>path</code> があるのですが、
-bash にはそういうものがなくて困ったので、分解する方法を考えてみた話の続きです。
-末尾の空文字列や改行に対応しました。</p>
-
-<!--more-->
-
-
-<h2>昨日の方法の問題点</h2>
-
-<p><a href="/blog/2016-10-06-bash-path-to-array.html">昨日の記事</a> に書きましたが、末尾の空文字列の処理に問題がありました。
-また、書いていませんでしたが、改行に対応できていませんでした。</p>
-
-<h2>末尾対応</h2>
-
-<p><code>PATH= bash -c 'ls'</code> を <code>/bin</code> やそれ以外で実行してみたら
-空の <code>PATH</code> はカレントディレクトリのみと同じ意味のようなので、
-「<a href="https://twitter.com/fixedpoint_jp/status/784229832930369536">末尾の空文字列に対応するために、PATHにの最後に:を追加した文字列をreadすればいい?</a>」
-という指摘のように末尾に <code>:</code> を追加する方法で良さそうでした。</p>
-
-<p>つまり、以下のようになります。</p>
-
-<pre><code class="console">% bash -c 'PATH=/bin:; IFS=: read -r -a path &lt;&lt;&lt;"$PATH:"; declare -p path'
-declare -a path='([0]="/bin" [1]="")'
-% bash -c 'PATH=/bin; IFS=: read -r -a path &lt;&lt;&lt;"$PATH:"; declare -p path'
-declare -a path='([0]="/bin")'
-% bash -c 'PATH=; IFS=: read -r -a path &lt;&lt;&lt;"$PATH:"; declare -p path'
-declare -a path='([0]="")'
-</code></pre>
-
-<p>「PATH自体が空だった場合は振舞いが変わるけど。」という話もありましたが、
-<code>PATH</code> 探索を再現できれば良いということを考えると空の場合も問題なさそうでした。</p>
-
-<pre><code class="console">% bash -c 'PATH=; ls'
-bash: ls: No such file or directory
-% cd /bin
-% bash -c 'PATH=; ls /bin/bash'
-/bin/bash
-</code></pre>
-
-<h2>改行対応</h2>
-
-<p>いろいろ試していると改行を含む <code>PATH</code> を扱えないことに気づいたのですが、
-<code>-d $'\0'</code> (以下の例ではコマンドラインのエスケープでひどいことになっていますが) を
-指定して区切り文字を変えると here string の末尾に付く改行も入力の一部として
-扱われてしまうのでうまくいかないようでしたが、末尾の要素を <code>unset</code> で削除することで
-良い感じになりました。</p>
-
-<p><code>$'\0'</code> は NUL 文字で C 言語での終端文字なので、普通は <code>PATH</code> の途中に入らないことが期待できるので、ありえない文字として指定しています。</p>
-
-<pre><code class="console">% bash -c 'PATH=/bin; IFS=: read -d $'"'"'\0'"'"' -r -a path &lt;&lt;&lt;"$PATH:"; declare -p path'
-declare -a path='([0]="/bin" [1]="
-")'
-% bash -c 'PATH=/bin; IFS=: read -d $'"'"'\0'"'"' -r -a path &lt;&lt;&lt;"$PATH:"; unset path[-1]; declare -p path'
-declare -a path='([0]="/bin")'
-% bash -c 'PATH=/foo$'"'"'\n'"'"'bar:/bin; IFS=: read -d $'"'"'\0'"'"' -r -a path &lt;&lt;&lt;"$PATH:"; unset path[-1]; declare -p path'
-declare -a path='([0]="/foo
-bar" [1]="/bin")'
-</code></pre>
-
-<p>わかりやすいようにファイルにして実行すると以下のような感じです。</p>
-
-<pre><code class="console">% cat /tmp/p.bash
-PATH=/foo$'\n'bar:/bin
-IFS=: read -d $'\0' -r -a path &lt;&lt;&lt;"$PATH:"
-unset path[-1]
-declare -p path
-PATH=/foo$'\n'bar:/bin:
-IFS=: read -d $'\0' -r -a path &lt;&lt;&lt;"$PATH:"
-unset path[-1]
-declare -p path
-% bash /tmp/p.bash
-declare -a path='([0]="/foo
-bar" [1]="/bin")'
-declare -a path='([0]="/foo
-bar" [1]="/bin" [2]="")'
-</code></pre>
-
-<h2>他の処理例</h2>
-
-<p><code>/etc/group</code> くらいのデータになると awk などを使った方が良いと思いますが、
-<code>/etc/group</code> (末尾に空文字列が入ることがある) のパースも良い感じにできるようです。</p>
-
-<p>設定されていない状態でも構わなかったり、
-末尾に空文字列が入らないことがわかっている <code>/etc/passwd</code> などの場合は
-bash の組み込みコマンドだけでいけそうです。</p>
-
-<pre><code class="console">% cat /tmp/t.bash
-#!/bin/bash
-sed 's/$/:/' /etc/group | while IFS=: read -r -a group; do
-  declare -p group
-done
-% bash /tmp/t.bash
-declare -a group='([0]="root" [1]="x" [2]="0" [3]="")'
-declare -a group='([0]="daemon" [1]="x" [2]="1" [3]="")'
-declare -a group='([0]="bin" [1]="x" [2]="2" [3]="")'
-declare -a group='([0]="sys" [1]="x" [2]="3" [3]="")'
-declare -a group='([0]="adm" [1]="x" [2]="4" [3]="syslog,vagrant")'
-(略)
-declare -a group='([0]="lpadmin" [1]="x" [2]="114" [3]="vagrant")'
-declare -a group='([0]="sambashare" [1]="x" [2]="115" [3]="vagrant")'
-declare -a group='([0]="vboxsf" [1]="x" [2]="999" [3]="")'
-declare -a group='([0]="scanner" [1]="x" [2]="116" [3]="")'
-declare -a group='([0]="colord" [1]="x" [2]="117" [3]="")'
-</code></pre>
-
-<h2>まとめ</h2>
-
-<p>最終的には</p>
-
-<pre><code class="bash">IFS=: read -d $'\0' -r -a path &lt;&lt;&lt;"$PATH:"
-unset path[-1]
-</code></pre>
-
-<p>で <code>PATH</code> を配列に変換できることがわかりました。</p>
-
-<p>入力データに改行がないとわかっているなら <code>-d $'\0'</code> などは省略できるので、
-入力データの性質に応じて適度に手を抜きつつ処理をするのが良いのではないでしょうか。</p>
 ]]></content>
   </entry>
   
