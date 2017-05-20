@@ -13,6 +13,10 @@ categories: linux ssh vagrant
 
 <!--more-->
 
+## 2017-05-20 追記
+
+[OpenSSH の ~/.ssh/config の見直しをした](/blog/2017-05-20-openssh-config.html)話で書いたように、今後は arcfour 系は使えなくなるようなので、デフォルトのままか `chacha20-poly1305@openssh.com` を外して `aes*-ctr` 系を使う方が良さそうです。
+
 ## 確認バージョン
 
 - Mac OS X 10.9.4

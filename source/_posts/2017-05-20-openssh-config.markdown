@@ -94,7 +94,7 @@ OpenSSH_7.5p1 で `ssh -Q cipher` を確認しても残っていますが、サ�
 
     Ciphers aes128-ctr,aes192-ctr,aes256-ctr,aes128-gcm@openssh.com,aes256-gcm@openssh.com
 
-ぐらいでいいのではないかと思いました。
+ぐらいでいいのではないかと思いました。(セキュリティを優先するならビット数が多い方を前に持ってくると良いと思います。)
 
 ## ControlMaster, ControlPath, ControlPersist
 
