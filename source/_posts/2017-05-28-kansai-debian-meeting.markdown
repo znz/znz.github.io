@@ -34,6 +34,8 @@ ruby の svn のコミットに必要という話は https://bugs.ruby-lang.org/
 ## GnuPG にまつわるアレコレ - GnuPG2 とか Keybase とか Yubikey とか
 
 - key id は昔は 8 文字だったけど conflict が作れるという話になって、今は 16 文字 (以上?) が普通らしい
+- (勉強会中に聞きそびれてしまったけど、GPG の key id が fingerprint の末尾っていうのは、みんなどうやって知るんだろう?)
+- (自分は昔の key sign party で fingerprint しか書いてないけど、どうやって fetch するの? と聞いたときに教えてもらったけど。)
 - GnuPG とは?
 - OpenPGP: RFC になっている
 - 暗号化によって盗聴を防ぐ (機密性)

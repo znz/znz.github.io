@@ -31,7 +31,7 @@ categories: event
 ## スライドなど
 
 - 今回のメインのスライドは (まだ?) 公開されていないっぽい? (https://slide.rabbit-shocker.org/ にはなかった)
-- Arrow の概要については [RubyもApache Arrowでデータ処理言語の仲間入り](https://slide.rabbit-shocker.org/authors/kou/data-science-rb/) を使って説明
+- Arrow については [RubyもApache Arrowでデータ処理言語の仲間入り](https://slide.rabbit-shocker.org/authors/kou/data-science-rb/) を使って説明 (Apache Arrow とは何なのかがわかるので、一読をオススメします。)
 - 今回は Apache Arrow がメインなので Ruby 関連のところは飛ばしていた。
 - 以下の関連資料の URL は `#osaka_arrow` でツイートしてから飛ばしつつ説明していました。
 - [Next-generation Python Big Data Tools, powered by Apache Arrow](https://www.slideshare.net/wesm/nextgeneration-python-big-data-tools-powered-by-apache-arrow)
@@ -76,3 +76,8 @@ categories: event
 - fluentd で message pack をパースしてルーティングの情報だけ読んでまた message pack にシリアライズして、だと読んでない部分のパースとシリアライズが無駄なので、そこを arrow で置き換えると改善できないかなあという話
 - Red Data Tools の名前の由来: Ruby に限定したくなかったので redmine などで使われている red と PyData などの Data を組み合わせて、 red data だけだと絶滅危惧種などの意味とぶつかるので、何が良いか悩んで最終的に tools をつけた。
 - データベースとの絡み
+
+## まとめ
+
+基本的には開発者としての参加をしやすくするための勉強会でした。
+Apache Arrow 自体でデータ分析ができるようになるわけではなく、ツールを作るための共通基盤という感じでした。
