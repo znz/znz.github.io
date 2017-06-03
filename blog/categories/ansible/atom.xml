@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ansible | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ansible/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-05-28T23:31:32+09:00</updated>
+  <updated>2017-06-03T23:55:57+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,123 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ansible で role を新規作成して ansible galaxy で公開して更新した]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-06-03-ansible-galaxy-new-role.html"/>
+    <updated>2017-06-03T23:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ansible-galaxy-new-role</id>
+    <content type="html"><![CDATA[<p>ansible で role を新規作成して ansible galaxy で公開して更新するときにやっているいつもの手順を紹介します。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>ansible 2.3.0.0</li>
+</ul>
+
+
+<h2>ansible-galaxy init</h2>
+
+<p><code>ansible-galaxy init</code> でファイルを作成します。</p>
+
+<pre><code>% ansible-galaxy init ansible-role-unattended-upgrades
+- ansible-role-unattended-upgrades was created successfully
+% cd ansible-role-unattended-upgrades
+% find . -type f | sort
+./README.md
+./defaults/main.yml
+./handlers/main.yml
+./meta/main.yml
+./tasks/main.yml
+./tests/inventory
+./tests/test.yml
+./vars/main.yml
+</code></pre>
+
+<p><code>tests</code> は使い方がよくわからないのですが、そのままにしています。</p>
+
+<h2>LICENSE 作成</h2>
+
+<p>すでに作成済みの role から The MIT License (MIT) のファイルをコピーしてきました。
+新規の場合は github に push した後にブラウザーから作成するのが簡単だと思います。</p>
+
+<h2>README 更新</h2>
+
+<p>ここで自分の他の role を参考に書き換えました。</p>
+
+<h2>vars 削除</h2>
+
+<p>上書きしやすいように、 <code>defaults/main.yml</code> しか使っていないので <code>vars/main.yml</code> は削除しました。</p>
+
+<pre><code>% rm -r vars
+</code></pre>
+
+<h2>中身作成</h2>
+
+<p><code>tasks</code>, <code>defaults</code>, <code>handlers</code>, <code>files</code>, <code>templates</code> などのディレクトリを使って作成します。</p>
+
+<h2>meta/main.yml 更新</h2>
+
+<p><code>meta/main.yml</code> を更新します。
+<code>galaxy_tags</code> は <a href="https://galaxy.ansible.com/">https://galaxy.ansible.com/</a> の browse roles を参考にして適当に選んでいます。</p>
+
+<h2>examples</h2>
+
+<p>テスト用に vagrant で serverspec を動かせるように <code>examples</code> を入れています。
+どうするのが良いのかわかっていないのですが、とりあえず全くテストしないよりはましなので、こういう方法をとっています。</p>
+
+<p><code>debian/wheezy64</code> の box は synced folder が rsync なのでシンボリックリンクのループでエラーになってしまうので、 <code>vagrant up wheezy64</code>, <code>vagrant provision wheezy64</code>, <code>rake spec:wheezy64</code> のように provision を別途実行しないといけないのが不便なのですが、 <a href="https://atlas.hashicorp.com/debian/">https://atlas.hashicorp.com/debian/</a> には VirtualBox Guest Addition が入った box が <code>debian/contrib-jessie64</code> しかないので、今のところ wheezy と stretch ではどうしようもなさそうです。</p>
+
+<p>テストに使った VM はディスクの無駄なので、こまめに vagrant destroy しています。</p>
+
+<h2>git push</h2>
+
+<p><code>basename $(pwd) | pbcopy</code> した名前で github に repository を作成します。
+タグもうっておきます。</p>
+
+<pre><code>git remote add origin git@github.com:znz/ansible-role-unattended-upgrades.git
+git push -u origin master
+git tag v1.0.0
+git push --tags
+</code></pre>
+
+<h2>ansible galaxy に反映</h2>
+
+<p>github 連携でログインして、 my roles を開きます。</p>
+
+<p>Search Roles の入力欄の右にあるボタンをクリックして refresh して github の新しい repository を表示させます。
+(たぶん <code>meta/main.yml</code> をチェックして一覧に出すかどうか決めているのだと思います。)</p>
+
+<p>追加した role を有効にします。
+Role Settings を開くとわかるのですが、なぜか Role Name は自動的に <code>ansible-role-</code> がとれて <code>unattended-upgrades</code> になっています。</p>
+
+<h2>role の更新</h2>
+
+<p>role を更新したら <a href="http://semver.org/lang/ja/">セマンティック バージョニング</a> にそってバージョン番号をあげて、タグをうって push しておきます。</p>
+
+<p>my roles のページで該当する role の行の一番右にある Import Role をクリックすると新しいタグが反映されます。
+(role 個別ページには該当する操作はなさそうです。)</p>
+
+<h2>まとめ</h2>
+
+<p>ansible で新規 role を作成して、 github と ansible galaxy で公開して更新しているときにやっている手順を紹介しました。</p>
+
+<p>昔は ansible-galaxy で role を取ってくるのに ansible galaxy への登録が必須だったので登録していたのですが、最近は他の人が role を作るときに参考になるかもと思って登録しています。
+あまり汎用性のない自分用の role の場合は github だけに登録して YAML ファイルで</p>
+
+<pre><code>- src: https://github.com/znz/ansible-role-nadoka
+  version: master
+  name: znz.nadoka
+</code></pre>
+
+<p>のように指定して使っていたり (この場合でも meta/main.yml は必要)、 playbook 用の repository の role 以下にそのまま入れていたり (この場合は meta/main.yml は不要) します。</p>
+
+<p>複数 role を登録していて、こういうフローで作業をしている人もいるということで、参考になれば幸いです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ansible-galaxy用のroleにversionを付ける]]></title>
@@ -343,237 +460,54 @@ github 連携でアカウントを登録しました。</p>
 
 <pre><code>```種類 ファイル名
 コードブロック
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-<span class='line-number'>51</span>
-<span class='line-number'>52</span>
-<span class='line-number'>53</span>
-<span class='line-number'>54</span>
-<span class='line-number'>55</span>
-<span class='line-number'>56</span>
-<span class='line-number'>57</span>
-<span class='line-number'>58</span>
-<span class='line-number'>59</span>
-<span class='line-number'>60</span>
-<span class='line-number'>61</span>
-<span class='line-number'>62</span>
-<span class='line-number'>63</span>
-<span class='line-number'>64</span>
-<span class='line-number'>65</span>
-<span class='line-number'>66</span>
-<span class='line-number'>67</span>
-<span class='line-number'>68</span>
-<span class='line-number'>69</span>
-<span class='line-number'>70</span>
-<span class='line-number'>71</span>
-<span class='line-number'>72</span>
-<span class='line-number'>73</span>
-<span class='line-number'>74</span>
-<span class='line-number'>75</span>
-<span class='line-number'>76</span>
-<span class='line-number'>77</span>
-<span class='line-number'>78</span>
-<span class='line-number'>79</span>
-<span class='line-number'>80</span>
-<span class='line-number'>81</span>
-<span class='line-number'>82</span>
-<span class='line-number'>83</span>
-<span class='line-number'>84</span>
-<span class='line-number'>85</span>
-<span class='line-number'>86</span>
-<span class='line-number'>87</span>
-<span class='line-number'>88</span>
-<span class='line-number'>89</span>
-<span class='line-number'>90</span>
-<span class='line-number'>91</span>
-<span class='line-number'>92</span>
-<span class='line-number'>93</span>
-<span class='line-number'>94</span>
-<span class='line-number'>95</span>
-<span class='line-number'>96</span>
-<span class='line-number'>97</span>
-<span class='line-number'>98</span>
-<span class='line-number'>99</span>
-<span class='line-number'>100</span>
-<span class='line-number'>101</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>&lt;/code&gt;&lt;/pre&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;の外側を
-</span><span class='line'>&lt;code&gt;{% raw %}&lt;/code&gt; と &lt;code&gt;{% endraw %}&lt;/code&gt;
-</span><span class='line'>でくくればうまくいきました。&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;h2&gt;文中の  のエスケープ&lt;/h2&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;先ほどのリンクのアンカーやこの節の見出しのような文の途中は&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;
-</span><span class='line'>    {{ &ldquo;{{&rdquo; }}
-</span><span class='line'>&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;のように書けばエスケープできました。&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;幅なしスペース (&lt;code&gt;&amp;#x200B;&lt;/code&gt;) のような幅のない文字を挟んでごまかすという手もあるかもしれません。&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;h2&gt;文中の &lt;code&gt;{%&lt;/code&gt; のエスケープ&lt;/h2&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;&lt;code&gt;{% raw %}&lt;/code&gt; と &lt;code&gt;{% endraw %}&lt;/code&gt; 自体をエスケープするのに&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;
-</span><span class='line'>    {{ &ldquo;{%&rdquo; }}
-</span><span class='line'>&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;を使って&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;
-</span><span class='line'>    &lt;code&gt;{{ "{%" }} raw %}&lt;/code&gt; と &lt;code&gt;{{ "{%" }} endraw %}&lt;/code&gt;
-</span><span class='line'>&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;のように書きました。&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;&lt;code&gt;%}&lt;/code&gt; まで &lt;code&gt;""&lt;/code&gt; の中に入れようとして&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;
-</span><span class='line'>    &lt;code&gt;{{ "{% raw %}" }}&lt;/code&gt;
-</span><span class='line'>&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;と書くと&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;
-</span><span class='line'>    Liquid Exception: Variable &lsquo;{{ &ldquo;{% raw %}&rsquo; was not properly terminated with regexp: /}}/
-</span><span class='line'>&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;というエラーになってうまくいきませんでした。&lt;/p&gt;
-</span><span class='line'>]]&gt;&lt;/content&gt;
-</span><span class='line'>  &lt;/entry&gt;
-</span><span class='line'>  
-</span><span class='line'>  &lt;entry&gt;
-</span><span class='line'>    &lt;title type="html"&gt;&lt;![CDATA[ansible で sources.list を変更したときに update する]]&gt;&lt;/title&gt;
-</span><span class='line'>    &lt;link href="http://blog.n-z.jp/blog/2014-05-20-ansible-apt-update.html"/&gt;
-</span><span class='line'>    &lt;updated&gt;2014-05-20T22:58:09+09:00&lt;/updated&gt;
-</span><span class='line'>    &lt;id&gt;http://blog.n-z.jp/blog/ansible-apt-update&lt;/id&gt;
-</span><span class='line'>    &lt;content type="html"&gt;&lt;![CDATA[&lt;p&gt;ansible で sources.list を変更したときには
-</span><span class='line'>&lt;code&gt;apt-get update&lt;/code&gt; して欲しいのですが、
-</span><span class='line'>毎回 update するのは無駄なので、
-</span><span class='line'>&lt;code&gt;cache_valid_time&lt;/code&gt; も使いたいと思ったので対処しました。&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;!--more--&gt;
-</span><span class='line'>
-</span><span class='line'>
-</span><span class='line'>&lt;h2&gt;動作確認バージョン&lt;/h2&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;ul&gt;
-</span><span class='line'>&lt;li&gt;クライアント側 ansible 1.6.1&lt;/li&gt;
-</span><span class='line'>&lt;li&gt;サーバー側 Ubuntu 12.04&lt;/li&gt;
-</span><span class='line'>&lt;/ul&gt;
-</span><span class='line'>
-</span><span class='line'>
-</span><span class='line'>&lt;h2&gt;やり方&lt;/h2&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;&lt;code&gt;register&lt;/code&gt; で &lt;code&gt;template&lt;/code&gt; モジュールの実行結果を受けて、
-</span><span class='line'>&lt;code&gt;changed&lt;/code&gt; の場合は必ず update して、
-</span><span class='line'>&lt;code&gt;skipped&lt;/code&gt; の場合は &lt;code&gt;cache_valid_time&lt;/code&gt; で情報が古い場合だけ update するようにしました。&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;pre&gt;&lt;code class="yaml tasks/apt.yaml"&gt;---
-</span><span class='line'>- template: src=sources.list.{{ ansible_distribution }}.j2 dest=/etc/apt/sources.list owner=root group=root mode=0644
-</span><span class='line'>  register: apt_sources_list
-</span><span class='line'>- apt: update_cache=yes
-</span><span class='line'>  when: apt_sources_list|changed
-</span><span class='line'>- apt: update_cache=yes cache_valid_time=3600
-</span><span class='line'>  when: apt_sources_list|skipped
-</span><span class='line'>&lt;/code&gt;&lt;/pre&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;h2&gt;テンプレートの内容&lt;/h2&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;gathering facts で設定された &lt;code&gt;ansible_distribution_release&lt;/code&gt; と
-</span><span class='line'>&lt;code&gt;vars&lt;/code&gt; で別途設定した &lt;code&gt;apt_ubuntu_uri&lt;/code&gt; と &lt;code&gt;apt_ubuntu_components&lt;/code&gt; を
-</span><span class='line'>組み合わせて apt-line を作るようにしました。&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;Ubuntu をインストールした直後の sources.list では
-</span><span class='line'>components が別の行になっているものもあったのですが、
-</span><span class='line'>1 行にまとめました。&lt;/p&gt;
-</span><span class='line'>
-</span><span class='line'>&lt;p&gt;</span></code></pre></td></tr></table></div></figure>text templates/sources.list.Ubuntu.j2
-deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }} {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
-deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }} {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
-deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-updates {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
-deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-updates {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}</p>
-
-<h1>deb {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-backports {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}</h1>
-
-<h1>deb-src {{ apt_ubuntu_uri }} {{ ansible_distribution_release }}-backports {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}</h1>
-
-<p>deb <a href="http://security.ubuntu.com/ubuntu">http://security.ubuntu.com/ubuntu</a> {{ ansible_distribution_release }}-security {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
-deb-src <a href="http://security.ubuntu.com/ubuntu">http://security.ubuntu.com/ubuntu</a> {{ ansible_distribution_release }}-security {{ apt_ubuntu_components | join(&ldquo; &rdquo;) }}
 ```
+</code></pre>
+
+<p>の外側を
+<code>{% raw %}</code> と <code>{% endraw %}</code>
+でくくればうまくいきました。</p>
+
+<h2>文中の  のエスケープ</h2>
+
+<p>先ほどのリンクのアンカーやこの節の見出しのような文の途中は</p>
+
+<p>
+    {{ &ldquo;{{&rdquo; }}
 </p>
 
-<p><code>backports</code> は使っていなかったのでコメントアウトしていますが、
-<code>deb-src</code> も使わないのならコメントアウトしておいても良さそうです。</p>
+<p>のように書けばエスケープできました。</p>
 
-<h2><code>vars</code> の内容</h2>
+<p>幅なしスペース (<code>&amp;#x200B;</code>) のような幅のない文字を挟んでごまかすという手もあるかもしれません。</p>
 
-<p>例として jaist ミラーを使うようにしました。</p>
+<h2>文中の <code>{%</code> のエスケープ</h2>
 
-<pre><code class="yaml vars/main.yml">---
-apt_ubuntu_uri: "http://ftp.jaist.ac.jp/pub/Linux/ubuntu/"
-apt_ubuntu_components:
-- main
-- restricted
-- universe
-- multiverse
-</code></pre>
+<p><code>{% raw %}</code> と <code>{% endraw %}</code> 自体をエスケープするのに</p>
+
+<p>
+    {{ &ldquo;{%&rdquo; }}
+</p>
+
+<p>を使って</p>
+
+<p>
+    <code>{{ "{%" }} raw %}</code> と <code>{{ "{%" }} endraw %}</code>
+</p>
+
+<p>のように書きました。</p>
+
+<p><code>%}</code> まで <code>""</code> の中に入れようとして</p>
+
+<p>
+    <code>{{ "{% raw %}" }}</code>
+</p>
+
+<p>と書くと</p>
+
+<p>
+    Liquid Exception: Variable &lsquo;{{ &ldquo;{% raw %}&rsquo; was not properly terminated with regexp: /}}/
+</p>
+
+<p>というエラーになってうまくいきませんでした。</p>
 ]]></content>
   </entry>
   
