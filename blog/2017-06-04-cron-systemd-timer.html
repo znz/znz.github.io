@@ -1,0 +1,474 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>cron(crontab)の代わりにsystemdのtimerを使う - @znz blog</title>
+  <meta name="author" content="Kazuhiro NISHIYAMA">
+
+  
+  <meta name="description" content="cron(crontab)の代わりにsystemdのtimerを使う 2017-06-04 (Sun) 2:18 pm | Comments 最近 gitlab omnibus などの環境を作っていて、GitLab CE の role でバックアップ処理を定期実行するのに crontab &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-06-04-cron-systemd-timer.html">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-43859023-1', 'n-z.jp');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">@znz blog</a></h1>
+  
+    <h2>ZnZ の memo のようなもの</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://www.google.co.jp/cse" id="cse-search-box">
+  <div>
+    <input type="hidden" name="cx" value="partner-pub-4711975605457723:5173725094" />
+    <input type="hidden" name="ie" value="UTF-8" />
+    <input type="text" name="q" size="40" />
+    <input type="submit" name="sa" value="検索" />
+  </div>
+</form>
+
+<script type="text/javascript" src="http://www.google.co.jp/coop/cse/brand?form=cse-search-box&amp;lang=ja"></script>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      
+      <!-- zenback_title_begin -->
+      
+      <h1 class="entry-title">cron(crontab)の代わりにsystemdのtimerを使う</h1>
+      
+      <!-- zenback_title_end -->
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2017-06-04T14:18:19+09:00'><span class='date'>2017-06-04 (Sun)</span> <span class='time'>2:18 pm</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+
+<!-- zenback_body_begin -->
+
+<div class="entry-content"><p>最近 <a href="https://github.com/znz/ansible-playbook-gitlab-dokku">gitlab omnibus などの環境</a>を作っていて、<a href="https://github.com/znz/ansible-role-gitlab-ce">GitLab CE の role</a> でバックアップ処理を定期実行するのに crontab ではなく systemd の timer を使ってみました。</p>
+
+<!--more-->
+
+
+<h2>利点</h2>
+
+<ul>
+<li>systemd 管理下で統一的に扱えるので、覚えれば楽</li>
+<li>ログも journald で統一されるので cron だといちいちメールが飛ぶと鬱陶しいような粒度でも簡単にログに残せる</li>
+<li>環境変数なども含めた環境が本番と同じ状態ですぐに実行を試しやすい</li>
+<li>systemd 依存の機能が使える (後述の例では After と Requires)</li>
+</ul>
+
+
+<p>などが利点に感じました。</p>
+
+<h2>欠点</h2>
+
+<ul>
+<li>情報が cron (crontab) に比べてまだ少ないので、何かあったときに調べにくい</li>
+<li>systemd に大きく依存してしまう</li>
+</ul>
+
+
+<p>などが欠点に感じました。</p>
+
+<h2>確認環境</h2>
+
+<ul>
+<li>Ubuntu 16.04.2 LTS (xenial)</li>
+<li>systemd 229-4ubuntu17</li>
+</ul>
+
+
+<h2>情報表示</h2>
+
+<ul>
+<li><code>systemctl list-timers</code> でタイマーの次回実行予定時刻、前回実行時刻などを含めて表示されます。</li>
+<li><code>systemctl status systemd-tmpfiles-clean.timer</code> でタイマーの情報、<code>systemctl status systemd-tmpfiles-clean.service</code> で実行されるサービスの情報が表示されます。</li>
+<li><code>journalctl -u systemd-tmpfiles-clean.timer</code> や <code>journalctl -u systemd-tmpfiles-clean.service</code> でログが表示されます。 <code>systemd-journal</code> グループに入っていない場合は <code>sudo</code> が必要かもしれません。 <code>systemd-journal</code> に入っていれば <code>systemctl status</code> でも最近のログが表示されます。</li>
+<li>Type=oneshot (後述) の場合、ログの Starting が実行開始時刻で Started が実行終了時刻になるようです。</li>
+</ul>
+
+
+<h2>設定ファイルの場所</h2>
+
+<p><code>systemctl status</code> で <code>Loaded: loaded (/lib/systemd/system/systemd-tmpfiles-clean.timer; static; vendor preset: enabled)</code> のようにパスが出るので、システムのものは <code>/lib/systemd/system/</code> にあることがわかります。</p>
+
+<p>タイマーではありませんが、 gitlab-ce では <code>/usr/lib/systemd/system/gitlab-runsvdir.service</code> に service が入っていたので、 <code>/usr/lib/systemd/system/</code> も参照されるようです。</p>
+
+<p>自分で作成する場合は systemd の流儀に従って <code>/etc/systemd/system/</code> に作成すれば良いと思います。</p>
+
+<h2>service 作成</h2>
+
+<p><code>/etc/systemd/system/gitlab-backup.service</code> を以下の内容で作成しました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>[Unit]
+</span><span class='line'>Description=Backup gitlab
+</span><span class='line'>After=gitlab-runsvdir.service
+</span><span class='line'>Requires=gitlab-runsvdir.service
+</span><span class='line'>
+</span><span class='line'>[Service]
+</span><span class='line'>Type=oneshot
+</span><span class='line'>ExecStart=/opt/gitlab/bin/gitlab-rake gitlab:backup:create CRON=1</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li>Unit の Description は適当にわかりやすい説明を書けば良いと思います。</li>
+<li>Service の Type は cron 代わりに使う場合は oneshot にするのが普通のようです。</li>
+<li>ExecStart に crontab で書いていたようにコマンドを書きます。 crontab と同じように、複雑な場合は無理にここに書こうとせずに別途シェルスクリプトなどを作成して実行する方が良さそうです。</li>
+<li>After と Requires はバックアップ処理を実行するのに postgresql などが実行されている必要がありそうだったので書きました。このあたりが必要かどうかは用途によると思います。</li>
+</ul>
+
+
+<h2>timer 作成</h2>
+
+<p><code>/etc/systemd/system/gitlab-backup.timer</code> は以下の内容で作成しました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>[Unit]
+</span><span class='line'>Description=Backup gitlab
+</span><span class='line'>
+</span><span class='line'>[Timer]
+</span><span class='line'>OnCalendar=*-*-* 2,14:00
+</span><span class='line'>Persistent=true
+</span><span class='line'>
+</span><span class='line'>[Install]
+</span><span class='line'>WantedBy=timers.target</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li>Unit の Description は適当にわかりやすい説明を書けば良いと思います。</li>
+<li>OnCalendar で毎日 2:00 と 14:00 に実行するように設定しています。ローカルタイムでの指定になります。詳細は systemd のドキュメントを参照してください。</li>
+<li>Persistent=true は<a href="https://wiki.archlinuxjp.org/index.php/Systemd/%E3%82%BF%E3%82%A4%E3%83%9E%E3%83%BC" title="systemd/タイマー - ArchWiki">systemd/タイマー - ArchWiki</a>によると「システムの電源が切られていたなどの理由で、最後の起動時間を過ぎていた場合、すぐに実行されます」ということのようで、 anacron 的な動作が期待できるかと思って指定しています。</li>
+<li>Install の WantedBy=timers は <code>systemctl enable</code> や <code>systemctl disable</code> ができるようにするための定型句のようです。</li>
+</ul>
+
+
+<h2>設定反映</h2>
+
+<p><code>sudo systemctl daemon-reload</code> で反映させます。
+新規作成時などは必要ないかもしれませんが、実行しておくと確実です。</p>
+
+<h2>有効化</h2>
+
+<p><code>sudo systemctl enable gitlab-backup.timer</code> で <code>/etc/systemd/system/timers.target.wants/gitlab-backup.timer</code> に <code>/etc/systemd/system/gitlab-backup.timer</code> へのシンボリックリンクが作成されて有効になります。</p>
+
+<h2>無効化</h2>
+
+<p><code>sudo systemctl disable gitlab-backup.timer</code> で無効に戻せます。
+timer を消したくなったときには disable してから timer ファイル (と service ファイル) を削除すると良いと思います。
+(ファイル削除後は <code>sudo systemctl daemon-reload</code> もすると良いかもしれません。)</p>
+
+<h2>テスト実行</h2>
+
+<p><code>sudo systemctl start gitlab-backup.service</code> でテスト実行できます。</p>
+
+<h2>実行時間を散らす</h2>
+
+<p>Timer セクションに RandomizedDelaySec を設定するとランダムスリープをいれて実行時間をばらけさせることができます。
+<code>certbot.timer</code> などで使われています。</p>
+
+<p>試しに <code>RandomizedDelaySec=10min</code> といれてみると、これを使ったときには設定が反映されたタイミングや前回の実行終了後などの次の実行が決まった段階でランダムスリープの時間が決まるようで、 <code>journalctl -u gitlab-misc-backup.timer</code> で <code>gitlab-misc-backup.timer: Adding 6min 33.234976s random time.</code> と出て、 <code>systemctl list-timers</code> の NEXT も遅延後の時刻になっていて、実行された時のログの Starting もその時刻以降 (AccuracySec がデフォルト 1min なので NEXT に出ていた時刻よりちょっと遅かった) になっていました。</p>
+
+<h2>atd</h2>
+
+<p>crond の crontab の代わりは service ファイルと timer ファイルを作成して反映させて有効にして、という操作が必要でした。</p>
+
+<p>atd の at の代わりとしては systemd-run というコマンドがあるようです。
+試しに使ったことしかないので、紹介だけに留めておきます。</p>
+
+<h2>まとめ</h2>
+
+<p>設定ファイルが複数必要だったり、反映するのに一手間必要だったりして、使い始めは crontab より面倒ですが、 systemd との連携が必要だったり、ログ管理をまとめたかったり、 RandomizedDelaySec のように systemd の機能を使った方がすっきりする場合などは積極的に timer を使っていくと良いのではないかと思いました。</p>
+</div>
+
+<!-- zenback_body_end -->
+
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2017-06-04T14:18:19+09:00'><span class='date'>2017-06-04 (Sun)</span> <span class='time'>2:18 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/linux/'>linux</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2017-06-03-ansible-galaxy-new-role.html" title="Previous Post: ansible で role を新規作成して ansible galaxy で公開して更新した">&laquo; ansible で role を新規作成して ansible galaxy で公開して更新した</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+<section>
+  <!-- X:S ZenBackWidget --><div id="zenback-widget-loader"></div><script type="text/javascript">!function(d,i){if(!d.getElementById(i)){var r=Math.ceil((new Date()*1)*Math.random());var j=d.createElement("script");j.id=i;j.async=true;j.src="//w.zenback.jp/v1/?base_uri=http%3A//blog.n-z.jp/&nsid=122901358100652638%3A%3A122901381991399941&rand="+r;d.body.appendChild(j);}}(document,"zenback-widget-js");</script><!-- X:E ZenBackWidget -->
+
+</section>
+
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- sidebar -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:160px;height:600px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4210402292"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+<section>
+  <h1>About Me</h1>
+  <img src="/favicon.png" style="float:right">
+  <p>
+    <a href="https://github.com/ruby/ruby/graphs/contributors">Ruby のコミッター</a>とかやってます。
+    フルスタックエンジニア(って何?)かもしれません。
+    <a href="https://www.n-z.jp/me.html">About znz</a>に主なアカウントをまとめました。
+  </p>
+<!--
+<script data-gittip-username="znz"
+        data-gittip-widget="button"
+        src="//gttp.co/v1.js"></script>
+-->
+</section>
+<script language="javascript" type="text/javascript" src="http://b.hatena.ne.jp/js/widget.js" charset="utf-8"></script>
+<script language="javascript" type="text/javascript">
+Hatena.BookmarkWidget.url   = "http://blog.n-z.jp/";
+Hatena.BookmarkWidget.title = "人気エントリー";
+Hatena.BookmarkWidget.sort  = "count";
+Hatena.BookmarkWidget.width = 0;
+Hatena.BookmarkWidget.num   = 6;
+Hatena.BookmarkWidget.theme = "default";
+Hatena.BookmarkWidget.load();
+</script>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2017-06-04-cron-systemd-timer.html">cron(crontab)の代わりにsystemdのtimerを使う</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2017-06-03-ansible-galaxy-new-role.html">ansible で role を新規作成して ansible galaxy で公開して更新した</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2017-05-28-kansai-debian-meeting.html">第 123 回関西 Debian 勉強会に参加しました</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2017-05-28-apache-arrow.html">【5/28大阪】データ分析用次世代データフォーマットApache Arrow勉強会に参加しました</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2017-05-27-kansairubykaigi2017.html">関西Ruby会議2017に参加しました #kanrk2017</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>Tag Cloud</h1>
+    <span id="tag-cloud"><a href='/blog/categories/alsa' style='font-size: 101.16504854368932%'>alsa(2)</a> <a href='/blog/categories/amagasakirb' style='font-size: 110.48543689320388%'>amagasakirb(18)</a> <a href='/blog/categories/ansible' style='font-size: 105.8252427184466%'>ansible(10)</a> <a href='/blog/categories/anyenv' style='font-size: 100.58252427184466%'>anyenv(1)</a> <a href='/blog/categories/authorization' style='font-size: 100.58252427184466%'>authorization(1)</a> <a href='/blog/categories/backup' style='font-size: 100.58252427184466%'>backup(1)</a> <a href='/blog/categories/bash' style='font-size: 101.16504854368932%'>bash(2)</a> <a href='/blog/categories/book' style='font-size: 101.16504854368932%'>book(2)</a> <a href='/blog/categories/boot2docker' style='font-size: 102.9126213592233%'>boot2docker(5)</a> <a href='/blog/categories/bootstrap' style='font-size: 100.58252427184466%'>bootstrap(1)</a> <a href='/blog/categories/bts' style='font-size: 100.58252427184466%'>bts(1)</a> <a href='/blog/categories/capistrano' style='font-size: 100.58252427184466%'>capistrano(1)</a> <a href='/blog/categories/ccollect' style='font-size: 100.58252427184466%'>ccollect(1)</a> <a href='/blog/categories/cdr' style='font-size: 101.74757281553399%'>cdr(3)</a> <a href='/blog/categories/certification' style='font-size: 100.58252427184466%'>certification(1)</a> <a href='/blog/categories/coffeescript' style='font-size: 101.16504854368932%'>coffeescript(2)</a> <a href='/blog/categories/community' style='font-size: 101.74757281553399%'>community(3)</a> <a href='/blog/categories/debian' style='font-size: 125.63106796116504%'>debian(44)</a> <a href='/blog/categories/devise' style='font-size: 103.49514563106796%'>devise(6)</a> <a href='/blog/categories/dkms' style='font-size: 100.58252427184466%'>dkms(1)</a> <a href='/blog/categories/docker' style='font-size: 110.48543689320388%'>docker(18)</a> <a href='/blog/categories/dokku' style='font-size: 105.24271844660194%'>dokku(9)</a> <a href='/blog/categories/doorkeeper' style='font-size: 102.33009708737865%'>doorkeeper(4)</a> <a href='/blog/categories/drb' style='font-size: 100.58252427184466%'>drb(1)</a> <a href='/blog/categories/elscreen' style='font-size: 100.58252427184466%'>elscreen(1)</a> <a href='/blog/categories/emacs' style='font-size: 106.40776699029126%'>emacs(11)</a> <a href='/blog/categories/event' style='font-size: 158.83495145631068%'>event(101)</a> <a href='/blog/categories/fluentd' style='font-size: 100.58252427184466%'>fluentd(1)</a> <a href='/blog/categories/gem' style='font-size: 102.33009708737865%'>gem(4)</a> <a href='/blog/categories/ghq' style='font-size: 101.16504854368932%'>ghq(2)</a> <a href='/blog/categories/git' style='font-size: 102.9126213592233%'>git(5)</a> <a href='/blog/categories/github' style='font-size: 104.07766990291262%'>github(7)</a> <a href='/blog/categories/go' style='font-size: 100.58252427184466%'>go(1)</a> <a href='/blog/categories/golang' style='font-size: 101.16504854368932%'>golang(2)</a> <a href='/blog/categories/gpg' style='font-size: 102.33009708737865%'>gpg(4)</a> <a href='/blog/categories/haml' style='font-size: 100.58252427184466%'>haml(1)</a> <a href='/blog/categories/heroku' style='font-size: 101.74757281553399%'>heroku(3)</a> <a href='/blog/categories/homebrew' style='font-size: 104.66019417475728%'>homebrew(8)</a> <a href='/blog/categories/html5' style='font-size: 101.74757281553399%'>html5(3)</a> <a href='/blog/categories/ime' style='font-size: 101.74757281553399%'>ime(3)</a> <a href='/blog/categories/ipsec' style='font-size: 100.58252427184466%'>ipsec(1)</a> <a href='/blog/categories/irb' style='font-size: 100.58252427184466%'>irb(1)</a> <a href='/blog/categories/irc' style='font-size: 101.16504854368932%'>irc(2)</a> <a href='/blog/categories/isbn' style='font-size: 100.58252427184466%'>isbn(1)</a> <a href='/blog/categories/javascript' style='font-size: 102.33009708737865%'>javascript(4)</a> <a href='/blog/categories/jenkins' style='font-size: 100.58252427184466%'>jenkins(1)</a> <a href='/blog/categories/jquery' style='font-size: 100.58252427184466%'>jquery(1)</a> <a href='/blog/categories/jquery-mobile' style='font-size: 101.16504854368932%'>jquery-mobile(2)</a> <a href='/blog/categories/jquery-ui' style='font-size: 100.58252427184466%'>jquery-ui(1)</a> <a href='/blog/categories/jus' style='font-size: 101.74757281553399%'>jus(3)</a> <a href='/blog/categories/k-of' style='font-size: 102.9126213592233%'>k-of(5)</a> <a href='/blog/categories/kansaidebian' style='font-size: 102.9126213592233%'>kansaidebian(5)</a> <a href='/blog/categories/kernelvm' style='font-size: 100.58252427184466%'>kernelvm(1)</a> <a href='/blog/categories/l10n' style='font-size: 100.58252427184466%'>l10n(1)</a> <a href='/blog/categories/land-of-lisp' style='font-size: 102.33009708737865%'>land-of-lisp(4)</a> <a href='/blog/categories/letsencrypt' style='font-size: 107.57281553398059%'>letsencrypt(13)</a> <a href='/blog/categories/libokansai' style='font-size: 100.58252427184466%'>libokansai(1)</a> <a href='/blog/categories/lilo' style='font-size: 105.8252427184466%'>lilo(10)</a> <a href='/blog/categories/linux' style='font-size: 124.46601941747574%'>linux(42)</a> <a href='/blog/categories/live' style='font-size: 102.33009708737865%'>live(4)</a> <a href='/blog/categories/ll' style='font-size: 101.16504854368932%'>ll(2)</a> <a href='/blog/categories/lxc' style='font-size: 100.58252427184466%'>lxc(1)</a> <a href='/blog/categories/lxcjp' style='font-size: 101.74757281553399%'>lxcjp(3)</a> <a href='/blog/categories/mail' style='font-size: 100.58252427184466%'>mail(1)</a> <a href='/blog/categories/mailman' style='font-size: 101.16504854368932%'>mailman(2)</a> <a href='/blog/categories/mastodon' style='font-size: 101.74757281553399%'>mastodon(3)</a> <a href='/blog/categories/mavericks' style='font-size: 102.33009708737865%'>mavericks(4)</a> <a href='/blog/categories/memcached' style='font-size: 100.58252427184466%'>memcached(1)</a> <a href='/blog/categories/milter-manager' style='font-size: 100.58252427184466%'>milter-manager(1)</a> <a href='/blog/categories/mojibake' style='font-size: 100.58252427184466%'>mojibake(1)</a> <a href='/blog/categories/mysql' style='font-size: 101.16504854368932%'>mysql(2)</a> <a href='/blog/categories/nadoka' style='font-size: 100.58252427184466%'>nadoka(1)</a> <a href='/blog/categories/oauth2' style='font-size: 102.33009708737865%'>oauth2(4)</a> <a href='/blog/categories/octopress' style='font-size: 103.49514563106796%'>octopress(6)</a> <a href='/blog/categories/omniauth' style='font-size: 101.16504854368932%'>omniauth(2)</a> <a href='/blog/categories/openssl' style='font-size: 101.16504854368932%'>openssl(2)</a> <a href='/blog/categories/oss-gate' style='font-size: 101.16504854368932%'>oss-gate(2)</a> <a href='/blog/categories/osx' style='font-size: 118.05825242718447%'>osx(31)</a> <a href='/blog/categories/owncloud' style='font-size: 101.16504854368932%'>owncloud(2)</a> <a href='/blog/categories/packer' style='font-size: 100.58252427184466%'>packer(1)</a> <a href='/blog/categories/passenger' style='font-size: 100.58252427184466%'>passenger(1)</a> <a href='/blog/categories/peco' style='font-size: 100.58252427184466%'>peco(1)</a> <a href='/blog/categories/postfix' style='font-size: 101.16504854368932%'>postfix(2)</a> <a href='/blog/categories/postgresql' style='font-size: 101.74757281553399%'>postgresql(3)</a> <a href='/blog/categories/pundit' style='font-size: 100.58252427184466%'>pundit(1)</a> <a href='/blog/categories/pyenv' style='font-size: 100.58252427184466%'>pyenv(1)</a> <a href='/blog/categories/r' style='font-size: 101.74757281553399%'>r(3)</a> <a href='/blog/categories/rabbit' style='font-size: 101.16504854368932%'>rabbit(2)</a> <a href='/blog/categories/rails' style='font-size: 122.71844660194175%'>rails(39)</a> <a href='/blog/categories/ransack' style='font-size: 100.58252427184466%'>ransack(1)</a> <a href='/blog/categories/rbenv' style='font-size: 102.33009708737865%'>rbenv(4)</a> <a href='/blog/categories/react' style='font-size: 100.58252427184466%'>react(1)</a> <a href='/blog/categories/redmine' style='font-size: 101.16504854368932%'>redmine(2)</a> <a href='/blog/categories/rspec' style='font-size: 100.58252427184466%'>rspec(1)</a> <a href='/blog/categories/rsyslog' style='font-size: 100.58252427184466%'>rsyslog(1)</a> <a href='/blog/categories/rubima' style='font-size: 100.58252427184466%'>rubima(1)</a> <a href='/blog/categories/ruby' style='font-size: 160.0%'>ruby(103)</a> <a href='/blog/categories/rubykaigi' style='font-size: 101.16504854368932%'>rubykaigi(2)</a> <a href='/blog/categories/rubykansai' style='font-size: 108.15533980582524%'>rubykansai(14)</a> <a href='/blog/categories/rubymotion' style='font-size: 110.48543689320388%'>rubymotion(18)</a> <a href='/blog/categories/security' style='font-size: 103.49514563106796%'>security(6)</a> <a href='/blog/categories/shell' style='font-size: 103.49514563106796%'>shell(6)</a> <a href='/blog/categories/slim' style='font-size: 100.58252427184466%'>slim(1)</a> <a href='/blog/categories/ssh' style='font-size: 101.74757281553399%'>ssh(3)</a> <a href='/blog/categories/sylpheed' style='font-size: 100.58252427184466%'>sylpheed(1)</a> <a href='/blog/categories/td2planet' style='font-size: 100.58252427184466%'>td2planet(1)</a> <a href='/blog/categories/tty' style='font-size: 102.33009708737865%'>tty(4)</a> <a href='/blog/categories/ubuntu' style='font-size: 118.64077669902912%'>ubuntu(32)</a> <a href='/blog/categories/upstart' style='font-size: 101.16504854368932%'>upstart(2)</a> <a href='/blog/categories/usp' style='font-size: 100.58252427184466%'>usp(1)</a> <a href='/blog/categories/vagrant' style='font-size: 105.24271844660194%'>vagrant(9)</a> <a href='/blog/categories/vagrantcloud' style='font-size: 101.16504854368932%'>vagrantcloud(2)</a> <a href='/blog/categories/virtualbox' style='font-size: 101.16504854368932%'>virtualbox(2)</a> <a href='/blog/categories/weechat' style='font-size: 100.58252427184466%'>weechat(1)</a> <a href='/blog/categories/windows' style='font-size: 100.58252427184466%'>windows(1)</a> <a href='/blog/categories/yaml' style='font-size: 100.58252427184466%'>yaml(1)</a> <a href='/blog/categories/zabbix' style='font-size: 101.16504854368932%'>zabbix(2)</a> <a href='/blog/categories/zsh' style='font-size: 107.57281553398059%'>zsh(13)</a> </span>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/znz">@znz</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'znz',
+            count: 3,
+            skip_forks: false,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2017 - Kazuhiro NISHIYAMA -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'znzblog';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-06-04-cron-systemd-timer.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-06-04-cron-systemd-timer.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" src="http://b.st-hatena.com/js/bookmark_button.js" charset="utf-8" async="async"></script>
+
+
+</body>
+</html>
