@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: bootstrap - @znz blog</title>
+  <title>letsencryptの証明書の更新に失敗していた(IPv6が原因だった) - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Category: bootstrap">
+  <meta name="description" content="letsencryptの証明書の更新に失敗していた(IPv6が原因だった) 2017-06-14 (Wed) 7:36 pm | Comments Let&rsquo;s Encrypt の証明書の自動更新が失敗しているサーバーがあって、原因を調べたら AAAA レコードに設定している IPv6 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/categories/bootstrap/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-06-14-failed-to-update-letsencrypt.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,37 +76,165 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: bootstrap</h1>
+    
+      
+      <!-- zenback_title_begin -->
+      
+      <h1 class="entry-title">letsencryptの証明書の更新に失敗していた(IPv6が原因だった)</h1>
+      
+      <!-- zenback_title_end -->
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2017-06-14T19:36:08+09:00'><span class='date'>2017-06-14 (Wed)</span> <span class='time'>7:36 pm</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
 
-  
-  <h2>2014</h2>
+<!-- zenback_body_begin -->
 
-<article>
-  
-<h1><a href="/blog/2014-03-14-bootstrap-2-to-3.html">bootstrap 2.3.2 から bootstrap 3.1.1 への移行</a></h1>
-<time datetime="2014-03-14T23:00:00+09:00" pubdate><span class='month'>Mar</span> <span class='day'>14</span> <span class='year'>2014</span></time>
+<div class="entry-content"><p>Let&rsquo;s Encrypt の証明書の自動更新が失敗しているサーバーがあって、原因を調べたら AAAA レコードに設定している IPv6 アドレスが間違っていたのが原因でした。</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/bootstrap/'>bootstrap</a>, <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a></span>
-</footer>
+<!--more-->
 
 
-</article>
+<h2>環境</h2>
 
+<ul>
+<li>Debian GNU/Linux 8.8 (jessie)</li>
+<li>certbot 0.10.2-1~bpo8+1</li>
+<li>さくらインターネットの VPS で IPv6 を使用 (過去に tun6rd を使っていた)</li>
+</ul>
+
+
+<h2>現象</h2>
+
+<p>2016-03-29 に現在のサーバーに移動した時に A レコードを書き換えただけではなく、追加で tun6rd の頃の IPv6 アドレスを AAAA レコードに設定してしまいました。
+別の IPv6 アドレスを設定しているサーバーからの接続に時間がかかるという現象が発生していたものの、原因がわからず、ずっとそのままの状態でした。</p>
+
+<p>StartCom の証明書が事実上使えなくなってしまったので、 2016-12-04 に Let&rsquo;s Encrypt の証明書に変更しました。
+初回の証明書の発行のときには問題なく発行できていました。
+2017-02-03,2017-04-04 の自動更新も問題なく動いていました。</p>
+
+<p>6月の自動更新で突然失敗するようになり、数日様子を見ていましたが、失敗し続けていたので、詳しく調査することにしました。</p>
+
+<h2>調査</h2>
+
+<p>色々悩んだ結果、 <code>/var/log/letsencrypt/letsencrypt.log</code> を眺めていたところ <code>addressUsed</code> に IPv6 のアドレスが出ているのに気づいて、もしかして、と思ってさらに調べることにしました。</p>
+
+<pre><code>"validationRecord": [
+  {
+    "url": "http://XXX.example.org/.well-known/acme-challenge/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "hostname": "XXX.example.org",
+    "port": "80",
+    "addressesResolved": [
+      "XX.XXX.XXX.XX",
+      "2001:e41:XXXX:XXXX::1"
+    ],
+    "addressUsed": "2001:e41:XXXX:XXXX::1",
+    "addressesTried": []
+  }
+]
+</code></pre>
+
+<p>該当のサーバーから <code>ping6 www.kame.net</code> などは問題なく通り、該当サーバーへの <code>ping6</code> も問題なく通ることなどを確認していたところ、IPv6 アドレスが違うことに気づきました。</p>
+
+<h2>修正</h2>
+
+<p>AAAA レコードを <code>2403:3a00:XXX:XXXX:XX:XXX:XXX:XX</code> に修正して、急いでいるわけでもないので certbot の自動実行を待ってみたところ、ちゃんと更新されました。</p>
+
+<h2>関連情報</h2>
+
+<p><a href="https://letsencrypt.jp/usage/dvsni-challenge-error.html">DVSNI challenge エラーの対処法</a>に <code>urn:acme:error:connection</code> の原因の例として A レコードのことは書いてあったのに AAAA レコードのことが書かれていなくて、可能性に気づくのが遅れたので、 AAAA レコードのことも書いてあると良いのではないかと思いました。</p>
+
+<h2>まとめ</h2>
+
+<p>Let&rsquo;s Encrypt のサーバーの実装が変わったのか、IPv6 アドレスから IPv4 へのフォールバックをしなくなっていて、IPv6 アドレスの間違いに気づくことができ、接続が遅かった現象も解決しました。</p>
+
+<p>主に IPv4 を使っているとなかなか気づかないので、 AAAA レコードを設定するときは、ちゃんと確認しておかないと、後でわかりにくいトラブルの原因になると実感しました。</p>
 </div>
 
+<!-- zenback_body_end -->
+
+
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2017-06-14T19:36:08+09:00'><span class='date'>2017-06-14 (Wed)</span> <span class='time'>7:36 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/letsencrypt/'>letsencrypt</a>, <a class='category' href='/blog/categories/linux/'>linux</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2017-06-04-cron-systemd-timer.html" title="Previous Post: cron(crontab)の代わりにsystemdのtimerを使う">&laquo; cron(crontab)の代わりにsystemdのtimerを使う</a>
+      
+      
+    </p>
+  </footer>
 </article>
 
+<section>
+  <!-- X:S ZenBackWidget --><div id="zenback-widget-loader"></div><script type="text/javascript">!function(d,i){if(!d.getElementById(i)){var r=Math.ceil((new Date()*1)*Math.random());var j=d.createElement("script");j.id=i;j.async=true;j.src="//w.zenback.jp/v1/?base_uri=http%3A//blog.n-z.jp/&nsid=122901358100652638%3A%3A122901381991399941&rand="+r;d.body.appendChild(j);}}(document,"zenback-widget-js");</script><!-- X:E ZenBackWidget -->
+
+</section>
+
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -227,7 +355,10 @@ Hatena.BookmarkWidget.load();
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-06-14-failed-to-update-letsencrypt.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-06-14-failed-to-update-letsencrypt.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

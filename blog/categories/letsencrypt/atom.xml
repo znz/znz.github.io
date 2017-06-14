@@ -4,7 +4,7 @@
   <title><![CDATA[Category: letsencrypt | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/letsencrypt/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-06-04T16:02:51+09:00</updated>
+  <updated>2017-06-14T20:03:27+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,73 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[letsencryptの証明書の更新に失敗していた(IPv6が原因だった)]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-06-14-failed-to-update-letsencrypt.html"/>
+    <updated>2017-06-14T19:36:08+09:00</updated>
+    <id>http://blog.n-z.jp/blog/failed-to-update-letsencrypt</id>
+    <content type="html"><![CDATA[<p>Let&rsquo;s Encrypt の証明書の自動更新が失敗しているサーバーがあって、原因を調べたら AAAA レコードに設定している IPv6 アドレスが間違っていたのが原因でした。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>Debian GNU/Linux 8.8 (jessie)</li>
+<li>certbot 0.10.2-1~bpo8+1</li>
+<li>さくらインターネットの VPS で IPv6 を使用 (過去に tun6rd を使っていた)</li>
+</ul>
+
+
+<h2>現象</h2>
+
+<p>2016-03-29 に現在のサーバーに移動した時に A レコードを書き換えただけではなく、追加で tun6rd の頃の IPv6 アドレスを AAAA レコードに設定してしまいました。
+別の IPv6 アドレスを設定しているサーバーからの接続に時間がかかるという現象が発生していたものの、原因がわからず、ずっとそのままの状態でした。</p>
+
+<p>StartCom の証明書が事実上使えなくなってしまったので、 2016-12-04 に Let&rsquo;s Encrypt の証明書に変更しました。
+初回の証明書の発行のときには問題なく発行できていました。
+2017-02-03,2017-04-04 の自動更新も問題なく動いていました。</p>
+
+<p>6月の自動更新で突然失敗するようになり、数日様子を見ていましたが、失敗し続けていたので、詳しく調査することにしました。</p>
+
+<h2>調査</h2>
+
+<p>色々悩んだ結果、 <code>/var/log/letsencrypt/letsencrypt.log</code> を眺めていたところ <code>addressUsed</code> に IPv6 のアドレスが出ているのに気づいて、もしかして、と思ってさらに調べることにしました。</p>
+
+<pre><code>"validationRecord": [
+  {
+    "url": "http://XXX.example.org/.well-known/acme-challenge/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "hostname": "XXX.example.org",
+    "port": "80",
+    "addressesResolved": [
+      "XX.XXX.XXX.XX",
+      "2001:e41:XXXX:XXXX::1"
+    ],
+    "addressUsed": "2001:e41:XXXX:XXXX::1",
+    "addressesTried": []
+  }
+]
+</code></pre>
+
+<p>該当のサーバーから <code>ping6 www.kame.net</code> などは問題なく通り、該当サーバーへの <code>ping6</code> も問題なく通ることなどを確認していたところ、IPv6 アドレスが違うことに気づきました。</p>
+
+<h2>修正</h2>
+
+<p>AAAA レコードを <code>2403:3a00:XXX:XXXX:XX:XXX:XXX:XX</code> に修正して、急いでいるわけでもないので certbot の自動実行を待ってみたところ、ちゃんと更新されました。</p>
+
+<h2>関連情報</h2>
+
+<p><a href="https://letsencrypt.jp/usage/dvsni-challenge-error.html">DVSNI challenge エラーの対処法</a>に <code>urn:acme:error:connection</code> の原因の例として A レコードのことは書いてあったのに AAAA レコードのことが書かれていなくて、可能性に気づくのが遅れたので、 AAAA レコードのことも書いてあると良いのではないかと思いました。</p>
+
+<h2>まとめ</h2>
+
+<p>Let&rsquo;s Encrypt のサーバーの実装が変わったのか、IPv6 アドレスから IPv4 へのフォールバックをしなくなっていて、IPv6 アドレスの間違いに気づくことができ、接続が遅かった現象も解決しました。</p>
+
+<p>主に IPv4 を使っているとなかなか気づかないので、 AAAA レコードを設定するときは、ちゃんと確認しておかないと、後でわかりにくいトラブルの原因になると実感しました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[cronでcertbot renewの--force-renewalを使用してはいけない]]></title>
@@ -549,170 +616,6 @@ ID が運転免許証しかなかったので、日本人とだけにしてお�
 
 <p>Web 上で <code>post-hook</code> を使っている例の方が多いのは、
 <code>renew-hook</code> の方が後から実装されたからではないかと思います。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[jessie の certbot が 0.9.3 に上がったので設定を変更した]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-11-08-certbot-0-dot-9-3.html"/>
-    <updated>2016-11-08T23:14:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/certbot-0-dot-9-3</id>
-    <content type="html"><![CDATA[<p>jessie の certbot が 0.9.3 に上がって、
-<code>/etc/cron.d/certbot</code> よりも systemd の <code>certbot.timer</code> が優先して動くように変わったので、
-reload に post-hook を使うように変えたり、
-ログの差分メールの仕組みを変えたりしました。</p>
-
-<!--more-->
-
-
-<h2>今までの方法</h2>
-
-<p>今までは <code>/etc/cron.daily/local-letsencrypt</code> で <code>certbot renew</code> を呼び出して、ログを保存して <code>diff</code> を出力して cron からメールを送信させて、
-<code>reload</code> は更新の有無にかかわらず実行していました。</p>
-
-<pre><code class="sh">#!/bin/sh
-LOGFILE=/var/log/certbot-renew.log
-if [ -f "$LOGFILE" ]; then
-    savelog -c 90 -q "$LOGFILE"
-fi
-if ! certbot renew &gt; "$LOGFILE" 2&gt;&amp;1 ; then
-    echo Automated renewal failed:
-    cat "$LOGFILE"
-    exit 1
-fi
-if [ -f "$LOGFILE".0 ]; then
-    diff -u "$LOGFILE".0 "$LOGFILE"
-fi
-apachectl graceful
-service postfix reload
-</code></pre>
-
-<h2>certbot パッケージでインストールされた自動更新の仕組み</h2>
-
-<p><code>/etc/cron.d/certbot</code> は <code>/run/systemd/system</code> をチェックして普通は動かないようになっていました。</p>
-
-<pre><code> % cat /etc/cron.d/certbot
- # /etc/cron.d/certbot: crontab entries for the certbot package
- #
- # Upstream recommends attempting renewal twice a day
- #
- # Eventually, this will be an opportunity to validate certificates
- # haven't been revoked, etc.  Renewal will only occur if expiration
- # is within 30 days.
- SHELL=/bin/sh
- PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-
- 0 */12 * * * root test -x /usr/bin/certbot -a \! -d /run/systemd/system &amp;&amp; perl -e 'sleep int(rand(3600))' &amp;&amp; certbot -q renew
-</code></pre>
-
-<p>systemd の方では、<code>timer</code> から動かすため、有効化されていない <code>certbot.service</code> と、 service を動かすための <code>certbot.timer</code> が入っていました。</p>
-
-<pre><code>% cat /lib/systemd/system/certbot.service
-[Unit]
-Description=Certbot
-Documentation=file:///usr/share/doc/python-certbot-doc/html/index.html
-Documentation=https://letsencrypt.readthedocs.io/en/latest/
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/certbot -q renew
-PrivateTmp=true
-% cat /lib/systemd/system/certbot.timer
-[Unit]
-Description=Run certbot twice daily
-
-[Timer]
-OnCalendar=*-*-* 00,12:00:00
-RandomizedDelaySec=3600
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-</code></pre>
-
-<p><code>OnCalendar</code> で毎日 00:00:00 と 12:00:00 に動くようになっていました。
-<code>RandomizedDelaySec</code> でランダムな遅延の設定をしようとしているようですが、
-jessie の systemd は対応していないようで、
-<code>systemd[1]: [/lib/systemd/system/certbot.timer:6] Unknown lvalue 'RandomizedDelaySec' in section 'Timer'</code>
-というログが出ていました。
-(<a href="https://bugs.debian.org/843607" title="#843607 - certbot: Unknown lvalue 'RandomizedDelaySec' in section 'Timer'">#843607 - certbot: Unknown lvalue &lsquo;RandomizedDelaySec&rsquo; in section &lsquo;Timer&rsquo;</a> として報告済みです。)</p>
-
-<h2>ログの diff のメール送信方法変更</h2>
-
-<p>設定を追加するには <code>/etc/systemd/system/certbot.service.d</code> にファイルをおけば良いので、
-以下の内容の <code>/etc/systemd/system/certbot.service.d/diffmail.conf</code> を作成しました。</p>
-
-<p><code>certbot.service</code> の <code>ExecStart=/usr/bin/certbot -q renew</code> の後に実行したかったので、
-<code>ExecStopPost</code> を使ってみました。</p>
-
-<pre><code>[Service]
-ExecStopPost=/bin/bash -c "diff -u &lt;(cut -d: -f4- /var/log/letsencrypt/letsencrypt.log.1 | egrep -v '^DEBUG') &lt;(cut -d: -f4- /var/log/letsencrypt/letsencrypt.log | egrep -v '^DEBUG') | ifne mail -s 'Change certbot log' root"
-</code></pre>
-
-<p>前回のログ (<code>letsencrypt.log.1</code>) と今回のログ (<code>letsencrypt.log</code>) から、必ず差分になってしまう時刻を <code>cut</code> で削って、さらに DEBUG ログの中にも現在日時で変化する部分があったので除外するようにしてから差分をとっています。</p>
-
-<p>そして <a href="https://packages.debian.org/moreutils" title="moreutils">moreutils</a> の <code>ifne</code> を使って差分があるときだけメール送信をするようにしています。</p>
-
-<h2>post-hook への変更</h2>
-
-<p>systemd の <code>ExecStart</code> を書き換えるのは、メンテナンスしにくいとか、手動で <code>certbot renew</code> を実行したときに使われないなど、あまりよくないかと思い、
-<code>/etc/letsencrypt/cli.ini</code> で設定することにしました。</p>
-
-<p>letsencrypt の証明書を apache のみで使っているサーバーでは post-hook にリロードするコマンドを直接設定しました。</p>
-
-<p>ついでに <code>rsa-key-size</code> も 2048 から 4096 に変更するようにしました。</p>
-
-<pre><code>% cat /etc/letsencrypt/cli.ini
-rsa-key-size = 4096
-post-hook = apachectl graceful
-</code></pre>
-
-<h2>複数コマンドの post-hook</h2>
-
-<p><code>post-hook = apachectl graceful; service postfix reload &gt;/dev/null</code> のような書き方は
-<code>certbot: error: Unexpected line 1 in /etc/letsencrypt/cli.ini: post-hook = apachectl graceful; service postfix reload &gt;/dev/null</code>
-というエラーになってうまくいかなかったので、
-<code>/etc/letsencrypt/post-hook</code> に実行ファイルを作って、それを post-hook に指定することにしました。</p>
-
-<pre><code> % sudoedit /etc/letsencrypt/cli.ini
- % sudoedit /etc/letsencrypt/post-hook
- % sudo chmod +x /etc/letsencrypt/post-hook
- % cat /etc/letsencrypt/cli.ini
- rsa-key-size = 4096
- post-hook = /etc/letsencrypt/post-hook
- % cat /etc/letsencrypt/post-hook
- #!/bin/sh
- apachectl graceful
- service postfix reload &gt;/dev/null
-</code></pre>
-
-<h2>テスト実行</h2>
-
-<p><code>sudo certbot renew</code> で試しに実行してみたところ、以下のような感じで更新の必要がないときは <code>post-hook</code> は実行されないことが確認できました。</p>
-
-<pre><code>% sudo certbot renew
-Saving debug log to /var/log/letsencrypt/letsencrypt.log
-
--------------------------------------------------------------------------------
-Processing /etc/letsencrypt/renewal/www.example.org.conf
--------------------------------------------------------------------------------
-Cert not yet due for renewal
-
-The following certs are not due for renewal yet:
-  /etc/letsencrypt/live/www.example.org/fullchain.pem (skipped)
-No renewals were attempted.
-No renewals attempted, so not running post-hook
-</code></pre>
-
-<h2>まとめ</h2>
-
-<p><code>certbot renew</code> で証明書が更新されたときに実行したいことは <code>post-hook</code> に、
-証明書の更新とは関係なく毎回実行したいことは systemd の <code>ExecStopPost</code> を使えば良いことがわかりました。</p>
-
-<p>certbot の hook には <code>post-hook</code> 以外に <code>pre-hook</code> と <code>renew-hook</code> もあるので、
-用途によってはそちらも使えそうです。
-(<code>webroot</code> プラグインを使っているので使っていませんが、
-<code>standalone</code> プラグインを使っているのなら <code>pre-hook</code> で <code>stop</code> して <code>post-hook</code> で <code>start</code> するとか、
-<code>renew-hook</code> で更新されたドメインに応じて必要な時だけ <code>postfix reload</code> するとか)</p>
 ]]></content>
   </entry>
   

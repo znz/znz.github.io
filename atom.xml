@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-06-04T16:02:51+09:00</updated>
+  <updated>2017-06-14T20:03:27+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,73 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[letsencryptの証明書の更新に失敗していた(IPv6が原因だった)]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-06-14-failed-to-update-letsencrypt.html"/>
+    <updated>2017-06-14T19:36:08+09:00</updated>
+    <id>http://blog.n-z.jp/blog/failed-to-update-letsencrypt</id>
+    <content type="html"><![CDATA[<p>Let&rsquo;s Encrypt の証明書の自動更新が失敗しているサーバーがあって、原因を調べたら AAAA レコードに設定している IPv6 アドレスが間違っていたのが原因でした。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>Debian GNU/Linux 8.8 (jessie)</li>
+<li>certbot 0.10.2-1~bpo8+1</li>
+<li>さくらインターネットの VPS で IPv6 を使用 (過去に tun6rd を使っていた)</li>
+</ul>
+
+
+<h2>現象</h2>
+
+<p>2016-03-29 に現在のサーバーに移動した時に A レコードを書き換えただけではなく、追加で tun6rd の頃の IPv6 アドレスを AAAA レコードに設定してしまいました。
+別の IPv6 アドレスを設定しているサーバーからの接続に時間がかかるという現象が発生していたものの、原因がわからず、ずっとそのままの状態でした。</p>
+
+<p>StartCom の証明書が事実上使えなくなってしまったので、 2016-12-04 に Let&rsquo;s Encrypt の証明書に変更しました。
+初回の証明書の発行のときには問題なく発行できていました。
+2017-02-03,2017-04-04 の自動更新も問題なく動いていました。</p>
+
+<p>6月の自動更新で突然失敗するようになり、数日様子を見ていましたが、失敗し続けていたので、詳しく調査することにしました。</p>
+
+<h2>調査</h2>
+
+<p>色々悩んだ結果、 <code>/var/log/letsencrypt/letsencrypt.log</code> を眺めていたところ <code>addressUsed</code> に IPv6 のアドレスが出ているのに気づいて、もしかして、と思ってさらに調べることにしました。</p>
+
+<pre><code>"validationRecord": [
+  {
+    "url": "http://XXX.example.org/.well-known/acme-challenge/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "hostname": "XXX.example.org",
+    "port": "80",
+    "addressesResolved": [
+      "XX.XXX.XXX.XX",
+      "2001:e41:XXXX:XXXX::1"
+    ],
+    "addressUsed": "2001:e41:XXXX:XXXX::1",
+    "addressesTried": []
+  }
+]
+</code></pre>
+
+<p>該当のサーバーから <code>ping6 www.kame.net</code> などは問題なく通り、該当サーバーへの <code>ping6</code> も問題なく通ることなどを確認していたところ、IPv6 アドレスが違うことに気づきました。</p>
+
+<h2>修正</h2>
+
+<p>AAAA レコードを <code>2403:3a00:XXX:XXXX:XX:XXX:XXX:XX</code> に修正して、急いでいるわけでもないので certbot の自動実行を待ってみたところ、ちゃんと更新されました。</p>
+
+<h2>関連情報</h2>
+
+<p><a href="https://letsencrypt.jp/usage/dvsni-challenge-error.html">DVSNI challenge エラーの対処法</a>に <code>urn:acme:error:connection</code> の原因の例として A レコードのことは書いてあったのに AAAA レコードのことが書かれていなくて、可能性に気づくのが遅れたので、 AAAA レコードのことも書いてあると良いのではないかと思いました。</p>
+
+<h2>まとめ</h2>
+
+<p>Let&rsquo;s Encrypt のサーバーの実装が変わったのか、IPv6 アドレスから IPv4 へのフォールバックをしなくなっていて、IPv6 アドレスの間違いに気づくことができ、接続が遅かった現象も解決しました。</p>
+
+<p>主に IPv4 を使っているとなかなか気づかないので、 AAAA レコードを設定するときは、ちゃんと確認しておかないと、後でわかりにくいトラブルの原因になると実感しました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[cron(crontab)の代わりにsystemdのtimerを使う]]></title>
@@ -3289,115 +3356,6 @@ fallback 動作は期待せず、
 <p>ちなみに自分の環境では、
 <code>pinentry-mac</code> に戻してしまっていて、
 <code>pinentry-emacs</code> は使っていません。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 121 回関西 Debian 勉強会 (10 周年記念会) に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-03-19-kansai-debian-meeting.html"/>
-    <updated>2017-03-19T13:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
-    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20170319" title="第 121 回 関西 Debian 勉強会 (10 周年記念会)">第 121 回 関西 Debian 勉強会 (10 周年記念会)</a>
-に参加しました。</p>
-
-<!--more-->
-
-
-<p>以下メモです。</p>
-
-<h2>会場など</h2>
-
-<p>初めての場所だったので、迷うかと思いましたが、迷ったのは建物の入り口ぐらいで、
-駅にも案内があったので、ほとんど迷わずにたどり着けました。</p>
-
-<p>参加者は 13 名で、参加費は 150 円でした。</p>
-
-<h2>オープニングなど</h2>
-
-<ul>
-<li><a href="https://twitter.com/search?q=%23kansaidebian&amp;src=typd">ハッシュタグは #kansaidebian</a></li>
-<li>祝10周年</li>
-<li>事前課題発表</li>
-</ul>
-
-
-<p>見つかったメモ的に、第 2 回からということにしておいたけど、詳しいことは覚えていないだけで、最初から参加していた気もするし、もっと詳しく調べてみないと本当のところは不明。</p>
-
-<h2>休憩</h2>
-
-<h2>Debian Developer になるのに何をしたかと勉強会の Design</h2>
-
-<ul>
-<li>やぶきさん</li>
-<li>自己紹介</li>
-<li>どうして関西 Debian 勉強会を立ち上げたのか</li>
-<li>Debian Developer になりたかった理由</li>
-<li>他人の批判を受けることも大事</li>
-<li>巨人の肩に乗る</li>
-<li><a href="http://amzn.to/2n9ZMtB">情熱プログラマー</a>という本</li>
-<li>「いちばんのへたくそになろう」</li>
-<li>どうしたら英語でコミュニケーションできる</li>
-<li>海外の conf に参加してモチベーションを保っていた</li>
-<li>自分のやる気を保つポイントは探らないとわからない</li>
-<li>分割統治法</li>
-<li>勉強会の Design として考慮したこと</li>
-<li><a href="http://amzn.to/2mInFoM">コンサルタントの秘密</a> という本を参考にした</li>
-<li>「プレスコットのピックルス原理」「漬け水がキュウリに漬かるよりは、キュウリが漬け水に漬かる方が早い」</li>
-<li>3の法則</li>
-<li>「自分の計画を駄目にする原因が3つ考えられないようなら、思考過程の方に問題がある」</li>
-<li>規模のジレンマ</li>
-<li>人が集まる質とサイズによって、非線形的に集まりの様相は異なる。</li>
-<li>「ラズベリー・ジャムの法則」（広げようとすれば、するほど薄くなる）</li>
-<li><a href="http://amzn.to/2mIf1qo">Becoming a Technical Leader</a> (原著)</li>
-<li>日本語題: <a href="http://amzn.to/2n9TLNn">スーパーエンジニアへの道―技術リーダーシップの人間学</a></li>
-<li>ある意味、コミュニティを作っていく指針でもある。</li>
-<li>動機づけ、アイディア、組織化</li>
-<li>技術コミュニティ活動だが、技術の話をするのは当然でも、社会学的アプローチ、組織論的アプローチして、勉強会を回して見たかった。</li>
-<li>自分の立ち位置は、見晴らしがいい場所か?</li>
-<li>質疑応答</li>
-<li>本の紹介</li>
-<li><a href="http://amzn.to/2mInFoM">コンサルタントの秘密</a></li>
-<li><a href="http://amzn.to/2mWH32j">Fearless Change アジャイルに効く アイデアを組織に広めるための48のパターン</a></li>
-</ul>
-
-
-<h2>10年間の振り返り</h2>
-
-<ul>
-<li>たかやさん</li>
-<li>自己紹介</li>
-<li>担当者の悩み</li>
-<li>場所の確保</li>
-<li>定期的な場所の確保の難しさ</li>
-<li>交通の便</li>
-<li>電源やプロジェクタなどの費用</li>
-<li>Google Map で場所の一覧を作っていた</li>
-<li>講師の先生の確保 ネタが難しい</li>
-<li>自分のスキルの向上</li>
-<li>Debian って充実している</li>
-<li>仕方がないので emacs 関係のパッケージを</li>
-<li>(navi2ch, jd などは proxy を使わないと見えなくなっているらしい)</li>
-<li>今後の関わり方</li>
-<li>パッケージ初心者ネタ大歓迎です</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<h2>宴会</h2>
-
-<p>過去の開催の記録 (参加者数や発表タイトルなどの表) を見ながらの話をしながら軽食(
-<a href="https://twitter.com/murase_syuka/status/843350811375632384">https://twitter.com/murase_syuka/status/843350811375632384</a>
-<a href="https://twitter.com/rarewin/status/843355875276394497">https://twitter.com/rarewin/status/843355875276394497</a>
-)。</p>
-
-<p>もくもくしすぎな年があって、一度止まってしまうと再開するのが大変なので、とりあえず定期開催していたのは大事だったのではないかという話が印象的でした。</p>
-
-<h2>懇親会</h2>
-
-<p>主に懇親会前後の移動中に関西 Debian 勉強会で相談したかった話ができたので良かった。</p>
-
-<p>懇親会に使った店では烏龍茶はおかわり自由だったらしく、別のテーブルの人たちはそれで烏龍茶を頼みまくっていて、軽食を食べていたので全体としてもあまり食べなかったからか、安かったらしい。</p>
 ]]></content>
   </entry>
   

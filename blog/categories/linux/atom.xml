@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-06-04T16:02:51+09:00</updated>
+  <updated>2017-06-14T20:03:27+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,73 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[letsencryptの証明書の更新に失敗していた(IPv6が原因だった)]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-06-14-failed-to-update-letsencrypt.html"/>
+    <updated>2017-06-14T19:36:08+09:00</updated>
+    <id>http://blog.n-z.jp/blog/failed-to-update-letsencrypt</id>
+    <content type="html"><![CDATA[<p>Let&rsquo;s Encrypt の証明書の自動更新が失敗しているサーバーがあって、原因を調べたら AAAA レコードに設定している IPv6 アドレスが間違っていたのが原因でした。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>Debian GNU/Linux 8.8 (jessie)</li>
+<li>certbot 0.10.2-1~bpo8+1</li>
+<li>さくらインターネットの VPS で IPv6 を使用 (過去に tun6rd を使っていた)</li>
+</ul>
+
+
+<h2>現象</h2>
+
+<p>2016-03-29 に現在のサーバーに移動した時に A レコードを書き換えただけではなく、追加で tun6rd の頃の IPv6 アドレスを AAAA レコードに設定してしまいました。
+別の IPv6 アドレスを設定しているサーバーからの接続に時間がかかるという現象が発生していたものの、原因がわからず、ずっとそのままの状態でした。</p>
+
+<p>StartCom の証明書が事実上使えなくなってしまったので、 2016-12-04 に Let&rsquo;s Encrypt の証明書に変更しました。
+初回の証明書の発行のときには問題なく発行できていました。
+2017-02-03,2017-04-04 の自動更新も問題なく動いていました。</p>
+
+<p>6月の自動更新で突然失敗するようになり、数日様子を見ていましたが、失敗し続けていたので、詳しく調査することにしました。</p>
+
+<h2>調査</h2>
+
+<p>色々悩んだ結果、 <code>/var/log/letsencrypt/letsencrypt.log</code> を眺めていたところ <code>addressUsed</code> に IPv6 のアドレスが出ているのに気づいて、もしかして、と思ってさらに調べることにしました。</p>
+
+<pre><code>"validationRecord": [
+  {
+    "url": "http://XXX.example.org/.well-known/acme-challenge/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "hostname": "XXX.example.org",
+    "port": "80",
+    "addressesResolved": [
+      "XX.XXX.XXX.XX",
+      "2001:e41:XXXX:XXXX::1"
+    ],
+    "addressUsed": "2001:e41:XXXX:XXXX::1",
+    "addressesTried": []
+  }
+]
+</code></pre>
+
+<p>該当のサーバーから <code>ping6 www.kame.net</code> などは問題なく通り、該当サーバーへの <code>ping6</code> も問題なく通ることなどを確認していたところ、IPv6 アドレスが違うことに気づきました。</p>
+
+<h2>修正</h2>
+
+<p>AAAA レコードを <code>2403:3a00:XXX:XXXX:XX:XXX:XXX:XX</code> に修正して、急いでいるわけでもないので certbot の自動実行を待ってみたところ、ちゃんと更新されました。</p>
+
+<h2>関連情報</h2>
+
+<p><a href="https://letsencrypt.jp/usage/dvsni-challenge-error.html">DVSNI challenge エラーの対処法</a>に <code>urn:acme:error:connection</code> の原因の例として A レコードのことは書いてあったのに AAAA レコードのことが書かれていなくて、可能性に気づくのが遅れたので、 AAAA レコードのことも書いてあると良いのではないかと思いました。</p>
+
+<h2>まとめ</h2>
+
+<p>Let&rsquo;s Encrypt のサーバーの実装が変わったのか、IPv6 アドレスから IPv4 へのフォールバックをしなくなっていて、IPv6 アドレスの間違いに気づくことができ、接続が遅かった現象も解決しました。</p>
+
+<p>主に IPv4 を使っているとなかなか気づかないので、 AAAA レコードを設定するときは、ちゃんと確認しておかないと、後でわかりにくいトラブルの原因になると実感しました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[cron(crontab)の代わりにsystemdのtimerを使う]]></title>
@@ -741,70 +808,6 @@ Accept updated hostkeys? (yes/no): yes
 <li><a href="https://lilo.linux.or.jp/">https://lilo.linux.or.jp/</a></li>
 <li><a href="https://histudy.github.io/">姫路IT系勉強会</a></li>
 </ul>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[LILO&東海道らぐオフラインミーティング 2017/01/07]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-01-07-lilo-tokaidolug.html"/>
-    <updated>2017-01-07T13:20:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/lilo-tokaidolug</id>
-    <content type="html"><![CDATA[<p><a href="https://lilo.connpass.com/event/47841/" title="LILO&amp;東海道らぐオフラインミーティング 2017/01/07">LILO&amp;東海道らぐオフラインミーティング 2017/01/07</a> に参加しました。</p>
-
-<p>今回もアンカンファレンス形式でした。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<p>今回のメモです。</p>
-
-<ul>
-<li>本を読んでいたら電車を乗り過ごしてしまって一度梅田まで行ってしまってちょっと遅くなりました。(開始時刻の13時には間に合いました。)</li>
-<li>会場の建物は同じでも、いつもの4階と違って6階でした。</li>
-<li>ハッシュタグ: <code>#lilo_jp</code> <code>#東海道らぐ</code></li>
-<li>登録参加者数 8名</li>
-<li>自己紹介から</li>
-<li><a href="https://opensuseja.connpass.com/event/47907/" title="関西 Debian 勉強会 + openSUSE Meetup + LILO &amp; 東海道らぐLT大会">関西 Debian 勉強会 + openSUSE Meetup + LILO &amp; 東海道らぐLT大会</a></li>
-<li>ラズパイで音楽 (山内さん)</li>
-<li>サンハヤトのハイレゾオーディオDACボード AS-E404RAS</li>
-<li>Volumio</li>
-<li>Spotify</li>
-<li>AirPlay対応スピーカーにできた</li>
-<li>lilo.linux.or.jp のサーバー管理の話 (自分)</li>
-<li>unattended-upgrades の公式っぽさを確認するにはメンテナをみればいいのではという話があったので確認してみたところ、 unattended-upgrades のメンテナを確認すると apt のメンテナの一人でした。 cron-apt のメンテナは全然別の人でした。</li>
-<li>休憩</li>
-<li>LibreOffice Kaigi 2016.12 の時の資料を使っての話 (榎さん)</li>
-<li>LibreOffice Conference の話</li>
-<li>Debian を再インストールした話 (さとうさん)</li>
-<li>OSM の話 (さかのしたさん)</li>
-<li>Overpass API</li>
-<li>umap</li>
-<li>LOF の LILO 展示の復習 (まるいちさん)</li>
-<li>gPhoto2</li>
-<li>最後にまた <a href="https://opensuseja.connpass.com/event/47907/" title="関西 Debian 勉強会 + openSUSE Meetup + LILO &amp; 東海道らぐLT大会">関西 Debian 勉強会 + openSUSE Meetup + LILO &amp; 東海道らぐLT大会</a> についての案内</li>
-</ul>
-
-
-<h2>発表した内容</h2>
-
-<p>スライドはいつも通り <a href="http://slide.rabbit-shocker.org/authors/znz/lilo-20170107/">Rabbit Slide Show</a> (<a href="https://rubygems.org/gems/rabbit-slide-znz-lilo-20170107">RubyGems</a>), <a href="https://slideshare.net/znzjp/lilolinuxorjp-20171">SlideShare</a>, <a href="https://speakerdeck.com/u/znz/p/lilo-dot-linux-dot-or-dot-jp-falsehua-2017nian-1yue">Speaker Deck</a> にあげています。(ソースは <a href="https://github.com/znz/lilo-20170107">github</a> にあげています。)</p>
-
-<iframe src="https://slide.rabbit-shocker.org/authors/znz/lilo-20170107/viewer.html"
-        width="640" height="524"
-        frameborder="0"
-        marginwidth="0"
-        marginheight="0"
-        scrolling="no"
-        style="border: 1px solid #ccc; border-width: 1px 1px 0; margin-bottom: 5px"
-        allowfullscreen> </iframe>
-
-
-<div style="margin-bottom: 5px">
-  <a href="https://slide.rabbit-shocker.org/authors/znz/lilo-20170107/" title="lilo.linux.or.jp の話 (2017年1月)">lilo.linux.or.jp の話 (2017年1月)</a>
-</div>
 
 ]]></content>
   </entry>
