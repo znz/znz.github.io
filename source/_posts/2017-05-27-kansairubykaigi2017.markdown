@@ -85,6 +85,7 @@ categories: event rubykaigi ruby
 - むりょういさん: 使っているソフトウェアについて(?) (ちゃんと聞き取れなかった)
 - Firefox / Thunderbird: すでにノウハウがあった(?) (ちゃんと聞き取れなかった)
 - Apache Arrow: いけると思って推進している
+- https://slide.rabbit-shocker.org/authors/kou/kansai-rubykaigi-2017
 
 ## 休憩
 
@@ -175,6 +176,7 @@ categories: event rubykaigi ruby
 - そうです。
 - ?: ? (メモ取れず)
 - 決めるにあたって色々葛藤があったが詳細は懇親会で
+- https://www.slideshare.net/kakko1003/ruby-on-rails-2
 
 ## Rubygem開発の流儀
 
@@ -249,6 +251,7 @@ categories: event rubykaigi ruby
 - https://github.com/muryoimpl/slippr
 - https://github.com/muryoimpl/talker-signupper
 - 時間がおしているので質疑応答はなし
+- https://speakerdeck.com/muryoimpl/kansai-ruby-kaigi-2017
 
 ## Rubyistと技術記事 ～なぜ書くの？どう書くの？何が起きるの？～
 
@@ -327,6 +330,7 @@ categories: event rubykaigi ruby
 - 大枠を Rails 側の view で作って、各章の担当者が該当する部分の文言を直接編集
 - https://coderdojo.jp/kata の「2017年1月には全国で70ヶ所以上」を「2017年5月には全国で84ヶ所以上」に更新するデモ
 - https://github.com/coderdojo-japan/coderdojo.jp
+- https://speakerdeck.com/yasulab/coderdojo-wozhi-eru-rails-cms-falsehuo-yong-shi-li
 
 ## スポンサーセッション
 
@@ -412,6 +416,7 @@ Ruby開発さんのスポンサーセッションでした。
 - 手離れよく作ることを考えるようになった
 - Ruby から得たもの
 - 一番大きいのは「軸」
+- https://speakerdeck.com/masuidrive/18nian-derubykaraxue-ndakoto-guan-xi-rubyhui-yi-2017
 
 ## クロージング
 
