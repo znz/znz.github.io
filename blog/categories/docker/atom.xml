@@ -4,7 +4,7 @@
   <title><![CDATA[Category: docker | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/docker/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-06-15T23:25:15+09:00</updated>
+  <updated>2017-06-16T22:21:48+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,104 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ansibleでjsonファイルの設定を更新した]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-06-16-ansible-json.html"/>
+    <updated>2017-06-16T21:26:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ansible-json</id>
+    <content type="html"><![CDATA[<p>ansible で json ファイル (今回は <code>/etc/docker/daemon.json</code>) を更新したかったのですが、 <code>lineinfile</code> や <code>replace</code> や <code>ini_file</code> のように単独のモジュールで簡単にできるものではなかったので、少し工夫をして実現しました。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>ansible 2.3.1.0</li>
+</ul>
+
+
+<p>combine フィルター (後述) が New in version 2.0 なので、 1.x では動かないと思います。</p>
+
+<h2>実例</h2>
+
+<p><a href="https://github.com/znz/ansible-role-docker">https://github.com/znz/ansible-role-docker</a> や <a href="https://github.com/znz/ansible-playbook-gitlab-dokku/tree/master/provision/roles/docker-dns">https://github.com/znz/ansible-playbook-gitlab-dokku/tree/master/provision/roles/docker-dns</a> にあります。</p>
+
+<h2>json ファイル読み込み</h2>
+
+<p>まずは <code>command</code> モジュールで読み込んで、 <code>set_fact</code> で変数に設定しておきます。</p>
+
+<pre><code>- name: "Read daemon.json"
+  command: cat /etc/docker/daemon.json
+  register: result
+  changed_when: no
+</code></pre>
+
+<p>記事を書いていて気づいたのですが、リモートからファイルを読み込むには <code>slurp</code> モジュールというのがあるようですが、作った時点では知らなかったので、使っていません。</p>
+
+<p>base64 でエンコードされていて b64decode を通す必要があるようなので、何度も参照するなら、次の <code>set_fact</code> を組み合わせた方が良さそうなのは変わらなさそうです。</p>
+
+<h2>json から dict に変換</h2>
+
+<p>json の文字列から <a href="http://docs.ansible.com/ansible/playbooks_filters.html#filters-for-formatting-data"><code>from_json</code>フィルター</a>で変換します。</p>
+
+<p></p>
+
+<pre><code>- set_fact: docker_daemon_json="{{ result.stdout | from_json }}"
+</code></pre>
+
+<p></p>
+
+<h2>combine フィルターでマージ</h2>
+
+<p><a href="http://docs.ansible.com/ansible/playbooks_filters.html#combining-hashes-dictionaries"><code>combine</code>フィルター</a>で設定をマージして、 <code>to_json</code> フィルターで json 文字列に変換してファイルに書き出します。</p>
+
+<p>今回の用途では、ネストしたデータは考慮する必要がなく、トップレベルのキーが一致するもので置き換えられればよかったので、 <code>recursive=True</code> は指定していません。</p>
+
+<p><code>when</code> でのチェックもしておかないと、設定内容としては変わっていないのに、 json 文字列になった時にキーの順番が変わっているのか、 changed になってしまうことがあったので、 <code>when</code> で設定内容に変更がある時だけ書き込むようにしています。</p>
+
+<pre><code>- name: "Update daemon.json"
+  template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: 0400
+  when: "docker_daemon_json != docker_daemon_json|combine({'dns':dns})"
+  notify:
+  - restart docker
+</code></pre>
+
+<p>templates/daemon.json.j2:</p>
+
+<p></p>
+
+<pre><code>{{ docker_daemon_json | combine({"dns": dns}) | to_json }}
+</code></pre>
+
+<p></p>
+
+<h2>動作確認</h2>
+
+<p>全体ができた後に、</p>
+
+<ul>
+<li>ファイルがない時の動作</li>
+<li>設定が変わらない時の動作</li>
+<li>設定が変わる時の動作</li>
+</ul>
+
+
+<p>も確認しておきます。</p>
+
+<h2>docker のデーモン設定ファイル</h2>
+
+<p>docker の<a href="http://docs.docker.jp/engine/reference/commandline/dockerd.html#daemon-configuration-file">デーモン設定ファイル</a>は <code>insecure-registries</code> (<code>--insecure-registry=[]</code>) や <code>dns</code> や <code>bip</code> など dockerd のオプションで指定できるものはなんでも指定できます。</p>
+
+<p><a href="http://docs.docker.jp/engine/admin/systemd.html#custom-docker-daemon-options">docker デーモンのオプション変更</a>は systemd の docker.service の設定を変更する方法もあるようですが、ローカルの変更をローカルの独立ファイルに隔離できて、バージョンアップの影響も少なそうなので、 daemon.json を使うことにしました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[dokku 0.4.1 の新規インストールを試してみた]]></title>
@@ -717,78 +815,6 @@ Connection to 10.0.0.2 closed.
 
 <pre><code>ssh dokku config:set ruby-rails-app CURL_TIMEOUT=120
 </code></pre>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第5回 コンテナ型仮想化の情報交換会＠大阪に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-11-14-ct-study-osaka-5.html"/>
-    <updated>2014-11-14T19:00:32+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ct-study-osaka-5</id>
-    <content type="html"><![CDATA[<p><a href="http://ct-study.connpass.com/event/9068/" title="第5回 コンテナ型仮想化の情報交換会＠大阪">第5回 コンテナ型仮想化の情報交換会＠大阪</a>
-に参加しました。</p>
-
-<!--more-->
-
-
-<p>以下メモです。</p>
-
-<h2>いまさら聞けない Docker</h2>
-
-<ul>
-<li>前半はさくらインターネットの話でした。</li>
-<li>仮想環境を動かす基盤として専用サーバがまた増えているらしいというのが興味深いと思いました。</li>
-<li>後半は docker の基本についての話でした。</li>
-<li><a href="http://www.slideshare.net/kunihirotanaka1/immutable-infrastructuredockercontainerstudyosaka20141114">http://www.slideshare.net/kunihirotanaka1/immutable-infrastructuredockercontainerstudyosaka20141114</a></li>
-</ul>
-
-
-<h2>Docker Registry入門</h2>
-
-<ul>
-<li><a href="https://github.com/docker/docker-registry">https://github.com/docker/docker-registry</a> の話</li>
-<li>起動は簡単</li>
-<li>pip でインストールも可能 (公式の <a href="https://github.com/docker/docker-registry/blob/master/Dockerfile">Dockerfile</a> 参照)</li>
-<li>設定は <a href="https://github.com/docker/docker-registry/blob/master/config/config_sample.yml">config_sample.yml</a> などを参照</li>
-<li>docker-registry-ui, docker-registry-web で検索すると非公式の Web UI が出てくる</li>
-<li>ミラーリングに使える
-
-<ul>
-<li>docker コマンドで <code>--registry-mirror</code> オプション</li>
-<li>private registry では <code>MIRROR_SOURCE</code> を指定</li>
-</ul>
-</li>
-</ul>
-
-
-<h2>Linuxコンテナの基本と最新情報</h2>
-
-<ul>
-<li>namespace と cgroup</li>
-<li>sane_behavior オプション</li>
-<li>CRIU のデモ</li>
-</ul>
-
-
-<h2>LT</h2>
-
-<p>LT では boot2docker について話しました。
-他の発表者も含めて、特に 5 分という制限はなく、緩い感じで発表していました。</p>
-
-<iframe src="http://slide.rabbit-shocker.org/authors/znz/boot2docker-upgrade/viewer.html"
-        width="640" height="524"
-        frameborder="0"
-        marginwidth="0"
-        marginheight="0"
-        scrolling="no"
-        style="border: 1px solid #ccc; border-width: 1px 1px 0; margin-bottom: 5px"
-        allowfullscreen> </iframe>
-
-
-<div style="margin-bottom: 5px">
-  <a href="http://slide.rabbit-shocker.org/authors/znz/boot2docker-upgrade/" title="boot2docker upgrade">boot2docker upgrade</a>
-</div>
-
 ]]></content>
   </entry>
   

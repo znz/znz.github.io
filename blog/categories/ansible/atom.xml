@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ansible | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ansible/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-06-15T23:25:15+09:00</updated>
+  <updated>2017-06-16T22:21:48+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,104 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ansibleでjsonファイルの設定を更新した]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-06-16-ansible-json.html"/>
+    <updated>2017-06-16T21:26:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ansible-json</id>
+    <content type="html"><![CDATA[<p>ansible で json ファイル (今回は <code>/etc/docker/daemon.json</code>) を更新したかったのですが、 <code>lineinfile</code> や <code>replace</code> や <code>ini_file</code> のように単独のモジュールで簡単にできるものではなかったので、少し工夫をして実現しました。</p>
+
+<!--more-->
+
+
+<h2>動作確認バージョン</h2>
+
+<ul>
+<li>ansible 2.3.1.0</li>
+</ul>
+
+
+<p>combine フィルター (後述) が New in version 2.0 なので、 1.x では動かないと思います。</p>
+
+<h2>実例</h2>
+
+<p><a href="https://github.com/znz/ansible-role-docker">https://github.com/znz/ansible-role-docker</a> や <a href="https://github.com/znz/ansible-playbook-gitlab-dokku/tree/master/provision/roles/docker-dns">https://github.com/znz/ansible-playbook-gitlab-dokku/tree/master/provision/roles/docker-dns</a> にあります。</p>
+
+<h2>json ファイル読み込み</h2>
+
+<p>まずは <code>command</code> モジュールで読み込んで、 <code>set_fact</code> で変数に設定しておきます。</p>
+
+<pre><code>- name: "Read daemon.json"
+  command: cat /etc/docker/daemon.json
+  register: result
+  changed_when: no
+</code></pre>
+
+<p>記事を書いていて気づいたのですが、リモートからファイルを読み込むには <code>slurp</code> モジュールというのがあるようですが、作った時点では知らなかったので、使っていません。</p>
+
+<p>base64 でエンコードされていて b64decode を通す必要があるようなので、何度も参照するなら、次の <code>set_fact</code> を組み合わせた方が良さそうなのは変わらなさそうです。</p>
+
+<h2>json から dict に変換</h2>
+
+<p>json の文字列から <a href="http://docs.ansible.com/ansible/playbooks_filters.html#filters-for-formatting-data"><code>from_json</code>フィルター</a>で変換します。</p>
+
+<p></p>
+
+<pre><code>- set_fact: docker_daemon_json="{{ result.stdout | from_json }}"
+</code></pre>
+
+<p></p>
+
+<h2>combine フィルターでマージ</h2>
+
+<p><a href="http://docs.ansible.com/ansible/playbooks_filters.html#combining-hashes-dictionaries"><code>combine</code>フィルター</a>で設定をマージして、 <code>to_json</code> フィルターで json 文字列に変換してファイルに書き出します。</p>
+
+<p>今回の用途では、ネストしたデータは考慮する必要がなく、トップレベルのキーが一致するもので置き換えられればよかったので、 <code>recursive=True</code> は指定していません。</p>
+
+<p><code>when</code> でのチェックもしておかないと、設定内容としては変わっていないのに、 json 文字列になった時にキーの順番が変わっているのか、 changed になってしまうことがあったので、 <code>when</code> で設定内容に変更がある時だけ書き込むようにしています。</p>
+
+<pre><code>- name: "Update daemon.json"
+  template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: 0400
+  when: "docker_daemon_json != docker_daemon_json|combine({'dns':dns})"
+  notify:
+  - restart docker
+</code></pre>
+
+<p>templates/daemon.json.j2:</p>
+
+<p></p>
+
+<pre><code>{{ docker_daemon_json | combine({"dns": dns}) | to_json }}
+</code></pre>
+
+<p></p>
+
+<h2>動作確認</h2>
+
+<p>全体ができた後に、</p>
+
+<ul>
+<li>ファイルがない時の動作</li>
+<li>設定が変わらない時の動作</li>
+<li>設定が変わる時の動作</li>
+</ul>
+
+
+<p>も確認しておきます。</p>
+
+<h2>docker のデーモン設定ファイル</h2>
+
+<p>docker の<a href="http://docs.docker.jp/engine/reference/commandline/dockerd.html#daemon-configuration-file">デーモン設定ファイル</a>は <code>insecure-registries</code> (<code>--insecure-registry=[]</code>) や <code>dns</code> や <code>bip</code> など dockerd のオプションで指定できるものはなんでも指定できます。</p>
+
+<p><a href="http://docs.docker.jp/engine/admin/systemd.html#custom-docker-daemon-options">docker デーモンのオプション変更</a>は systemd の docker.service の設定を変更する方法もあるようですが、ローカルの変更をローカルの独立ファイルに隔離できて、バージョンアップの影響も少なそうなので、 daemon.json を使うことにしました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ansible で role を新規作成して ansible galaxy で公開して更新した]]></title>
@@ -439,75 +537,6 @@ github 連携でアカウントを登録しました。</p>
 </li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[octopress で ansible の記事を書く時のエスケープ]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-05-20-octopress-ansible.html"/>
-    <updated>2014-05-20T23:25:18+09:00</updated>
-    <id>http://blog.n-z.jp/blog/octopress-ansible</id>
-    <content type="html"><![CDATA[<p>octopress で ansible の記事を書く時に連続する <code>{</code> のエスケープに困ったので、
-対処方法を調べました。</p>
-
-<!--more-->
-
-
-<h2>コードブロックのエスケープ</h2>
-
-<p><a href="http://stackoverflow.com/questions/15786144/how-to-escape-in-markdown-on-octopress">How to escape  in markdown on Octopress? - Stack Overflow</a>
-にあるように</p>
-
-<pre><code>```種類 ファイル名
-コードブロック
-```
-</code></pre>
-
-<p>の外側を
-<code>{% raw %}</code> と <code>{% endraw %}</code>
-でくくればうまくいきました。</p>
-
-<h2>文中の  のエスケープ</h2>
-
-<p>先ほどのリンクのアンカーやこの節の見出しのような文の途中は</p>
-
-<p>
-    {{ &ldquo;{{&rdquo; }}
-</p>
-
-<p>のように書けばエスケープできました。</p>
-
-<p>幅なしスペース (<code>&amp;#x200B;</code>) のような幅のない文字を挟んでごまかすという手もあるかもしれません。</p>
-
-<h2>文中の <code>{%</code> のエスケープ</h2>
-
-<p><code>{% raw %}</code> と <code>{% endraw %}</code> 自体をエスケープするのに</p>
-
-<p>
-    {{ &ldquo;{%&rdquo; }}
-</p>
-
-<p>を使って</p>
-
-<p>
-    <code>{{ "{%" }} raw %}</code> と <code>{{ "{%" }} endraw %}</code>
-</p>
-
-<p>のように書きました。</p>
-
-<p><code>%}</code> まで <code>""</code> の中に入れようとして</p>
-
-<p>
-    <code>{{ "{% raw %}" }}</code>
-</p>
-
-<p>と書くと</p>
-
-<p>
-    Liquid Exception: Variable &lsquo;{{ &ldquo;{% raw %}&rsquo; was not properly terminated with regexp: /}}/
-</p>
-
-<p>というエラーになってうまくいきませんでした。</p>
 ]]></content>
   </entry>
   

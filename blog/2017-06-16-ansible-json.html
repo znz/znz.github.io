@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>OSS Gate大阪ワークショップ2017-04-22に参加した - @znz blog</title>
+  <title>ansibleでjsonファイルの設定を更新した - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="OSS Gate大阪ワークショップ2017-04-22に参加した 2017-04-22 (Sat) 11:00 pm | Comments OSS Gate大阪ワークショップ2017-04-22 - OSS Gate | Doorkeeperにサポーター (旧称: メンター) として参加しました &hellip;">
+  <meta name="description" content="ansibleでjsonファイルの設定を更新した 2017-06-16 (Fri) 9:26 pm | Comments ansible で json ファイル (今回は /etc/docker/daemon.json) を更新したかったのですが、 lineinfile や replace や &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-04-22-oss-gate-workshop.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-06-16-ansible-json.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -83,7 +83,7 @@
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">OSS Gate大阪ワークショップ2017-04-22に参加した</h1>
+      <h1 class="entry-title">ansibleでjsonファイルの設定を更新した</h1>
       
       <!-- zenback_title_end -->
       
@@ -95,7 +95,7 @@
 
 
 
-<time class='entry-date' datetime='2017-04-22T23:00:00+09:00'><span class='date'>2017-04-22 (Sat)</span> <span class='time'>11:00 pm</span></time>
+<time class='entry-date' datetime='2017-06-16T21:26:00+09:00'><span class='date'>2017-06-16 (Fri)</span> <span class='time'>9:26 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -108,98 +108,88 @@
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><a href="https://oss-gate.doorkeeper.jp/events/58579" title="OSS Gate大阪ワークショップ2017-04-22 - OSS Gate | Doorkeeper">OSS Gate大阪ワークショップ2017-04-22 - OSS Gate | Doorkeeper</a>にサポーター (旧称: メンター) として参加しました。</p>
+<div class="entry-content"><p>ansible で json ファイル (今回は <code>/etc/docker/daemon.json</code>) を更新したかったのですが、 <code>lineinfile</code> や <code>replace</code> や <code>ini_file</code> のように単独のモジュールで簡単にできるものではなかったので、少し工夫をして実現しました。</p>
 
 <!--more-->
 
 
-<h2>全体の感想</h2>
+<h2>動作確認バージョン</h2>
 
-<p>最後のアンケートにも書きましたが、前回はデモである程度メモをどの程度とるのかなどの方向性が示されていたのと、やる内容がインストールから初めて、ひっかかったところのドキュメントの改善をフィードバックする、というのが多かったのに対して、今回はデモがほぼなくて、サポーター (旧称: メンター) として応募したけど、人数の都合でビギナーになった人が多かったからか、いろんなことに挑戦していて、難しい感じでした。</p>
-
-<p>作業メモの粒度としては、<a href="https://github.com/oss-gate/workshop/issues?q=is%3Aissue+is%3Aclosed">過去のビギナーの作業ログ</a>から特にコメント数が多いものを参考にしてみると、こういう細かい思考過程までメモすると良いのか、というのが、 oss-gate に限らず普段の作業メモのとり方としても、参考になるかと思います。</p>
-
-<h2>メモ</h2>
-
-<p>以下、今回の雑多なメモです。</p>
-
-<h3>フォント</h3>
-
-<p>途中のふりかえりのときのビギナーの人がブラウザーで変わったフォントを使っていたのできいてみたところ、「スマートフォントUI」というのを使っていると教えてもらいました。</p>
-
-<h3>Chef DK のアンインストール</h3>
-
-<p>参考のため、自分の環境にも Chef DK を入れてみていたのですが、 <a href="https://docs.chef.io/install_dk.html">https://docs.chef.io/install_dk.html</a> にアンインストールの手順があったので、それに従ってアンインストールしました。</p>
-
-<p>symlink は削除前に確認してみたら、たくさんありました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>%  sudo rm -rf /opt/chefdk
-</span><span class='line'>Password:
-</span><span class='line'>%  sudo pkgutil --forget com.getchef.pkg.chefdk
-</span><span class='line'>Forgot package 'com.getchef.pkg.chefdk' on '/'.
-</span><span class='line'>%  find /usr/local/bin -lname '/opt/chefdk/*'
-</span><span class='line'>/usr/local/bin/berks
-</span><span class='line'>/usr/local/bin/chef
-</span><span class='line'>/usr/local/bin/chef-apply
-</span><span class='line'>/usr/local/bin/chef-client
-</span><span class='line'>/usr/local/bin/chef-shell
-</span><span class='line'>/usr/local/bin/chef-solo
-</span><span class='line'>/usr/local/bin/chef-vault
-</span><span class='line'>/usr/local/bin/cookstyle
-</span><span class='line'>/usr/local/bin/dco
-</span><span class='line'>/usr/local/bin/delivery
-</span><span class='line'>/usr/local/bin/foodcritic
-</span><span class='line'>/usr/local/bin/inspec
-</span><span class='line'>/usr/local/bin/kitchen
-</span><span class='line'>/usr/local/bin/knife
-</span><span class='line'>/usr/local/bin/ohai
-</span><span class='line'>/usr/local/bin/push-apply
-</span><span class='line'>/usr/local/bin/pushy-client
-</span><span class='line'>/usr/local/bin/pushy-service-manager
-</span><span class='line'>/usr/local/bin/rubocop
-</span><span class='line'>%  sudo find /usr/local/bin -lname '/opt/chefdk/*' -delete
-</span><span class='line'>%  find /usr/bin -lname '/opt/chefdk/*'</span></code></pre></td></tr></table></div></figure>
+<ul>
+<li>ansible 2.3.1.0</li>
+</ul>
 
 
-<h3>辞書</h3>
+<p>combine フィルター (後述) が New in version 2.0 なので、 1.x では動かないと思います。</p>
 
-<p>macOS の辞書ではなく、Logophile という辞書ソフトを使っているのをみました。
-COBUILD のシソーラスが便利だそうです。</p>
+<h2>実例</h2>
 
-<p>たぶん <a href="http://dicwizard.jp/logophile/" title="Logophile">Logophile</a> で、シェアウェアのようです。</p>
+<p><a href="https://github.com/znz/ansible-role-docker">https://github.com/znz/ansible-role-docker</a> や <a href="https://github.com/znz/ansible-playbook-gitlab-dokku/tree/master/provision/roles/docker-dns">https://github.com/znz/ansible-playbook-gitlab-dokku/tree/master/provision/roles/docker-dns</a> にあります。</p>
 
-<h3>fish shell</h3>
+<h2>json ファイル読み込み</h2>
 
-<p>検索しにくい名前ですが、<a href="http://fish.rubikitch.com/" title="全訳！fishシェル普及計画【コマンドラインは怖くない】">全訳！fishシェル普及計画【コマンドラインは怖くない】</a> に翻訳されたドキュメントがあるので、使い始めやすそうです。</p>
+<p>まずは <code>command</code> モジュールで読み込んで、 <code>set_fact</code> で変数に設定しておきます。</p>
 
-<p>個人的には rvm を入れたら環境を壊された (<code>zsh</code> なら <code>chpwd_function</code> を使えばいいのに使っていなかったらしく <code>cd</code> のカスタマイズが壊れた) ぐらいシェルはカスタマイズをしているので、乗り換える可能性は低いですが、ちょっと試してみたところ、 <code>echo</code> のオートサジェスチョンで <code>$BASH_VERSION</code> がでてきたので、<code>.bash_history</code> をみているようです。
-ちょっと試した後は、 <code>rm -rf ~/.local/share/fish</code> でクリーンな状態に戻して、また最初から試せるようにしておきました。</p>
+<pre><code>- name: "Read daemon.json"
+  command: cat /etc/docker/daemon.json
+  register: result
+  changed_when: no
+</code></pre>
+
+<p>記事を書いていて気づいたのですが、リモートからファイルを読み込むには <code>slurp</code> モジュールというのがあるようですが、作った時点では知らなかったので、使っていません。</p>
+
+<p>base64 でエンコードされていて b64decode を通す必要があるようなので、何度も参照するなら、次の <code>set_fact</code> を組み合わせた方が良さそうなのは変わらなさそうです。</p>
+
+<h2>json から dict に変換</h2>
+
+<p>json の文字列から <a href="http://docs.ansible.com/ansible/playbooks_filters.html#filters-for-formatting-data"><code>from_json</code>フィルター</a>で変換します。</p>
+
+<pre><code>- set_fact: docker_daemon_json="{{ result.stdout | from_json }}"
+</code></pre>
+
+<h2>combine フィルターでマージ</h2>
+
+<p><a href="http://docs.ansible.com/ansible/playbooks_filters.html#combining-hashes-dictionaries"><code>combine</code>フィルター</a>で設定をマージして、 <code>to_json</code> フィルターで json 文字列に変換してファイルに書き出します。</p>
+
+<p>今回の用途では、ネストしたデータは考慮する必要がなく、トップレベルのキーが一致するもので置き換えられればよかったので、 <code>recursive=True</code> は指定していません。</p>
+
+<p><code>when</code> でのチェックもしておかないと、設定内容としては変わっていないのに、 json 文字列になった時にキーの順番が変わっているのか、 changed になってしまうことがあったので、 <code>when</code> で設定内容に変更がある時だけ書き込むようにしています。</p>
+
+<pre><code>- name: "Update daemon.json"
+  template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: 0400
+  when: "docker_daemon_json != docker_daemon_json|combine({'dns':dns})"
+  notify:
+  - restart docker
+</code></pre>
+
+<p>templates/daemon.json.j2:</p>
+
+<pre><code>{{ docker_daemon_json | combine({"dns": dns}) | to_json }}
+</code></pre>
+
+<h2>動作確認</h2>
+
+<p>全体ができた後に、</p>
+
+<ul>
+<li>ファイルがない時の動作</li>
+<li>設定が変わらない時の動作</li>
+<li>設定が変わる時の動作</li>
+</ul>
+
+
+<p>も確認しておきます。</p>
+
+<h2>docker のデーモン設定ファイル</h2>
+
+<p>docker の<a href="http://docs.docker.jp/engine/reference/commandline/dockerd.html#daemon-configuration-file">デーモン設定ファイル</a>は <code>insecure-registries</code> (<code>--insecure-registry=[]</code>) や <code>dns</code> や <code>bip</code> など dockerd のオプションで指定できるものはなんでも指定できます。</p>
+
+<p><a href="http://docs.docker.jp/engine/admin/systemd.html#custom-docker-daemon-options">docker デーモンのオプション変更</a>は systemd の docker.service の設定を変更する方法もあるようですが、ローカルの変更をローカルの独立ファイルに隔離できて、バージョンアップの影響も少なそうなので、 daemon.json を使うことにしました。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -218,12 +208,12 @@ COBUILD のシソーラスが便利だそうです。</p>
 
 
 
-<time class='entry-date' datetime='2017-04-22T23:00:00+09:00'><span class='date'>2017-04-22 (Sat)</span> <span class='time'>11:00 pm</span></time>
+<time class='entry-date' datetime='2017-06-16T21:26:00+09:00'><span class='date'>2017-06-16 (Fri)</span> <span class='time'>9:26 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/event/'>event</a>, <a class='category' href='/blog/categories/oss-gate/'>oss-gate</a>
+    <a class='category' href='/blog/categories/ansible/'>ansible</a>, <a class='category' href='/blog/categories/docker/'>docker</a>
   
 </span>
 
@@ -250,10 +240,8 @@ COBUILD のシソーラスが便利だそうです。</p>
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2017-04-17-mastodon-api-curl.html" title="Previous Post: mastodonのAPIをcurlで試してみた">&laquo; mastodonのAPIをcurlで試してみた</a>
+        <a class="basic-alignment left" href="/blog/2017-06-14-failed-to-update-letsencrypt.html" title="Previous Post: letsencryptの証明書の更新に失敗していた(IPv6が原因だった)">&laquo; letsencryptの証明書の更新に失敗していた(IPv6が原因だった)</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2017-04-23-kansai-debian-meeting.html" title="Next Post: 第 122 回関西 Debian 勉強会に参加しました">第 122 回関西 Debian 勉強会に参加しました &raquo;</a>
       
     </p>
   </footer>
@@ -391,8 +379,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-04-22-oss-gate-workshop.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2017-04-22-oss-gate-workshop.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-06-16-ansible-json.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-06-16-ansible-json.html';
         var disqus_script = 'embed.js';
       
     (function () {
