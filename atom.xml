@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-06-16T22:21:48+09:00</updated>
+  <updated>2017-06-17T23:23:15+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,299 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第11回 コンテナ型仮想化の情報交換会＠大阪に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-06-17-lxcjp.html"/>
+    <updated>2017-06-17T13:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/lxcjp</id>
+    <content type="html"><![CDATA[<p><a href="https://ct-study.connpass.com/event/55305/">第11回 コンテナ型仮想化の情報交換会＠大阪</a>に参加してきました。</p>
+
+<!--more-->
+
+
+<p>以下、メモです。</p>
+
+<h2>案内など</h2>
+
+<ul>
+<li>Wi-Fi はないはずだったが、提供できた</li>
+<li>ハッシュタグは <a href="https://twitter.com/search?q=%23lxcjp">#lxcjp</a></li>
+<li>(<a href="https://togetter.com/li/1121078">第11回 コンテナ型仮想化の情報交換会＠大阪 #lxcjp - Togetterまとめ</a>にまとめられています。質疑応答はメモ間違いもありそうなので、Togetter の方が正確そうです。)</li>
+</ul>
+
+
+<h2>Linuxコンテナ基礎(仮)</h2>
+
+<ul>
+<li>自己紹介</li>
+<li><a href="http://gihyo.jp/admin/serial/01/linux_containers">LXCで学ぶコンテナ入門 －軽量仮想化環境を実現する技術</a></li>
+<li>基礎知識</li>
+<li>単独の機能があるわけではなく、 namespace とか cgroup とかを組みわせて実現されている</li>
+<li>chroot とか pivot_root とか</li>
+<li>speakerdeck で資料は公開予定</li>
+<li>speakerdeck に元になった情報の多い資料も公開されている</li>
+<li><a href="https://speakerdeck.com/tenforward/11th-ctstudy">Linux コンテナの基礎 / 11th CTStudy by tenforward</a></li>
+</ul>
+
+
+<h2>Haconiwa</h2>
+
+<ul>
+<li>イベントページでは「変拍子パワーポップ系コンテナランタイムHaconiwa - 夏を古くするな！」というタイトルになっていましたが、実際のタイトルは変わっていました。</li>
+<li>自己紹介</li>
+<li>Haconiwa とは?</li>
+<li>mruby</li>
+<li>ビュッフェ型コンテナランタイム</li>
+<li>ビュッフェ型とは Web フレームワークでいうと Padrino</li>
+<li>ruby で色々かける</li>
+<li>コンテナの初期化処理とか</li>
+<li>シグナルハンドラで CPU 割り当てを増減したりとか</li>
+<li>Sqale という PaaS の運用のお手伝いの話</li>
+<li>やりたいことが lxc などが古くて実現が難しかった</li>
+<li>もしイチからやるなら?</li>
+<li>コンテナ勉強会との出会い</li>
+<li>RubyKaigi 2016 に応募して選考に通る前に完成</li>
+<li>Haconiwa の実装方針</li>
+<li>コア部分は Pure Ruby</li>
+<li>システムコールは mruby gem でラップ</li>
+<li>全てはプロセス</li>
+<li>sample/process.rb を改変したものでデモ</li>
+<li>関連技術</li>
+<li>FastContainer</li>
+<li><a href="http://hb.matsumoto-r.jp/entry/2016/11/11/234915">FastContainerアーキテクチャ構想</a></li>
+<li>プロセスの3分類: immortal (いわゆるデーモン), short-lived (バッチとか ls とかの単独のコマンド), mortal</li>
+<li>2つの中間的なものを定義する</li>
+<li>mortal な存在としての FastCGI</li>
+<li>inetd, xinetd</li>
+<li>immortal なコンテナ: システムコンテナ, アプリケーションコンテナ, VPS として使う場合, Dokku</li>
+<li>short-lived なコンテナ: アプリケーションコンテナで単一のジョブ: systemd-nspawn, FaaS</li>
+<li>なぜ FastContainer か</li>
+<li>負荷が上がった時: スケールアップ, スケールアウト</li>
+<li>従来の VM では高速なスケールアップは非常に困難</li>
+<li>コンテナでも煩雑さは残る</li>
+<li>Haconiwa がスケールアップについての問題を解決</li>
+<li>スケールアウトも従来の VM ではインスタンスの複製が難しいなど</li>
+<li>コンテナもコストは下がるが自動化には課題がある</li>
+<li><a href="http://mikeda.hatenablog.com/entry/2015/02/01/195102">負荷低すぎはもはや障害じゃないのか</a></li>
+<li>FastContainer が解決するもの: スケールアウトについて インスタンスの入れ替え、増減が容易になる</li>
+<li>+Haconiwa が解決するもの: 起動するコンテナ数をコンテナ自身で動的に操作させることが可能</li>
+<li>Container as Code</li>
+<li>その他のメリット</li>
+<li>セキュリティ的観点: コンテナは、常に入れ替わるので、パッケージのアップグレードや、ミドルウェアの更新が非常になめらかに行える</li>
+<li>運用的観点: どのホストであっても同じように動く。ホストをリソースプールとみなして透過的に扱える</li>
+<li>FastContainer は実現できるか?</li>
+<li>Scheduler: nomad</li>
+<li>CoreAPI+CMDB</li>
+<li>Web Proxy / Dispatcher : 起動のきっかけにもなるので Dispatcher</li>
+<li>どうして Haconiwa を作ったのですか?</li>
+<li>alternative rock</li>
+<li>Docker はすごいが、それだけでいいのか</li>
+<li>オルタナティブな存在が新しい価値観を届けるかもしれないのだ。</li>
+<li>質疑応答</li>
+<li>Q: どこで負荷を判別するか</li>
+<li>A: cgroup の stat をベースに, veth (?) とかの負荷をみて</li>
+<li>udzura cgroup で検索</li>
+<li><a href="http://udzura.hatenablog.jp/entry/2017/05/02/175445">cgroup経由でシステムの利用状況を知る - CPU編</a> あたりが関連?</li>
+<li>Q: mruby?</li>
+<li>A: mruby の説明など</li>
+<li>システムコール部分も Ruby っぽくやるために mruby という感じ?</li>
+<li>Q: Web 以外の技術で FastCGI のような技術を応用することを考えているか?</li>
+<li>A: nginx は tcp proxy 機能もあるので sshd とかも試している</li>
+<li>Q: 具体的な利用予定は?</li>
+<li>A: ロリポップ的に使えてオートスケールできるものができると良いかも?</li>
+<li><a href="https://speakerdeck.com/udzura/the-alternative-container">変拍子パワーポップ系コンテナ、Haconiwa /the-alternative-container</a></li>
+</ul>
+
+
+<h2>休憩</h2>
+
+<p>懇親会の追加申し込み受付案内</p>
+
+<h2>chrootとnetwork namespaceでつくる簡易コンテナ</h2>
+
+<ul>
+<li>自己紹介</li>
+<li>自作コンテナのモチベーション</li>
+<li>Linux コンテナの勉強、既存コンテナ技術の再確認、手元でのネットワークテスト環境</li>
+<li>chroot × network namespace × UTS namespace</li>
+<li>UTS namespace は管理しやすいから</li>
+<li>nginx + mackerel-agent + sshd</li>
+<li>コマンドで作成</li>
+<li>デモ</li>
+<li>イメージ作成は docker export とか debootstrap とかが使える</li>
+<li>namespace の永続化</li>
+<li>/proc/[PID]/ns 配下にある特殊ファイル</li>
+<li>bind マウントを使って永続化する</li>
+<li>mount &ndash;bind /run/utsns /run/utsns</li>
+<li>mount &ndash;make-shared /run/utsns</li>
+<li>unshare -u mount &ndash;bind /proc/self/ns/uts /run/utsns/test01</li>
+<li>最近の unshare コマンドなら unshare &ndash;uts=/run/utsns/test01</li>
+<li>UTS namespace: 主に管理のため</li>
+<li>Network の作成</li>
+<li>veth 作って bridge に接続</li>
+<li>Netowrk はポータビリティに影響が出やすい</li>
+<li>一時期 docker が頑張ってた: VXLAN による overlay Network など</li>
+<li>改善すべき箇所がたくさんある面白い分野</li>
+<li>chroot 環境の作成</li>
+<li>コンテナの中でも systemd を動かすと shared マウントだとコンテナの片付けの時に親の方まで一緒にアンマウントされてしまってはまるので、 rslave が必要</li>
+<li>コンテナ内でのプロセスの実行: nsenter した上で chroot する</li>
+<li>chroot 配下では systemd は動作しないので注意が必要</li>
+<li>chroot の代わりに systemd-nspawn を使う</li>
+<li>PID namespace</li>
+<li>docker 1.13 で run に init オプションがついた</li>
+<li>ss はネームスペースを指定できる</li>
+<li>いけてない箇所</li>
+<li>質疑応答</li>
+<li>Q: udzuraさん: VXLAN を検証している?</li>
+<li>A: 業務では使っていなくて趣味でやっている。 Open vSwitch で軽く試したことはある。</li>
+</ul>
+
+
+<p>veth のデモは <a href="https://asciinema.org/a/122327">Network Namespace &amp; Veth demo</a> を参照</p>
+
+<h2>LXD 採用から運用までの顛末記</h2>
+
+<ul>
+<li>自己紹介</li>
+<li>LXD 採用で、XREA、ハイパフォーマンスで安定稼働しております</li>
+<li>XERA の歴史</li>
+<li>古い物理サーバーから KVM</li>
+<li>完全仮想化の利点と問題点</li>
+<li>時代はコンテナだということで準仮想化</li>
+<li>なぜ LXD か?</li>
+<li>Docker: ユーザーの権限独立とネットワーク周りの問題が解決できず</li>
+<li>KVM: オーバーヘッドが多くてリソースが無駄</li>
+<li>OpenVZ: コンテナより遅かった</li>
+<li>VMware: 考えたこともない</li>
+<li>LXD: コンテナだし、リソースが有効に使えて、ヒャッハーだ！</li>
+<li>LXD 採用からサービス開始まで</li>
+<li>マイグレーションに伴う障害はあったが、コンテナが原因の問題はおきなかった</li>
+<li>LXD の運用環境</li>
+<li>ホスト Ubuntu 16.04 LTS</li>
+<li>ゲスト CentOS 7</li>
+<li>ZFS + ブロックデバイス</li>
+<li>ホストシステム構築時のトラブル</li>
+<li>オープンファイル数の上限編</li>
+<li>試行錯誤した結果 <code>fs.inotify.max_user_instances</code> だった</li>
+<li>その他色々上限解除</li>
+<li>LXD 運用編</li>
+<li>1: ユーザークォータがきかない→運用でカバー</li>
+<li>2: マイグレーション時に Apache のアラートがあがる</li>
+<li>原因は Apache RLimitNPROC + Potential DoS attacks</li>
+<li>同じユーザーだったのが原因</li>
+<li><a href="https://linuxcontainers.org/lxc/security/">https://linuxcontainers.org/lxc/security/</a></li>
+<li>3: ホストのロードアベレージが急激に上昇→ZFS がボトルネック、チューニングを実施</li>
+<li>4: コンテナ自体のリソース制御</li>
+<li>5: (よそ見をしていたら見逃した)</li>
+<li>LXD に変えてどうだったか</li>
+<li>よかったという話</li>
+<li>質疑応答</li>
+<li>Q: ホスト間のマイグレーションは使っているか?</li>
+<li>A: KVM からのマイグレーションだったので今回は使っていない。次回は使うかもしれない。</li>
+<li>Q: ZFS で苦労されたという話だったが、他に選択肢はあったのか?</li>
+<li>A: ZFS がデフォルトっぽい感じだったので、選んだ。ブロックデバイスかどうかというのはあったが、ブロックデバイスを選んだ。</li>
+<li>Q: Docker のネットワーク周りの問題とは?</li>
+<li>担当者 A: ポートとか IP とかの問題</li>
+</ul>
+
+
+<h2>休憩</h2>
+
+<p>懇親会の案内</p>
+
+<h2>Joe&rsquo;s と LXC とその運用実例と</h2>
+
+<ul>
+<li>Joe&rsquo;s Cloud Computing</li>
+<li>会社紹介</li>
+<li>Speaker 紹介</li>
+<li>Joe&rsquo;s と LXC</li>
+<li>2001年: Scientific Linux 6 with kernel 2.6.42 (後で訂正あり) + patch, zfs on fuse: 当初よりテンプレートを意識した設計</li>
+<li>2010年〜: ubuntu に乗り換え, LXD への移行模索中</li>
+<li>現在: 共用サーバーの半分が LXC 駆動</li>
+<li>LXC と Docker</li>
+<li>kvm との比較</li>
+<li>LXC 運用のメリット: リソース管理がしやすい</li>
+<li>運用例: zabbix 運用, 障害対応, IPブロック, プロセス管理</li>
+<li>運用テストで LXC で zabbix を作成</li>
+<li>nagios から移行</li>
+<li>本番環境に移動</li>
+<li>lxc だと rsync でコピーして起動できる</li>
+<li>同一ネットワークだと監視の意味が、ということでさくらクラウドに移動</li>
+<li>障害対応</li>
+<li>ハードウェア障害</li>
+<li>起動しなくても HDD から読み出せるならレスキュー環境で起動して吸い出してなんとかできる</li>
+<li>IP ブロック</li>
+<li>ホスト側の FORWARD チェインでブロック</li>
+<li>FORWARD なので失敗しても取り消しやすい</li>
+<li>ゲスト側が古くて ipset が使えなくてもホスト側で使えるので便利</li>
+<li>プロセス管理: ホスト側から監視できる (htop とか)</li>
+<li>これからの LXC ホスティング</li>
+<li>デプロイ速度の向上</li>
+<li>仮想コンソールの実装</li>
+<li>Migration / HA の実装</li>
+<li>まだまだこれから楽しめる分野</li>
+<li>質疑応答</li>
+<li>Q: Zabbix のバックアップ運用は?</li>
+<li>A: ローカルは HDD が多いマシンがあるのでそこにとっている。リモートはホスト側で rsync と database のバックアップ</li>
+<li>Q: ゲスト数はどのくらい?</li>
+<li>A: 4コアで1台ぐらいのイメージ。テストでは40台ぐらいで</li>
+<li>ディスクの I/O がボトルネックになる。</li>
+<li>Q: 特権コンテナ?</li>
+<li>A: マネージドは特権コンテナで問題ない。 VPS は非特権コンテナの予定あり。</li>
+<li>Q: LXC のバージョンアップやマイグレーションでの気をつけたポイントは?</li>
+<li>A: 古いサーバーのバージョン確認 kernel 2.6.42 ではなかった 2.6.32.41 LXC 0.7.4.1</li>
+<li><a href="https://speakerdeck.com/samaiyou/joes-and-working-with-lxc">Joe&rsquo;s and working with LXC by samaiyou</a></li>
+</ul>
+
+
+<h2>Dockerコンテナ監視要素の検討</h2>
+
+<ul>
+<li>古い情報で誤解されていることがある</li>
+<li><a href="http://docs.docker.jp/">http://docs.docker.jp/</a></li>
+<li>動機: どのように監視をしたら良いのか?, runC と containerD, 私は私が欲しい監視システムを作りたい</li>
+<li>監視と運用: システム稼働状況の把握と対策, サービスレベル</li>
+<li><a href="http://www.brendangregg.com/linuxperf.html">http://www.brendangregg.com/linuxperf.html</a></li>
+<li>ストレージドライバーによってパフォーマンスが大きく異なる</li>
+<li>dockerd (Docker Engine), containerD</li>
+<li>スケジューリング + クラスタ管理 = オーケストレーション</li>
+<li>良い感じの自動化ツールはまだなさそう</li>
+<li>Prometheus</li>
+<li>Docker Engine とデーモンの変遷</li>
+<li>v1.11〜 は dockerd - containerd - runC になっている</li>
+<li><a href="https://www.opencontainers.org/">https://www.opencontainers.org/</a> - runC</li>
+<li><a href="https://www.cncf.io/">https://www.cncf.io/</a> - containerd</li>
+<li>2013年→2016年夏現在: dockerd デーモンの解体, 従来のコンテナ監視はメトリクス取得に集中</li>
+<li>runC</li>
+<li>バイナリ配布はされていないので自分で make する必要あり</li>
+<li>runc のデモ</li>
+<li>Docker Compose</li>
+<li>fig が買収されて docker-compose になった</li>
+<li>docker swarm mode, overlay network で Routing mesh, docker service create でサービス作成</li>
+<li>サービス名で名前解決できる</li>
+<li>監視はどうする?</li>
+<li>Docker Swarm という swarm mode とは名前は似ているが別物がまだ残っているがそのうち消えるはず</li>
+<li>API と SDK</li>
+<li><code>curl --unix-socket /var/run/docker.sock -X GET http://v1.29/containers/json?size=true | jq "." | less</code> とかでも情報がとれる</li>
+<li><a href="https://github.com/yadutaf/ctop">https://github.com/yadutaf/ctop</a></li>
+<li>systemd-cgtop より便利</li>
+<li>Q: containerd と runc を意識する必要はあるか?</li>
+<li>A: 普段はあまり意識する必要はない</li>
+<li>Q: ホスティングサービスでは docker を選ばなかったが、お客様から見えない部分では使いたい</li>
+<li>A: さくらの VPS のコントロールパネルなどで docker を使っている</li>
+<li>Q: kubernetes とかは?</li>
+<li>A: 用途が違うので使い分ければ良いのでは。使いたいものを使えば良いのでは。</li>
+<li>ユーザー目線で使いやすいのは swarm mode とか</li>
+<li>リソースを有効活用したいのなら mesos とか</li>
+<li>kubernetes はあまり詳しくない</li>
+<li>mesos は API があって使いやすいらしい</li>
+<li>ctop は同じ名前で別のものがある</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ansibleでjsonファイルの設定を更新した]]></title>
@@ -3075,262 +3368,6 @@ letsencrypt/boulder のソースを見ても iodef に対して何か送信し�
 <li><a href="https://http2.try-and-test.net/dns_caa.html">DNSサーバのCAA設定 - Apache 2.4系でHTTP/2対応サーバを構築してみるテスト。</a></li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[elpaのpinentry.elを試してみた]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-03-25-elpa-pinentry.html"/>
-    <updated>2017-03-25T12:57:57+09:00</updated>
-    <id>http://blog.n-z.jp/blog/elpa-pinentry</id>
-    <content type="html"><![CDATA[<p>Emacs の easypg と gnupg 2 で <code>Opening input file: Decryption failed,</code> になることの対処として、
-<a href="https://elpa.gnu.org/packages/pinentry.html">ELPA の pinentry.el</a> を試してみました。</p>
-
-<!--more-->
-
-
-<h2>動作確認環境</h2>
-
-<p>デフォルトの gpg コマンドが gnupg 2 になっている Debian 系の環境で安定版がリリースされているものということで、
-yakkety を使いました。</p>
-
-<ul>
-<li>Ubuntu 16.10 (yakkety)</li>
-<li>gnupg 2.1.15-1ubuntu6</li>
-<li>pinentry-curses 0.9.7-5 (をリビルドしたもの)</li>
-<li>emacs24 24.5+1-6ubuntu3</li>
-<li>pinentry-0.1.el, 2015-Jun-12, 15.8kB</li>
-</ul>
-
-
-<h2>結果</h2>
-
-<p>先に結果を書いておくと、
-そのままだと動きませんでした。</p>
-
-<p><code>pinentry</code> を <code>--disable-pinentry-emacs --disable-inside-emacs</code> なしでリビルドして試すとうまくいきました。</p>
-
-<h2>設定反映</h2>
-
-<p>パッケージを入れ替えたり、
-<code>~/.gnupg/gpg-agent.conf</code> を書き換えた後は、
-<code>gpg-connect-agent killagent /bye</code> で <code>gpg-agent</code> を終了させました。
-<code>pkill gpg-agent</code> でも同じようですが、
-<code>gpg-connect-agent</code> の方が正式な手順のようです。
-<code>gpgconf --kill gpg-agent</code> でも終了できるようです。</p>
-
-<h2>オリジナルパッケージでの挙動</h2>
-
-<p><code>~/.gnupg/gpg-agent.conf</code> に <code>allow-emacs-pinentry</code> を追加すると Emacs の中どころか、
-コマンドライン直接でも使えなくなりました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% cat ~/.gnupg/gpg-agent.conf
-</span><span class='line'>allow-emacs-pinentry
-</span><span class='line'>log-file /tmp/gpg-agent.log</span></code></pre></td></tr></table></div></figure>
-
-
-<p>のように <code>log-file</code> も指定してみると <code>gpg -c hoge</code> で暗号化したファイルを復号しようとしたときは</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% gpg hoge.gpg
-</span><span class='line'>gpg: AES暗号化済みデータ
-</span><span class='line'>gpg: エージェントに問題: サポートされていません
-</span><span class='line'>gpg: 1 個のパスフレーズで暗号化
-</span><span class='line'>gpg: 復号に失敗しました: 秘密鍵がありません</span></code></pre></td></tr></table></div></figure>
-
-
-<p>となって、ログには</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>2017-03-25 13:XX:XX gpg-agent[XXXXX] gpg-agent (GnuPG) 2.1.15 started
-</span><span class='line'>2017-03-25 13:XX:XX gpg-agent[XXXXX] command 'GET_PASSPHRASE' failed: サポートされていません &lt;Pinentry&gt;</span></code></pre></td></tr></table></div></figure>
-
-
-<p>と出ていました。</p>
-
-<p>公開鍵で暗号化したファイルを復号しようとしたときには</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% gpg fuga.gpg
-</span><span class='line'>gpg: 2048-ビットRSA鍵, ID XXXXXXXXXXXXXXXX, 日付2017-03-24に暗号化されました
-</span><span class='line'>      "test@example.com"
-</span><span class='line'>gpg: 公開鍵の復号に失敗しました: サポートされていません
-</span><span class='line'>gpg: 復号に失敗しました: 秘密鍵がありません</span></code></pre></td></tr></table></div></figure>
-
-
-<p>となって、ログには</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>2017-03-25 13:XX:XX gpg-agent[XXXXX] gpg-agent (GnuPG) 2.1.15 started
-</span><span class='line'>2017-03-25 13:XX:XX gpg-agent[XXXXX] failed to unprotect the secret key: サポートされていません
-</span><span class='line'>2017-03-25 13:XX:XX gpg-agent[XXXXX] failed to read the secret key
-</span><span class='line'>2017-03-25 13:XX:XX gpg-agent[XXXXX] command 'PKDECRYPT' failed: サポートされていません &lt;Pinentry&gt;</span></code></pre></td></tr></table></div></figure>
-
-
-<p>と出ていました。</p>
-
-<h2>パッケージのリビルド</h2>
-
-<p>変更点としては <code>debian/rules</code> の <code>--disable-pinentry-emacs --disable-inside-emacs</code> を外して <code>pinentry-curses</code> を入れ替えただけですが、
-全体の手順もメモしておきます。</p>
-
-<ul>
-<li><code>apt-get source pinentry-curses</code></li>
-<li><code>sudo apt-get build-dep pinentry</code></li>
-<li><code>sudo apt-get install devscripts</code></li>
-<li><code>cd pinentry-0.9.7</code></li>
-<li><code>vi debian/rules</code> で <code>SHARED_CONFIGS = --disable-rpath --without-libcap --disable-pinentry-emacs --disable-inside-emacs</code> を <code>SHARED_CONFIGS = --disable-rpath --without-libcap</code> に変更</li>
-<li><code>debuild -uc -us -rfakeroot</code></li>
-<li><code>cd ..</code></li>
-<li><code>sudo dpkg -i pinentry-curses_0.9.7-5_amd64.deb</code></li>
-</ul>
-
-
-<h2>Emacs の設定</h2>
-
-<p><code>M-x package-install RET pinentry RET</code> などで <code>pinentry.el</code> をインストールしておきます。</p>
-
-<p><a href="https://elpa.gnu.org/packages/pinentry.html">GNU ELPA - pinentry</a> の説明にはありませんが、
-<code>INSIDE_EMACS</code> 環境変数も設定しないと <code>pinentry-curses</code> に Emacs を開いている端末を乗っ取られて操作できなくなってしまいました。
-(<code>pkill pinentry</code> で復帰できました。 <code>gpg-agent</code> も終了させたり <code>C-l</code> で再描画も必要かもしれません。)</p>
-
-<p><code>INSIDE_EMACS</code> 環境変数は <code>M-x shell</code> では <code>Emacsのバージョン,comint</code> に自動で設定されるようなので、
-<code>pinentry.el</code> はそういう環境での使用を前提として作られたのかもしれません。</p>
-
-<p><code>(package-initialize)</code> は <code>(pinentry-start)</code> を呼ぶのに必要だったので追加しています。
-起動後に <code>M-x pinentry-start</code> する時には <code>M-x package-initialize</code> は必要なかったので、
-初期化の順番の問題なのだと思います。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% cat ~/.emacs.d/init.el
-</span><span class='line'>(setenv "INSIDE_EMACS" "t")
-</span><span class='line'>(package-initialize)
-</span><span class='line'>(pinentry-start)</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>pinentry.el の動作</h2>
-
-<p>共通鍵で暗号化した <code>hoge.gpg</code> を開こうとするとミニバッファで</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>パスフレーズを入力:</span></code></pre></td></tr></table></div></figure>
-
-
-<p>と聞いてきて、間違ったパスフレーズを入力すると <code>Opening input file: Decryption failed,</code> になりました。</p>
-
-<p>正しいパスフレーズを入力すると開けました。
-編集して保存は新しいパスフレーズをきいてきました。
-保存した時のパスフレーズがキャッシュされているらしく、
-<code>C-x C-v</code> (<code>find-alternate-file</code>) での開き直しはパスフレーズ入力なしでできました。</p>
-
-<p>公開鍵で暗号化した <code>fuga.gpg</code> を開こうとするとミニバッファで</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>OpenPGPの秘密鍵のロックを解除するためにパスフレーズを入力してください:
-</span><span class='line'>"test@example.com"
-</span><span class='line'>2048ビットRSA鍵, ID XXXXXXXXXXXXXXXX,
-</span><span class='line'>作成日付 2017-03-24 (主鍵ID YYYYYYYYYYYYYYYY).:</span></code></pre></td></tr></table></div></figure>
-
-
-<p>のようにきいてきました。</p>
-
-<p>何も入力せずに <code>RET</code> を押すと <code>Opening input file: Decryption failed,</code> になりました。
-パスフレーズを 3 回間違えても <code>Opening input file: Decryption failed,</code> になりました。</p>
-
-<p>正しいパスフレーズを入力すると開けました。
-編集して保存や <code>C-x C-v</code> (<code>find-alternate-file</code>) での開き直しもパスフレーズ入力なしでできました。</p>
-
-<h2>パスフレーズの入力漏れに注意</h2>
-
-<p>オリジナルの <code>pinentry-curses</code> でも発生した問題です。</p>
-
-<p>パスフレーズを入力せずに <code>RET</code> を押してしまうと <code>Opening input file: Decryption failed,</code> になった後、
-再度開こうとしてもパスフレーズをきいてこなくて、
-すぐに <code>Opening input file: Decryption failed,</code> になるようになってしまいました。
-間違ったパスフレーズの場合は再度きいてくるので、
-普通はそのまま <code>RET</code> は避けるようにして、
-やってしまったら <code>gpg-connect-agent killagent /bye</code> などで <code>gpg-agent</code> を再起動するのが良さそうです。</p>
-
-<p><code>gpg hoge.gpg</code> で直接空欄で OK を押してしまったときも再度きいてこなくなってすぐに</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% gpg hoge.gpg
-</span><span class='line'>gpg: AES暗号化済みデータ
-</span><span class='line'>gpg: gcry_kdf_derive failed: 無効なデータです
-</span><span class='line'>gpg: 1 個のパスフレーズで暗号化
-</span><span class='line'>gpg: 復号に失敗しました: 秘密鍵がありません</span></code></pre></td></tr></table></div></figure>
-
-
-<p>になるようになってしまったので、
-<code>pinentry.el</code> に限らず注意した方が良さそうです。</p>
-
-<h2>Debian パッケージで disable されている理由</h2>
-
-<p>debian/changelog には</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>pinentry (0.9.5-2) unstable; urgency=medium
-</span><span class='line'>
-</span><span class='line'>  * disable emacs and emacs-fallback until we get a better description of
-</span><span class='line'>    them in the upstream documentation</span></code></pre></td></tr></table></div></figure>
-
-
-<p>と書いてあって、
-意図的に無効にされているようです。</p>
-
-<p>経緯としては
-<a href="https://bugs.gnupg.org/gnupg/issue2034">https://bugs.gnupg.org/gnupg/issue2034</a>
-や
-<a href="https://bugs.debian.org/854797">https://bugs.debian.org/854797</a>
-をみるのが良さそうです。</p>
-
-<p>upstream のドキュメント不足ということで、
-ちゃんとドキュメントがあれば再度有効にしてもらえそうですが、
-英語ドキュメントが書ける人じゃないと根本的な解決は難しそうです。</p>
-
-<h2>まとめ</h2>
-
-<p>現状の Debian や Ubuntu では <code>pinentry.el</code> をそのまま使うことは難しそうです。</p>
-
-<p>この記事に書いたように自前でリビルドしてセキュリティアップデートなどがあれば頑張ってリビルドし直すようにするか、
-<a href="http://blog.n-z.jp/blog/2017-03-23-pinentry-emacs.html">pinentry-emacsを使ってみた</a>記事に書いたように、
-セキュリティや Emacs の外での使い勝手などを犠牲にして <code>pinentry-emacs</code> を使うか、
-ということになりそうです。</p>
-
-<p>現状で一番良い方法は Emacs のミニバッファでの入力は諦めて、
-GUI のダイアログが出てくる <code>pinentry</code> を使うことのようなので、
-<code>ssh</code> で入った先の <code>emacs</code> で完結しないといけないなどの制限がなければ、
-手元の Emacs と GUI の <code>pinentry</code> を組み合わせて、
-リモートのファイルは TRAMP 経由で開く、
-というのが良いのかもしれません。</p>
 ]]></content>
   </entry>
   
