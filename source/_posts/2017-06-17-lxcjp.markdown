@@ -1,0 +1,270 @@
+---
+layout: post
+title: "第11回 コンテナ型仮想化の情報交換会＠大阪に参加した"
+date: 2017-06-17 13:30:00 +0900
+comments: true
+categories: lxcjp docker
+---
+[第11回 コンテナ型仮想化の情報交換会＠大阪](https://ct-study.connpass.com/event/55305/)に参加してきました。
+
+<!--more-->
+
+以下、メモです。
+
+## 案内など
+
+- Wi-Fi はないはずだったが、提供できた
+- ハッシュタグは [#lxcjp](https://twitter.com/search?q=%23lxcjp)
+- ([第11回 コンテナ型仮想化の情報交換会＠大阪 #lxcjp - Togetterまとめ](https://togetter.com/li/1121078)にまとめられています。質疑応答はメモ間違いもありそうなので、Togetter の方が正確そうです。)
+
+## Linuxコンテナ基礎(仮)
+
+- 自己紹介
+- [LXCで学ぶコンテナ入門 －軽量仮想化環境を実現する技術](http://gihyo.jp/admin/serial/01/linux_containers)
+- 基礎知識
+- 単独の機能があるわけではなく、 namespace とか cgroup とかを組みわせて実現されている
+- chroot とか pivot_root とか
+- speakerdeck で資料は公開予定
+- speakerdeck に元になった情報の多い資料も公開されている
+- [Linux コンテナの基礎 / 11th CTStudy by tenforward](https://speakerdeck.com/tenforward/11th-ctstudy)
+
+## Haconiwa
+
+- イベントページでは「変拍子パワーポップ系コンテナランタイムHaconiwa - 夏を古くするな！」というタイトルになっていましたが、実際のタイトルは変わっていました。
+- 自己紹介
+- Haconiwa とは?
+- mruby
+- ビュッフェ型コンテナランタイム
+- ビュッフェ型とは Web フレームワークでいうと Padrino
+- ruby で色々かける
+- コンテナの初期化処理とか
+- シグナルハンドラで CPU 割り当てを増減したりとか
+- Sqale という PaaS の運用のお手伝いの話
+- やりたいことが lxc などが古くて実現が難しかった
+- もしイチからやるなら?
+- コンテナ勉強会との出会い
+- RubyKaigi 2016 に応募して選考に通る前に完成
+- Haconiwa の実装方針
+- コア部分は Pure Ruby
+- システムコールは mruby gem でラップ
+- 全てはプロセス
+- sample/process.rb を改変したものでデモ
+- 関連技術
+- FastContainer
+- [FastContainerアーキテクチャ構想](http://hb.matsumoto-r.jp/entry/2016/11/11/234915)
+- プロセスの3分類: immortal (いわゆるデーモン), short-lived (バッチとか ls とかの単独のコマンド), mortal
+- 2つの中間的なものを定義する
+- mortal な存在としての FastCGI
+- inetd, xinetd
+- immortal なコンテナ: システムコンテナ, アプリケーションコンテナ, VPS として使う場合, Dokku
+- short-lived なコンテナ: アプリケーションコンテナで単一のジョブ: systemd-nspawn, FaaS
+- なぜ FastContainer か
+- 負荷が上がった時: スケールアップ, スケールアウト
+- 従来の VM では高速なスケールアップは非常に困難
+- コンテナでも煩雑さは残る
+- Haconiwa がスケールアップについての問題を解決
+- スケールアウトも従来の VM ではインスタンスの複製が難しいなど
+- コンテナもコストは下がるが自動化には課題がある
+- [負荷低すぎはもはや障害じゃないのか](http://mikeda.hatenablog.com/entry/2015/02/01/195102)
+- FastContainer が解決するもの: スケールアウトについて インスタンスの入れ替え、増減が容易になる
+- +Haconiwa が解決するもの: 起動するコンテナ数をコンテナ自身で動的に操作させることが可能
+- Container as Code
+- その他のメリット
+- セキュリティ的観点: コンテナは、常に入れ替わるので、パッケージのアップグレードや、ミドルウェアの更新が非常になめらかに行える
+- 運用的観点: どのホストであっても同じように動く。ホストをリソースプールとみなして透過的に扱える
+- FastContainer は実現できるか?
+- Scheduler: nomad
+- CoreAPI+CMDB
+- Web Proxy / Dispatcher : 起動のきっかけにもなるので Dispatcher
+- どうして Haconiwa を作ったのですか?
+- alternative rock
+- Docker はすごいが、それだけでいいのか
+- オルタナティブな存在が新しい価値観を届けるかもしれないのだ。
+- 質疑応答
+- Q: どこで負荷を判別するか
+- A: cgroup の stat をベースに, veth (?) とかの負荷をみて
+- udzura cgroup で検索
+- [cgroup経由でシステムの利用状況を知る - CPU編](http://udzura.hatenablog.jp/entry/2017/05/02/175445) あたりが関連?
+- Q: mruby?
+- A: mruby の説明など
+- システムコール部分も Ruby っぽくやるために mruby という感じ?
+- Q: Web 以外の技術で FastCGI のような技術を応用することを考えているか?
+- A: nginx は tcp proxy 機能もあるので sshd とかも試している
+- Q: 具体的な利用予定は?
+- A: ロリポップ的に使えてオートスケールできるものができると良いかも?
+- [変拍子パワーポップ系コンテナ、Haconiwa /the-alternative-container](https://speakerdeck.com/udzura/the-alternative-container)
+
+## 休憩
+
+懇親会の追加申し込み受付案内
+
+## chrootとnetwork namespaceでつくる簡易コンテナ
+
+- 自己紹介
+- 自作コンテナのモチベーション
+- Linux コンテナの勉強、既存コンテナ技術の再確認、手元でのネットワークテスト環境
+- chroot × network namespace × UTS namespace
+- UTS namespace は管理しやすいから
+- nginx + mackerel-agent + sshd
+- コマンドで作成
+- デモ
+- イメージ作成は docker export とか debootstrap とかが使える
+- namespace の永続化
+- /proc/[PID]/ns 配下にある特殊ファイル
+- bind マウントを使って永続化する
+- mount --bind /run/utsns /run/utsns
+- mount --make-shared /run/utsns
+- unshare -u mount --bind /proc/self/ns/uts /run/utsns/test01
+- 最近の unshare コマンドなら unshare --uts=/run/utsns/test01
+- UTS namespace: 主に管理のため
+- Network の作成
+- veth 作って bridge に接続
+- Netowrk はポータビリティに影響が出やすい
+- 一時期 docker が頑張ってた: VXLAN による overlay Network など
+- 改善すべき箇所がたくさんある面白い分野
+- chroot 環境の作成
+- コンテナの中でも systemd を動かすと shared マウントだとコンテナの片付けの時に親の方まで一緒にアンマウントされてしまってはまるので、 rslave が必要
+- コンテナ内でのプロセスの実行: nsenter した上で chroot する
+- chroot 配下では systemd は動作しないので注意が必要
+- chroot の代わりに systemd-nspawn を使う
+- PID namespace
+- docker 1.13 で run に init オプションがついた
+- ss はネームスペースを指定できる
+- いけてない箇所
+- 質疑応答
+- Q: udzuraさん: VXLAN を検証している?
+- A: 業務では使っていなくて趣味でやっている。 Open vSwitch で軽く試したことはある。
+
+veth のデモは [Network Namespace & Veth demo](https://asciinema.org/a/122327) を参照
+
+## LXD 採用から運用までの顛末記
+
+- 自己紹介
+- LXD 採用で、XREA、ハイパフォーマンスで安定稼働しております
+- XERA の歴史
+- 古い物理サーバーから KVM
+- 完全仮想化の利点と問題点
+- 時代はコンテナだということで準仮想化
+- なぜ LXD か?
+- Docker: ユーザーの権限独立とネットワーク周りの問題が解決できず
+- KVM: オーバーヘッドが多くてリソースが無駄
+- OpenVZ: コンテナより遅かった
+- VMware: 考えたこともない
+- LXD: コンテナだし、リソースが有効に使えて、ヒャッハーだ！
+- LXD 採用からサービス開始まで
+- マイグレーションに伴う障害はあったが、コンテナが原因の問題はおきなかった
+- LXD の運用環境
+- ホスト Ubuntu 16.04 LTS
+- ゲスト CentOS 7
+- ZFS + ブロックデバイス
+- ホストシステム構築時のトラブル
+- オープンファイル数の上限編
+- 試行錯誤した結果 `fs.inotify.max_user_instances` だった
+- その他色々上限解除
+- LXD 運用編
+- 1: ユーザークォータがきかない→運用でカバー
+- 2: マイグレーション時に Apache のアラートがあがる
+- 原因は Apache RLimitNPROC + Potential DoS attacks
+- 同じユーザーだったのが原因
+- https://linuxcontainers.org/lxc/security/
+- 3: ホストのロードアベレージが急激に上昇→ZFS がボトルネック、チューニングを実施
+- 4: コンテナ自体のリソース制御
+- 5: (よそ見をしていたら見逃した)
+- LXD に変えてどうだったか
+- よかったという話
+- 質疑応答
+- Q: ホスト間のマイグレーションは使っているか?
+- A: KVM からのマイグレーションだったので今回は使っていない。次回は使うかもしれない。
+- Q: ZFS で苦労されたという話だったが、他に選択肢はあったのか?
+- A: ZFS がデフォルトっぽい感じだったので、選んだ。ブロックデバイスかどうかというのはあったが、ブロックデバイスを選んだ。
+- Q: Docker のネットワーク周りの問題とは?
+- 担当者 A: ポートとか IP とかの問題
+
+## 休憩
+
+懇親会の案内
+
+## Joe's と LXC とその運用実例と
+
+- Joe's Cloud Computing
+- 会社紹介
+- Speaker 紹介
+- Joe's と LXC
+- 2001年: Scientific Linux 6 with kernel 2.6.42 (後で訂正あり) + patch, zfs on fuse: 当初よりテンプレートを意識した設計
+- 2010年〜: ubuntu に乗り換え, LXD への移行模索中
+- 現在: 共用サーバーの半分が LXC 駆動
+- LXC と Docker
+- kvm との比較
+- LXC 運用のメリット: リソース管理がしやすい
+- 運用例: zabbix 運用, 障害対応, IPブロック, プロセス管理
+- 運用テストで LXC で zabbix を作成
+- nagios から移行
+- 本番環境に移動
+- lxc だと rsync でコピーして起動できる
+- 同一ネットワークだと監視の意味が、ということでさくらクラウドに移動
+- 障害対応
+- ハードウェア障害
+- 起動しなくても HDD から読み出せるならレスキュー環境で起動して吸い出してなんとかできる
+- IP ブロック
+- ホスト側の FORWARD チェインでブロック
+- FORWARD なので失敗しても取り消しやすい
+- ゲスト側が古くて ipset が使えなくてもホスト側で使えるので便利
+- プロセス管理: ホスト側から監視できる (htop とか)
+- これからの LXC ホスティング
+- デプロイ速度の向上
+- 仮想コンソールの実装
+- Migration / HA の実装
+- まだまだこれから楽しめる分野
+- 質疑応答
+- Q: Zabbix のバックアップ運用は?
+- A: ローカルは HDD が多いマシンがあるのでそこにとっている。リモートはホスト側で rsync と database のバックアップ
+- Q: ゲスト数はどのくらい?
+- A: 4コアで1台ぐらいのイメージ。テストでは40台ぐらいで
+- ディスクの I/O がボトルネックになる。
+- Q: 特権コンテナ?
+- A: マネージドは特権コンテナで問題ない。 VPS は非特権コンテナの予定あり。
+- Q: LXC のバージョンアップやマイグレーションでの気をつけたポイントは?
+- A: 古いサーバーのバージョン確認 kernel 2.6.42 ではなかった 2.6.32.41 LXC 0.7.4.1
+- [Joe's and working with LXC by samaiyou](https://speakerdeck.com/samaiyou/joes-and-working-with-lxc)
+
+## Dockerコンテナ監視要素の検討
+
+- 古い情報で誤解されていることがある
+- http://docs.docker.jp/
+- 動機: どのように監視をしたら良いのか?, runC と containerD, 私は私が欲しい監視システムを作りたい
+- 監視と運用: システム稼働状況の把握と対策, サービスレベル
+- http://www.brendangregg.com/linuxperf.html
+- ストレージドライバーによってパフォーマンスが大きく異なる
+- dockerd (Docker Engine), containerD
+- スケジューリング + クラスタ管理 = オーケストレーション
+- 良い感じの自動化ツールはまだなさそう
+- Prometheus
+- Docker Engine とデーモンの変遷
+- v1.11〜 は dockerd - containerd - runC になっている
+- https://www.opencontainers.org/ - runC
+- https://www.cncf.io/ - containerd
+- 2013年→2016年夏現在: dockerd デーモンの解体, 従来のコンテナ監視はメトリクス取得に集中
+- runC
+- バイナリ配布はされていないので自分で make する必要あり
+- runc のデモ
+- Docker Compose
+- fig が買収されて docker-compose になった
+- docker swarm mode, overlay network で Routing mesh, docker service create でサービス作成
+- サービス名で名前解決できる
+- 監視はどうする?
+- Docker Swarm という swarm mode とは名前は似ているが別物がまだ残っているがそのうち消えるはず
+- API と SDK
+- `curl --unix-socket /var/run/docker.sock -X GET http://v1.29/containers/json?size=true | jq "." | less` とかでも情報がとれる
+- https://github.com/yadutaf/ctop
+- systemd-cgtop より便利
+- Q: containerd と runc を意識する必要はあるか?
+- A: 普段はあまり意識する必要はない
+- Q: ホスティングサービスでは docker を選ばなかったが、お客様から見えない部分では使いたい
+- A: さくらの VPS のコントロールパネルなどで docker を使っている
+- Q: kubernetes とかは?
+- A: 用途が違うので使い分ければ良いのでは。使いたいものを使えば良いのでは。
+- ユーザー目線で使いやすいのは swarm mode とか
+- リソースを有効活用したいのなら mesos とか
+- kubernetes はあまり詳しくない
+- mesos は API があって使いやすいらしい
+- ctop は同じ名前で別のものがある
