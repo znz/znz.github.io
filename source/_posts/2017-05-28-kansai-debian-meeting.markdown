@@ -3,7 +3,7 @@ layout: post
 title: "第 123 回関西 Debian 勉強会に参加しました"
 date: 2017-05-28 13:50:00 +0900
 comments: true
-categories: Debian event
+categories: debian event
 ---
 [第 123 回関西 Debian 勉強会](https://debianjp.connpass.com/event/57323/ "第 123 回関西 Debian 勉強会")に参加しました。
 
