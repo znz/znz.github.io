@@ -4,7 +4,7 @@
   <title><![CDATA[Category: event | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/event/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-06-18T22:07:09+09:00</updated>
+  <updated>2017-06-24T23:13:17+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,940 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Shinosaka.rb #27 (GraphQL) に参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-06-24-shinosaka-rb-graphql.html"/>
+    <updated>2017-06-24T13:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/shinosaka-rb-graphql</id>
+    <content type="html"><![CDATA[<p><a href="https://shinosakarb.doorkeeper.jp/events/61090">Shinosaka.rb #27</a> に参加しました。
+Shinosaka.rb 自体は初参加でした。</p>
+
+<p>今回は GraphQL の解説と node と rails でのハンズオンでした。</p>
+
+<!--more-->
+
+
+<p>以下、メモです。</p>
+
+<h2>メモ</h2>
+
+<ul>
+<li><a href="http://www.kokuchpro.com/event/tddbcosaka4/">TDDBC大阪4.0 2017年7月1日（大阪府） - こくちーずプロ（告知'sプロ）</a></li>
+<li><a href="https://management30.doorkeeper.jp/events/61787">［認定証発行］アジャイル・リーダーシップとチェンジ・マネジメント・ワークショップ（Management 3.0） - Management 3.0（アジャイル・リーダーシップ、チェンジ･マネジメント、イノベーション・マネジメント） | Doorkeeper</a></li>
+<li>自己紹介</li>
+<li>QraphQL とは?</li>
+<li>単一のエンドポイント</li>
+<li>ライブラリーもいろんな言語や環境に対応している</li>
+<li>REST API がツライから</li>
+<li>GraphQL の微妙な点: pagination, 認証も考慮されていない</li>
+<li>React との相性が良い: データ駆動</li>
+<li>GitHub が GraphQL を採用: <a href="https://developer.github.com/v4/explorer/">https://developer.github.com/v4/explorer/</a></li>
+<li><a href="http://graphql.org/">http://graphql.org/</a></li>
+</ul>
+
+
+<h2>動作確認環境</h2>
+
+<ul>
+<li>macOS Sierra 10.12.5</li>
+<li>node v8.1.2</li>
+<li>npm 5.0.3</li>
+<li>graphql などのバージョン: <a href="https://github.com/znz/getting_started_graphql">https://github.com/znz/getting_started_graphql</a> を参照</li>
+<li>ruby ruby 2.3.3p222 (2016-11-21 revision 56859) [x86_64-darwin15]</li>
+<li>Bundler version 1.15.1</li>
+<li>Rails 5.1.1</li>
+<li>graphql 1.6.4, graphiql-rails 1.4.2</li>
+<li>その他: <a href="https://github.com/znz/getting_started_graphql_ruby">https://github.com/znz/getting_started_graphql_ruby</a> を参照</li>
+</ul>
+
+
+<h2>ソースコード</h2>
+
+<ul>
+<li>node 版は <a href="https://github.com/znz/getting_started_graphql">https://github.com/znz/getting_started_graphql</a> を参照</li>
+<li>Rails 版は <a href="https://github.com/znz/getting_started_graphql_ruby">https://github.com/znz/getting_started_graphql_ruby</a> を参照</li>
+</ul>
+
+
+<p>途中での graphiql での確認方法は下の作業メモの方に書いてあるので、あわせて参照してください。</p>
+
+<h2>感想</h2>
+
+<p>作業メモが長く続くので、先に感想を書いておきます。</p>
+
+<p>node の方はエラーも json で帰ってきてブラウザーで見えて開発環境として使いやすそうな感じでしたが、
+graphiql-rails の方はエラーの時に <code>SyntaxError: Unexpected token &lt; in JSON at position 0</code> とだけ出て、
+詳細はサーバー側のログをみないといけないので、node に比べるとちょっと使いづらいかもしれない、と思いました。</p>
+
+<p>GraphQL 自体は色々と利点も多そうだと思いましたが、サーバー側は結局 REST とは別に作り込まないといけなさそうで、
+アクセス権限などを考えると、既存のアプリケーションで簡単に置き換えられるものでもなさそうかな、と思いました。</p>
+
+<h2>実際に使ってみる</h2>
+
+<ul>
+<li><a href="http://graphql.org/code/">http://graphql.org/code/</a></li>
+<li>npm init -y</li>
+<li>npm install graphql</li>
+</ul>
+
+
+<h2>step 1</h2>
+
+<p>index.js として以下の内容を作成:</p>
+
+<pre><code>'use strict'
+
+const { graphql, buildSchema } = require('graphql')
+
+const schema = buildSchema(`
+type Query {
+  foo: String
+}
+
+type Schema {
+  query: Query
+}
+`)
+
+const resolvers = {
+  foo: () =&gt; 'bar',
+}
+
+const query = `
+query myQuery {
+  foo
+}
+`
+
+graphql(schema, query, resolvers)
+  .then(result =&gt; console.log(result))
+  .catch(err =&gt; console.log(err))
+</code></pre>
+
+<p>実行結果:</p>
+
+<pre><code>% node.index.js
+{ data: { foo: 'bar' } }
+</code></pre>
+
+<h2>step 2</h2>
+
+<pre><code>const schema = buildSchema(`
+type Query {
+  id: ID,
+  title: String,
+  watched: Boolean,
+}
+
+type Schema {
+  query: Query
+}
+`)
+</code></pre>
+
+<pre><code>const resolvers = {
+  id: () =&gt; 1,
+  title: () =&gt; 'bar',
+  watched: () =&gt; true,
+}
+</code></pre>
+
+<pre><code>const query = `
+query myQuery {
+  id,
+  title,
+  watched,
+}
+`
+</code></pre>
+
+<pre><code>% node index.js
+{ data: { id: '1', title: 'bar', watched: true } }
+</code></pre>
+
+<p>query から watched を削ると <code>{ data: { id: '1', title: 'bar' } }</code> になる。</p>
+
+<h2>step 3</h2>
+
+<pre><code>const schema = buildSchema(`
+type Video {
+  id: ID,
+  title: String,
+  watched: Boolean,
+}
+
+type Query {
+  video: Video
+}
+
+type Schema {
+  query: Query
+}
+`)
+</code></pre>
+
+<pre><code>const resolvers = {
+  video: () =&gt;({
+    id: 1,
+    title: 'bar',
+    watched: true
+  }),
+}
+</code></pre>
+
+<pre><code>const query = `
+query myQuery {
+  video {
+    id,
+    title,
+    watched,
+  }
+}
+`
+</code></pre>
+
+<h2>step 4</h2>
+
+<p>videos 対応</p>
+
+<pre><code>const schema = buildSchema(`
+type Video {
+  id: ID,
+  title: String,
+  watched: Boolean,
+}
+
+type Query {
+  video: Video,
+  videos: [Video],
+}
+
+type Schema {
+  query: Query
+}
+`)
+</code></pre>
+
+<pre><code>const videoA = {
+  id: 1,
+  title: 'title1',
+  watched: true
+}
+const videoB = {
+  id: 2,
+  title: 'title2',
+  watched: false
+}
+const videos = [videoA, videoB]
+</code></pre>
+
+<pre><code>const resolvers = {
+  video: () =&gt; ({
+    id: 1,
+    title: 'bar',
+    watched: true,
+  }),
+  videos: () =&gt; videos,
+}
+</code></pre>
+
+<pre><code>const query = `
+query myQuery {
+  videos {
+    id,
+    title,
+    watched,
+  }
+}
+`
+</code></pre>
+
+<pre><code>% node index.js
+{ data: { videos: [ [Object], [Object] ] } }
+</code></pre>
+
+<h2>step 5</h2>
+
+<p><code>yarn add express express-graphql</code> or <code>npm install express express-graphql</code></p>
+
+<p><code>require('graphql')</code> の行の上に追加:</p>
+
+<pre><code>const express = require('express')
+const graphqlHTTP = require('express-graphql')
+</code></pre>
+
+<p>追加:</p>
+
+<pre><code>const PORT = process.env.PORT || 3000
+const server = express()
+</code></pre>
+
+<p>末尾の <code>graphql</code> の呼び出しを置き換え:</p>
+
+<pre><code>server.use('/graphql', graphqlHTTP({
+  schema,
+  graphiql: true,
+  rootValue: resolvers,
+}))
+
+server.listen(PORT, () =&gt; {
+  console.log(`Listening on http://localhost:${PORT}`)
+})
+</code></pre>
+
+<p><code>http://localhost:3000/graphql</code> を開いて</p>
+
+<pre><code>{
+  videos {
+    id,
+    title,
+    watched,
+  }
+}
+</code></pre>
+
+<p>などを試す。</p>
+
+<p>右上の Docs でスキーマも見える。</p>
+
+<h2>step 6</h2>
+
+<p>graphql の require のところを書き換え:</p>
+
+<pre><code>const {
+  GraphQLSchema,
+  GraphQLObjectType,
+  GraphQLID,
+  GraphQLString,
+  GraphQLBoolean,
+} = require('graphql')
+</code></pre>
+
+<p>buildSchema を書き換え:</p>
+
+<pre><code>const videoType = new GraphQLObjectType({
+  name: 'Video',
+  description: 'video',
+  fields: {
+    id: {
+      type: GraphQLID,
+      description: 'id of video',
+    },
+    title: {
+      type: GraphQLString,
+      description: 'title of video'
+    },
+    watched: {
+      type: GraphQLBoolean,
+      description: 'has watched'
+    }
+  }
+})
+</code></pre>
+
+<pre><code>const queryType = new GraphQLObjectType({
+  name: 'QueryType',
+  description: 'root query',
+  fields: {
+    video: {
+      type: videoType,
+      resolve: () =&gt; new Promise(resolve =&gt; {
+        resolve({
+          id: 1,
+          title: 'title1',
+          watched: true,
+        })
+      })
+    }
+  }
+})
+</code></pre>
+
+<pre><code>const schema = new GraphQLSchema({
+  query: queryType,
+})
+</code></pre>
+
+<p><code>node index.js</code> を再起動して <code>http://localhost:3000/graphql</code> で</p>
+
+<pre><code>{
+  video {
+    id
+    title
+    watched
+  }
+}
+</code></pre>
+
+<p>などを試す。</p>
+
+<h2>休憩</h2>
+
+<h2>id: 1 だけ欲しいときなど</h2>
+
+<p>videos を移動して data.js を作成:</p>
+
+<pre><code>'use strict'
+
+const videoA = {
+  id: 1,
+  title: 'title1',
+  watched: true
+}
+const videoB = {
+  id: 2,
+  title: 'title2',
+  watched: false
+}
+const videos = [videoA, videoB]
+
+const getVideoById = (id) =&gt; new Promise(resolve =&gt; {
+  const [video] = videos.filter(v =&gt; (v.id + '') === id)
+  resolve(video)
+})
+
+exports.getVideoById = getVideoById
+</code></pre>
+
+<pre><code>const { getVideoById } = require('./data')
+</code></pre>
+
+<pre><code>const queryType = new GraphQLObjectType({
+  name: 'QueryType',
+  description: 'root query',
+  fields: {
+    video: {
+      type: videoType,
+      args: {
+        id: {
+          type: GraphQLID,
+          description: 'id of video',
+        },
+      },
+      resolve: (_, args) =&gt; getVideoById(args.id)
+    }
+  }
+})
+</code></pre>
+
+<p><code>node index.js</code> を再起動して <code>http://localhost:3000/graphql</code> で</p>
+
+<pre><code>{
+  video(id: 2) {
+    id
+    title
+    watched
+  }
+}
+</code></pre>
+
+<p>などを試す。</p>
+
+<h2>id を必須にしたい</h2>
+
+<p><code>require('graphql')</code> のところに <code>GraphQLNonNull,</code> を追加。</p>
+
+<p><code>type: new GraphQLNonNull(GraphQLID),</code> にする。</p>
+
+<pre><code>{
+  "errors": [
+    {
+      "message": "Unknown operation named \"null\"."
+    }
+  ]
+}
+</code></pre>
+
+<p>になってしまったが、 getVideos の追加の後、もう一度試したら動いたので謎。
+謎のエラーが発生した時は Prettify を押すとエラーが起きなくなるみたい。</p>
+
+<pre><code>{
+  video {
+    id
+    title
+    watched
+  }
+}
+</code></pre>
+
+<p>などを試すと以下のように意図通りのエラーになる。</p>
+
+<pre><code>{
+  "errors": [
+    {
+      "message": "Field \"video\" argument \"id\" of type \"ID!\" is required but not provided.",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ]
+    }
+  ]
+}
+</code></pre>
+
+<h2>配列</h2>
+
+<p><code>GraphQLList</code> を追加</p>
+
+<p>data.js に追加:</p>
+
+<pre><code>const getVideos = () =&gt; new Promise(resolve =&gt; resolve(videos))
+</code></pre>
+
+<pre><code>exports.getVideos = getVideos
+</code></pre>
+
+<p>index.js:</p>
+
+<pre><code>const { getVideoById, getVideos } = require('./data')
+</code></pre>
+
+<pre><code>    videos: {
+      type: new GraphQLList(videoType),
+      resolve: getVideos,
+    },
+</code></pre>
+
+<p><code>node index.js</code> を再起動して <code>http://localhost:3000/graphql</code> で</p>
+
+<pre><code>{
+  videos {
+    id
+    title
+    watched
+  }
+}
+</code></pre>
+
+<p>などを試す。</p>
+
+<h2>mutation</h2>
+
+<p>schema に mutation を追加:</p>
+
+<pre><code>const schema = new GraphQLSchema({
+  query: queryType,
+  mutation: mutationType,
+})
+</code></pre>
+
+<p>schema の上に追加:</p>
+
+<pre><code>const mutationType = new GraphQLObjectType({
+  name: 'Mutation',
+  description: 'Mutation type',
+  fields: {
+    createVideo: {
+      type: videoType,
+      args: {
+        title: {
+          type: new GraphQLNonNull(GraphQLString),
+          description: 'title of video',
+        },
+      },
+      resolve: (_, args) =&gt; {
+        return createVideo(args)
+      }
+    },
+  },
+})
+</code></pre>
+
+<p>data.js:</p>
+
+<pre><code>const createVideo = ({ title }) =&gt; {
+  const maxId = Math.max.apply(null, videos.map(v =&gt; v.id))
+  const watched = false
+  const video = {
+    id: maxId + 1,
+    title,
+    watched,
+  }
+  return video
+}
+</code></pre>
+
+<p>(videos への push が抜けていた。)</p>
+
+<pre><code>exports.createVideo = createVideo
+</code></pre>
+
+<p>index.js:</p>
+
+<pre><code>const { getVideoById, getVideos, createVideo } = require('./data')
+</code></pre>
+
+<p><code>node index.js</code> を再起動して <code>http://localhost:3000/graphql</code> で</p>
+
+<pre><code>mutation M {
+  createVideo(title: "hoge") {
+    id
+    title
+    watched
+  }
+}
+</code></pre>
+
+<p>を試す。</p>
+
+<p>この時点の index.js:</p>
+
+<pre><code>'use strict'
+
+const express = require('express')
+const graphqlHTTP = require('express-graphql')
+const {
+  GraphQLSchema,
+  GraphQLObjectType,
+  GraphQLID,
+  GraphQLString,
+  GraphQLBoolean,
+  GraphQLNonNull,
+  GraphQLList,
+} = require('graphql')
+const { getVideoById, getVideos, createVideo } = require('./data')
+
+const PORT = process.env.PORT || 3000
+const server = express()
+
+/*
+video
+  id
+  title
+  watched
+*/
+
+const videoType = new GraphQLObjectType({
+  name: 'Video',
+  description: 'video',
+  fields: {
+    id: {
+      type: GraphQLID,
+      description: 'id of video',
+    },
+    title: {
+      type: GraphQLString,
+      description: 'title of video'
+    },
+    watched: {
+      type: GraphQLBoolean,
+      description: 'has watched'
+    }
+  }
+})
+
+const queryType = new GraphQLObjectType({
+  name: 'QueryType',
+  description: 'root query',
+  fields: {
+    videos: {
+      type: new GraphQLList(videoType),
+      resolve: getVideos,
+    },
+    video: {
+      type: videoType,
+      args: {
+        id: {
+          type: new GraphQLNonNull(GraphQLID),
+          description: 'id of video',
+        }
+      },
+      resolve: (_, args) =&gt; getVideoById(args.id)
+    }
+  }
+})
+
+const mutationType = new GraphQLObjectType({
+  name: 'Mutation',
+  description: 'Mutation type',
+  fields: {
+    createVideo: {
+      type: videoType,
+      args: {
+        title: {
+          type: new GraphQLNonNull(GraphQLString),
+          description: 'title of video',
+        },
+      },
+      resolve: (_, args) =&gt; {
+        return createVideo(args)
+      }
+    },
+  },
+})
+
+const schema = new GraphQLSchema({
+  query: queryType,
+  mutation: mutationType,
+})
+
+server.use('/graphql', graphqlHTTP({
+  schema,
+  graphiql: true,
+}))
+
+server.listen(PORT, () =&gt; {
+  console.log(`Listening on http://localhost:${PORT}`)
+})
+</code></pre>
+
+<p>data.js:</p>
+
+<pre><code>'use strict'
+
+const videoA = {
+  id: 1,
+  title: 'title1',
+  watched: true
+}
+const videoB = {
+  id: 2,
+  title: 'title2',
+  watched: false
+}
+const videos = [videoA, videoB]
+
+const getVideos = () =&gt; new Promise(resolve =&gt; resolve(videos))
+
+const createVideo = ({ title }) =&gt; {
+  const maxId = Math.max.apply(null, videos.map(v =&gt; v.id))
+  const watched = false
+  const video = {
+    id: maxId + 1,
+    title,
+    watched,
+  }
+  videos.push(video)
+  return video
+}
+
+const getVideoById = (id) =&gt; new Promise(resolve =&gt; {
+  const [video] = videos.filter(v =&gt; (v.id + '') === id)
+  resolve(video)
+})
+
+exports.getVideoById = getVideoById
+exports.getVideos = getVideos
+exports.createVideo = createVideo
+</code></pre>
+
+<h2>createVideo の args を分離したい</h2>
+
+<p>require のところに <code>GraphQLInputObjectType,</code> を追加。</p>
+
+<pre><code>const videoInputType = new GraphQLInputObjectType({
+  name: 'VideoInputType',
+  description: 'video input type',
+  fields: {
+    title: {
+      type: new GraphQLNonNull(GraphQLString),
+      description: 'title of video',
+    },
+  }
+})
+
+const mutationType = new GraphQLObjectType({
+  name: 'Mutation',
+  description: 'Mutation type',
+  fields: {
+    createVideo: {
+      type: videoType,
+      args: {
+        video: {
+          type: new GraphQLNonNull(videoInputType)
+        },
+      },
+      resolve: (_, args) =&gt; {
+        return createVideo(args.video)
+      }
+    },
+  },
+})
+</code></pre>
+
+<p><code>node index.js</code> を再起動して <code>http://localhost:3000/graphql</code> で</p>
+
+<pre><code>mutation M {
+  createVideo(video: {title: "hoge"}) {
+    id
+    title
+    watched
+  }
+}
+</code></pre>
+
+<p>を試す (<code>video:</code> で一段増えているので注意)</p>
+
+<pre><code>{
+  videos {
+    id
+    title
+  }
+}
+</code></pre>
+
+<p>などを試す。</p>
+
+<h2>休憩</h2>
+
+<h3>createVideo も Promise にするとどうか</h3>
+
+<p>createVideo の末尾を <code>return Promise.resolve(video)</code> にしても問題なく動いた。</p>
+
+<h2>ruby でどうか</h2>
+
+<ul>
+<li><code>rails new getting_started_graphql_ruby</code></li>
+<li><a href="http://graphql-ruby.org/getting_started">http://graphql-ruby.org/getting_started</a></li>
+<li>Gemfile に <code>gem 'graphql'</code> を追加</li>
+<li><code>bundle install</code></li>
+<li><code>rails g graphql:install</code></li>
+<li>Gemfile に <code>graphiql-rails</code> が追加されているので <code>bundle install</code></li>
+</ul>
+
+
+<h2>video 追加</h2>
+
+<ul>
+<li><code>rails g graphql:object Video id:Int title:String watched:Boolean</code></li>
+<li>id は Int ではなく ID が正しいので <code>rails d graphql:object Video id:Int title:String watched:Boolean</code> で消してやり直し</li>
+<li><code>rails g graphql:object Video id:ID title:String watched:Boolean</code></li>
+<li><code>app/graphql/types/query_type.rb</code> を変更</li>
+</ul>
+
+
+<pre><code>  field :video do
+    type Types::VideoType
+    argument :id, !types.ID
+    description 'Find video by ID'
+    resolve -&gt;(obj, args, ctx) { Video.find(args["id"]) }
+  end
+</code></pre>
+
+<p><code>rails s</code> を起動して <code>http://localhost:3000/graphiql</code> (express-graphql での例と違って <code>/graphql</code> ではなく <code>i</code> が入る) で</p>
+
+<pre><code>{
+  video(id: 1) {
+    id
+    title
+  }
+}
+</code></pre>
+
+<p>を試すと server 側で <code>NameError (uninitialized constant Video):</code> になるのを確認。</p>
+
+<ul>
+<li><code>rails g model video title watched:boolean</code></li>
+<li><code>rake db:migrate</code></li>
+<li><code>rails c</code> で <code>Video.create(title: "Hoge", watched: false)</code> などでレコードを作成しておく</li>
+<li>graphiql で試す</li>
+</ul>
+
+
+<pre><code>{
+  video(id: 1) {
+    id
+    title
+    watched
+  }
+}
+</code></pre>
+
+<h2>mutation</h2>
+
+<ul>
+<li><code>app/graphql/mutations/create_video.rb</code></li>
+</ul>
+
+
+<pre><code># 動かない
+Mutations::CreateVideo = GraphQL::Relay::Mutation.define do
+  name "CreateVideo"
+
+  return_field :video, Types::VideoType
+
+  input_field :title, !types.String
+
+  resolve -&gt;(obj, args, ctx) {
+    return Video.create(title: args["title"])
+  }
+end
+</code></pre>
+
+<ul>
+<li><code>app/graphql/getting_started_graphql_ruby_schema.rb</code> に <code>mutation(Mutations::CreateVideo)</code> を追加</li>
+<li><code>GraphQL::Schema::InvalidTypeError (CreateVideo has an invalid type: must be an instance of GraphQL::BaseType, not GraphQL::Relay::Mutation</code> になってうまくいかない</li>
+<li><code>rails g graphql:mutation</code> は relay mutation 用で違うらしい</li>
+</ul>
+
+
+<h2>クライアント</h2>
+
+<ul>
+<li><a href="http://dev.apollodata.com/react/">http://dev.apollodata.com/react/</a> が redux っぽくてしっくりきたらしい。</li>
+<li>rack-cors の設定が必要?</li>
+<li><a href="https://github.com/facebook/relay">https://github.com/facebook/relay</a></li>
+</ul>
+
+
+<h2>mutation の動くコード例</h2>
+
+<p>rito さんに動く例をみせてもらって修正。</p>
+
+<p><code>app/graphql/mutations/video.rb</code>:</p>
+
+<pre><code>Mutations::Video = GraphQL::ObjectType.define do
+  name "mutation"
+
+  field :video, Types::VideoType do
+    description "Create a video"
+    argument :title, !types.String
+
+    resolve -&gt;(obj, args, ctx) {
+      Video.create(title: args["title"], watched: false)
+    }
+  end
+end
+</code></pre>
+
+<p>(<code>name "Video"</code> にすると <code>Duplicate type definition found for name 'Video'</code> で動かなかった。)</p>
+
+<p><code>app/graphql/getting_started_graphql_ruby_schema.rb</code>:</p>
+
+<pre><code>GettingStartedGraphqlRubySchema = GraphQL::Schema.define do
+  query(Types::QueryType)
+  mutation(Mutations::Video)
+end
+</code></pre>
+
+<p><code>http://localhost:3000/graphiql</code> で以下を試す。</p>
+
+<pre><code>mutation M {
+  video(title: "foo") {
+    id
+    title
+    watched
+  }
+}
+</code></pre>
+
+<pre><code>{
+  video(id: 2) {
+    id
+    title
+    watched
+  }
+}
+</code></pre>
+
+<p>追加されたのがみえたら OK</p>
+
+<p>時間切れで試せなかったけど、 mutation を複数追加する場合はどうなるのかがわからなかった。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Debian 9 "Stretch" リリースパーティ in 関西に参加した]]></title>
@@ -899,108 +1833,6 @@ Apache Arrow 自体でデータ分析ができるようになるわけではな�
 
 <p>@nifty の about me は使っていたので懐かしいと思いました。
 @nifty で Rails を使っていると前面に打ち出していたのは、他に @nifty TimeLine があったのも思い出しました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[DDD.rb #11 (Rails with React) (Mastodon のコードリーディング) に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-05-10-mastodon.html"/>
-    <updated>2017-05-10T23:59:59+09:00</updated>
-    <id>http://blog.n-z.jp/blog/mastodon</id>
-    <content type="html"><![CDATA[<p><a href="https://dddrb.doorkeeper.jp/events/60099" title="DDD.rb #11 (Rails with React)">DDD.rb #11 (Rails with React)</a> という Mastodon のコードリーディングに参加したので、そのメモです。</p>
-
-<p>インストールがほとんどでコードリーディングはほとんどできなかったので、大まかな読み方の話だけで、あまり突っ込んだ話はありませんでした。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<ul>
-<li>次回は <a href="https://dddrb.doorkeeper.jp/events/60238" title="DDD.rb #12 RDRA for DDD ワークショップ！ - DDD.rb | Doorkeeper">DDD.rb #12 RDRA for DDD ワークショップ！ - DDD.rb | Doorkeeper</a> (RDRA はラドラと読むらしい)</li>
-<li><a href="http://motokase.com/mastodon-matome/" title="マストドン評判とは！SNS初心者が安全にMastodonを楽しむ方法">マストドン評判とは！SNS初心者が安全にMastodonを楽しむ方法</a>の最初の方が参考になる</li>
-<li>ローカルで起動するには <a href="https://github.com/tootsuite/mastodon/blob/e2491680e696d2c285a798ec4c66b26d2748df66/docs/Running-Mastodon/Development-guide.md">docs/Running-Mastodon/Development-guide.md</a> のリンク先の <a href="https://github.com/tootsuite/documentation/blob/master/Running-Mastodon/Development-guide.md">Development guide</a> を参照</li>
-<li>vagrant も手軽</li>
-<li>開発環境のメールは <a href="https://github.com/ryanb/letter_opener">https://github.com/ryanb/letter_opener</a> を使っている</li>
-<li>master だと jquery-rails が消えている</li>
-<li>master だと .foreman と Procfile.dev で streaming のサーバーなども起動する</li>
-<li>今の master は cld3 でエラーになりやすい</li>
-<li>基本的に v1.3.3 のタグで試そうという話に</li>
-<li>react のルーティングは <code>./app/assets/javascripts/components/containers/mastodon.jsx</code> をみる</li>
-<li><code>&lt;Route path='getting-started' component={GettingStarted} /&gt;</code> とか</li>
-<li>翻訳が難しい話 (連合とか未収載とか)</li>
-<li>docker を使うなら docker-compose.yml を直接書き換える代わりに docker-compose.override.yml が使える</li>
-</ul>
-
-
-<h3>getElementById</h3>
-
-<ul>
-<li>HTML ソースに <code>&lt;script id='initial-state' type='application/json'&gt;</code> がある</li>
-<li><code>getElementById</code> で検索</li>
-<li><code>app/assets/javascripts/components/containers/mastodon.jsx</code> に <code>const initialState = JSON.parse(document.getElementById("initial-state").textContent);</code> とある</li>
-</ul>
-
-
-<h3>react のソースの読み方</h3>
-
-<ul>
-<li>react のページのざっくりとした見分け方は HTML ソースがやけに少ないときは react (登録ページなど devise 由来のページは react を使っていない)</li>
-<li><code>data-react-class</code> がついてるところに差し込まれている</li>
-<li>react のルーティングは <code>./app/assets/javascripts/components/containers/mastodon.jsx</code> をみる</li>
-<li><code>&lt;Route path='getting-started' component={GettingStarted} /&gt;</code> とか</li>
-<li><code>localhost:3000/web/</code> は残して <code>localhost:3000/web/getting-started</code> を開くと出てくる</li>
-<li><code>&lt;Route path='blocks' component={Blocks} /&gt;</code> は <code>import Blocks from '../features/blocks';</code> なので <code>app/assets/javascripts/components/features/blocks/index.jsx</code> にある</li>
-</ul>
-
-
-<h3>ストリーミングは?</h3>
-
-<ul>
-<li><code>app/assets/javascripts/components/api.jsx</code> にクライアントがある</li>
-<li><code>axios</code> (アクシオス) を使っている</li>
-<li><p><code>Authorization</code> で <code>Bearer</code> トークンを渡している</p></li>
-<li><p>サーバー側は <code>streaming/index.js</code> にある (トップ直下)</p></li>
-<li><code>import WebSocket from 'ws'</code></li>
-<li>nginx などで受けて rails と振り分けられてここにくるので <code>wss</code> ではなく <code>ws</code> のみ</li>
-</ul>
-
-
-<h3>storybook とは?</h3>
-
-<ul>
-<li>直下に storybook ディレクトリがあるのでその話題</li>
-<li>動くスタイルガイド?</li>
-</ul>
-
-
-<h3>その他</h3>
-
-<ul>
-<li><code>app/controllers/auth</code> に <code>devise</code> 関連</li>
-<li><code>User</code> と <code>Account</code> が別にある</li>
-<li><code>app/controllers/api</code> に API 関連</li>
-</ul>
-
-
-<h3><code>package.json</code></h3>
-
-<ul>
-<li><code>chai</code> はいろいろなものを入れる必要がある</li>
-<li>rails を使う人はよく使っているらしい</li>
-<li><code>sinon</code> もテストのライブラリでスタブを使いたいからではないか</li>
-</ul>
-
-
-<h3>ActionCable</h3>
-
-<ul>
-<li>actioncable という node (npm) のモジュールがある</li>
-<li>開発元は <a href="https://github.com/rails/rails/blob/master/actioncable/package.json">https://github.com/rails/rails/blob/master/actioncable/package.json</a> らしい</li>
-<li>サーバー側とクライアント側で同じ名前なので紛らわしい</li>
-<li>npm の方の actioncable はあまり情報がない</li>
-</ul>
-
 ]]></content>
   </entry>
   
