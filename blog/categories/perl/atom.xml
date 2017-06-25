@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: perl | @znz blog]]></title>
+  <link href="http://blog.n-z.jp/blog/categories/perl/atom.xml" rel="self"/>
+  <link href="http://blog.n-z.jp/"/>
+  <updated>2017-06-25T22:42:54+09:00</updated>
+  <id>http://blog.n-z.jp/</id>
+  <author>
+    <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Ruby と Perl 5.26 の &lt;&lt;~ の挙動の違い]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-06-25-indented-here-document.html"/>
+    <updated>2017-06-25T22:22:22+09:00</updated>
+    <id>http://blog.n-z.jp/blog/indented-here-document</id>
+    <content type="html"><![CDATA[<p>Ruby には 2.3.0 から入っていた indented here document が<a href="https://mag.osdn.jp/17/06/02/161500">「Perl 5.26」リリース、「@INC」の仕様が変更される | OSDN Magazine</a> によると、Perl 5.26 にも入ったようなのですが、挙動が若干違うようなので、調べてみました。
+(最初に調べたのは OSDN Magazine の記事をみた直後だったのですが、調べた結果を残し忘れていたので、今日調べなおしたものになります。)</p>
+
+<!--more-->
+
+
+<h2>動作確認環境</h2>
+
+<p>Perl の最新を試すために archlinux を使ってみました。</p>
+
+<ul>
+<li>OS は vagrant で <a href="https://atlas.hashicorp.com/terrywang/boxes/archlinux">terrywang/archlinux</a> の box を使って <code>sudo pacman -Syu</code> した環境</li>
+<li>ruby 2.4.1p111 (2017-03-22 revision 58053) [x86_64-linux]</li>
+<li>This is perl 5, version 26, subversion 0 (v5.26.0) built for x86_64-linux-thread-multi</li>
+</ul>
+
+
+<h2>Ruby での基本動作</h2>
+
+<p>Ruby では基本的に indented here document の中で一番インデントが浅いところを基準に削られます。</p>
+
+<p>Perl では <code>&lt;&lt;</code> の代わりに <code>&lt;&lt;~</code> を使っただけでは削られません。</p>
+
+<pre><code>vagrant@archlinux:~$ cat /tmp/a
+print &lt;&lt;~END;
+    4
+ 1
+  2
+END
+vagrant@archlinux:~$ ruby /tmp/a
+   4
+1
+ 2
+vagrant@archlinux:~$ perl /tmp/a
+    4
+ 1
+  2
+</code></pre>
+
+<h2>Perl での基本動作</h2>
+
+<p>Ruby では <code>&lt;&lt;-</code> と同様に閉じる識別子のインデントは意味を持ちませんが、
+Perl では閉じる識別子のインデント分が削られます。</p>
+
+<pre><code>vagrant@archlinux:~$ cat /tmp/b
+print &lt;&lt;~END;
+   3
+    4
+  2
+ END
+vagrant@archlinux:~$ ruby /tmp/b
+ 3
+  4
+2
+vagrant@archlinux:~$ perl /tmp/b
+  3
+   4
+ 2
+</code></pre>
+
+<h2>Perl でのエラー例</h2>
+
+<p>Perl では閉じる識別子のインデントより浅い部分があるとエラーになります。</p>
+
+<pre><code>vagrant@archlinux:~$ cat /tmp/c
+print &lt;&lt;~END;
+ 1
+    4
+  2
+  END
+vagrant@archlinux:~$ ruby /tmp/c
+1
+   4
+ 2
+vagrant@archlinux:~$ perl /tmp/c
+Indentation on line 1 of here-doc doesn't match delimiter at /tmp/c line 1.
+</code></pre>
+
+<h2>Ruby で一番浅い行頭に空白を入れたい場合</h2>
+
+<p>Ruby では一番浅い行頭に空白を入れたい場合はエスケープする必要があります。</p>
+
+<p>Perl では最初の2例のように閉じる識別子のインデントの方を浅くするだけです。</p>
+
+<pre><code>vagrant@archlinux:~$ cat /tmp/d
+print &lt;&lt;~END;
+ \ x
+    4
+  2
+ END
+vagrant@archlinux:~$ ruby /tmp/d
+ x
+   4
+ 2
+vagrant@archlinux:~$ perl /tmp/d
+ x
+   4
+ 2
+</code></pre>
+
+<h2>感想</h2>
+
+<ul>
+<li>Ruby の仕様の方が内容を開始の行と終了の行よりインデントしたい時には都合が良さそうと感じました。</li>
+<li>Perl の仕様の方がパーサーは単純になって速そうという印象を受けました。 (実際に速いかどうかは調べていません。)</li>
+<li>Perl の仕様の方が行頭にある程度の空白を残したい場合は都合が良さそうと感じました。</li>
+</ul>
+
+]]></content>
+  </entry>
+  
+</feed>

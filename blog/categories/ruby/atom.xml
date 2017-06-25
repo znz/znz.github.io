@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-06-24T23:13:17+09:00</updated>
+  <updated>2017-06-25T22:42:54+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,122 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Ruby と Perl 5.26 の &lt;&lt;~ の挙動の違い]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-06-25-indented-here-document.html"/>
+    <updated>2017-06-25T22:22:22+09:00</updated>
+    <id>http://blog.n-z.jp/blog/indented-here-document</id>
+    <content type="html"><![CDATA[<p>Ruby には 2.3.0 から入っていた indented here document が<a href="https://mag.osdn.jp/17/06/02/161500">「Perl 5.26」リリース、「@INC」の仕様が変更される | OSDN Magazine</a> によると、Perl 5.26 にも入ったようなのですが、挙動が若干違うようなので、調べてみました。
+(最初に調べたのは OSDN Magazine の記事をみた直後だったのですが、調べた結果を残し忘れていたので、今日調べなおしたものになります。)</p>
+
+<!--more-->
+
+
+<h2>動作確認環境</h2>
+
+<p>Perl の最新を試すために archlinux を使ってみました。</p>
+
+<ul>
+<li>OS は vagrant で <a href="https://atlas.hashicorp.com/terrywang/boxes/archlinux">terrywang/archlinux</a> の box を使って <code>sudo pacman -Syu</code> した環境</li>
+<li>ruby 2.4.1p111 (2017-03-22 revision 58053) [x86_64-linux]</li>
+<li>This is perl 5, version 26, subversion 0 (v5.26.0) built for x86_64-linux-thread-multi</li>
+</ul>
+
+
+<h2>Ruby での基本動作</h2>
+
+<p>Ruby では基本的に indented here document の中で一番インデントが浅いところを基準に削られます。</p>
+
+<p>Perl では <code>&lt;&lt;</code> の代わりに <code>&lt;&lt;~</code> を使っただけでは削られません。</p>
+
+<pre><code>vagrant@archlinux:~$ cat /tmp/a
+print &lt;&lt;~END;
+    4
+ 1
+  2
+END
+vagrant@archlinux:~$ ruby /tmp/a
+   4
+1
+ 2
+vagrant@archlinux:~$ perl /tmp/a
+    4
+ 1
+  2
+</code></pre>
+
+<h2>Perl での基本動作</h2>
+
+<p>Ruby では <code>&lt;&lt;-</code> と同様に閉じる識別子のインデントは意味を持ちませんが、
+Perl では閉じる識別子のインデント分が削られます。</p>
+
+<pre><code>vagrant@archlinux:~$ cat /tmp/b
+print &lt;&lt;~END;
+   3
+    4
+  2
+ END
+vagrant@archlinux:~$ ruby /tmp/b
+ 3
+  4
+2
+vagrant@archlinux:~$ perl /tmp/b
+  3
+   4
+ 2
+</code></pre>
+
+<h2>Perl でのエラー例</h2>
+
+<p>Perl では閉じる識別子のインデントより浅い部分があるとエラーになります。</p>
+
+<pre><code>vagrant@archlinux:~$ cat /tmp/c
+print &lt;&lt;~END;
+ 1
+    4
+  2
+  END
+vagrant@archlinux:~$ ruby /tmp/c
+1
+   4
+ 2
+vagrant@archlinux:~$ perl /tmp/c
+Indentation on line 1 of here-doc doesn't match delimiter at /tmp/c line 1.
+</code></pre>
+
+<h2>Ruby で一番浅い行頭に空白を入れたい場合</h2>
+
+<p>Ruby では一番浅い行頭に空白を入れたい場合はエスケープする必要があります。</p>
+
+<p>Perl では最初の2例のように閉じる識別子のインデントの方を浅くするだけです。</p>
+
+<pre><code>vagrant@archlinux:~$ cat /tmp/d
+print &lt;&lt;~END;
+ \ x
+    4
+  2
+ END
+vagrant@archlinux:~$ ruby /tmp/d
+ x
+   4
+ 2
+vagrant@archlinux:~$ perl /tmp/d
+ x
+   4
+ 2
+</code></pre>
+
+<h2>感想</h2>
+
+<ul>
+<li>Ruby の仕様の方が内容を開始の行と終了の行よりインデントしたい時には都合が良さそうと感じました。</li>
+<li>Perl の仕様の方がパーサーは単純になって速そうという印象を受けました。 (実際に速いかどうかは調べていません。)</li>
+<li>Perl の仕様の方が行頭にある程度の空白を残したい場合は都合が良さそうと感じました。</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[関西Ruby会議2017に参加しました #kanrk2017]]></title>
@@ -1076,169 +1192,6 @@ int main() {
 <li>Rails Follow-up Osaka の紹介</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[frozen_string_literalをtrueにしていっている]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-01-08-frozen-string-literal.html"/>
-    <updated>2017-01-08T17:35:03+09:00</updated>
-    <id>http://blog.n-z.jp/blog/frozen-string-literal</id>
-    <content type="html"><![CDATA[<p><a href="https://www.ruby-lang.org/ja/documentation/repository-guide/">Ruby の trunk</a> で最近は <code>frozen_string_literal</code> を <code>true</code> に変更するというコミットをしていっています。
-(<a href="https://svn.ruby-lang.org/cgi-bin/viewvc.cgi?revision=53141&amp;view=revision" title="Revision 53141">Revision 53141</a> で <code>frozen_string_literal: false</code> として magic comment 自体は追加されています。)</p>
-
-<p>その時にちょっと確認に手間取った変更があったので、そのメモです。</p>
-
-<!--more-->
-
-
-<h2>lib/fileutils.rb</h2>
-
-<p>確認に手間取ったのは <a href="https://svn.ruby-lang.org/cgi-bin/viewvc.cgi?revision=57275&amp;view=revision" title="Revision 57275">Revision 57275</a> の <code>lib/fileutils.rb</code> の変更です。</p>
-
-<h2>freeze の削除</h2>
-
-<p>まず最初は <code>.freeze</code> を削除した変更です。</p>
-
-<p><code>frozen_string_literal: true</code> にすれば <code>"文字列リテラル".freeze</code> の <code>.freeze</code> は不要になるはずと思ったのですが、実行してみてちゃんと <code>frozen?</code> が <code>true</code> になるのかと <code>--dump=insns</code> で disasm の結果をみて確認しました。</p>
-
-<p>該当部分の変更は以下の通りです。</p>
-
-<pre><code class="diff">@@ -1432,9 +1432,9 @@ def join(dir, base)
-     end
-
-     if File::ALT_SEPARATOR
--      DIRECTORY_TERM = "(?=[/#{Regexp.quote(File::ALT_SEPARATOR)}]|\\z)".freeze
-+      DIRECTORY_TERM = "(?=[/#{Regexp.quote(File::ALT_SEPARATOR)}]|\\z)"
-     else
--      DIRECTORY_TERM = "(?=/|\\z)".freeze
-+      DIRECTORY_TERM = "(?=/|\\z)"
-     end
-     SYSCASE = File::FNM_SYSCASE.nonzero? ? "-i" : ""
-</code></pre>
-
-<p>文字列補間がある場合は <code>freeze</code> の呼び出しが減っていました。</p>
-
-<pre><code class="console">% cat /tmp/a.rb
-# frozen_string_literal: true
-ALT_SEPARATOR = '\\'
-p "(?=[/#{Regexp.quote(ALT_SEPARATOR)}]|\\z)".freeze.frozen?
-% cat /tmp/b.rb
-# frozen_string_literal: true
-ALT_SEPARATOR = '\\'
-p "(?=[/#{Regexp.quote(ALT_SEPARATOR)}]|\\z)".frozen?
-% ruby /tmp/a.rb
-true
-% ruby /tmp/b.rb
-true
-% diff -u &lt;(ruby --dump=insns /tmp/a.rb) &lt;(ruby --dump=insns /tmp/b.rb)
---- /proc/self/fd/11    2017-01-08 17:43:38.532932848 +0900
-+++ /proc/self/fd/13    2017-01-08 17:43:38.532932848 +0900
-@@ -1,4 +1,4 @@
--== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/a.rb&gt;=====================================
-+== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/b.rb&gt;=====================================
- 0000 trace            1                                               (   2)
- 0002 putobject        "\\"
- 0004 putspecialobject 3
-@@ -17,7 +17,6 @@
- 0031 putobject        "]|\\z)"
- 0033 concatstrings    3
- 0035 freezestring     nil
--0037 opt_send_without_block &lt;callinfo!mid:freeze, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;
--0040 opt_send_without_block &lt;callinfo!mid:frozen?, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;
--0043 opt_send_without_block &lt;callinfo!mid:p, argc:1, FCALL|ARGS_SIMPLE&gt;, &lt;callcache&gt;
--0046 leave
-+0037 opt_send_without_block &lt;callinfo!mid:frozen?, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;
-+0040 opt_send_without_block &lt;callinfo!mid:p, argc:1, FCALL|ARGS_SIMPLE&gt;, &lt;callcache&gt;
-+0043 leave
-</code></pre>
-
-<p>文字列補間がない場合は <code>opt_str_freeze</code> (<code>freeze</code> が再定義されていたら呼ぶ) から <code>putobject</code> (単純にスタックにプッシュするだけ) に変わっていました。</p>
-
-<pre><code class="console">% cat /tmp/1.rb
-# frozen_string_literal: false
-p ''.freeze.frozen?
-% cat /tmp/2.rb
-# frozen_string_literal: true
-p ''.freeze.frozen?
-% cat /tmp/3.rb
-# frozen_string_literal: true
-p ''.frozen?
-% ruby /tmp/1.rb
-true
-% ruby /tmp/2.rb
-true
-% ruby /tmp/3.rb
-true
-% diff -u &lt;(ruby --dump=insns /tmp/1.rb) &lt;(ruby --dump=insns /tmp/2.rb)
---- /proc/self/fd/11    2017-01-08 17:52:25.569282848 +0900
-+++ /proc/self/fd/13    2017-01-08 17:52:25.569282848 +0900
-@@ -1,4 +1,4 @@
--== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/1.rb&gt;=====================================
-+== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/2.rb&gt;=====================================
- 0000 trace            1                                               (   2)
- 0002 putself
- 0003 opt_str_freeze   ""
-% diff -u &lt;(ruby --dump=insns /tmp/1.rb) &lt;(ruby --dump=insns /tmp/3.rb)
---- /proc/self/fd/11    2017-01-08 17:52:27.952090848 +0900
-+++ /proc/self/fd/13    2017-01-08 17:52:27.952090848 +0900
-@@ -1,7 +1,7 @@
--== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/1.rb&gt;=====================================
-+== disasm: #&lt;ISeq:&lt;main&gt;@/tmp/3.rb&gt;=====================================
- 0000 trace            1                                               (   2)
- 0002 putself
--0003 opt_str_freeze   ""
-+0003 putobject        ""
- 0005 opt_send_without_block &lt;callinfo!mid:frozen?, argc:0, ARGS_SIMPLE&gt;, &lt;callcache&gt;
- 0008 opt_send_without_block &lt;callinfo!mid:p, argc:1, FCALL|ARGS_SIMPLE&gt;, &lt;callcache&gt;
- 0011 leave
-</code></pre>
-
-<h2>String.new への変更</h2>
-
-<p>同じコミットの <code>compare_stream</code> の変更は一通り目視確認していた時には <code>&lt;&lt;</code> による破壊的変更ではないので見落としていて、 <code>make install</code> を実行したら引っかかったので気づいたのですが、 <code>File#read</code> にバッファとして文字列を渡していることによる破壊的変更でした。</p>
-
-<p>該当部分の変更は以下の通りです。</p>
-
-<pre><code class="diff">@@ -735,8 +735,8 @@ def compare_file(a, b)
-   #
-   def compare_stream(a, b)
-     bsize = fu_stream_blksize(a, b)
--    sa = ""
--    sb = ""
-+    sa = String.new(capacity: bsize)
-+    sb = String.new(capacity: bsize)
-     begin
-       a.read(bsize, sa)
-       b.read(bsize, sb)
-</code></pre>
-
-<p>変更候補として</p>
-
-<ul>
-<li><code>"".dup</code> にする (文字列のエンコーディングがソースエンコーディング (この場合は UTF-8) になる)</li>
-<li><code>String.new</code> にする (文字列のエンコーディングが ASCII-8BIT になる)</li>
-</ul>
-
-
-<p>がありましたが、エンコーディングはどちらでも良かったのと、
-ここではバッファサイズとして <code>bsize</code> バイトが望ましいという情報が別途存在していたので、
-ruby 2.4.0 からの新機能の <code>String.new(capacity: size)</code> を使うことにしました。</p>
-
-<p>エンコーディングの違いは以下のように確認できます。</p>
-
-<pre><code class="console">% cat /tmp/a.rb
-# frozen_string_literal: true
-p "".dup.frozen?
-p "".dup.encoding
-p String.new.frozen?
-p String.new.encoding
-% ruby /tmp/a.rb
-false
-#&lt;Encoding:UTF-8&gt;
-false
-#&lt;Encoding:ASCII-8BIT&gt;
-</code></pre>
 ]]></content>
   </entry>
   
