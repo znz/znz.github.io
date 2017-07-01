@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-06-25T22:42:54+09:00</updated>
+  <updated>2017-07-01T16:53:17+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,157 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Debian/Ubuntuで暗号化 LVM を使いつつ自動起動する]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-07-01-cryptsetup.html"/>
+    <updated>2017-07-01T14:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/cryptsetup</id>
+    <content type="html"><![CDATA[<p>さくらの VPS 環境でも ssh などの秘密鍵を置くなら、ディスクの暗号化は使いたいので、リリースされたばかりの Debian 9 の ISO をアップロードしてインストールして、暗号化されていない <code>/boot</code> に鍵ファイルを置いて自動起動を設定しました。</p>
+
+<p>自動起動を設定するということはセキュリティ的には弱くなりますが、そこはホストを信用するということにしています。</p>
+
+<p>自動起動設定時に <code>/etc/crypttab</code> の設定ミスで起動しなくなるということがあったので、そういう時の直し方も含めてまとめてみました。</p>
+
+<!--more-->
+
+
+<h2>確認環境</h2>
+
+<ul>
+<li>Debian GNU/Linux 9.0 (stretch)</li>
+</ul>
+
+
+<p>Ubuntu でも debian-installer ベースのインストーラーを使った場合は同じだと思います。
+(Live 環境が起動するデスクトップ版のインストーラーの場合は暗号化 LVM でのインストールができるかどうか確認していないのでわかりません。)</p>
+
+<p>他のバージョンの Debian でも luks 対応の cryptsetup があれば同じだと思います。</p>
+
+<h2>インストール</h2>
+
+<p>普通に netinst の iso でインストールします。</p>
+
+<p>ただし途中の「ディスクのパーティショニング」で「ガイド - ディスク全体を使い、暗号化 LVM をセットアップする」を選んだ場合が対象です。
+パーティションは <code>/</code> (と <code>/boot</code>) だけを想定しています。
+暗号化のパスフレーズは鍵ファイル設定前の起動時と、鍵ファイルの追加時などしか使わないので、長くて強いものにしておくと良いと思います。</p>
+
+<p>VirtualBox などの仮想環境で試す時は、暗号化前のランダムなデータで上書きでデータ用のパーティション全体に書き込みが発生するので、可変サイズのディスクではなく固定サイズのディスクにしておくと良いかもしれません。</p>
+
+<h2>鍵ファイル作成</h2>
+
+<p>まず、鍵ファイルを作成します。
+内容作成前に root しか読み書きできないようにするために、touch して chmod しておきます。
+次に urandom から読んだランダムデータを鍵ファイルに書き込みます。
+前回設定したときは count=1 で 1024 バイトにしていましたが、今回は 4096 バイトにしてみました。
+最後に root はパーミッションだと書き込み禁止できないので、誤操作防止 (削除やヒストリーから dd を再実行してしまうなど) のために chattr で ext2 の immutable 属性をつけておきます。(確認は <code>sudo lsattr /boot/keyfile</code>)</p>
+
+<pre><code>sudo touch /boot/keyfile
+sudo chmod 400 /boot/keyfile
+sudo dd if=/dev/urandom of=/boot/keyfile bs=1024 count=4
+sudo chattr +i /boot/keyfile
+</code></pre>
+
+<h2>情報確認</h2>
+
+<ul>
+<li><code>/etc/fstab</code>: <code>/dev/mapper/HOSTNAME--vg-root</code> が <code>/</code> に、 <code>/dev/mapper/HOSTNAME--vg_swap_1</code> がスワップパーティションに設定されています (<code>HOSTNAME</code> はインストーラーで設定したホスト名)</li>
+<li><code>/etc/crypttab</code>: <code>vda5_crypt UUID=... none luks</code> で UUID で指定された <code>/dev/vda5</code> の暗号化が解除された状態が <code>/dev/mapper/vda5_crypt</code> として見えるということがわかります</li>
+<li><code>lsblk</code>: ツリー上にみえます (<code>lsblk -f</code> だと UUID も表示されました)</li>
+<li><code>ls -l /dev/disk/by-uuid</code>: uuid とデバイスの対応を確認できます (これで確認できる vda1 のパスをあとで使います)</li>
+<li><code>sudo cryptsetup luksDump /dev/vda5</code>: luks の情報が表示できます (最初は Key Slot 0 だけ ENABLED で 1 から 7 は DISABLED になっています)</li>
+</ul>
+
+
+<h2>鍵追加</h2>
+
+<p><code>cryptsetup luksAddKey</code> で鍵を追加します。
+ここで最初に設定したパスフレーズが必要です。
+なぜか <code>Key slot 0 unlocked.</code> が2回でましたが、特に問題はなさそうです。</p>
+
+<pre><code>$ sudo cryptsetup -v luksAddKey /dev/vda5 /boot/keyfile
+Enter any passphrase:
+Key slot 0 unlocked.
+Key slot 0 unlocked.
+Command successful.
+</code></pre>
+
+<h2>鍵削除</h2>
+
+<p>違うファイルを登録してしまったり、同じ鍵を複数回追加してしまったりしたときには <code>cryptsetup luksRemoveKey</code> で削除できます。
+この場合はその鍵自身で unlock されるようなので、パスフレーズは不要でした。</p>
+
+<pre><code>$ sudo cryptsetup -v luksRemoveKey /dev/vda5 /boot/keyfile
+Key slot 1 unlocked.
+Key slot 1 selected for deletion.
+Command successful.
+</code></pre>
+
+<p>特定の Key Slot を DISABLED に戻したいときは <code>cryptsetup luksKillSlot</code> が使えます。
+この場合はパスフレーズが必要でした。</p>
+
+<pre><code>$ sudo cryptsetup -v luksKillSlot /dev/vda5 2
+Key slot 2 selected for deletion.
+Enter any remaining passphrase:
+Key slot 0 unlocked.
+Command successful.
+</code></pre>
+
+<h2>自動起動設定</h2>
+
+<p>この段階ではまだ暗号化解除に使える鍵が増えただけで、再起動してもパスフレーズを要求されるままです。</p>
+
+<p><code>/etc/crypttab</code> を以下のように書き換えます。</p>
+
+<pre><code>vda5_crypt UUID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx /dev/disk/by-uuid/yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy:/keyfile luks,keyscript=/lib/cryptsetup/scripts/passdev
+</code></pre>
+
+<p>xxx&hellip; の方の UUID は <code>/dev/vda5</code> の UUID なので、そのまま書き換えません。
+第3項目の <code>none</code> を <code>/boot</code> パーティションのデバイスを UUID を使って指定したパス + <code>:</code> + <code>/boot</code> パーティション内での <code>keyfile</code> へのパスに書き換えます。
+第4項目の <code>luks</code> は <code>luks,keyscript=/lib/cryptsetup/scripts/passdev</code> に書き換えます。
+<code>passdev</code> は <code>cryptsetup</code> パッケージで用意されているファイルなので、そのまま書きます。</p>
+
+<h2>initramfs 更新</h2>
+
+<p>書き換えてもまだブートプロセスに反映されていないので、再起動してもパスフレーズを要求されるままなので、
+最後に initramfs を更新します。</p>
+
+<pre><code>sudo update-initramfs -u
+</code></pre>
+
+<p>これで再起動すると自動起動するようになります。</p>
+
+<p>keyscript のパスが間違っていると以下のように WARNING が出るので、再起動する前に気づくことができますが、
+keyfile の指定は間違っていても何も出ないので注意する必要があります。</p>
+
+<pre><code>$ sudo update-initramfs -u
+update-initramfs: Generating /boot/initrd.img-4.9.0-3-amd64
+cryptsetup: WARNING: target vda5_crypt has an invalid keyscript, skipped
+cryptsetup: WARNING: target vda5_crypt has an invalid keyscript, skipped
+</code></pre>
+
+<h2>起動失敗した場合</h2>
+
+<p><code>/etc/crypttab</code> の設定をミスして起動しなくなった場合、 netinst の ISO からレスキューモードで起動すればパスフレーズでマウントできます。
+そしてルートファイルシステムとして <code>/dev/HOSTNAME-vg/root</code> (<code>HOSTNAME</code> はインストーラーで設定したホスト名) を選び、 <code>/boot</code> パーティションもマウントしてシェルを起動します。</p>
+
+<p>シェルは <code>/bin/sh -i</code> なので使いにくければ <code>bash</code> を起動して、<code>/etc/crypttab</code> を修正して <code>update-initramfs -u</code> で反映させます。
+そして exit で抜けて再起動します。</p>
+
+<p>レスキュー環境での修正が難しそうなら、 <code>none</code> と <code>luks</code> だけに戻して、パスフレーズを使う通常起動にしてから直すという方法もあります。</p>
+
+<h2>最後に</h2>
+
+<p>知らないところで暗号化が解除できてしまうのは、コンソール接続が毎回必要になることとのトレードオフですが、鍵ファイルでも解約時に <code>chattr -i /boot/keyfile; shred --remove /boot/keyfile</code> でディスク全体の削除に似た効果を期待できます。ただし <a href="https://linuxjm.osdn.jp/html/GNU_coreutils/man1/shred.1.html">Man page of SHRED</a>の警告に書いてあるように上書きを期待しているので、 ext2 になっている <code>/boot</code> はファイルシステム的には大丈夫だとしても、その下のブロックデバイスで上書きされていない可能性は残りそうです。</p>
+
+<h2>まとめ</h2>
+
+<p>暗号化 LVM を使うことで macOS の FileVault や Windows BitLocker のように簡単にディスクほぼ全体 (<code>/boot</code> を除く) を暗号化できました。
+そして、再起動したい時に常にコンソールに接続できるとは限らない環境向けに鍵ファイルで自動起動の設定もできました。</p>
+
+<p>トレードオフもちゃんと考えた上で設定すれば、安全な環境が簡単に作れると思いました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[cron(crontab)の代わりにsystemdのtimerを使う]]></title>
@@ -721,132 +872,6 @@ base-files:
 <p>ダウングレードする時は <code>apt_preferences(5)</code> の <code>Pin</code> 設定をうまく工夫しましょう。</p>
 
 <p>backports のパッケージが不要なら backports の apt-line を追加するのは避けましょう。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[letsencrypt-auto の自動アップグレードを止めて手動でアップグレード]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-04-07-letsencrypt.html"/>
-    <updated>2016-04-07T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/letsencrypt</id>
-    <content type="html"><![CDATA[<p><code>/etc/cron.daily/letsencrypt</code> は <code>root</code> 権限で実行されるため、そこで自動アップグレードがかかるとファイルのオーナーが <code>root</code> になってしまうかもしれないと思ったので、自動更新を止めて手動でアップグレードするようにしました。</p>
-
-<!--more-->
-
-
-<h2>自動アップグレードを止めた <code>/etc/cron.daily/local-letsencrypt</code></h2>
-
-<p><a href="http://blog.n-z.jp/blog/2016-03-06-letsencrypt.html">前回の記事</a> からの差分としては <a href="http://packages.debian.org/debianutils">debianutils</a> の <code>savelog</code> でログをローテートして、証明書の有効期限の 90 日分残すようにしたのと、 <code>--no-self-upgrade</code> をつけて自動アップグレードを止めたことです。
-それから、パッケージで入れたものではないということを明示するために <code>local</code> という文字列を入れたファイル名に変更しました。</p>
-
-<pre><code class="bash /etc/cron.daily/local-letsencrypt">#!/bin/sh
-LOGFILE=/var/log/letsencrypt/renew.log
-if [ -f "$LOGFILE" ]; then
-    /usr/bin/savelog -c 90 -q "$LOGFILE"
-fi
-if ! /home/hoge/letsencrypt/letsencrypt-auto renew --no-self-upgrade &gt; "$LOGFILE" 2&gt;&amp;1 ; then
-    echo Automated renewal failed:
-    cat "$LOGFILE"
-    exit 1
-fi
-apachectl graceful
-service postfix reload &gt;/dev/null
-service dovecot reload
-</code></pre>
-
-<h2>手動アップグレードしたログ</h2>
-
-<p>手動実行したところ、ちょうど 0.4.2 から 0.5.0 へのアップグレードが実行されました。</p>
-
-<pre><code>% ~/letsencrypt/letsencrypt-auto --help
-Checking for new version...
-Upgrading letsencrypt-auto 0.4.2 to 0.5.0...
-Replacing letsencrypt-auto...
-   sudo cp -p /home/hoge/letsencrypt/letsencrypt-auto /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto.permission-clone
-   sudo cp /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto.permission-clone
-   sudo mv -f /tmp/user/1000/tmp.MclJH3TO68/letsencrypt-auto.permission-clone /home/hoge/letsencrypt/letsencrypt-auto
-Creating virtual environment...
-Installing Python packages...
-Installation succeeded.
-Requesting root privileges to run letsencrypt...
-   sudo /home/hoge/.local/share/letsencrypt/bin/letsencrypt --help
-
-  letsencrypt-auto [SUBCOMMAND] [options] [-d domain] [-d domain] ...
-
-The Let's Encrypt agent can obtain and install HTTPS/TLS/SSL certificates.  By
-default, it will attempt to use a webserver both for obtaining and installing
-the cert. Major SUBCOMMANDS are:
-
-  (default) run        Obtain &amp; install a cert in your current webserver
-  certonly             Obtain cert, but do not install it (aka "auth")
-  install              Install a previously obtained cert in a server
-  renew                Renew previously obtained certs that are near expiry
-  revoke               Revoke a previously obtained certificate
-  rollback             Rollback server configuration changes made during install
-  config_changes       Show changes made to server config during installation
-  plugins              Display information about installed plugins
-
-Choice of server plugins for obtaining and installing cert:
-
-  --apache          Use the Apache plugin for authentication &amp; installation
-  --standalone      Run a standalone webserver for authentication
-  (nginx support is experimental, buggy, and not installed by default)
-  --webroot         Place files in a server's webroot folder for authentication
-
-OR use different plugins to obtain (authenticate) the cert and then install it:
-
-  --authenticator standalone --installer apache
-
-More detailed help:
-
-  -h, --help [topic]    print this message, or detailed help on a topic;
-                        the available topics are:
-
-   all, automation, paths, security, testing, or any of the subcommands or
-   plugins (certonly, install, nginx, apache, standalone, webroot, etc)
-</code></pre>
-
-<h2>アップグレードがないときのログ</h2>
-
-<pre><code>% ~/letsencrypt/letsencrypt-auto --help
-Checking for new version...
-Requesting root privileges to run letsencrypt...
-   sudo /home/hoge/.local/share/letsencrypt/bin/letsencrypt --help
-
-  letsencrypt-auto [SUBCOMMAND] [options] [-d domain] [-d domain] ...
-
-The Let's Encrypt agent can obtain and install HTTPS/TLS/SSL certificates.  By
-default, it will attempt to use a webserver both for obtaining and installing
-the cert. Major SUBCOMMANDS are:
-
-  (default) run        Obtain &amp; install a cert in your current webserver
-  certonly             Obtain cert, but do not install it (aka "auth")
-  install              Install a previously obtained cert in a server
-  renew                Renew previously obtained certs that are near expiry
-  revoke               Revoke a previously obtained certificate
-  rollback             Rollback server configuration changes made during install
-  config_changes       Show changes made to server config during installation
-  plugins              Display information about installed plugins
-
-Choice of server plugins for obtaining and installing cert:
-
-  --apache          Use the Apache plugin for authentication &amp; installation
-  --standalone      Run a standalone webserver for authentication
-  (nginx support is experimental, buggy, and not installed by default)
-  --webroot         Place files in a server's webroot folder for authentication
-
-OR use different plugins to obtain (authenticate) the cert and then install it:
-
-  --authenticator standalone --installer apache
-
-More detailed help:
-
-  -h, --help [topic]    print this message, or detailed help on a topic;
-                        the available topics are:
-
-   all, automation, paths, security, testing, or any of the subcommands or
-   plugins (certonly, install, nginx, apache, standalone, webroot, etc)
-</code></pre>
 ]]></content>
   </entry>
   

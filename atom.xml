@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-06-25T22:42:54+09:00</updated>
+  <updated>2017-07-01T16:53:17+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,157 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Debian/Ubuntuで暗号化 LVM を使いつつ自動起動する]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-07-01-cryptsetup.html"/>
+    <updated>2017-07-01T14:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/cryptsetup</id>
+    <content type="html"><![CDATA[<p>さくらの VPS 環境でも ssh などの秘密鍵を置くなら、ディスクの暗号化は使いたいので、リリースされたばかりの Debian 9 の ISO をアップロードしてインストールして、暗号化されていない <code>/boot</code> に鍵ファイルを置いて自動起動を設定しました。</p>
+
+<p>自動起動を設定するということはセキュリティ的には弱くなりますが、そこはホストを信用するということにしています。</p>
+
+<p>自動起動設定時に <code>/etc/crypttab</code> の設定ミスで起動しなくなるということがあったので、そういう時の直し方も含めてまとめてみました。</p>
+
+<!--more-->
+
+
+<h2>確認環境</h2>
+
+<ul>
+<li>Debian GNU/Linux 9.0 (stretch)</li>
+</ul>
+
+
+<p>Ubuntu でも debian-installer ベースのインストーラーを使った場合は同じだと思います。
+(Live 環境が起動するデスクトップ版のインストーラーの場合は暗号化 LVM でのインストールができるかどうか確認していないのでわかりません。)</p>
+
+<p>他のバージョンの Debian でも luks 対応の cryptsetup があれば同じだと思います。</p>
+
+<h2>インストール</h2>
+
+<p>普通に netinst の iso でインストールします。</p>
+
+<p>ただし途中の「ディスクのパーティショニング」で「ガイド - ディスク全体を使い、暗号化 LVM をセットアップする」を選んだ場合が対象です。
+パーティションは <code>/</code> (と <code>/boot</code>) だけを想定しています。
+暗号化のパスフレーズは鍵ファイル設定前の起動時と、鍵ファイルの追加時などしか使わないので、長くて強いものにしておくと良いと思います。</p>
+
+<p>VirtualBox などの仮想環境で試す時は、暗号化前のランダムなデータで上書きでデータ用のパーティション全体に書き込みが発生するので、可変サイズのディスクではなく固定サイズのディスクにしておくと良いかもしれません。</p>
+
+<h2>鍵ファイル作成</h2>
+
+<p>まず、鍵ファイルを作成します。
+内容作成前に root しか読み書きできないようにするために、touch して chmod しておきます。
+次に urandom から読んだランダムデータを鍵ファイルに書き込みます。
+前回設定したときは count=1 で 1024 バイトにしていましたが、今回は 4096 バイトにしてみました。
+最後に root はパーミッションだと書き込み禁止できないので、誤操作防止 (削除やヒストリーから dd を再実行してしまうなど) のために chattr で ext2 の immutable 属性をつけておきます。(確認は <code>sudo lsattr /boot/keyfile</code>)</p>
+
+<pre><code>sudo touch /boot/keyfile
+sudo chmod 400 /boot/keyfile
+sudo dd if=/dev/urandom of=/boot/keyfile bs=1024 count=4
+sudo chattr +i /boot/keyfile
+</code></pre>
+
+<h2>情報確認</h2>
+
+<ul>
+<li><code>/etc/fstab</code>: <code>/dev/mapper/HOSTNAME--vg-root</code> が <code>/</code> に、 <code>/dev/mapper/HOSTNAME--vg_swap_1</code> がスワップパーティションに設定されています (<code>HOSTNAME</code> はインストーラーで設定したホスト名)</li>
+<li><code>/etc/crypttab</code>: <code>vda5_crypt UUID=... none luks</code> で UUID で指定された <code>/dev/vda5</code> の暗号化が解除された状態が <code>/dev/mapper/vda5_crypt</code> として見えるということがわかります</li>
+<li><code>lsblk</code>: ツリー上にみえます (<code>lsblk -f</code> だと UUID も表示されました)</li>
+<li><code>ls -l /dev/disk/by-uuid</code>: uuid とデバイスの対応を確認できます (これで確認できる vda1 のパスをあとで使います)</li>
+<li><code>sudo cryptsetup luksDump /dev/vda5</code>: luks の情報が表示できます (最初は Key Slot 0 だけ ENABLED で 1 から 7 は DISABLED になっています)</li>
+</ul>
+
+
+<h2>鍵追加</h2>
+
+<p><code>cryptsetup luksAddKey</code> で鍵を追加します。
+ここで最初に設定したパスフレーズが必要です。
+なぜか <code>Key slot 0 unlocked.</code> が2回でましたが、特に問題はなさそうです。</p>
+
+<pre><code>$ sudo cryptsetup -v luksAddKey /dev/vda5 /boot/keyfile
+Enter any passphrase:
+Key slot 0 unlocked.
+Key slot 0 unlocked.
+Command successful.
+</code></pre>
+
+<h2>鍵削除</h2>
+
+<p>違うファイルを登録してしまったり、同じ鍵を複数回追加してしまったりしたときには <code>cryptsetup luksRemoveKey</code> で削除できます。
+この場合はその鍵自身で unlock されるようなので、パスフレーズは不要でした。</p>
+
+<pre><code>$ sudo cryptsetup -v luksRemoveKey /dev/vda5 /boot/keyfile
+Key slot 1 unlocked.
+Key slot 1 selected for deletion.
+Command successful.
+</code></pre>
+
+<p>特定の Key Slot を DISABLED に戻したいときは <code>cryptsetup luksKillSlot</code> が使えます。
+この場合はパスフレーズが必要でした。</p>
+
+<pre><code>$ sudo cryptsetup -v luksKillSlot /dev/vda5 2
+Key slot 2 selected for deletion.
+Enter any remaining passphrase:
+Key slot 0 unlocked.
+Command successful.
+</code></pre>
+
+<h2>自動起動設定</h2>
+
+<p>この段階ではまだ暗号化解除に使える鍵が増えただけで、再起動してもパスフレーズを要求されるままです。</p>
+
+<p><code>/etc/crypttab</code> を以下のように書き換えます。</p>
+
+<pre><code>vda5_crypt UUID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx /dev/disk/by-uuid/yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy:/keyfile luks,keyscript=/lib/cryptsetup/scripts/passdev
+</code></pre>
+
+<p>xxx&hellip; の方の UUID は <code>/dev/vda5</code> の UUID なので、そのまま書き換えません。
+第3項目の <code>none</code> を <code>/boot</code> パーティションのデバイスを UUID を使って指定したパス + <code>:</code> + <code>/boot</code> パーティション内での <code>keyfile</code> へのパスに書き換えます。
+第4項目の <code>luks</code> は <code>luks,keyscript=/lib/cryptsetup/scripts/passdev</code> に書き換えます。
+<code>passdev</code> は <code>cryptsetup</code> パッケージで用意されているファイルなので、そのまま書きます。</p>
+
+<h2>initramfs 更新</h2>
+
+<p>書き換えてもまだブートプロセスに反映されていないので、再起動してもパスフレーズを要求されるままなので、
+最後に initramfs を更新します。</p>
+
+<pre><code>sudo update-initramfs -u
+</code></pre>
+
+<p>これで再起動すると自動起動するようになります。</p>
+
+<p>keyscript のパスが間違っていると以下のように WARNING が出るので、再起動する前に気づくことができますが、
+keyfile の指定は間違っていても何も出ないので注意する必要があります。</p>
+
+<pre><code>$ sudo update-initramfs -u
+update-initramfs: Generating /boot/initrd.img-4.9.0-3-amd64
+cryptsetup: WARNING: target vda5_crypt has an invalid keyscript, skipped
+cryptsetup: WARNING: target vda5_crypt has an invalid keyscript, skipped
+</code></pre>
+
+<h2>起動失敗した場合</h2>
+
+<p><code>/etc/crypttab</code> の設定をミスして起動しなくなった場合、 netinst の ISO からレスキューモードで起動すればパスフレーズでマウントできます。
+そしてルートファイルシステムとして <code>/dev/HOSTNAME-vg/root</code> (<code>HOSTNAME</code> はインストーラーで設定したホスト名) を選び、 <code>/boot</code> パーティションもマウントしてシェルを起動します。</p>
+
+<p>シェルは <code>/bin/sh -i</code> なので使いにくければ <code>bash</code> を起動して、<code>/etc/crypttab</code> を修正して <code>update-initramfs -u</code> で反映させます。
+そして exit で抜けて再起動します。</p>
+
+<p>レスキュー環境での修正が難しそうなら、 <code>none</code> と <code>luks</code> だけに戻して、パスフレーズを使う通常起動にしてから直すという方法もあります。</p>
+
+<h2>最後に</h2>
+
+<p>知らないところで暗号化が解除できてしまうのは、コンソール接続が毎回必要になることとのトレードオフですが、鍵ファイルでも解約時に <code>chattr -i /boot/keyfile; shred --remove /boot/keyfile</code> でディスク全体の削除に似た効果を期待できます。ただし <a href="https://linuxjm.osdn.jp/html/GNU_coreutils/man1/shred.1.html">Man page of SHRED</a>の警告に書いてあるように上書きを期待しているので、 ext2 になっている <code>/boot</code> はファイルシステム的には大丈夫だとしても、その下のブロックデバイスで上書きされていない可能性は残りそうです。</p>
+
+<h2>まとめ</h2>
+
+<p>暗号化 LVM を使うことで macOS の FileVault や Windows BitLocker のように簡単にディスクほぼ全体 (<code>/boot</code> を除く) を暗号化できました。
+そして、再起動したい時に常にコンソールに接続できるとは限らない環境向けに鍵ファイルで自動起動の設定もできました。</p>
+
+<p>トレードオフもちゃんと考えた上で設定すれば、安全な環境が簡単に作れると思いました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Ruby と Perl 5.26 の &lt;&lt;~ の挙動の違い]]></title>
@@ -4608,106 +4759,6 @@ int main() {
 <h2>その後</h2>
 
 <p>時間が余ったので、次回の予定などの話をしていました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[OSS Gate大阪ワークショップ2017-04-22に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-04-22-oss-gate-workshop.html"/>
-    <updated>2017-04-22T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/oss-gate-workshop</id>
-    <content type="html"><![CDATA[<p><a href="https://oss-gate.doorkeeper.jp/events/58579" title="OSS Gate大阪ワークショップ2017-04-22 - OSS Gate | Doorkeeper">OSS Gate大阪ワークショップ2017-04-22 - OSS Gate | Doorkeeper</a>にサポーター (旧称: メンター) として参加しました。</p>
-
-<!--more-->
-
-
-<h2>全体の感想</h2>
-
-<p>最後のアンケートにも書きましたが、前回はデモである程度メモをどの程度とるのかなどの方向性が示されていたのと、やる内容がインストールから初めて、ひっかかったところのドキュメントの改善をフィードバックする、というのが多かったのに対して、今回はデモがほぼなくて、サポーター (旧称: メンター) として応募したけど、人数の都合でビギナーになった人が多かったからか、いろんなことに挑戦していて、難しい感じでした。</p>
-
-<p>作業メモの粒度としては、<a href="https://github.com/oss-gate/workshop/issues?q=is%3Aissue+is%3Aclosed">過去のビギナーの作業ログ</a>から特にコメント数が多いものを参考にしてみると、こういう細かい思考過程までメモすると良いのか、というのが、 oss-gate に限らず普段の作業メモのとり方としても、参考になるかと思います。</p>
-
-<h2>メモ</h2>
-
-<p>以下、今回の雑多なメモです。</p>
-
-<h3>フォント</h3>
-
-<p>途中のふりかえりのときのビギナーの人がブラウザーで変わったフォントを使っていたのできいてみたところ、「スマートフォントUI」というのを使っていると教えてもらいました。</p>
-
-<h3>Chef DK のアンインストール</h3>
-
-<p>参考のため、自分の環境にも Chef DK を入れてみていたのですが、 <a href="https://docs.chef.io/install_dk.html">https://docs.chef.io/install_dk.html</a> にアンインストールの手順があったので、それに従ってアンインストールしました。</p>
-
-<p>symlink は削除前に確認してみたら、たくさんありました。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>%  sudo rm -rf /opt/chefdk
-</span><span class='line'>Password:
-</span><span class='line'>%  sudo pkgutil --forget com.getchef.pkg.chefdk
-</span><span class='line'>Forgot package 'com.getchef.pkg.chefdk' on '/'.
-</span><span class='line'>%  find /usr/local/bin -lname '/opt/chefdk/*'
-</span><span class='line'>/usr/local/bin/berks
-</span><span class='line'>/usr/local/bin/chef
-</span><span class='line'>/usr/local/bin/chef-apply
-</span><span class='line'>/usr/local/bin/chef-client
-</span><span class='line'>/usr/local/bin/chef-shell
-</span><span class='line'>/usr/local/bin/chef-solo
-</span><span class='line'>/usr/local/bin/chef-vault
-</span><span class='line'>/usr/local/bin/cookstyle
-</span><span class='line'>/usr/local/bin/dco
-</span><span class='line'>/usr/local/bin/delivery
-</span><span class='line'>/usr/local/bin/foodcritic
-</span><span class='line'>/usr/local/bin/inspec
-</span><span class='line'>/usr/local/bin/kitchen
-</span><span class='line'>/usr/local/bin/knife
-</span><span class='line'>/usr/local/bin/ohai
-</span><span class='line'>/usr/local/bin/push-apply
-</span><span class='line'>/usr/local/bin/pushy-client
-</span><span class='line'>/usr/local/bin/pushy-service-manager
-</span><span class='line'>/usr/local/bin/rubocop
-</span><span class='line'>%  sudo find /usr/local/bin -lname '/opt/chefdk/*' -delete
-</span><span class='line'>%  find /usr/bin -lname '/opt/chefdk/*'</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>辞書</h3>
-
-<p>macOS の辞書ではなく、Logophile という辞書ソフトを使っているのをみました。
-COBUILD のシソーラスが便利だそうです。</p>
-
-<p>たぶん <a href="http://dicwizard.jp/logophile/" title="Logophile">Logophile</a> で、シェアウェアのようです。</p>
-
-<h3>fish shell</h3>
-
-<p>検索しにくい名前ですが、<a href="http://fish.rubikitch.com/" title="全訳！fishシェル普及計画【コマンドラインは怖くない】">全訳！fishシェル普及計画【コマンドラインは怖くない】</a> に翻訳されたドキュメントがあるので、使い始めやすそうです。</p>
-
-<p>個人的には rvm を入れたら環境を壊された (<code>zsh</code> なら <code>chpwd_function</code> を使えばいいのに使っていなかったらしく <code>cd</code> のカスタマイズが壊れた) ぐらいシェルはカスタマイズをしているので、乗り換える可能性は低いですが、ちょっと試してみたところ、 <code>echo</code> のオートサジェスチョンで <code>$BASH_VERSION</code> がでてきたので、<code>.bash_history</code> をみているようです。
-ちょっと試した後は、 <code>rm -rf ~/.local/share/fish</code> でクリーンな状態に戻して、また最初から試せるようにしておきました。</p>
 ]]></content>
   </entry>
   
