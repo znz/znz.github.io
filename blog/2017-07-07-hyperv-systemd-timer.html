@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: windows - @znz blog</title>
+  <title>Hyper-V のゲスト環境で systemd timer がうまく動いていなかった - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Category: windows">
+  <meta name="description" content="Hyper-V のゲスト環境で systemd timer がうまく動いていなかった 2017-07-07 (Fri) 12:30 am | Comments Hyper-V のゲストとしてインストールした Linux 環境で systemd timer の RandomizedDelaySec &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/categories/windows/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-07-07-hyperv-systemd-timer.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,51 +76,184 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: windows</h1>
+    
+      
+      <!-- zenback_title_begin -->
+      
+      <h1 class="entry-title">Hyper-V のゲスト環境で systemd timer がうまく動いていなかった</h1>
+      
+      <!-- zenback_title_end -->
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2017-07-07T00:30:00+09:00'><span class='date'>2017-07-07 (Fri)</span> <span class='time'>12:30 am</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
 
-  
-  <h2>2017</h2>
+<!-- zenback_body_begin -->
 
-<article>
-  
-<h1><a href="/blog/2017-07-07-hyperv-systemd-timer.html">Hyper-V のゲスト環境で systemd timer がうまく動いていなかった</a></h1>
-<time datetime="2017-07-07T00:30:00+09:00" pubdate><span class='month'>Jul</span> <span class='day'>07</span> <span class='year'>2017</span></time>
+<div class="entry-content"><p>Hyper-V のゲストとしてインストールした Linux 環境で systemd timer の <code>RandomizedDelaySec</code> がおかしくて timer が実行されないことがあったのですが、Hyper-V の時刻の同期との相性が悪いのが原因でした。</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/linux/'>linux</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>, <a class='category' href='/blog/categories/windows/'>windows</a></span>
-</footer>
+<!--more-->
 
 
-</article>
+<h2>環境</h2>
+
+<ul>
+<li>ホスト: Windows Server 2012</li>
+<li>ゲスト: Ubuntu 16.04.2 LTS (xenial) と Debian GNU/Linux 9.0 (stretch)</li>
+</ul>
 
 
+<h2>現象</h2>
 
-<article>
-  
-<h1><a href="/blog/2017-02-19-golang-windows-gui.html">Go言語でWindowsのnetshラッパーのGUIアプリを作った</a></h1>
-<time datetime="2017-02-19T19:00:00+09:00" pubdate><span class='month'>Feb</span> <span class='day'>19</span> <span class='year'>2017</span></time>
+<p>journalctl で過去のログを確認してみると</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/golang/'>golang</a>, <a class='category' href='/blog/categories/windows/'>windows</a></span>
-</footer>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> 6月 28 12:07:56 hostname systemd[9928]: Time has been changed
+</span><span class='line'> 6月 28 12:07:59 hostname systemd[9928]: Time has been changed
+</span><span class='line'> 6月 28 12:08:04 hostname systemd[9928]: Time has been changed
+</span><span class='line'> 6月 28 12:08:09 hostname systemd[9928]: Time has been changed
+</span><span class='line'> 6月 28 12:08:14 hostname systemd[9928]: Time has been changed
+</span><span class='line'> 6月 28 12:08:19 hostname systemd[9928]: Time has been changed</span></code></pre></td></tr></table></div></figure>
 
 
-</article>
+<p>のように Time has been changed が頻繁に記録されていました。</p>
 
+<p>再起動した後からは RandomizedDelaySec が設定されている timer のランダムな時間挿入が Time has been changed の直後におきていました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'> 6月 28 15:07:51 hostname systemd[1]: Time has been changed
+</span><span class='line'> 6月 28 15:07:51 hostname systemd[1]: apt-daily-upgrade.timer: Adding 46min 16.478521s random time.
+</span><span class='line'> 6月 28 15:07:51 hostname systemd[1]: apt-daily.timer: Adding 3h 45min 54.621700s random time.
+</span><span class='line'> 6月 28 15:07:56 hostname systemd[1]: Time has been changed
+</span><span class='line'> 6月 28 15:07:56 hostname systemd[1]: apt-daily-upgrade.timer: Adding 25min 59.320458s random time.
+</span><span class='line'> 6月 28 15:07:56 hostname systemd[1]: apt-daily.timer: Adding 11h 34min 9.012513s random time.
+</span><span class='line'> 6月 28 15:08:01 hostname systemd[1]: Time has been changed
+</span><span class='line'> 6月 28 15:08:01 hostname systemd[1]: apt-daily-upgrade.timer: Adding 42min 37.932995s random time.
+</span><span class='line'> 6月 28 15:08:01 hostname systemd[1]: apt-daily.timer: Adding 4h 48min 31.255279s random time.
+</span><span class='line'> 6月 28 15:08:06 hostname systemd[1]: Time has been changed
+</span><span class='line'> 6月 28 15:08:06 hostname systemd[1]: apt-daily-upgrade.timer: Adding 13min 44.192537s random time.
+</span><span class='line'> 6月 28 15:08:06 hostname systemd[1]: apt-daily.timer: Adding 38min 56.349412s random time.</span></code></pre></td></tr></table></div></figure>
+
+
+<p>自作した timer が実行されなくて <code>journalctl -u local-backup.timer</code> のように調べた時に「Adding &hellip; random time.」のログで埋まっていて、他の動いている timer との違いも特になくて悩んでいましたが、ふと <code>journalctl</code> (引数なし) を実行してみたら「Time has been changed」とセットでおきていることに気づきました。</p>
+
+<h2>解決策</h2>
+
+<p>「Time has been changed」で検索して最初に出てきた <a href="https://askubuntu.com/questions/888493/var-log-syslog-systemd1-time-has-been-changed-message-every-5-seconds">16.04 - /var/log/syslog &lsquo;systemd[1]: Time has been changed&rsquo; message every 5 seconds - Ask Ubuntu</a> に</p>
+
+<blockquote><p>I encountered this issue of &ldquo;systemd[&hellip;]Time has been changed&rdquo; messages logged every five seconds in /var/log/syslog on a 16.04 server running under Windows 8.1 Hyper-V. To fix it, I disabled time synchronization on the Hyper-V side. In Hyper-V Manager, I highlighted the VM, selected &ldquo;Settings&hellip;&rdquo;, then &ldquo;Integration Services&rdquo;, unchecked &ldquo;Time synchronization&rdquo;, and clicked Apply. The messages stopped instantly - no VM restart was required.</p></blockquote>
+
+<p>と書いてあったので、「設定&hellip;」から「統合サービス」の「時刻の同期」のチェックを外して (再起動なしで) 解決しました。</p>
+
+<h2>解決確認</h2>
+
+<p>「Time has been changed」も出なくなって「Adding &hellip; random time.」も出なくなって、翌日まで待ってみるとちゃんと実行されていたので、解決したようです。</p>
+
+<h2>まとめ</h2>
+
+<p>ntp サーバー機能も必要で、 ntp パッケージを入れている環境で発生したので、時刻の同期の仕方によっては発生しないのかもしれませんが、「Time has been changed」で検索して出てきた他の方法はログを無視するだけとか、根本的な解決になっていないものが多そうだったので、Hyper-V との組み合わせなら systemd-timesyncd でも発生するのかもしれません。</p>
 </div>
 
+<!-- zenback_body_end -->
+
+
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2017-07-07T00:30:00+09:00'><span class='date'>2017-07-07 (Fri)</span> <span class='time'>12:30 am</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/linux/'>linux</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>, <a class='category' href='/blog/categories/windows/'>windows</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2017-07-01-cryptsetup.html" title="Previous Post: Debian/Ubuntuで暗号化 LVM を使いつつ自動起動する">&laquo; Debian/Ubuntuで暗号化 LVM を使いつつ自動起動する</a>
+      
+      
+    </p>
+  </footer>
 </article>
 
+<section>
+  <!-- X:S ZenBackWidget --><div id="zenback-widget-loader"></div><script type="text/javascript">!function(d,i){if(!d.getElementById(i)){var r=Math.ceil((new Date()*1)*Math.random());var j=d.createElement("script");j.id=i;j.async=true;j.src="//w.zenback.jp/v1/?base_uri=http%3A//blog.n-z.jp/&nsid=122901358100652638%3A%3A122901381991399941&rand="+r;d.body.appendChild(j);}}(document,"zenback-widget-js");</script><!-- X:E ZenBackWidget -->
+
+</section>
+
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -241,7 +374,10 @@ Hatena.BookmarkWidget.load();
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-07-07-hyperv-systemd-timer.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-07-07-hyperv-systemd-timer.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

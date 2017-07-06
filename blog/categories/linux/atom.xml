@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-07-01T16:53:17+09:00</updated>
+  <updated>2017-07-07T00:32:28+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,74 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Hyper-V のゲスト環境で systemd timer がうまく動いていなかった]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-07-07-hyperv-systemd-timer.html"/>
+    <updated>2017-07-07T00:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/hyperv-systemd-timer</id>
+    <content type="html"><![CDATA[<p>Hyper-V のゲストとしてインストールした Linux 環境で systemd timer の <code>RandomizedDelaySec</code> がおかしくて timer が実行されないことがあったのですが、Hyper-V の時刻の同期との相性が悪いのが原因でした。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>ホスト: Windows Server 2012</li>
+<li>ゲスト: Ubuntu 16.04.2 LTS (xenial) と Debian GNU/Linux 9.0 (stretch)</li>
+</ul>
+
+
+<h2>現象</h2>
+
+<p>journalctl で過去のログを確認してみると</p>
+
+<pre><code> 6月 28 12:07:56 hostname systemd[9928]: Time has been changed
+ 6月 28 12:07:59 hostname systemd[9928]: Time has been changed
+ 6月 28 12:08:04 hostname systemd[9928]: Time has been changed
+ 6月 28 12:08:09 hostname systemd[9928]: Time has been changed
+ 6月 28 12:08:14 hostname systemd[9928]: Time has been changed
+ 6月 28 12:08:19 hostname systemd[9928]: Time has been changed
+</code></pre>
+
+<p>のように Time has been changed が頻繁に記録されていました。</p>
+
+<p>再起動した後からは RandomizedDelaySec が設定されている timer のランダムな時間挿入が Time has been changed の直後におきていました。</p>
+
+<pre><code> 6月 28 15:07:51 hostname systemd[1]: Time has been changed
+ 6月 28 15:07:51 hostname systemd[1]: apt-daily-upgrade.timer: Adding 46min 16.478521s random time.
+ 6月 28 15:07:51 hostname systemd[1]: apt-daily.timer: Adding 3h 45min 54.621700s random time.
+ 6月 28 15:07:56 hostname systemd[1]: Time has been changed
+ 6月 28 15:07:56 hostname systemd[1]: apt-daily-upgrade.timer: Adding 25min 59.320458s random time.
+ 6月 28 15:07:56 hostname systemd[1]: apt-daily.timer: Adding 11h 34min 9.012513s random time.
+ 6月 28 15:08:01 hostname systemd[1]: Time has been changed
+ 6月 28 15:08:01 hostname systemd[1]: apt-daily-upgrade.timer: Adding 42min 37.932995s random time.
+ 6月 28 15:08:01 hostname systemd[1]: apt-daily.timer: Adding 4h 48min 31.255279s random time.
+ 6月 28 15:08:06 hostname systemd[1]: Time has been changed
+ 6月 28 15:08:06 hostname systemd[1]: apt-daily-upgrade.timer: Adding 13min 44.192537s random time.
+ 6月 28 15:08:06 hostname systemd[1]: apt-daily.timer: Adding 38min 56.349412s random time.
+</code></pre>
+
+<p>自作した timer が実行されなくて <code>journalctl -u local-backup.timer</code> のように調べた時に「Adding &hellip; random time.」のログで埋まっていて、他の動いている timer との違いも特になくて悩んでいましたが、ふと <code>journalctl</code> (引数なし) を実行してみたら「Time has been changed」とセットでおきていることに気づきました。</p>
+
+<h2>解決策</h2>
+
+<p>「Time has been changed」で検索して最初に出てきた <a href="https://askubuntu.com/questions/888493/var-log-syslog-systemd1-time-has-been-changed-message-every-5-seconds">16.04 - /var/log/syslog &lsquo;systemd[1]: Time has been changed&rsquo; message every 5 seconds - Ask Ubuntu</a> に</p>
+
+<blockquote><p>I encountered this issue of &ldquo;systemd[&hellip;]Time has been changed&rdquo; messages logged every five seconds in /var/log/syslog on a 16.04 server running under Windows 8.1 Hyper-V. To fix it, I disabled time synchronization on the Hyper-V side. In Hyper-V Manager, I highlighted the VM, selected &ldquo;Settings&hellip;&rdquo;, then &ldquo;Integration Services&rdquo;, unchecked &ldquo;Time synchronization&rdquo;, and clicked Apply. The messages stopped instantly - no VM restart was required.</p></blockquote>
+
+<p>と書いてあったので、「設定&hellip;」から「統合サービス」の「時刻の同期」のチェックを外して (再起動なしで) 解決しました。</p>
+
+<h2>解決確認</h2>
+
+<p>「Time has been changed」も出なくなって「Adding &hellip; random time.」も出なくなって、翌日まで待ってみるとちゃんと実行されていたので、解決したようです。</p>
+
+<h2>まとめ</h2>
+
+<p>ntp サーバー機能も必要で、 ntp パッケージを入れている環境で発生したので、時刻の同期の仕方によっては発生しないのかもしれませんが、「Time has been changed」で検索して出てきた他の方法はログを無視するだけとか、根本的な解決になっていないものが多そうだったので、Hyper-V との組み合わせなら systemd-timesyncd でも発生するのかもしれません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Debian/Ubuntuで暗号化 LVM を使いつつ自動起動する]]></title>
@@ -649,208 +717,6 @@ Accept updated hostkeys? (yes/no): yes
 <h2>まとめ</h2>
 
 <p><code>ServerAliveInterval</code> のように以前設定を見直したときにどの環境でも使えるようになっていたものもありましたが、 <code>ControlPersist</code> のように以前は使えない環境もあったけど、今はどこでも使える設定があったり、 <code>UpdateHostKeys</code> のようにまだ使えない環境もある設定もあったりするので、たまに気が向いたときに設定の見直しをするのはお勧めだと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[ LILO&東海道らぐオフラインミーティング 2017/05/06]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-05-06-lilo-tokaidolug.html"/>
-    <updated>2017-05-06T13:17:50+09:00</updated>
-    <id>http://blog.n-z.jp/blog/lilo-tokaidolug</id>
-    <content type="html"><![CDATA[<p><a href="https://lilo.connpass.com/event/55003/" title="LILO&amp;東海道らぐオフラインミーティング 2017/05/06">LILO&amp;東海道らぐオフラインミーティング 2017/05/06</a> に参加しました。</p>
-
-<p>今回もアンカンファレンス形式でした。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<p>今回のメモです。</p>
-
-<ul>
-<li>会場はいつもの 4 階でした。</li>
-<li>ハッシュタグ: <code>#lilo_jp</code> <code>#東海道らぐ</code></li>
-<li>登録参加者数 16名</li>
-<li>自己紹介から</li>
-</ul>
-
-
-<h2>自分の発表</h2>
-
-<ul>
-<li>資料にある話</li>
-<li>資料にないけど DNS CAA の話</li>
-<li>CAA レコードに書いて spam が増えなかったかという話</li>
-<li>公開しているアドレスなので変化はわからず</li>
-<li>.travis.yml に書いた時には明らかに増えた</li>
-<li>質問があったので、ちょっと etckeeper の話 (etckeeper vcs とか)</li>
-</ul>
-
-
-<h2>こんどうさん</h2>
-
-<ul>
-<li>ESP パーティションの話</li>
-<li>ESP 内の grub データを消せば Windows のみになる</li>
-<li>BIOS/MBR から UEFI の過渡期の話</li>
-<li>openSUSE の話</li>
-<li>openSUSE Asia Summit 招聘中</li>
-<li>LibO もほぼ併催確定</li>
-<li>Cinnamon を入れた</li>
-<li>Linux Mint 17.3 with NVIDIA Driver は GPU 切り替えがログアウトだけで可能</li>
-<li>18.1 では切り替え NG (プロプラドライバとの相性も悪い)</li>
-<li>M17N: ibus の設定</li>
-<li>SUSE のデフォルトは <code>/</code> が btrfs で <code>/home</code> が XFS</li>
-</ul>
-
-
-<h2>5分休憩</h2>
-
-<h2>としひささん</h2>
-
-<ul>
-<li>スマートウォッチ</li>
-<li>WSD-F20 と Pebble</li>
-<li>必要な理由とか要件とか</li>
-<li>特徴とか比較とか</li>
-<li>個人的には Pebble の方が良い</li>
-<li>WSD-F20 は GPS ロガーにはならない</li>
-<li><p>Android Wear 2.0 はアプリが少ない</p></li>
-<li><p>LILO の歴史 <a href="https://lilo.linux.or.jp/history/">https://lilo.linux.or.jp/history/</a></p></li>
-<li>今年で 20 年</li>
-<li>インストールからサポートする場、九州でやっているから関西でも、というのが発足理由</li>
-<li>Samba の話で 150 人ぐらいきたことがあるのがピーク</li>
-<li>普通は多くて50人ぐらい</li>
-<li>普通は10から20人ぐらい</li>
-<li>タコを育てようという文化</li>
-<li>JF がすばらしい</li>
-<li>Linux は初心者を大切にするのが良い</li>
-<li><a href="https://twitter.com/xoxyuxu/status/860737579657732098">https://twitter.com/xoxyuxu/status/860737579657732098</a> JFは素晴らしい(ドキュメントがあることは素晴らしい) タコを育てよ(判らないことがある環境が悪い,という考え方)</li>
-<li>みんないろんなものを持ってきていた</li>
-<li>NAIST でやっていた奈良時代</li>
-<li>場所が先端</li>
-<li>デスクトップマシンを持ってくるのが普通</li>
-<li>Doom をやりたくて Linux を入れた人もいる</li>
-<li>Enlightment は昔からかっこいい</li>
-<li>昔は重かったが時代が変わって今は軽い</li>
-<li>Tizen にのっているので今も開発は活発</li>
-<li>第3回のアンケート結果</li>
-<li>2002年より後の歴史は分散していてまとまっていない</li>
-<li>Wiki にある <a href="https://lilo.linux.or.jp/wiki/history">https://lilo.linux.or.jp/wiki/history</a></li>
-<li>トップから辿れる一覧ページもある <a href="https://lilo.linux.or.jp/event/">https://lilo.linux.or.jp/event/</a></li>
-<li>LMS だけ別ページ <a href="https://lilo.linux.or.jp/event/lms/">https://lilo.linux.or.jp/event/lms/</a></li>
-</ul>
-
-
-<h2>さかのしたさん</h2>
-
-<ul>
-<li>「Google map 印刷 制約」で検索</li>
-<li><a href="https://www.google.co.jp/intl/ja/permissions/geoguidelines.html">https://www.google.co.jp/intl/ja/permissions/geoguidelines.html</a></li>
-<li>Google Map は使用に制限がある</li>
-<li>Open Street Map</li>
-<li>facebook のチェックインなどに使われている</li>
-<li>overpass turbo</li>
-<li>f4map - 延暦寺</li>
-<li><a href="https://www.netfort.gr.jp/~saka/accessmap/">OSM Access Map</a> というのを作った</li>
-<li>道路のみの画像を保存できる</li>
-<li>道路の区別は実データを元にご意見募集中</li>
-<li>ゼンリンが地図グッズを売っている <a href="http://www.zenrin.co.jp/goods/matimati/item/">http://www.zenrin.co.jp/goods/matimati/item/</a></li>
-<li>SUZURI でグッズを売る?</li>
-<li>5月20日(土) 【西国街道#04】摂津富田の街並みと寺社巡り <a href="https://countries-romantic.connpass.com/event/56126/">https://countries-romantic.connpass.com/event/56126/</a></li>
-</ul>
-
-
-<h2>やまうちさん</h2>
-
-<ul>
-<li>実践IOTハウス 古いPCで</li>
-<li>Tocos 無線モジュール</li>
-<li>Raspberry Pi が遅いので古い PC に置き換え</li>
-<li>Linux Beans</li>
-<li>TOCOS TWE-Lite と ToCoStick で簡易照度センサー(100均電卓)</li>
-<li>太陽電池部分の電圧をとっている</li>
-<li>デモはうまく動かず</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>懇親会参加予定は 10 名</li>
-<li>会場費は 100 円</li>
-</ul>
-
-
-<h2>もりわかさん</h2>
-
-<ul>
-<li><a href="https://developers.redhat.com/">https://developers.redhat.com/</a></li>
-<li>登録すると 1 年間無料で開発用途に使える</li>
-<li>1 年後に更新すればずっと使える</li>
-<li>シェルスクリプト10行ぐらい書くよねという話</li>
-<li>JBoss などもある</li>
-<li>ナレッジベースやドキュメントにもアクセスできる</li>
-<li>質の高いドキュメント</li>
-<li>実マシン1台という制限があるが、VM の制限はないのですごいマシンを用意して 100 VM とかでも OK</li>
-<li>会社で開発者がそれぞれ登録して手元のマシンはそれで動かすと言うのもあり</li>
-<li>バグかどうか困ったらサポートを買うのが良い</li>
-</ul>
-
-
-<h2>のがたさん</h2>
-
-<ul>
-<li><a href="http://gihyo.jp/admin/serial/01/ubuntu-recipe/0462">第462回　韓国開催，Korea Community Day参加レポート 〜Ubuntu KRのみなさんと交流してきました：Ubuntu Weekly Recipe｜gihyo.jp … 技術評論社</a></li>
-<li>記事とは違う話を</li>
-<li><a href="http://cogniti.github.io/nimf/ja/">http://cogniti.github.io/nimf/ja/</a> (ibus などの層のもの) の開発者の人と Google 翻訳を使って話をした</li>
-<li>Google 翻訳は韓国語と日本語の翻訳はスラングなどを使わずきれいに話せば精度良く翻訳できるので、突っ込んだ話もできた</li>
-<li>Samsung と Tizen</li>
-<li>言語が違うだけでやっていることは同じだと思った話</li>
-</ul>
-
-
-<h2>ぉゅぅさん</h2>
-
-<ul>
-<li>Ext4 filesystem ではまった話</li>
-<li>32 bit OS だと 16TiB まで</li>
-<li>ブロックアロケータまで調べた</li>
-<li><code>posix_fallocate</code></li>
-<li><a href="http://www.ujiya.net/linux/">http://www.ujiya.net/linux/</a></li>
-</ul>
-
-
-<h2>今後の予定</h2>
-
-<ul>
-<li>次回はたぶん 8 月</li>
-</ul>
-
-
-<h2>発表した内容</h2>
-
-<p>スライドはいつも通り <a href="http://slide.rabbit-shocker.org/authors/znz/lilo-20170506/">Rabbit Slide Show</a> (<a href="https://rubygems.org/gems/rabbit-slide-znz-lilo-20170506">RubyGems</a>), <a href="https://slideshare.net/znzjp/lilolinuxorjp-20175">SlideShare</a>, <a href="https://speakerdeck.com/u/znz/p/lilo-dot-linux-dot-or-dot-jp-falsehua-2017nian-5yue">Speaker Deck</a> にあげています。(ソースは <a href="https://github.com/znz/lilo-20170506">github</a> にあげています。)</p>
-
-<iframe src="https://slide.rabbit-shocker.org/authors/znz/lilo-20170506/viewer.html"
-        width="640" height="524"
-        frameborder="0"
-        marginwidth="0"
-        marginheight="0"
-        scrolling="no"
-        style="border: 1px solid #ccc; border-width: 1px 1px 0; margin-bottom: 5px"
-        allowfullscreen> </iframe>
-
-
-<div style="margin-bottom: 5px">
-  <a href="https://slide.rabbit-shocker.org/authors/znz/lilo-20170506/" title="lilo.linux.or.jp の話 (2017年5月)">lilo.linux.or.jp の話 (2017年5月)</a>
-</div>
-
-
-<h2>Togetter まとめ</h2>
-
-<p><a href="https://togetter.com/li/1107707">LILO&amp;東海道らぐオフラインミーティング 2017/05/06の記録 - Togetterまとめ</a>にまとめられているようです。</p>
 ]]></content>
   </entry>
   

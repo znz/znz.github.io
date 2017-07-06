@@ -4,7 +4,7 @@
   <title><![CDATA[Category: debian | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/debian/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-07-01T16:53:17+09:00</updated>
+  <updated>2017-07-07T00:32:28+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,74 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Hyper-V のゲスト環境で systemd timer がうまく動いていなかった]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-07-07-hyperv-systemd-timer.html"/>
+    <updated>2017-07-07T00:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/hyperv-systemd-timer</id>
+    <content type="html"><![CDATA[<p>Hyper-V のゲストとしてインストールした Linux 環境で systemd timer の <code>RandomizedDelaySec</code> がおかしくて timer が実行されないことがあったのですが、Hyper-V の時刻の同期との相性が悪いのが原因でした。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>ホスト: Windows Server 2012</li>
+<li>ゲスト: Ubuntu 16.04.2 LTS (xenial) と Debian GNU/Linux 9.0 (stretch)</li>
+</ul>
+
+
+<h2>現象</h2>
+
+<p>journalctl で過去のログを確認してみると</p>
+
+<pre><code> 6月 28 12:07:56 hostname systemd[9928]: Time has been changed
+ 6月 28 12:07:59 hostname systemd[9928]: Time has been changed
+ 6月 28 12:08:04 hostname systemd[9928]: Time has been changed
+ 6月 28 12:08:09 hostname systemd[9928]: Time has been changed
+ 6月 28 12:08:14 hostname systemd[9928]: Time has been changed
+ 6月 28 12:08:19 hostname systemd[9928]: Time has been changed
+</code></pre>
+
+<p>のように Time has been changed が頻繁に記録されていました。</p>
+
+<p>再起動した後からは RandomizedDelaySec が設定されている timer のランダムな時間挿入が Time has been changed の直後におきていました。</p>
+
+<pre><code> 6月 28 15:07:51 hostname systemd[1]: Time has been changed
+ 6月 28 15:07:51 hostname systemd[1]: apt-daily-upgrade.timer: Adding 46min 16.478521s random time.
+ 6月 28 15:07:51 hostname systemd[1]: apt-daily.timer: Adding 3h 45min 54.621700s random time.
+ 6月 28 15:07:56 hostname systemd[1]: Time has been changed
+ 6月 28 15:07:56 hostname systemd[1]: apt-daily-upgrade.timer: Adding 25min 59.320458s random time.
+ 6月 28 15:07:56 hostname systemd[1]: apt-daily.timer: Adding 11h 34min 9.012513s random time.
+ 6月 28 15:08:01 hostname systemd[1]: Time has been changed
+ 6月 28 15:08:01 hostname systemd[1]: apt-daily-upgrade.timer: Adding 42min 37.932995s random time.
+ 6月 28 15:08:01 hostname systemd[1]: apt-daily.timer: Adding 4h 48min 31.255279s random time.
+ 6月 28 15:08:06 hostname systemd[1]: Time has been changed
+ 6月 28 15:08:06 hostname systemd[1]: apt-daily-upgrade.timer: Adding 13min 44.192537s random time.
+ 6月 28 15:08:06 hostname systemd[1]: apt-daily.timer: Adding 38min 56.349412s random time.
+</code></pre>
+
+<p>自作した timer が実行されなくて <code>journalctl -u local-backup.timer</code> のように調べた時に「Adding &hellip; random time.」のログで埋まっていて、他の動いている timer との違いも特になくて悩んでいましたが、ふと <code>journalctl</code> (引数なし) を実行してみたら「Time has been changed」とセットでおきていることに気づきました。</p>
+
+<h2>解決策</h2>
+
+<p>「Time has been changed」で検索して最初に出てきた <a href="https://askubuntu.com/questions/888493/var-log-syslog-systemd1-time-has-been-changed-message-every-5-seconds">16.04 - /var/log/syslog &lsquo;systemd[1]: Time has been changed&rsquo; message every 5 seconds - Ask Ubuntu</a> に</p>
+
+<blockquote><p>I encountered this issue of &ldquo;systemd[&hellip;]Time has been changed&rdquo; messages logged every five seconds in /var/log/syslog on a 16.04 server running under Windows 8.1 Hyper-V. To fix it, I disabled time synchronization on the Hyper-V side. In Hyper-V Manager, I highlighted the VM, selected &ldquo;Settings&hellip;&rdquo;, then &ldquo;Integration Services&rdquo;, unchecked &ldquo;Time synchronization&rdquo;, and clicked Apply. The messages stopped instantly - no VM restart was required.</p></blockquote>
+
+<p>と書いてあったので、「設定&hellip;」から「統合サービス」の「時刻の同期」のチェックを外して (再起動なしで) 解決しました。</p>
+
+<h2>解決確認</h2>
+
+<p>「Time has been changed」も出なくなって「Adding &hellip; random time.」も出なくなって、翌日まで待ってみるとちゃんと実行されていたので、解決したようです。</p>
+
+<h2>まとめ</h2>
+
+<p>ntp サーバー機能も必要で、 ntp パッケージを入れている環境で発生したので、時刻の同期の仕方によっては発生しないのかもしれませんが、「Time has been changed」で検索して出てきた他の方法はログを無視するだけとか、根本的な解決になっていないものが多そうだったので、Hyper-V との組み合わせなら systemd-timesyncd でも発生するのかもしれません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Debian/Ubuntuで暗号化 LVM を使いつつ自動起動する]]></title>
@@ -638,112 +706,6 @@ Role Settings を開くとわかるのですが、なぜか Role Name は自動�
 <p>のように指定して使っていたり (この場合でも meta/main.yml は必要)、 playbook 用の repository の role 以下にそのまま入れていたり (この場合は meta/main.yml は不要) します。</p>
 
 <p>複数 role を登録していて、こういうフローで作業をしている人もいるということで、参考になれば幸いです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 123 回関西 Debian 勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-05-28-kansai-debian-meeting.html"/>
-    <updated>2017-05-28T13:50:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
-    <content type="html"><![CDATA[<p><a href="https://debianjp.connpass.com/event/57323/" title="第 123 回関西 Debian 勉強会">第 123 回関西 Debian 勉強会</a>に参加しました。</p>
-
-<!--more-->
-
-
-<p>以下メモです。</p>
-
-<h2>会場など</h2>
-
-<p>Apache Arrow の勉強会の後、一緒にランチに行くのに参加していたら、ちょっと遅くなってしまって、 13:40 すぎに到着しました。</p>
-
-<h2>オープニング</h2>
-
-<ul>
-<li>事前課題は必須項目になっていなかったため、 connpass での参加登録時に出ていなかったので、その場で発表して資料が更新されていた。</li>
-<li>初参加の人がいた</li>
-<li>初めて作った人とか長い間使っていない人とか</li>
-<li>easypg は表示は復号されているがメモリダンプをしても平文はないらしい</li>
-<li>期限切れと revoke の違い: 期限切れはのばせるが、 revoke は取り消せない</li>
-</ul>
-
-
-<p>ruby の svn のコミットに必要という話は <a href="https://bugs.ruby-lang.org/projects/ruby/wiki/CommitterHowto">https://bugs.ruby-lang.org/projects/ruby/wiki/CommitterHowto</a> <a href="https://bugs.ruby-lang.org/projects/ruby/wiki/CommitterHowtoJa">https://bugs.ruby-lang.org/projects/ruby/wiki/CommitterHowtoJa</a> あたりに書いてあるのですが、今見ると <code>ssh-keygen -b 2048 -f ruby_key</code> になってて古い感じ。英語の方は <code>~/.ssh/id_rsa or ~/.ssh/id_dsa</code> と書いてあるのでもっと古い感じが。</p>
-
-<h3>途中で矢吹さんの話</h3>
-
-<ul>
-<li>カジュアルに使うのも良いけど、暗号関連は色々気にしている人もいるので気をつけましょう (色々なポリシーがあるのを尊重しましょう) という話とか</li>
-<li>cypherpunk : 暗号の民主化</li>
-<li>FST-01 を入手した (まだ秘密鍵は入れていない) ので回覧</li>
-</ul>
-
-
-<h2>GnuPG にまつわるアレコレ - GnuPG2 とか Keybase とか Yubikey とか</h2>
-
-<ul>
-<li>key id は昔は 8 文字だったけど conflict が作れるという話になって、今は 16 文字 (以上?) が普通らしい</li>
-<li>(勉強会中に聞きそびれてしまったけど、GPG の key id が fingerprint の末尾っていうのは、みんなどうやって知るんだろう?)</li>
-<li>(自分は昔の key sign party で fingerprint しか書いてないけど、どうやって fetch するの? と聞いたときに教えてもらったけど。)</li>
-<li>GnuPG とは?</li>
-<li>OpenPGP: RFC になっている</li>
-<li>暗号化によって盗聴を防ぐ (機密性)</li>
-<li>署名によって改ざんを検知可能にする (完全性)</li>
-<li>例: secure-apt, DKIM</li>
-<li>信頼の輪 (Web of trust) によって本人を同定</li>
-<li>過去の資料の参照情報紹介</li>
-<li><a href="https://wiki.debian.org/KansaiDebianMeeting/20150823" title="第 101 回 関西 Debian 勉強会">第 101 回 関西 Debian 勉強会</a>の「wiki:Subkeys」が気になった</li>
-<li>Windows の GUI の GPG クライアントで良いものがない</li>
-<li>mac は GPG Tools というので標準の Mail.app で GPG 対応できるらしい</li>
-<li>Web メールで困る話</li>
-<li>Thunderbird は Enigmail</li>
-<li>鍵の選び方の話</li>
-<li>ED25519 は gnupg 1.4 系 (今は oldstable ブランチ) で復号できない</li>
-<li>今の所は互換性のための RSA4096 と速い ED25519 を併用するのが良いかもしれない</li>
-<li>GnuPG 2 - Stretch での変更点</li>
-<li>gnupg (1.4 → 2.1), gnupg1 (なし → 1.4), gnupg2 (2.0 → drop)</li>
-<li>gnupg 2.1 は初回実行時に自動的に移行が実行されて、2.1 用のファイル (<code>pubring.kbx</code> とか <code>private-keys-v1.d/</code> とか) が作成される</li>
-<li>古いバージョン用のファイル (<code>pubring.gpg</code> とか <code>secring.gpg</code> とか) はそのまま残るので古いバージョンの共存も可能 (だがそれぞれのバージョンのファイルしか更新されないので、併用すると情報がずれていくはず)</li>
-<li>2.0 がどっちのファイルを使うのかは検証してないので不明</li>
-<li>プログラムの分離具合が整理された (<a href="http://miniconf.debian.or.jp/">Mini Debian Conference Japan 2016</a> の<a href="http://miniconf.debian.or.jp/assets/files/gnupg-now.html">g新部さんのスライド</a> の図が非常にわかりやすい (GnuPG programs (2) の図))</li>
-<li>proxy 設定が gpg.conf から dirmngr.conf に変わった</li>
-<li>use-gpg-agent が obsolete (常に有効で単純に無視される)</li>
-<li>大量の ssh 接続に使うと scdaemon がエントロピーが足りないという話</li>
-<li>haveged (はべーじでぃー(と言っていた)) とか rng-tools とか</li>
-<li>disable-scdaemon をつけておくと無駄に scdaemon が起動しなくなる (gpg-agent から scdaemon が起動して scdaemon 対応のデバイスがなければ、すぐに gpg-agent に返ってくるらしいが、起動するだけ無駄という話)</li>
-<li>gpg-agent を ssh-agent として使うのは簡単</li>
-<li>GNOME で gnome keyring daemon は止めやすい</li>
-<li>mate や xfce では ssh-agent を止めにくい</li>
-<li>ssh-agent を入れないときは <code>.xsessionrc</code> で <code>SSH_AUTH_SOCK</code> を自分で設定する必要がある</li>
-<li>mate や xfce では <code>.xsessionrc</code> で設定しても、さらに上書きされるらしい</li>
-<li>YubiKey <a href="https://yubikey.yubion.com/">https://yubikey.yubion.com/</a> <a href="https://www.cloudgate.jp/yubikey.html">https://www.cloudgate.jp/yubikey.html</a></li>
-<li>ED25519 には対応していない</li>
-<li>RSA 4096 で復号で 0.5 秒ぐらい</li>
-<li>(後でし</li>
-<li>Qt5 での GUI ツールとコマンドラインツールがある</li>
-<li>keybase.io というサービスがあるらしいが秘密鍵もアップロードできるらしく?</li>
-<li>アカウントを作ってみた <a href="https://keybase.io/uwabami">https://keybase.io/uwabami</a> が消すかも。</li>
-<li><a href="https://github.com/keybase/client">https://github.com/keybase/client</a> には大量の Issues が。</li>
-</ul>
-
-
-<h2>クロージング</h2>
-
-<ul>
-<li>今後の予定</li>
-<li>来月は17日に stretch がリリース予定なので、25日から18日に予定を変更してリリースパーティの可能性が高そう</li>
-</ul>
-
-
-<h2>よくわからないままだった点</h2>
-
-<ul>
-<li>懇親会への移動中などにある程度話しましたが</li>
-<li><code>gpg --version</code> で出てくる「公開鍵: RSA, ELG, DSA, ECDH, ECDSA, EDDSA」の「EDDSA」(ECDSA ではなく)と「ED25519」は同じ?</li>
-<li>Curve25519 と ED25519 の関係</li>
-<li><a href="https://ja.wikipedia.org/wiki/%E3%82%A8%E3%83%89%E3%83%AF%E3%83%BC%E3%82%BA%E6%9B%B2%E7%B7%9A%E3%83%87%E3%82%B8%E3%82%BF%E3%83%AB%E7%BD%B2%E5%90%8D%E3%82%A2%E3%83%AB%E3%82%B4%E3%83%AA%E3%82%BA%E3%83%A0" title="エドワーズ曲線デジタル署名アルゴリズム">エドワーズ曲線デジタル署名アルゴリズム</a> に多少説明がある</li>
-</ul>
-
 ]]></content>
   </entry>
   

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: windows | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/windows/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-07-01T16:53:17+09:00</updated>
+  <updated>2017-07-07T00:32:28+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,74 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Hyper-V のゲスト環境で systemd timer がうまく動いていなかった]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-07-07-hyperv-systemd-timer.html"/>
+    <updated>2017-07-07T00:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/hyperv-systemd-timer</id>
+    <content type="html"><![CDATA[<p>Hyper-V のゲストとしてインストールした Linux 環境で systemd timer の <code>RandomizedDelaySec</code> がおかしくて timer が実行されないことがあったのですが、Hyper-V の時刻の同期との相性が悪いのが原因でした。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>ホスト: Windows Server 2012</li>
+<li>ゲスト: Ubuntu 16.04.2 LTS (xenial) と Debian GNU/Linux 9.0 (stretch)</li>
+</ul>
+
+
+<h2>現象</h2>
+
+<p>journalctl で過去のログを確認してみると</p>
+
+<pre><code> 6月 28 12:07:56 hostname systemd[9928]: Time has been changed
+ 6月 28 12:07:59 hostname systemd[9928]: Time has been changed
+ 6月 28 12:08:04 hostname systemd[9928]: Time has been changed
+ 6月 28 12:08:09 hostname systemd[9928]: Time has been changed
+ 6月 28 12:08:14 hostname systemd[9928]: Time has been changed
+ 6月 28 12:08:19 hostname systemd[9928]: Time has been changed
+</code></pre>
+
+<p>のように Time has been changed が頻繁に記録されていました。</p>
+
+<p>再起動した後からは RandomizedDelaySec が設定されている timer のランダムな時間挿入が Time has been changed の直後におきていました。</p>
+
+<pre><code> 6月 28 15:07:51 hostname systemd[1]: Time has been changed
+ 6月 28 15:07:51 hostname systemd[1]: apt-daily-upgrade.timer: Adding 46min 16.478521s random time.
+ 6月 28 15:07:51 hostname systemd[1]: apt-daily.timer: Adding 3h 45min 54.621700s random time.
+ 6月 28 15:07:56 hostname systemd[1]: Time has been changed
+ 6月 28 15:07:56 hostname systemd[1]: apt-daily-upgrade.timer: Adding 25min 59.320458s random time.
+ 6月 28 15:07:56 hostname systemd[1]: apt-daily.timer: Adding 11h 34min 9.012513s random time.
+ 6月 28 15:08:01 hostname systemd[1]: Time has been changed
+ 6月 28 15:08:01 hostname systemd[1]: apt-daily-upgrade.timer: Adding 42min 37.932995s random time.
+ 6月 28 15:08:01 hostname systemd[1]: apt-daily.timer: Adding 4h 48min 31.255279s random time.
+ 6月 28 15:08:06 hostname systemd[1]: Time has been changed
+ 6月 28 15:08:06 hostname systemd[1]: apt-daily-upgrade.timer: Adding 13min 44.192537s random time.
+ 6月 28 15:08:06 hostname systemd[1]: apt-daily.timer: Adding 38min 56.349412s random time.
+</code></pre>
+
+<p>自作した timer が実行されなくて <code>journalctl -u local-backup.timer</code> のように調べた時に「Adding &hellip; random time.」のログで埋まっていて、他の動いている timer との違いも特になくて悩んでいましたが、ふと <code>journalctl</code> (引数なし) を実行してみたら「Time has been changed」とセットでおきていることに気づきました。</p>
+
+<h2>解決策</h2>
+
+<p>「Time has been changed」で検索して最初に出てきた <a href="https://askubuntu.com/questions/888493/var-log-syslog-systemd1-time-has-been-changed-message-every-5-seconds">16.04 - /var/log/syslog &lsquo;systemd[1]: Time has been changed&rsquo; message every 5 seconds - Ask Ubuntu</a> に</p>
+
+<blockquote><p>I encountered this issue of &ldquo;systemd[&hellip;]Time has been changed&rdquo; messages logged every five seconds in /var/log/syslog on a 16.04 server running under Windows 8.1 Hyper-V. To fix it, I disabled time synchronization on the Hyper-V side. In Hyper-V Manager, I highlighted the VM, selected &ldquo;Settings&hellip;&rdquo;, then &ldquo;Integration Services&rdquo;, unchecked &ldquo;Time synchronization&rdquo;, and clicked Apply. The messages stopped instantly - no VM restart was required.</p></blockquote>
+
+<p>と書いてあったので、「設定&hellip;」から「統合サービス」の「時刻の同期」のチェックを外して (再起動なしで) 解決しました。</p>
+
+<h2>解決確認</h2>
+
+<p>「Time has been changed」も出なくなって「Adding &hellip; random time.」も出なくなって、翌日まで待ってみるとちゃんと実行されていたので、解決したようです。</p>
+
+<h2>まとめ</h2>
+
+<p>ntp サーバー機能も必要で、 ntp パッケージを入れている環境で発生したので、時刻の同期の仕方によっては発生しないのかもしれませんが、「Time has been changed」で検索して出てきた他の方法はログを無視するだけとか、根本的な解決になっていないものが多そうだったので、Hyper-V との組み合わせなら systemd-timesyncd でも発生するのかもしれません。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Go言語でWindowsのnetshラッパーのGUIアプリを作った]]></title>
