@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-07-07T00:32:28+09:00</updated>
+  <updated>2017-07-08T16:40:31+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,271 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Omnibus GitLabをContainer RegistryやMattermostを有効にして使う]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-07-08-omnibus-gitlab.html"/>
+    <updated>2017-07-08T16:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/omnibus-gitlab</id>
+    <content type="html"><![CDATA[<p>GitLab と Dokku (と一部 Heroku) を使って CI/CD (Continuous Integration / Continuous Deployment) 環境を作ってみたので、何回かにわけてその話を書いていきます。
+最初は Omnibus GitLab 自体の設定の話です。
+certbot で https を有効にして、 GitLab Container Registry や GitLab Mattermost も有効にします。
+GitLab Pages も有効にしますが、 certbot での自動化はできなかったので http のみの設定です。</p>
+
+<p><a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Ubuntu 16.04.2 LTS</li>
+<li>Omnibus GitLab 9.1.4-ce.0 (インストール時) から 9.3.5-ce.0 (記事執筆時)</li>
+<li>gitlab-ci-multi-runner 9.2.0 (インストール時) から 9.3.0 (記事執筆時)</li>
+<li>Dokku 0.9.4 (インストール時) から 0.10.2 (記事執筆時)</li>
+</ul>
+
+
+<h2>インストール方法選択</h2>
+
+<p><a href="https://about.gitlab.com/installation/">Installation methods for GitLab</a> にある方法のうち、Omnibus package installation (recommended) を選択しました。
+理由としては以下のようなことを考慮しました。</p>
+
+<ul>
+<li>ソースインストールはインストールもバージョンアップも管理も大変そうなので除外</li>
+<li>Docker でのインストールはバージョンを上げて問題がおきた場合に戻しやすそうだが、バージョンアップ情報を自分で追いかけないといけない</li>
+<li>Omnibus package は apt で他のパッケージの更新と同様にバージョンアップが検知可能</li>
+<li>GitLab 自体は仮想マシン1台で動かすのでバージョンアップ時に停止時間が発生するのは許容</li>
+</ul>
+
+
+<h2>カスタマイズ方法</h2>
+
+<p>Docker イメージは <code>GITLAB_OMNIBUS_CONFIG</code> で、 Omnibus package は <code>/etc/gitlab/gitlab.rb</code> でカスタマイズできます。
+(設定できる項目は <a href="https://docs.gitlab.com/omnibus/docker/README.html">https://docs.gitlab.com/omnibus/docker/README.html</a> からリンクされている <a href="https://gitlab.com/gitlab-org/omnibus-gitlab/blob/master/files/gitlab-config-template/gitlab.rb.template">Omnibus GitLab template</a> 参照)</p>
+
+<p>自動構築したい場合は <code>gitlab_rails['initial_root_password']</code> や <code>gitlab_rails['initial_shared_runners_registration_token']</code> が設定できるというのを知っておくと良さそうです。</p>
+
+<p>設定項目によっては Web UI で変更しても <code>sudo gitlab-ctl reconfigure</code> を実行すると再設定されてしまうものもあるようなので、影響しそうな設定を変更するときは気にしておくと良さそうです。
+(気づいた範囲では GitLab Mattermost 関係の設定が再設定されました。)</p>
+
+<h2>最低限の設定</h2>
+
+<p>相対時間で表示されることも多いので、デフォルトのままでもあまり気にならないかもしれませんが、</p>
+
+<pre><code>gitlab_rails['time_zone'] = 'Asia/Tokyo'
+</code></pre>
+
+<p>でタイムゾーンの設定をしておくと良いと思います。</p>
+
+<h2>メール設定</h2>
+
+<p><a href="https://docs.gitlab.com/omnibus/settings/smtp.html">SMTP settings</a> を参考にしてメール送信の設定をしておきます。</p>
+
+<p>以下は SMTP over TLS (smtps) で送信する例です。</p>
+
+<pre><code># https://docs.gitlab.com/omnibus/settings/smtp.html
+gitlab_rails['smtp_enable'] = true
+gitlab_rails['smtp_address'] = 'smtp.example.com'
+gitlab_rails['smtp_port'] = 465
+gitlab_rails['smtp_user_name'] = 'username'
+gitlab_rails['smtp_password'] = 'password'
+gitlab_rails['smtp_tls'] = true
+</code></pre>
+
+<p>Mattermost も使うなら一緒に設定しておきます。</p>
+
+<pre><code>mattermost['email_smtp_username'] = 'username'
+mattermost['email_smtp_password'] = 'password'
+mattermost['email_smtp_server'] = 'smtp.example.com'
+mattermost['email_smtp_port'] = 465
+mattermost['email_connection_security'] = 'TLS'
+mattermost['email_feedback_name'] = 'GitLab Mattermost'
+mattermost['email_feedback_email'] = 'email@example.com'
+mattermost['support_email'] =  'support@example.com'
+</code></pre>
+
+<h2>後で使う変数設定</h2>
+
+<p>config は ruby のコードなので、ローカル変数でドメインをまとめて設定できるようにしておきます。</p>
+
+<pre><code>base_domain = 'example.test'
+gitlab_domain = "gitlab.#{base_domain}"
+registry_domain = "registry.#{base_domain}"
+mattermost_domain = "mattermost.#{base_domain}"
+</code></pre>
+
+<h2>https 設定</h2>
+
+<p>GitLab で <a href="https://launchpad.net/~certbot/+archive/ubuntu/certbot">Certbot</a> で <a href="https://letsencrypt.org/">Let&rsquo;s Encrypt - Free SSL/TLS Certificates</a> の証明書を使うので、そのファイルの有無で設定を分岐します。</p>
+
+<p>これで、最初の証明書がない状態や vagrant などでの検証環境では http でつながり、証明書発行後に <code>sudo gitlab-ctl reconfigure</code> すれば https でつながるようになる、という設定が実現できます。</p>
+
+<pre><code>if File.exist?("/etc/letsencrypt/live/#{gitlab_domain}/fullchain.pem")
+  external_url "https://#{gitlab_domain}"
+  nginx['redirect_http_to_https'] = true
+  nginx['ssl_certificate'] = "/etc/letsencrypt/live/#{gitlab_domain}/fullchain.pem"
+  nginx['ssl_certificate_key'] = "/etc/letsencrypt/live/#{gitlab_domain}/privkey.pem"
+else
+  external_url "http://#{gitlab_domain}"
+end
+nginx['custom_gitlab_server_config'] = 'location ^~ /.well-known { root /var/www/letsencrypt; }'
+</code></pre>
+
+<h2>GitLab Container Registry 設定</h2>
+
+<p>Docker の Container Registry の <a href="https://docs.gitlab.com/ce/user/project/container_registry.html">GitLab Container Registry</a> も設定します。
+GitLab と同様に証明書の有無で分岐しています。</p>
+
+<p>Container Registry は https を使わない場合、 insecure-registry で困ることになると思います。</p>
+
+<pre><code>if File.exist?("/etc/letsencrypt/live/#{registry_domain}/fullchain.pem")
+  registry_external_url "https://#{registry_domain}"
+  registry_nginx['redirect_http_to_https'] = true
+  registry_nginx['ssl_certificate'] = "/etc/letsencrypt/live/#{registry_domain}/fullchain.pem"
+  registry_nginx['ssl_certificate_key'] = "/etc/letsencrypt/live/#{registry_domain}/privkey.pem"
+else
+  registry_external_url "http://#{registry_domain}"
+end
+registry_nginx['custom_gitlab_server_config'] = 'location ^~ /.well-known { root /var/www/letsencrypt; }'
+</code></pre>
+
+<p>設定はしましたが、今のところ使っていません。</p>
+
+<h2>GitLab Mattermost 設定</h2>
+
+<p>GitLab Mattermost も同様に https の設定をします。</p>
+
+<pre><code>if File.exist?("/etc/letsencrypt/live/#{mattermost_domain}/fullchain.pem")
+  mattermost_scheme = "https"
+  mattermost_port = 443
+  mattermost_external_url "#{mattermost_scheme}://#{mattermost_domain}"
+  mattermost_nginx['redirect_http_to_https'] = true
+  mattermost_nginx['ssl_certificate'] = "/etc/letsencrypt/live/#{mattermost_domain}/fullchain.pem"
+  mattermost_nginx['ssl_certificate_key'] = "/etc/letsencrypt/live/#{mattermost_domain}/privkey.pem"
+  mattermost['service_use_ssl'] = true
+else
+  mattermost_scheme = "http"
+  mattermost_port = 80
+  mattermost_external_url "#{mattermost_scheme}://#{mattermost_domain}"
+end
+mattermost_nginx['custom_gitlab_mattermost_server_config'] = 'location ^~ /.well-known { root /var/www/letsencrypt; }'
+</code></pre>
+
+<p><a href="https://docs.gitlab.com/omnibus/gitlab-mattermost/#email-batching">Email Batching</a> にはポート番号付きで書いてありますが、ポート番号付きで設定していると Omnibus GitLab 9.2.0 の Mattermost で Bad token type error になってしまってログインできなくなってしまったので、ポート番号なしで設定しています。</p>
+
+<pre><code># required by Email Batching
+#mattermost['service_site_url'] = "#{mattermost_scheme}://#{mattermost_domain}:#{mattermost_port}"
+# port causes Bad token type error https://github.com/mattermost/platform/issues/6489
+mattermost['service_site_url'] = "#{mattermost_scheme}://#{mattermost_domain}"
+mattermost['email_enable_batching'] = true
+</code></pre>
+
+<p>Mattermost の方だけにアカウントを作れる必要はなかったので、 GitLab 連携のアカウントだけに制限しています。</p>
+
+<pre><code>mattermost['email_enable_sign_in_with_email'] = false # gitlab accounts only
+mattermost['email_enable_sign_up_with_email'] = false # default
+</code></pre>
+
+<p>チーム作成も GitLab のグループ作成のときに連動して作ることを想定して制限しています。
+ただし Admin Area の方からグループを作成しようとすると「Create a Mattermost team for this group」のチェックボックスが出てこないので、 Dashboard の Groups の方から New group で作成する必要があるようです。</p>
+
+<pre><code>mattermost['team_enable_team_creation'] = false
+mattermost['team_enable_user_creation'] = true # default, required by GitLab SSO
+mattermost['team_restrict_creation_to_domains'] = 'example.com'
+</code></pre>
+
+<p>デフォルトの言語設定をしておきます。</p>
+
+<pre><code>mattermost['localization_server_locale'] = 'ja'
+mattermost['localization_client_locale'] = 'ja'
+</code></pre>
+
+<p>Webhook を有効にします。
+このあたりの設定は Web UI から変更しても <code>sudo gitlab-ctl reconfigure</code> すると、こちらの設定が優先されるようです。</p>
+
+<pre><code>mattermost['service_enable_incoming_webhooks'] = true
+</code></pre>
+
+<h2>GitLab Pages</h2>
+
+<p><a href="https://docs.gitlab.com/ce/user/project/pages/index.html">GitLab Pages</a> の設定をします。</p>
+
+<p>github.io と同様にグループやユーザーのサブドメインで見えるようになるので、 xip.io や nip.io などのようなワイルドカード DNS を使うのが簡単だと思います。</p>
+
+<pre><code>pages_external_url 'http://10.0.0.10.nip.io'
+</code></pre>
+
+<p>この設定で <code>http://hello.10.0.0.10.nip.io/world/</code> などでみえるようになります。</p>
+
+<p>https を使うには証明書と秘密鍵を Web UI から設定する必要があるようなので、自動化は難しそうな印象を受けました。</p>
+
+<h2>機能制限</h2>
+
+<p>デフォルトではグループを作成できないようにしました。</p>
+
+<pre><code># GitLab user privileges
+gitlab_rails['gitlab_default_can_create_group'] = false
+gitlab_rails['gitlab_username_changing_enabled'] = false
+</code></pre>
+
+<p>すべてのプロジェクトですべての機能を使うわけではないので、デフォルトでは無効にしました。</p>
+
+<pre><code># Default project feature settings
+gitlab_rails['gitlab_default_projects_features_issues'] = false
+gitlab_rails['gitlab_default_projects_features_merge_requests'] = false
+gitlab_rails['gitlab_default_projects_features_wiki'] = false
+gitlab_rails['gitlab_default_projects_features_snippets'] = false
+gitlab_rails['gitlab_default_projects_features_builds'] = false
+gitlab_rails['gitlab_default_projects_features_container_registry'] = false
+</code></pre>
+
+<h2>certbot 実行</h2>
+
+<p>Ubuntu 16.04.2 LTS にはまだ certbot が含まれていないので、 <a href="https://launchpad.net/~certbot/+archive/ubuntu/certbot">Certbot PPA</a> から certbot パッケージをインストールして、</p>
+
+<pre><code>sudo certbot certonly --webroot --webroot-path=/var/www/letsencrypt -d gitlab.example.jp
+sudo certbot certonly --webroot --webroot-path=/var/www/letsencrypt -d registry.example.jp
+sudo certbot certonly --webroot --webroot-path=/var/www/letsencrypt -d mattermost.example.jp
+</code></pre>
+
+<p>のように証明書を発行して、</p>
+
+<pre><code>sudo gitlab-ctl reconfigure
+</code></pre>
+
+<p>で反映させました。</p>
+
+<p>後は certbot の timer で 60 日ごとに証明書が自動更新されるはずです。</p>
+
+<h2>Web から設定</h2>
+
+<p>以上で <code>/etc/gitlab/gitlab.rb</code> での設定や端末での作業は終わりなので、 Web から設定していきます。</p>
+
+<h2>グループ作成</h2>
+
+<p>Mattermost のチーム作成に必要だったので、 GitLab の Administrator (@root) ユーザーには Web UI からグループ作成権限をつけて、 Dashboard の Groups の方から New group で「Create a Mattermost team for this group」のチェックを入れてグループを作成しました。</p>
+
+<p>チェックを入れて作成しても、特にリンクなどはつかないようなので、 Group の Description に <code>https://mattermost.example.jp/</code> の URL を書いておきました。</p>
+
+<h2>GitLab からの通知用 Webhook 設定</h2>
+
+<p>Mattermost のチャンネルのサイドバー3点マークから「統合機能」を選んで「内向きのウェブフック」を追加します。
+事前に通知用にチャンネルを作成して、送信先を分離しておくと良いかもしれません。
+追加したら URL を控えておきます。</p>
+
+<p>GitLab の Admin area (上のレンチ) を開いて、右上の歯車から「Service Templates」を開きます。
+「Mattermost notifications」を選んで「Active」にチェックを入れて、「Webhook」に先ほどの URL を貼り付けます。
+できるだけ通知して欲しいので「Notify only broken pipelines」と「Notify only default branch」のチェックは外しました。
+最後に「Save」で設定を保存するとプロジェクトを作成する時に自動で通知する設定が入るようになります。</p>
+
+<h2>まとめ</h2>
+
+<p>以上で GitLab の基本的な機能は使えるようになります。
+後は GitLab CI (GitLab Runner) の設定と Dokku の設定とバックアップの設定になります。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Hyper-V のゲスト環境で systemd timer がうまく動いていなかった]]></title>
@@ -488,251 +753,6 @@ Role Settings を開くとわかるのですが、なぜか Role Name は自動�
 <p>のように指定して使っていたり (この場合でも meta/main.yml は必要)、 playbook 用の repository の role 以下にそのまま入れていたり (この場合は meta/main.yml は不要) します。</p>
 
 <p>複数 role を登録していて、こういうフローで作業をしている人もいるということで、参考になれば幸いです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[lsで丸数字で始まるファイル名の順番が変だった]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-08-30-lc-collate-again.html"/>
-    <updated>2016-08-30T22:58:34+09:00</updated>
-    <id>http://blog.n-z.jp/blog/lc-collate-again</id>
-    <content type="html"><![CDATA[<p>OS X で丸数字から始まるファイル名のファイルが入ったフォルダーを Finder で開くと丸数字の数字順に並んでいたのに、 <code>ls</code> で表示すると別の順番になっていたので原因を調べてみました。</p>
-
-<!--more-->
-
-
-<h2>動作確認環境</h2>
-
-<ul>
-<li>OS X Yosemite (10.10.5)</li>
-<li>ls, uniq バージョン不明</li>
-<li>sort (GNU coreutils) 5.93</li>
-</ul>
-
-
-<h2>動作確認</h2>
-
-<p>Unicode 的に連続している 丸1 から 丸20 までのファイル名のファイルと、それに適当な ASCII の数字をつけたファイル名のファイルを作成して <code>ls</code> で表示してみました。</p>
-
-<pre><code>%  touch $(ruby -e 'puts ("\u{2460}".."\u{2473}").to_a')
-%  touch $(ruby -e 'puts ("\u{2460}".."\u{2473}").to_a.shuffle.map.with_index{|e,i|"#{e}#{i}"}')
-%  ls
-①      ⑤      ⑨      ⑬      ⑰      ⑧0     ⑲12    ⑮16    ⑥2     ⑬6
-②      ⑥      ⑩      ⑭      ⑱      ⑤1     ⑱13    ⑳17    ④3     ⑫7
-③      ⑦      ⑪      ⑮      ⑲      ⑨10    ②14    ⑪18    ⑭4     ⑦8
-④      ⑧      ⑫      ⑯      ⑳      ⑯11    ⑩15    ③19    ⑰5     ①9
-</code></pre>
-
-<p>丸数字のみだと数字順に並んでいるのに、後ろに ASCII の数字をつけた部分は ASCII の数字順に並んでいます。
-(numeric sort じゃないので 1,10,2 という順番になっているのがちょっとわかりにくいかもしれませんが。)</p>
-
-<h2>Jessie での動作確認</h2>
-
-<p>比較のために Debian GNU/Linux 8.5 (jessie) でも同様のファイルを作成して <code>ls</code> してみると丸数字のみのところもバラバラの順番でした。
-何度か実行しても同じ結果なので、ランダムというわけではなくなんらかの基準がありそうですが、どういう順番なのかはわかりませんでした。</p>
-
-<pre><code>% ls
-⑧  ⑯  ⑥  ⑬  ⑫  ⑦  ①  ③  ⑮  ⑰  ④0  ⑨10  ⑳12  ⑫14  ⑭16  ①18  ⑩2  ⑥4  ⑯6  ⑱8
-⑱  ⑩  ⑨  ⑪  ⑲  ⑤  ②  ④  ⑭  ⑳  ⑪1  ⑦11  ⑲13  ⑬15  ⑮17  ⑧19  ⑤3  ②5  ⑰7  ③9
-</code></pre>
-
-<h2>LC_COLLATE</h2>
-
-<p><a href="http://blog.n-z.jp/blog/2013-10-31-lc-collate-uniq.html" title="LC_COLLATEの問題でuniqで丸数字が同一視されてしまう">LC_COLLATEの問題でuniqで丸数字が同一視されてしまう</a>のと同じ話かと思って、 <code>sort</code> や <code>uniq</code> も試してみたところ、同じ話のように見えました。
-OS X では locale data が GNU/Linux とは違うようで <code>uniq</code> で同一視されるということは起きませんでした。</p>
-
-<pre><code>% rbenv exec irb -r irb/completion --simple-prompt
-&gt;&gt; IO.popen("uniq", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a; io.close_write; puts io.read }
-①
-②
-③
-④
-⑤
-⑥
-⑦
-⑧
-⑨
-⑩
-⑪
-⑫
-⑬
-⑭
-⑮
-⑯
-⑰
-⑱
-⑲
-⑳
-=&gt; nil
-&gt;&gt; IO.popen("sort", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a.shuffle; io.close_write; puts io.read }
-①
-②
-③
-④
-⑤
-⑥
-⑦
-⑧
-⑨
-⑩
-⑪
-⑫
-⑬
-⑭
-⑮
-⑯
-⑰
-⑱
-⑲
-⑳
-=&gt; nil
-&gt;&gt; IO.popen("sort", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a.shuffle.map.with_index{|e,i|"#{e}#{i}"}; io.close_write; puts io.read }
-⑬0
-⑥1
-⑰10
-⑱11
-⑤12
-⑮13
-⑦14
-④15
-③16
-⑪17
-⑩18
-①19
-⑧2
-⑲3
-⑫4
-⑳5
-⑭6
-②7
-⑯8
-⑨9
-=&gt; nil
-&gt;&gt; IO.popen({"LC_COLLATE"=&gt;"C"}, "sort", "r+"){|io| io.puts ("\u{2460}".."\u{2473}").to_a.shuffle.map.with_index{|e,i|"#{e}#{i}"}; io.close_write; puts io.read }
-①6
-②5
-③0
-④16
-⑤19
-⑥18
-⑦7
-⑧2
-⑨8
-⑩3
-⑪12
-⑫15
-⑬4
-⑭9
-⑮14
-⑯10
-⑰1
-⑱17
-⑲13
-⑳11
-=&gt; nil
-</code></pre>
-
-<h2>一番自然に感じる並び順</h2>
-
-<p>ruby の sort での結果は <code>LC_COLLATE=C</code> と同じように文字コード順になり、意味自然な並び順に感じました。
-<code>LC_COLLATE=C ls</code> も同じ並び順でした。</p>
-
-<pre><code>&gt;&gt; puts Dir['*'].sort
-①
-①9
-②
-②14
-③
-③19
-④
-④3
-⑤
-⑤1
-⑥
-⑥2
-⑦
-⑦8
-⑧
-⑧0
-⑨
-⑨10
-⑩
-⑩15
-⑪
-⑪18
-⑫
-⑫7
-⑬
-⑬6
-⑭
-⑭4
-⑮
-⑮16
-⑯
-⑯11
-⑰
-⑰5
-⑱
-⑱13
-⑲
-⑲12
-⑳
-⑳17
-=&gt; nil
-</code></pre>
-
-<pre><code>% LC_COLLATE=C ls
-①      ③      ⑤      ⑦      ⑨      ⑪      ⑬      ⑮      ⑰      ⑲
-①9     ③19    ⑤1     ⑦8     ⑨10    ⑪18    ⑬6     ⑮16    ⑰5     ⑲12
-②      ④      ⑥      ⑧      ⑩      ⑫      ⑭      ⑯      ⑱      ⑳
-②14    ④3     ⑥2     ⑧0     ⑩15    ⑫7     ⑭4     ⑯11    ⑱13    ⑳17
-</code></pre>
-
-<h2>Finder での並び順</h2>
-
-<p>Finder での並び順は <code>LC_COLLATE=C</code> での結果と同じかと思いきや、丸1 の後に 丸10 がきて、丸19, 丸2, 丸20, 丸3 のように並んでいたので、独特な感じでした。</p>
-
-<pre><code>①
-①9
-⑩
-⑩15
-⑪
-⑪18
-⑫
-⑫7
-⑬
-⑬6
-⑭
-⑭4
-⑮
-⑮16
-⑯
-⑯11
-⑰
-⑰5
-⑱
-⑱13
-⑲
-⑲12
-②
-②14
-⑳
-⑳17
-③
-③19
-④
-④3
-⑤
-⑤1
-⑥
-⑥2
-⑦
-⑦8
-⑧
-⑧0
-⑨
-⑨10
-</code></pre>
 ]]></content>
   </entry>
   
