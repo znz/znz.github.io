@@ -238,3 +238,5 @@ GitLab の Admin area (上のレンチ) を開いて、右上の歯車から「S
 
 以上で GitLab の基本的な機能は使えるようになります。
 後は GitLab CI (GitLab Runner) の設定と Dokku の設定とバックアップの設定になります。
+
+[gitlab カテゴリー](/blog/categories/gitlab/)で一覧が見えます。
