@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-07-08T16:40:31+09:00</updated>
+  <updated>2017-07-09T14:24:12+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,150 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[GitLab Runner の設定]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-07-09-gitlab-runner.html"/>
+    <updated>2017-07-09T14:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/gitlab-runner</id>
+    <content type="html"><![CDATA[<p>GitLab と Dokku (と一部 Heroku) を使って CI/CD (Continuous Integration / Continuous Deployment) 環境を作ってみた話の続きです。
+CI 部分のメインとなる GitLab Runner の設定の話です。</p>
+
+<p><a href="http://blog.n-z.jp/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Ubuntu 16.04.2 LTS</li>
+<li>Omnibus GitLab 9.1.4-ce.0 (インストール時) から 9.3.5-ce.0 (記事執筆時)</li>
+<li>gitlab-ci-multi-runner 9.2.0 (インストール時) から 9.3.0 (記事執筆時)</li>
+<li>Dokku 0.9.4 (インストール時) から 0.10.2 (記事執筆時)</li>
+</ul>
+
+
+<h2>GitLab Runner とは?</h2>
+
+<p><a href="https://docs.gitlab.com/runner/">GitLab Runner</a> とは GitLab CI のジョブを実行する部分のことです。</p>
+
+<p>Jenkins でいうと (ジョブを実行しない設定にした) master が GitLab CI で、 slave が GitLab Runner に相当します。</p>
+
+<h2>名前について</h2>
+
+<p>昔は gitlab-ci-multi-runner という名前だったらしく、 repository は <a href="https://gitlab.com/gitlab-org/gitlab-ci-multi-runner">https://gitlab.com/gitlab-org/gitlab-ci-multi-runner</a> になっています。</p>
+
+<p>GitLab CI は GitLab 8.x の時に GitLab 本体に統合されたということで、古いドキュメントを参照するときは注意が必要そうです。</p>
+
+<h2>executor 選択</h2>
+
+<p>GitLab Runner を入れたマシン上で直接実行する Shell executor や Docker で実行する Docker executor などがありますが、一番簡単で便利そうな Docker executor を使うことにしました。
+また、管理を簡単にするために全てのプロジェクトで共通の Runner を使うことにしました。</p>
+
+<p>必要なら複数登録してタグで使い分けることもできます。
+プロジェクトごとに使い分けることもできます。</p>
+
+<h2>インストール</h2>
+
+<p>GitLab とは別マシンが推奨のようなので、別仮想マシンを用意しました。
+<a href="https://docs.gitlab.com/runner/install/linux-repository.html">Install GitLab Runner using the official GitLab repositories</a> の方法でパッケージをインストールしました。</p>
+
+<p>「Note: Debian users should use APT pinning」とありますが、<a href="https://packages.debian.org/gitlab-ci-multi-runner">Debian の gitlab-ci-multi-runner パッケージ</a>をみてもリリースされた Stretch には入っていないようです。<a href="https://packages.ubuntu.com/gitlab-ci-multi-runner">Ubuntu の gitlab-ci-multi-runner パッケージ</a>も xenial (16.04LTS) には入っていないようなので、 APT pinning はなくても良さそうです。(今回の設定では念のため入れています。)</p>
+
+<h2>GitLab CI に登録</h2>
+
+<p><a href="https://docs.gitlab.com/runner/register/index.html">Registering Runners</a> に書いてあるように <code>sudo gitlab-runner register</code> で登録します。
+オプションなしで実行すると対話的にいろいろきかれます。</p>
+
+<p>gitlab-ci coordinator URL は古いドキュメントだと <code>/ci</code> が付いていることがあるようですが、今はあってもなくてもどちらでも大丈夫のようです。</p>
+
+<p>自動設定するなら token は GitLab 側の初期設定をする時に <code>gitlab_rails['initial_shared_runners_registration_token']</code> で固定しておくと良いと思います。</p>
+
+<p>タグを空欄にした場合はタグなしのジョブも実行されるのですが、タグを設定した場合は run untagged jobs も設定しておかないとジョブが実行されなくて悩むことになります。
+(タグは GitLab の Web UI で後から空欄にできなくて、実行されない条件を絞り込むのに unregister して register し直す必要があって面倒だったのですが、当時のバージョンのバグだったのか、GitLab 9.3.5 では問題なく空欄に変更できました。)</p>
+
+<p>Docker executor を選んだ時のデフォルトの Docker image は <code>hello-world</code> ぐらいの使いにくいものにしておいて、 <code>.gitlab-ci.yml</code> で image を常に指定する方が Runner の設定に影響されないので無難かもしれません。</p>
+
+<h2>GitLab CI から登録解除</h2>
+
+<p><code>gitlab-runner list</code> で token などを確認して <code>gitlab-runner unregister</code> で登録解除できます。</p>
+
+<p>unregister せずに GitLab Runner がいなくなってしまった場合は GitLab の Admin Area の Runners から Remove できます。</p>
+
+<h2>同時実行数指定</h2>
+
+<p><code>/etc/gitlab-runner/config.toml</code> の <code>concurrent =</code> で同時に実行するジョブ数を指定できます。
+自動で再読み込みしているらしく、試した感じだと runner の restart をしなくても設定が反映されるようでした。</p>
+
+<h2>.gitlab-ci.yml の Lint</h2>
+
+<p><a href="http://qiita.com/sei40kr/items/407e08cc45f218738d4c">GitLab CIの設定ファイルを手元でLintする</a>によると <code>/api/v4/ci/lint</code> で Lint できるようなので、 curl と jq をインストールしておいて、</p>
+
+<pre><code>linter_api_url='https://gitlab.com/api/v4/ci/lint'
+curl -sH 'Content-Type: application/json' "$linter_api_url" -d "$(jq -Rs '{"content":.}' &lt; .gitlab-ci.yml)" | jq
+</code></pre>
+
+<p>のようにすれば良いようです。</p>
+
+<p><code>linter_api_url</code> を自前の GitLab の URL にしておけば外部に送信することなく Lint できます。</p>
+
+<h2>GitLab Container Registry と連携</h2>
+
+<p>Docker executor を使って GitLab Container Registry を扱いたい場合、 Docker executor と同じホスト側の docker を使う方法と docker in docker を使う方法があります。</p>
+
+<p>詳細は <a href="https://docs.gitlab.com/ce/ci/docker/using_docker_build.html">Using Docker Build</a> を参考にしてください。</p>
+
+<p>GitLab Container Registry にちゃんとした https の証明書が設定できる場合は良いのですが、テスト環境などで http しか有効にできない場合は困ることがあります。</p>
+
+<h3>ホスト側の docker を使う方法</h3>
+
+<p>ホスト側の docker を使うということは、ホスト側の docker の権限を GitLab CI で使えるようにしてしまうということなので、信頼できないユーザーが <code>.gitlab-ci.yml</code> を操作できる環境では使えません。</p>
+
+<p>使い方としては GitLab Runner の register の時に <code>--docker-volumes /var/run/docker.sock:/var/run/docker.sock</code> を指定します。</p>
+
+<p>GitLab Container Registry が http のみの場合は、ホスト側の Docker に insecure-registry の設定をすることになります。</p>
+
+<p><code>/etc/systemd/system/docker.service.d/local.conf</code> などで <code>ExecStart</code> を上書きして設定するか、 <code>/etc/docker/daemon.json</code> に</p>
+
+<pre><code>{"insecure-registries": ["registry.example.test"]}
+</code></pre>
+
+<p>のように設定することで http で接続できるようになります。
+(daemon.json では<a href="http://docs.docker.jp/engine/reference/commandline/daemon.html#daemon-configuration-file">デーモン設定ファイル</a>に書いてあるようにコマンドラインオプションの <code>--insecure-registry</code> が複数形の <code>"insecure-registries"</code> になります。 <code>dns</code> のように複数形でも変わらないものもあるので、指定できるオプションはドキュメントを参照するのが無難です。)</p>
+
+<h3>docker in docker を使う方法</h3>
+
+<p><code>.gitlab-ci.yml</code> の services に <code>docker:dind</code> を指定して使う、という方法になります。
+<code>docker:dind</code> サービスに insecure-registry を設定する方法がないので、試していませんが http のみで使いたい場合は派生 image を自分で作るなどの対応が必要そうです。</p>
+
+<p>使い方としては GitLab Runner の register の時に <code>--docker-privileged</code> を指定します。
+register の時に指定し忘れていた場合は、後から config.toml に <code>privileged = true</code> を追加でも良いと思います。</p>
+
+<h3>.gitlab-ci.yml での設定</h3>
+
+<p><a href="https://docs.gitlab.com/ce/ci/docker/using_docker_build.html">Using Docker Build</a> に書いてあるように</p>
+
+<pre><code>- docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.example.com
+</code></pre>
+
+<p>か</p>
+
+<pre><code>- docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+</code></pre>
+
+<p>のようにログインした後、 build や push などができるようになります。</p>
+
+<p><code>gitlab-ci-token</code> も固定ではなく環境変数を参照するようにできますが、固定で書いてある設定例が多いので、変わる可能性は低そうなので、固定で書いておいても良いと思います。</p>
+
+<h2>まとめ</h2>
+
+<p>GitLab Runner の設定と Lint の使い方、 GitLab Container Registry と連携方法を紹介しました。
+次は Dokku の設定になります。</p>
+
+<p><a href="http://blog.n-z.jp/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Omnibus GitLabをContainer RegistryやMattermostを有効にして使う]]></title>
@@ -275,6 +419,8 @@ sudo certbot certonly --webroot --webroot-path=/var/www/letsencrypt -d mattermos
 
 <p>以上で GitLab の基本的な機能は使えるようになります。
 後は GitLab CI (GitLab Runner) の設定と Dokku の設定とバックアップの設定になります。</p>
+
+<p><a href="http://blog.n-z.jp/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
 ]]></content>
   </entry>
   
@@ -4896,51 +5042,6 @@ int main() {
 <li>表現とデータをわけると嬉しいと思ってくれる人が増えると嬉しい</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[homebrewの更新はbrew upgrade --cleanupだけでよくなっている]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-04-27-homebrew-upgrade-cleanup.html"/>
-    <updated>2017-04-27T20:00:48+09:00</updated>
-    <id>http://blog.n-z.jp/blog/homebrew-upgrade-cleanup</id>
-    <content type="html"><![CDATA[<p>Homebrew のパッケージの更新に昔は <code>brew update</code>; <code>brew upgrade</code>; <code>brew cleanup</code> と 3 コマンドを使っていましたが、今は <code>brew upgrade --cleanup</code> だけでよくなっています。</p>
-
-<!--more-->
-
-
-<h2>確認バージョン</h2>
-
-<ul>
-<li>Homebrew 1.1.13</li>
-</ul>
-
-
-<h2><code>brew update</code></h2>
-
-<p>Debian 系で使われている <code>apt</code> の <code>sudo apt-get update</code> に相当するパッケージ情報を更新するサブコマンドです。
-基本的には <code>git</code> で更新しているだけなので、こけたら <code>git</code> コマンドを直接使ってなおす必要がありそうです。</p>
-
-<p>今は他のサブコマンドを実行した時に情報が古ければ自動で更新されるので不要になっています。</p>
-
-<h2><code>brew upgrade</code></h2>
-
-<p>パッケージを更新するサブコマンドです。</p>
-
-<p>古いバージョンも残るので、 <code>gem update</code> に近いような気がします。</p>
-
-<h2><code>brew cleanup</code></h2>
-
-<p>古いバージョンを消したり、ダウンロードしたファイルのキャッシュを消したりします。</p>
-
-<p><code>brew upgrade --cleanup</code> のように <code>upgrade</code> サブコマンドに <code>--cleanup</code> オプションをつけると <code>upgrade</code> 中に削除してくれるようです。
-(例えば 2 個更新があった時に、更新、削除、更新、削除になる。)</p>
-
-<p>後から <code>brew cleanup</code> するのと違って <code>upgrade</code> 中に削除してくれるので、何が削除されたのかの確認はしにくくなったり、問題が起きた時に戻しにくくなったりという欠点はありますが、一時的に空き容量が減るのが緩やかになったり、消し忘れがなくなるなどの利点があると思います。</p>
-
-<h2>まとめ</h2>
-
-<p><code>brew update</code>; <code>brew upgrade</code>; <code>brew cleanup</code> と 3 コマンドを連続で使っている人は、 <code>brew upgrade --cleanup</code> だけに置き換えると便利です。</p>
 ]]></content>
   </entry>
   
