@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: slim - @znz blog</title>
+  <title>GitLabと連携するDokkuの初期設定 - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Category: slim">
+  <meta name="description" content="GitLabと連携するDokkuの初期設定 2017-07-10 (Mon) 9:30 pm | Comments GitLab と Dokku (と一部 Heroku) を使って CI/CD (Continuous Integration / Continuous Deployment) &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/categories/slim/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-07-10-gitlab-dokku.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,37 +76,206 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: slim</h1>
+    
+      
+      <!-- zenback_title_begin -->
+      
+      <h1 class="entry-title">GitLabと連携するDokkuの初期設定</h1>
+      
+      <!-- zenback_title_end -->
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2017-07-10T21:30:00+09:00'><span class='date'>2017-07-10 (Mon)</span> <span class='time'>9:30 pm</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
 
-  
-  <h2>2014</h2>
+<!-- zenback_body_begin -->
 
-<article>
-  
-<h1><a href="/blog/2014-03-11-haml-to-slim.html">hamlからslimへの移行でひっかかったこと</a></h1>
-<time datetime="2014-03-11T22:39:11+09:00" pubdate><span class='month'>Mar</span> <span class='day'>11</span> <span class='year'>2014</span></time>
+<div class="entry-content"><p>GitLab と Dokku (と一部 Heroku) を使って CI/CD (Continuous Integration / Continuous Deployment) 環境を作ってみた話の続きです。
+今回は Dokku の設定の話になります。</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/haml/'>haml</a>, <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>, <a class='category' href='/blog/categories/slim/'>slim</a>, <a class='category' href='/blog/categories/zsh/'>zsh</a></span>
-</footer>
+<p><a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
+
+<!--more-->
 
 
-</article>
+<h2>対象バージョン</h2>
 
+<ul>
+<li>Ubuntu 16.04.2 LTS</li>
+<li>Omnibus GitLab 9.1.4-ce.0 (インストール時) から 9.3.5-ce.0 (記事執筆時)</li>
+<li>gitlab-ci-multi-runner 9.2.0 (インストール時) から 9.3.0 (記事執筆時)</li>
+<li>Dokku 0.9.4 (インストール時) から 0.10.2 (記事執筆時)</li>
+</ul>
+
+
+<h2>Dokku とは?</h2>
+
+<p><a href="http://dokku.viewdocs.io/dokku/">Dokku - The smallest PaaS implementation you&rsquo;ve ever seen</a>は bash で書かれた OSS の PaaS です。</p>
+
+<p>Heroku のように git push でデプロイするというのが基本的な使い方になります。</p>
+
+<p>環境変数の操作などのような heroku コマンドで操作に相当することは ssh 経由と Dokku ホスト上での dokku コマンドの両方でできることが多いです。
+プラグインのインストールなど、一部の操作は Dokku ホスト上で直接実行する必要があります。</p>
+
+<p>データベースなどはプラグインで対応しています。</p>
+
+<p>Dokku の更新が止まっていた時にできた <a href="https://github.com/dokku-alt/dokku-alt">Dokku Alternative</a> という fork もありましたが、メンテナンスが止まっているので使うべきではありません。</p>
+
+<p>最近はコアプラグインから少しずつ Go 言語への移行を進めているようです。</p>
+
+<h2>インストール</h2>
+
+<p><a href="http://dokku.viewdocs.io/dokku/">Dokku</a> に書いてあるように <code>bootstrap.sh</code> を使うと自動で <code>get.docker.com</code> からの docker のインストールも含めて、 apt から dokku をインストールしてくれます。</p>
+
+<h2>初期設定</h2>
+
+<p>debconf であらかじめ設定しておくか、<code>web_config</code> を使って設定します。</p>
+
+<p>デフォルトのままなどで <code>web_config</code> が有効な場合、 Dokku をインストールしたホストをブラウザーで開くと初期設定画面が出てきます。</p>
+
+<p>そこでデプロイや ssh 経由での操作に使う ssh の公開鍵の登録とホスト名の設定をします。
+ホスト名はアプリケーションごとに個別のバーチャルホストを別途設定できるので、とりあえず xip.io や nip.io を使っておくのが手軽だと思います。</p>
+
+<h2>プラグインのインストール</h2>
+
+<p><a href="http://dokku.viewdocs.io/dokku/community/plugins/">プラグイン一覧</a>から Compatibility を確認して必要なプラグインをインストールします。</p>
+
+<p>Heroku と似た感じで使いたいのなら <a href="https://github.com/dokku/dokku-postgres">dokku postgres</a> を入れておくと良いと思います。</p>
+
+<p>Dokku ホストで</p>
+
+<pre><code>sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git postgres
+</code></pre>
+
+<p>でインストールできます。</p>
+
+<p><a href="https://github.com/dokku/dokku-maintenance">dokku-maintenance</a> のように Heroku だと標準で対応していることがプラグインになっていたり、
+<a href="https://github.com/F4-Group/dokku-apt">dokku-apt</a> のように Heroku だと複数 buildpack で対応していたようなことがプラグインになっていたりすることもあります。</p>
+
+<h2>ssh の公開鍵設定</h2>
+
+<p>後で GitLab CI の secret variables に秘密鍵を設定するので、専用の鍵ペアを作成して、 <a href="http://dokku.viewdocs.io/dokku/deployment/user-management/">User Management</a> の方法で Dokku に公開鍵を登録しておきます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% ssh-keygen
+</span><span class='line'>Generating public/private rsa key pair.
+</span><span class='line'>Enter file in which to save the key (/home/vagrant/.ssh/id_rsa): /home/vagrant/.ssh/id_gitlab
+</span><span class='line'>Enter passphrase (empty for no passphrase):
+</span><span class='line'>Enter same passphrase again:
+</span><span class='line'>Your identification has been saved in /home/vagrant/.ssh/id_gitlab.
+</span><span class='line'>Your public key has been saved in /home/vagrant/.ssh/id_gitlab.pub.
+</span><span class='line'>The key fingerprint is:
+</span><span class='line'>(略)
+</span><span class='line'>% cat ~/.ssh/id_gitlab.pub | ssh dokku@dokku.example.jp ssh-keys:add gitlab</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>動作確認</h2>
+
+<p>データベースの必要な例を試すなら、<a href="http://dokku.viewdocs.io/dokku/deployment/application-deployment/">Deploy tutorial</a>を試してみると良いと思います。</p>
+
+<p>データベースの不要な例を試すなら、<a href="https://devcenter.heroku.com/articles/rack">Deploying Rack-based Apps | Heroku Dev Center</a> の <code>heroku create</code> を <code>git remote add dokku dokku@dokku.example.test:hello</code> に変えて、 <code>git push heroku master</code> の代わりに <code>git push dokku master</code> で試してみたりすると良いと思います。</p>
+
+<h2>まとめ</h2>
+
+<p>Dokku のインストールから簡単な動作確認方法まで紹介しました。
+次は <code>.gitlab-ci.yml</code> を作成して連携する話です。</p>
+
+<p><a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
 </div>
 
+<!-- zenback_body_end -->
+
+
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2017-07-10T21:30:00+09:00'><span class='date'>2017-07-10 (Mon)</span> <span class='time'>9:30 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/dokku/'>dokku</a>, <a class='category' href='/blog/categories/gitlab/'>gitlab</a>, <a class='category' href='/blog/categories/linux/'>linux</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2017-07-09-gitlab-runner.html" title="Previous Post: GitLab Runner の設定">&laquo; GitLab Runner の設定</a>
+      
+      
+    </p>
+  </footer>
 </article>
 
+<section>
+  <!-- X:S ZenBackWidget --><div id="zenback-widget-loader"></div><script type="text/javascript">!function(d,i){if(!d.getElementById(i)){var r=Math.ceil((new Date()*1)*Math.random());var j=d.createElement("script");j.id=i;j.async=true;j.src="//w.zenback.jp/v1/?base_uri=http%3A//blog.n-z.jp/&nsid=122901358100652638%3A%3A122901381991399941&rand="+r;d.body.appendChild(j);}}(document,"zenback-widget-js");</script><!-- X:E ZenBackWidget -->
+
+</section>
+
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -227,7 +396,10 @@ Hatena.BookmarkWidget.load();
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-07-10-gitlab-dokku.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-07-10-gitlab-dokku.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

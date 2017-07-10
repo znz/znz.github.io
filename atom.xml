@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-07-09T14:24:12+09:00</updated>
+  <updated>2017-07-10T21:53:10+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,114 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[GitLabと連携するDokkuの初期設定]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-07-10-gitlab-dokku.html"/>
+    <updated>2017-07-10T21:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/gitlab-dokku</id>
+    <content type="html"><![CDATA[<p>GitLab と Dokku (と一部 Heroku) を使って CI/CD (Continuous Integration / Continuous Deployment) 環境を作ってみた話の続きです。
+今回は Dokku の設定の話になります。</p>
+
+<p><a href="http://blog.n-z.jp/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Ubuntu 16.04.2 LTS</li>
+<li>Omnibus GitLab 9.1.4-ce.0 (インストール時) から 9.3.5-ce.0 (記事執筆時)</li>
+<li>gitlab-ci-multi-runner 9.2.0 (インストール時) から 9.3.0 (記事執筆時)</li>
+<li>Dokku 0.9.4 (インストール時) から 0.10.2 (記事執筆時)</li>
+</ul>
+
+
+<h2>Dokku とは?</h2>
+
+<p><a href="http://dokku.viewdocs.io/dokku/">Dokku - The smallest PaaS implementation you&rsquo;ve ever seen</a>は bash で書かれた OSS の PaaS です。</p>
+
+<p>Heroku のように git push でデプロイするというのが基本的な使い方になります。</p>
+
+<p>環境変数の操作などのような heroku コマンドで操作に相当することは ssh 経由と Dokku ホスト上での dokku コマンドの両方でできることが多いです。
+プラグインのインストールなど、一部の操作は Dokku ホスト上で直接実行する必要があります。</p>
+
+<p>データベースなどはプラグインで対応しています。</p>
+
+<p>Dokku の更新が止まっていた時にできた <a href="https://github.com/dokku-alt/dokku-alt">Dokku Alternative</a> という fork もありましたが、メンテナンスが止まっているので使うべきではありません。</p>
+
+<p>最近はコアプラグインから少しずつ Go 言語への移行を進めているようです。</p>
+
+<h2>インストール</h2>
+
+<p><a href="http://dokku.viewdocs.io/dokku/">Dokku</a> に書いてあるように <code>bootstrap.sh</code> を使うと自動で <code>get.docker.com</code> からの docker のインストールも含めて、 apt から dokku をインストールしてくれます。</p>
+
+<h2>初期設定</h2>
+
+<p>debconf であらかじめ設定しておくか、<code>web_config</code> を使って設定します。</p>
+
+<p>デフォルトのままなどで <code>web_config</code> が有効な場合、 Dokku をインストールしたホストをブラウザーで開くと初期設定画面が出てきます。</p>
+
+<p>そこでデプロイや ssh 経由での操作に使う ssh の公開鍵の登録とホスト名の設定をします。
+ホスト名はアプリケーションごとに個別のバーチャルホストを別途設定できるので、とりあえず xip.io や nip.io を使っておくのが手軽だと思います。</p>
+
+<h2>プラグインのインストール</h2>
+
+<p><a href="http://dokku.viewdocs.io/dokku/community/plugins/">プラグイン一覧</a>から Compatibility を確認して必要なプラグインをインストールします。</p>
+
+<p>Heroku と似た感じで使いたいのなら <a href="https://github.com/dokku/dokku-postgres">dokku postgres</a> を入れておくと良いと思います。</p>
+
+<p>Dokku ホストで</p>
+
+<pre><code>sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git postgres
+</code></pre>
+
+<p>でインストールできます。</p>
+
+<p><a href="https://github.com/dokku/dokku-maintenance">dokku-maintenance</a> のように Heroku だと標準で対応していることがプラグインになっていたり、
+<a href="https://github.com/F4-Group/dokku-apt">dokku-apt</a> のように Heroku だと複数 buildpack で対応していたようなことがプラグインになっていたりすることもあります。</p>
+
+<h2>ssh の公開鍵設定</h2>
+
+<p>後で GitLab CI の secret variables に秘密鍵を設定するので、専用の鍵ペアを作成して、 <a href="http://dokku.viewdocs.io/dokku/deployment/user-management/">User Management</a> の方法で Dokku に公開鍵を登録しておきます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% ssh-keygen
+</span><span class='line'>Generating public/private rsa key pair.
+</span><span class='line'>Enter file in which to save the key (/home/vagrant/.ssh/id_rsa): /home/vagrant/.ssh/id_gitlab
+</span><span class='line'>Enter passphrase (empty for no passphrase):
+</span><span class='line'>Enter same passphrase again:
+</span><span class='line'>Your identification has been saved in /home/vagrant/.ssh/id_gitlab.
+</span><span class='line'>Your public key has been saved in /home/vagrant/.ssh/id_gitlab.pub.
+</span><span class='line'>The key fingerprint is:
+</span><span class='line'>(略)
+</span><span class='line'>% cat ~/.ssh/id_gitlab.pub | ssh dokku@dokku.example.jp ssh-keys:add gitlab</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>動作確認</h2>
+
+<p>データベースの必要な例を試すなら、<a href="http://dokku.viewdocs.io/dokku/deployment/application-deployment/">Deploy tutorial</a>を試してみると良いと思います。</p>
+
+<p>データベースの不要な例を試すなら、<a href="https://devcenter.heroku.com/articles/rack">Deploying Rack-based Apps | Heroku Dev Center</a> の <code>heroku create</code> を <code>git remote add dokku dokku@dokku.example.test:hello</code> に変えて、 <code>git push heroku master</code> の代わりに <code>git push dokku master</code> で試してみたりすると良いと思います。</p>
+
+<h2>まとめ</h2>
+
+<p>Dokku のインストールから簡単な動作確認方法まで紹介しました。
+次は <code>.gitlab-ci.yml</code> を作成して連携する話です。</p>
+
+<p><a href="http://blog.n-z.jp/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[GitLab Runner の設定]]></title>
@@ -4848,200 +4956,6 @@ int main() {
 <p>ruby の sample はリリースに含まれていても、そのバージョンで動作確認されているとは限らないようです。</p>
 
 <p><code>readline().print</code> は <code>Kernel#readline</code> が <code>String</code> を返して、その <code>Kernel#print</code> を呼んでいるようなので、どのくらい古い ruby だと動くのか、それとも最初から動かなかったのか、よくわかりませんでした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第14回関西LibreOffice勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-04-29-libokansai.html"/>
-    <updated>2017-04-29T13:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/libokansai</id>
-    <content type="html"><![CDATA[<p><a href="https://connpass.com/event/53960/" title="第14回関西LibreOffice勉強会">第14回関西LibreOffice勉強会</a>に参加しました。</p>
-
-<!--more-->
-
-
-<p>以下、メモです。</p>
-
-<h2>会場など</h2>
-
-<ul>
-<li>地図ソフトで三国駅から歩くルートも表示されたので、早めに出発して時間もあったので、歩いてみました。(帰りは懇親会には参加しなかったので、十三駅まで歩いてちょっと梅田に出てから帰りました。)</li>
-<li>セキュリティがかかって閉まっていてオフィスフロアに入れなくて、しばらく待っていました。</li>
-<li>普通の土曜日なら開いているのに、祝日だから閉まっていたようです。</li>
-<li>電源やネットワークはなし</li>
-<li>飲食は可能</li>
-</ul>
-
-
-<h2>自己紹介</h2>
-
-<p>自分はたぶん初参加でした。</p>
-
-<p>久しぶりに参加という人も何人かいて、長く続いている勉強会という感じを受けました。</p>
-
-<h2>書式の自由が社会を変える―LibreOfficeとPandocができること</h2>
-
-<ul>
-<li>発表資料: <a href="https://github.com/sky-y/libreoffice-kansai-14-pandoc">https://github.com/sky-y/libreoffice-kansai-14-pandoc</a></li>
-<li><p>Pandoc の日本語ドキュメントは古くなってしまっているので、英語が読めるなら本家の英語を推奨</p></li>
-<li><p>この発表の概要</p></li>
-<li>Pandoc の概要</li>
-<li>Pandoc をインストールする</li>
-<li>Pandoc でドキュメントを変換する (LibreOffice Writer 文書を中心に)</li>
-<li><p>「書式の自由」について</p></li>
-<li><p>対応フォーマットが多い</p></li>
-<li>ODT などは入力にも対応</li>
-<li><p>Markdown とは</p></li>
-<li><p>Pandoc でできないこと</p></li>
-<li>スプレッドシートは扱えない</li>
-<li>簡単な表は対応している</li>
-<li>LibreOffice Impress には対応してない</li>
-<li><p>LaTeX Beamer/HTML プレゼンには変換可能</p></li>
-<li><p>Pandoc を使う心得</p></li>
-<li>過剰な期待をし過ぎないこと</li>
-<li>Pandoc は万能でないし、文書仕様の全てを満たしているわけではない</li>
-<li><p>補助的に使うのがベスト</p></li>
-<li><p>Pandoc の実装は Haskell</p></li>
-<li><p>補足: Markdownと標準仕様</p></li>
-<li>RFC で Media Typeにて「Markdownであること」と「方言の名前」を明示する方法を定めた</li>
-<li><p>(RFC でうまくいかなかったというと Cookie を思い出した)</p></li>
-<li><p>質疑応答</p></li>
-<li><p>文字コードは UTF-8 で</p></li>
-<li><p>Pandoc をインストールする</p></li>
-<li>wkhtmltopdf の wk は WebKit らしい</li>
-<li>動作確認</li>
-<li><code>echo "http://localhost" | pandoc -f markdown_github -t html</code> のように <code>markdown_github</code> だと自動リンクがある</li>
-<li><p><code>echo "**Hello**" | pandoc -f markdown -t html5 -o hello.pdf</code></p></li>
-<li><p>おまけ: Pandocで作れるスライド</p></li>
-<li>今回は「reveal.js」形式に変換</li>
-<li><p>LaTeX Beamer など他のプレゼン形式にも変換できる</p></li>
-<li><p>Pandoc でドキュメントを変換する</p></li>
-<li><a href="https://github.com/sky-y/libreoffice-kansai-14-pandoc">https://github.com/sky-y/libreoffice-kansai-14-pandoc</a> の sample で変換を試す</li>
-<li><p>Windows の start コマンド、GNOME の gnome-open や macOS の open に相当</p></li>
-<li><p>テンプレート</p></li>
-<li><code>pandoc --print-default-data-file reference.odt &gt; reference.odt</code></li>
-<li>左の <code>reference.odt</code> は pandoc 内部のテンプレートディレクトリの中のファイル名を指定している</li>
-<li>右は出力ファイル名なので紛らわしいが別物</li>
-<li><p>スタイルで 源ノ角ゴシック (げんの かくごしっく) に変えるとか</p></li>
-<li><p>画像に関するノウハウ</p></li>
-<li><p>96dpi よりも 300dpi の方が良いという指摘あり <a href="https://twitter.com/nogajun/status/858193042309861377">https://twitter.com/nogajun/status/858193042309861377</a></p></li>
-<li><p>「書式の自由」について</p></li>
-<li><p>質疑応答</p></li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<p>10分間休憩</p>
-
-<h2>Office文書を手打ちハックする ～FlatODF活用のすすめ～</h2>
-
-<ul>
-<li>JO3EMC さん</li>
-<li>文書の自動生成をやりたい</li>
-<li>文書を細部まで思い通りにコントロールしたい</li>
-<li>アプローチ例1: LibreOffice 以外のツール・言語を利用する</li>
-<li>アプローチ例2: LibreOffice 関連のツールを利用する</li>
-<li>FlatODF</li>
-<li>単一の圧縮されていない XML ファイル</li>
-<li>弱点</li>
-<li>ファイルサイズが大きくなる</li>
-<li>圧縮されていないので</li>
-<li>あとで ODF に変換すれば良い</li>
-<li>画像やオブジェクトの埋め込みは少し面倒</li>
-<li>Base64</li>
-<li>fodt で保存してテキストエディタで書き換えて開き直すデモ</li>
-<li>UTF-8 以外には対応していないらしい</li>
-<li>LibreOffice を使って他フォーマットへ変換・印刷</li>
-<li><code>soffice --headless --convert-to pdf *.fodt</code></li>
-<li><code>soffice -p *.fodt</code></li>
-<li>活用例</li>
-<li>FlatODF の構造の概略</li>
-<li>質疑応答</li>
-<li>zip された中の content.xml をいじる方法も FlatODF をいじる方法もそれぞれ長所や短所があるのでいろんな方法があるのは良いんじゃないかという話</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>時間がおしているので5分間休憩</li>
-<li>休憩前に懇親会参加者確認</li>
-</ul>
-
-
-<h2>LibreOffice Online環境の構築</h2>
-
-<ul>
-<li>LibreOffice Online (LOOL)</li>
-<li>LOOL (ろーる)</li>
-<li>CentOS 7.3.1611 で環境構築</li>
-<li>LibreOffice の make に時間がかかる (一晩?)</li>
-<li>依存をいろいろ入れる</li>
-<li>日本語フォントも別途入れる必要あり</li>
-<li>LibreOffice Online のコンパイル (5〜10分ぐらい?)</li>
-<li>LOOL はファイルのインプットの GUI がない</li>
-<li>Nextcloud と連携</li>
-<li>サーバー側でレンダリングして画面を転送しているので、サーバー側にフォントが必要</li>
-<li><a href="https://librepc.jp/">https://librepc.jp/</a></li>
-</ul>
-
-
-<h2>LT</h2>
-
-<ul>
-<li>矢吹さんの話</li>
-<li>会場アンケート</li>
-<li>スプレッドシートを使ったことがある人</li>
-<li>SQL を使ったことがある人</li>
-<li>領収書を集計するのが面倒だった話</li>
-<li>バベルの塔</li>
-<li>ピボットテーブル = GROUP BY を知るのに時間がかかった話</li>
-<li>相手の文化を知る必要がある</li>
-<li>用語集の必要性</li>
-<li>抽象度の上げ下げ</li>
-</ul>
-
-
-<h2>ディスカッション</h2>
-
-<ul>
-<li>来年 LibreOffice 6 になる</li>
-<li>デザインを一新するのでデザイナーを募集している</li>
-<li><a href="https://design.blog.documentfoundation.org/2017/04/21/new-branding-libreoffice-6-0/">New branding for LibreOffice 6.0 - LibreOffice Design Team</a></li>
-<li><p><a href="http://opensourcedesign.net/jobs/jobs/2017-04-20-branding-for-libreoffice-60">BRANDING FOR LIBREOFFICE 6.0</a></p></li>
-<li><p><a href="https://design.blog.documentfoundation.org/2017/04/27/table-styles-survey/">Please participate in a survey about table styles - LibreOffice Design Team</a></p></li>
-<li>表スタイルというのが追加された</li>
-<li><p>デザインのアンケートを実施中</p></li>
-<li><p><a href="http://www.clear-code.com/blog/2017/4/24.html" title="LibreOffice Calcのスプレッドシートの変更点をgit diffで見られるようにする - ククログ(2017-04-24)">LibreOffice Calcのスプレッドシートの変更点をgit diffで見られるようにする - ククログ(2017-04-24)</a></p></li>
-<li><p>本?</p></li>
-<li><p>HackFest</p></li>
-<li><p>バグハンティング・セッション</p></li>
-<li><p>源ノ明朝</p></li>
-<li>IPA フォントはデザインなどが古い</li>
-<li>源ノ角ゴシック 源ノ明朝 と Noto はパッケージの違い</li>
-<li>CJK にも対応しているのが良い</li>
-<li>デザインも今風</li>
-<li><p>LibreOffice 5.2 だと縦書きが変? 5.3 だと太字しか出ない?</p></li>
-<li><p>テストの話</p></li>
-<li>普通のテスターが簡単に使える Selenium のような自動化がないのがつらい</li>
-<li><p>xautomation ?</p></li>
-<li><p>デザインチームなどの話</p></li>
-<li><p>ドキュメントの翻訳の話</p></li>
-<li>OmegaT は odt に直接対応している</li>
-</ul>
-
-
-<h2>ふりかえり</h2>
-
-<ul>
-<li>抽象度の話がよかった</li>
-<li>LibreOffice を直接触る話はなかった</li>
-<li>前処理は好き勝手にできるというのは良い</li>
-<li>表現とデータをわけると嬉しいと思ってくれる人が増えると嬉しい</li>
-</ul>
-
 ]]></content>
   </entry>
   

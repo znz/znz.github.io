@@ -4,7 +4,7 @@
   <title><![CDATA[Category: dokku | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/dokku/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-07-09T14:24:12+09:00</updated>
+  <updated>2017-07-10T21:53:10+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,104 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[GitLabと連携するDokkuの初期設定]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-07-10-gitlab-dokku.html"/>
+    <updated>2017-07-10T21:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/gitlab-dokku</id>
+    <content type="html"><![CDATA[<p>GitLab と Dokku (と一部 Heroku) を使って CI/CD (Continuous Integration / Continuous Deployment) 環境を作ってみた話の続きです。
+今回は Dokku の設定の話になります。</p>
+
+<p><a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Ubuntu 16.04.2 LTS</li>
+<li>Omnibus GitLab 9.1.4-ce.0 (インストール時) から 9.3.5-ce.0 (記事執筆時)</li>
+<li>gitlab-ci-multi-runner 9.2.0 (インストール時) から 9.3.0 (記事執筆時)</li>
+<li>Dokku 0.9.4 (インストール時) から 0.10.2 (記事執筆時)</li>
+</ul>
+
+
+<h2>Dokku とは?</h2>
+
+<p><a href="http://dokku.viewdocs.io/dokku/">Dokku - The smallest PaaS implementation you&rsquo;ve ever seen</a>は bash で書かれた OSS の PaaS です。</p>
+
+<p>Heroku のように git push でデプロイするというのが基本的な使い方になります。</p>
+
+<p>環境変数の操作などのような heroku コマンドで操作に相当することは ssh 経由と Dokku ホスト上での dokku コマンドの両方でできることが多いです。
+プラグインのインストールなど、一部の操作は Dokku ホスト上で直接実行する必要があります。</p>
+
+<p>データベースなどはプラグインで対応しています。</p>
+
+<p>Dokku の更新が止まっていた時にできた <a href="https://github.com/dokku-alt/dokku-alt">Dokku Alternative</a> という fork もありましたが、メンテナンスが止まっているので使うべきではありません。</p>
+
+<p>最近はコアプラグインから少しずつ Go 言語への移行を進めているようです。</p>
+
+<h2>インストール</h2>
+
+<p><a href="http://dokku.viewdocs.io/dokku/">Dokku</a> に書いてあるように <code>bootstrap.sh</code> を使うと自動で <code>get.docker.com</code> からの docker のインストールも含めて、 apt から dokku をインストールしてくれます。</p>
+
+<h2>初期設定</h2>
+
+<p>debconf であらかじめ設定しておくか、<code>web_config</code> を使って設定します。</p>
+
+<p>デフォルトのままなどで <code>web_config</code> が有効な場合、 Dokku をインストールしたホストをブラウザーで開くと初期設定画面が出てきます。</p>
+
+<p>そこでデプロイや ssh 経由での操作に使う ssh の公開鍵の登録とホスト名の設定をします。
+ホスト名はアプリケーションごとに個別のバーチャルホストを別途設定できるので、とりあえず xip.io や nip.io を使っておくのが手軽だと思います。</p>
+
+<h2>プラグインのインストール</h2>
+
+<p><a href="http://dokku.viewdocs.io/dokku/community/plugins/">プラグイン一覧</a>から Compatibility を確認して必要なプラグインをインストールします。</p>
+
+<p>Heroku と似た感じで使いたいのなら <a href="https://github.com/dokku/dokku-postgres">dokku postgres</a> を入れておくと良いと思います。</p>
+
+<p>Dokku ホストで</p>
+
+<pre><code>sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git postgres
+</code></pre>
+
+<p>でインストールできます。</p>
+
+<p><a href="https://github.com/dokku/dokku-maintenance">dokku-maintenance</a> のように Heroku だと標準で対応していることがプラグインになっていたり、
+<a href="https://github.com/F4-Group/dokku-apt">dokku-apt</a> のように Heroku だと複数 buildpack で対応していたようなことがプラグインになっていたりすることもあります。</p>
+
+<h2>ssh の公開鍵設定</h2>
+
+<p>後で GitLab CI の secret variables に秘密鍵を設定するので、専用の鍵ペアを作成して、 <a href="http://dokku.viewdocs.io/dokku/deployment/user-management/">User Management</a> の方法で Dokku に公開鍵を登録しておきます。</p>
+
+<pre><code>% ssh-keygen
+Generating public/private rsa key pair.
+Enter file in which to save the key (/home/vagrant/.ssh/id_rsa): /home/vagrant/.ssh/id_gitlab
+Enter passphrase (empty for no passphrase):
+Enter same passphrase again:
+Your identification has been saved in /home/vagrant/.ssh/id_gitlab.
+Your public key has been saved in /home/vagrant/.ssh/id_gitlab.pub.
+The key fingerprint is:
+(略)
+% cat ~/.ssh/id_gitlab.pub | ssh dokku@dokku.example.jp ssh-keys:add gitlab
+</code></pre>
+
+<h2>動作確認</h2>
+
+<p>データベースの必要な例を試すなら、<a href="http://dokku.viewdocs.io/dokku/deployment/application-deployment/">Deploy tutorial</a>を試してみると良いと思います。</p>
+
+<p>データベースの不要な例を試すなら、<a href="https://devcenter.heroku.com/articles/rack">Deploying Rack-based Apps | Heroku Dev Center</a> の <code>heroku create</code> を <code>git remote add dokku dokku@dokku.example.test:hello</code> に変えて、 <code>git push heroku master</code> の代わりに <code>git push dokku master</code> で試してみたりすると良いと思います。</p>
+
+<h2>まとめ</h2>
+
+<p>Dokku のインストールから簡単な動作確認方法まで紹介しました。
+次は <code>.gitlab-ci.yml</code> を作成して連携する話です。</p>
+
+<p><a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[React On Rails の react-webpack-rails-tutorial を Dokku で試してみた]]></title>
@@ -1005,112 +1103,6 @@ git push xip master
 </code></pre>
 
 <p><code>http://node-js-app.127.0.0.1.xip.io</code> でも「<code>Hello World!</code>」が見えれば成功ですが、デフォルトホストとして見えているだけかもしれないので、 <code>index.js</code> の <code>'Hello World!'</code> 部分を変更して区別できるようにすると良いかもしれません。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[dokku 0.3 系から 0.4 系へのアップグレード]]></title>
-    <link href="http://blog.n-z.jp/blog/2015-10-08-dokku-03-to-04.html"/>
-    <updated>2015-10-08T22:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/dokku-03-to-04</id>
-    <content type="html"><![CDATA[<p>dokku 0.3.26 から dokku 0.4.1 へのアップグレードをしました。</p>
-
-<!--more-->
-
-
-<h2>検証環境</h2>
-
-<ul>
-<li>Ubuntu 14.04.3 LTS (trusty) amd64</li>
-<li><code>docker</code> 1.6.2 から 1.8.2</li>
-<li><code>dokku</code> 0.3.26 から 0.4.1</li>
-<li><a href="https://github.com/Flink/dokku-psql-single-container" title="dokku-psql-single-container">dokku-psql-single-container</a> プラグイン 0.4.0</li>
-</ul>
-
-
-<h2>docker の apt レポジトリの変更</h2>
-
-<p><a href="https://blog.docker.com/2015/07/new-apt-and-yum-repos/" title="New Apt and Yum Repos">New Apt and Yum Repos</a> に書いてあるように <code>docker</code> 1.8 からは新しいレポジトリにしか存在しなくなったので、 <code>/etc/apt/sources.list.d/docker.list</code> を書き換える必要がありました。</p>
-
-<p>以下の手順で変更しました。</p>
-
-<pre><code>sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
-sudoedit /etc/apt/sources.list.d/docker.list
-sudo apt-get update
-</code></pre>
-
-<p><code>docker.list</code> は以下の内容に変更しました。</p>
-
-<pre><code>deb https://apt.dockerproject.org/repo ubuntu-trusty main
-</code></pre>
-
-<p>パッケージ名も <code>lxc-docker</code> で始まるものから <code>docker-engine</code> に変わっています。</p>
-
-<p><code>dokku</code> 0.3.26 ではプラグインの互換性への配慮から <code>lxc-docker-1.6.2</code> にバージョンが固定されていましたが、制限が解除されています。</p>
-
-<p>具体的には <code>herokuish</code> 0.0.1 が <code>lxc-docker-1.6.2</code> に <code>Pre-Depends</code> していたのが、 <code>herokuish</code> 0.3.3 に上がって <code>docker-engine</code> への <code>Pre-Depends</code> に変わっています。</p>
-
-<h2>アップグレード</h2>
-
-<h3>sshcommand の変更</h3>
-
-<p><code>sshcommand create</code> で <code>dokku-psql-single-container</code> プラグインが使っている <code>/home/dokku/.psql-sc/data</code> の <a href="https://github.com/Flink/dokku-psql-single-container/issues/5">owner が変わってしまう問題がある</a>ため、</p>
-
-<pre><code>sudoedit /usr/local/bin/sshcommand
-</code></pre>
-
-<p>で</p>
-
-<pre><code>    chown -R $USER $USERHOME
-</code></pre>
-
-<p>を</p>
-
-<pre><code>    chown $USER $USERHOME
-    chown -R $USER $USERHOME/.ssh*
-</code></pre>
-
-<p>に変更しています。</p>
-
-<p><code>sshcommand</code> パッケージが 0.0.1 から 0.1.0 に上がって変更が戻ってしまうので、 <code>sshcommand</code> だけ先にアップグレードして、再度変更しました。</p>
-
-<h3>パッケージのアップグレード</h3>
-
-<pre><code>sudo apt-get dist-upgrade
-</code></pre>
-
-<p>でアップグレードしました。</p>
-
-<p><code>dokku</code> や <code>herokuish</code> のアップグレードの他に、 <code>lxc-docker-1.6.2</code> が削除されて <code>docker-engine</code> と <code>plugn</code> が新しくインストールされます。</p>
-
-<p>初回インストールと同様に <code>herokuish</code> の postinst で時間がかかります。</p>
-
-<h3>不要なパッケージの削除</h3>
-
-<p><code>lxc-docker-1.6.2</code> の完全削除と (<code>plugn</code> パッケージに置き換えられた) <code>pluginhook</code> パッケージの削除をしました。</p>
-
-<pre><code>sudo apt-get purge lxc-docker*
-sudo apt-get autoremove
-</code></pre>
-
-<h3>プラグインの再インストール</h3>
-
-<p><code>psql-sc</code> は移行措置で <code>/var/lib/dokku/plugins/available/psql-sc</code> に移動されているのですが、有効になっていない (<code>/var/lib/dokku/plugins/enabled</code> からのシンボリックリンクがない) ので、パスが違うこともあり、再度インストールして、古い方は消すことにしました。</p>
-
-<pre><code>sudo dokku plugin:install https://github.com/Flink/dokku-psql-single-container
-sudo dokku plugin:uninstall psql-sc
-</code></pre>
-
-<p>プラグインのインストールやアンインストールは root 権限が必要なため、サーバー上で <code>sudo dokku</code> で実行する必要がありました。</p>
-
-<p>PostgreSQL のプラグインとしては <a href="https://github.com/dokku/dokku-postgres" title="dokku postgres (beta)">dokku postgres (beta)</a> もありますが、まだ beta なのとデータ移行の問題があるため、当面は同じプラグインを使い続けることにしました。</p>
-
-<h2>再起動して反映</h2>
-
-<pre><code>sudo reboot
-</code></pre>
-
-<p>で再起動して、問題なく動くことを確認しました。</p>
 ]]></content>
   </entry>
   
