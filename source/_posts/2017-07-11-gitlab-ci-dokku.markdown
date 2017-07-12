@@ -126,7 +126,7 @@ GitLab で該当プロジェクトを開いて、 Settings の Pipelines から 
 - `PRODUCTION_DOKKU_HOST` : production 用の Dokku に ssh するときのホスト名
 - `SSH_CONFIG` : `~/.ssh/config` に設定したい内容
 
-`SSH_PRIVATE_KEY` は Protected を Yes にしておくと良さそうですが、他は No のままでも良さそうな気がします。
+`SSH_PRIVATE_KEY` は Protected を Yes にしたいところですが、 review 環境への deploy に失敗するので、 No のままにする必要がありました。
 
 ## review 環境への deploy 用 script
 
