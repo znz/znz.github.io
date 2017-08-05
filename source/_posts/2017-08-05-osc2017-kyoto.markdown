@@ -1,0 +1,248 @@
+---
+layout: post
+title: "オープンソースカンファレンス2017 Kyotoに参加した"
+date: 2017-08-05 20:30:00 +0900
+comments: true
+categories: event osc
+---
+[オープンソースカンファレンス2017 Kyoto](https://www.ospn.jp/osc2017-kyoto/)
+に参加しました。
+
+<!--more-->
+
+以下、メモです。
+
+## 会場
+
+KRP は遠いですが、行きは西院駅から歩きました。
+帰りは天気が悪かったので、丹波口駅から帰りました。
+
+朝からは行けなかったので、13時すぎに到着しました。
+
+## 「DLL読み込みの問題」を読み解く
+
+よく見かける DLL 読み込みの脆弱性がどういうことなのか気になっていたので、途中からになってしまいましたが、聴きに行きました。
+
+- DLL の検索パス [Dynamic-Link Library Search Order (Windows)](https://msdn.microsoft.com/en-us/library/windows/desktop/ms682586(v=vs.85%29.aspx)
+  - KnownDLLs に登録されているかどうか
+  - 実行ファイルがあるディレクトリ (アプリケーションディレクトリ)
+  - Windows システムディレクトリ
+  - Windows ディレクトリ
+  - カレントディレクトリ
+  - 環境変数 PATH
+
+- sysinternals の Process Monitor (procmon)
+- Dependency Walker
+- procmon の使い方の例
+
+- 2010年ごろの状況
+- DLL 読み込みの脆弱性に対する攻撃手法が公開され、注目を集める
+- [第8回　WindowsのDLLだけが危ないのか？DLL hijacking vulnerability概説（前編）](https://www.jpcert.or.jp/sc-magazine/codezine02-8.html)
+- ドキュメントと一緒に細工した DLL を置いてアプリを起動するとカレントディレクトリの DLL を読み込む
+- この対策としてカレントディレクトリの優先順位が下がった
+
+- 2016年ごろから「インストーラ」「自己解凍書庫」に対するDLL読み込み脆弱性の届出が増える
+- インストーラーと一緒に細工した DLL を置いてインストーラーを起動すると同一ディレクトリにある DLL を使ってしまう
+
+- Windows や Program Files といったシステム領域はアプリ側ではなくシステム側が保護
+- ユーザディレクトリは管理はユーザーの責任だが
+- システム領域外で動作するアプリには、よりセキュアな実装を求めたい
+- インストーラ、自己解凍書庫、ポータブルアプリなど
+
+- ユーザーが行うべき対策
+- あやしいファイルを放置しない
+- インストーラーや自己解凍書庫を安全な形で実行する
+- 安全な形で実行: インストーラーをダウンロード、新規にディレクトリを作成、作成したディレクトリにインストーラーを移動、インストーラーを起動
+
+- 開発者が行うべき対策
+- DLL の読み込み方法に注意する
+- アプリ/インストーラーの挙動についてユーザーに説明し、注意を促す
+- SetDefaultDllDirectories() や SetDllDirectory() でアプリケーションディレクトリやカレントディレクトリを排除
+- DLL 読み込みは可能な限り絶対パスで
+- インストーラー作成ツールによるインストーラー作成やアーカイバーによる自己解凍書庫作成時にはツールの対応状況を確認
+
+- 開発者が対処しきれないケース
+- アプリのスタートアップ部分で勝手にロード
+- Windows 標準 DLL が独自に他 DLL をロード
+- Windows 標準機能 (DLL forwarding, OS 互換機能の発動など)
+- 動作監視ソフトの影響など
+- (参考: [UNLHA32.DLLで作成された自己解凍書庫における任意のDLL読み込みに関する脆弱性](http://micco.mars.jp/vul/2017/mhsvi20170515_01.htm)など)
+
+- DLL 読み込みと合わせてコマンド呼び出しについても注意
+
+- 関連情報
+- メモとれず
+
+ユーザーの対策として、ダウンロードしたファイルを実行する際に別途ディレクトリを作って、という話があったので、ブラウザーにダウンロード時にディレクトリを作る機能を要望したりはしていないのでしょうか? という質問をしてみました。
+今の所、そういう話はしていないが、話をしてみるのは良いかもという感じの回答だったと思います。
+
+## Ubuntuはどこへ向かうのか～方針転換の解説～
+
+どういう系統の話か全然わかってなくて聴きにいったら、 Unity の話でした。
+狭い部屋がほぼいっぱいで人気でした。
+
+- R.I.P. Unity 2010-2017
+- 2007年頃(?) に Netbook の登場
+- ディスプレイが狭いので専用のチューニングが求められた
+- Dell Inspiron Mini 9 : 日本で発売された Ubuntu プリインストールの Netbook
+- 1024×600
+- Ubuntu Netbook Remix の登場 : Ubuntu 9.04 ベース
+- Remix はアンオフィシャル
+- Ubuntu Netbook Edition : Ubuntu 10.04 ベースと 10.10 ベースのみ
+- Edition はオフィシャルリリース
+- 10.04 は LTS だが Netbook Edition は LTS ではなかった
+- Unity 初登場は Ubuntu Netbook Edition 10.10
+- Mutter ベース
+- Ubuntu 11.04 : Unity がデフォルトになった最初の Ubuntu
+- Desktop Edition と Netbook Edition を統合
+- Compiz ベースの Unity と Metacity ベースの Unity 2D
+- Ubuntu 11.10 の Unity
+- Ubuntu 12.04 LTS : Unity がデフォルトになって初めての LTS
+- じゃんけんタイム: 日経 Linux 6 月号
+- Ubuntu 12.10 : Unity 2D はなくなった
+- Ubuntu 13.04 : Unity 7 になった
+- 逆に言えばここから 4 年間 Unity 7 が続いた
+
+- Unity 8
+- デスクトップ用とスマートデバイス用 Ubuntu を統合する UI が必要となった
+- スクラッチから開発
+- UI だけでなく、ディスプレイマネージャ (Mir) から開発
+- X.Org ではスマートデバイスは辛い
+- 2012年8月: 当初 qml-phone-shell という名前
+- 2013年6月から Unity 8 に
+- Ubuntu 17.10 で概ね実用的に (日本語を打たなければという条件付きで)
+
+- じゃんけんタイム: 日経 Linux 7 月号
+
+- 2017.04.05 https://insights.ubuntu.com/?p=65030
+- スマートデバイスやコンバージェンスよりもクラウドや IoT に重点的に投資するという内容
+- Unity 8 への投資も中止し、 GNOME に戻る
+- Ubuntu デスクトップはユーザーも多く今尚重要である
+
+- 現時点での確定事項
+- GNOME Shell と GDM をデフォルトに
+- Ubuntu GNOME はリリースせず
+- Unity 7 から GNOME Shell への移行サポート
+
+- 現時点での未確定事項
+- デフォルトのアプリケーション
+- インプットメソッド: Fcitx の現行バージョンは Wayland 非対応
+- ディスプレイマネージャ: Wayland がデフォルトになりそう
+
+- Unity 7 を使用したいなら Ubuntu 16.04 LTS にするのがおすすめ
+- Unity 8 は yunit というフォークとして生き残る見込み https://yunit.io/
+
+- Ubuntu のセカンドチョイスは Ubuntu GNOME だった
+- 今後その役目は Ubuntu MATE か?
+
+- Ubuntu Weekly Topics 2017年4月7日号
+- Ubuntu Weekly Recipe 第 467 回 GNOME 初心者向け
+- Software Design
+- 日経 Linux
+
+## Debian updates
+
+とりあえず OSC に行こうかと思ったきっかけになった Debian の話も聴きました。
+時間がなくなったので後半は急いで終わりました。
+
+- Debian とは?
+- Debian は連携する個人の集団
+- Debian は開発元企業はなく、ボランティアのみ
+- 世界中に開発者がいる
+- Debian Free Software Guideline
+- https://www.debian.org/social_contract#guidelines
+- http://www.opensource.jp/osd/osd-japanese.html
+- https://www.debian.org/social_contract
+- Debian Policy
+- Debian Derivatives
+- https://en.wikipedia.org/wiki/List_of_Linux_distributions の図
+- stable, testing, unstable
+- Debian JP Project とは?
+- 次回の関西勉強会は 8/27(日) に IM の話
+- Debian 9 Stretch
+- 2017-06-17: Debian 9.0
+- 2017-07-22: Debian 9.1
+- 主な変更点
+- サポートアーキテクチャ
+- mips64el
+- i386 が i686 以降に変更
+- サポートから外れたアーキテクチャ: powerpc
+- kFreeBSD はテクノロジープレビューから porter (?) になった
+- ポメラで Debian (armhf) が動く
+- theme: softwaves
+- 主な Software のバージョン
+- クロスコンパイルがデフォルトでサポート
+- 変更点, 注意点
+- 実行ファイルは PIE が有効になっている
+- iproute2 が推奨、 net-tools は非推奨 (net-tools: ifconfig, arp, netstat, route, ...)
+- iceweasel → firefox 、 icedove → thunderbird
+- mysql から mariadb : jessie からのアップグレードの際には自動的に mariadb へ
+- Xorg がユーザー権限でも動作可能に
+- セキュリティ関連
+- Firefox, Chromium のセキュリティ更新の提供
+- Firefox ESR, Thunderbird ESR
+- libv8, nodejs, node-* のセキュリティ更新は提供されない
+- OpenSSL: 3DES, RC4 の TLS/SSL 利用は提供されない
+- Ruby チームは Redmine と他2個ぐらいのパッケージが必要とする gem を中心にメンテしている
+- Adobe Flash が Stretch に入らない
+- 互換性
+- PIE
+- NIC : predictable name (jessie からの更新の際には据え置き)
+- OpenSSH : 旧式暗号と SSH v2 が無効
+- Xorg: evdev から libinput
+- Upstart は削除
+- デフォルトは systemd
+- sysvinit, OpenRC も利用可能
+- installer
+- GUI インストールがデフォルト
+- UEFI のセキュアブートは未対応
+- screen 対応
+- CD イメージを廃止
+- アップグレード
+- リリースノートを読むことを推奨
+- apt-line が `ftp://` の場合は `http://` に変更が必須
+- Debian 8.8 以降にあげてから一度再起動してからあげないと PIE 関連ではまる
+
+## ライトニングトーク＆閉会式
+
+- https://github.com/verifast/verifast
+- コメントで注釈を入れるとC言語のプログラムを検証してくれる
+- [#静的コード解析の会 第4回@大阪 - connpass](https://metasepi.connpass.com/event/55350/)
+
+- 近くの海外カンファレンスに行こう！
+
+- openSUSE.Asia Summit 2017 Tokyo
+- [openSUSE Leap 42.3 Release Party Kyoto & もくもく会 - connpass](https://opensuseja.connpass.com/event/62902/)
+
+- KRP 周辺グルメガイド
+- 順番に紹介していってドラがなったところで終了だった
+
+- 鉄道とオープンデータ
+- 時刻表データは自由なものが少ないので架空の路線を作っていろいろやっている話だった
+
+- どうしてもあれが欲しくなった
+- 500兆円ほしいジェネレーターを fork してクリッピングするようにした
+- iOS も対応した
+- http://tmx3.net/5000choyen/
+
+- 大学で無理やり Splatoon2 をやった話
+- VPN + mac のインターネット共有
+- 共有する接続経路で VPN を選ぶ必要があった
+
+- 便利？な機能を使って開発していく
+- https://github.com/shiotomo/cPractice
+
+- 最近の学生コミュニティーについて
+- ICT トラブルシューティングコンテスト
+- ネットワーク講座
+- OITLT
+- 東京に負けない魅力的なコミュニティーとイベントを作りたい
+- 関西を盛り上げたい
+- 「とある工大生の死活日記」で検索
+
+- 山形で OSC 開催したい！
+
+- OSC サミットと  11/26(日) OSC 広島のご紹介
+
+- IT 企業の裏側を知りたい！ アンケート調査
+- 会場でアンケートをとっていたらしく、その結果発表でした。
