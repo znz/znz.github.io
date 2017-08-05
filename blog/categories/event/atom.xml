@@ -4,7 +4,7 @@
   <title><![CDATA[Category: event | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/event/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-07-30T21:06:20+09:00</updated>
+  <updated>2017-08-05T23:53:58+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,244 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[オープンソースカンファレンス2017 Kyotoに参加した]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-08-05-osc2017-kyoto.html"/>
+    <updated>2017-08-05T20:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/osc2017-kyoto</id>
+    <content type="html"><![CDATA[<p><a href="https://www.ospn.jp/osc2017-kyoto/">オープンソースカンファレンス2017 Kyoto</a>
+に参加しました。</p>
+
+<!--more-->
+
+
+<p>以下、メモです。</p>
+
+<h2>会場</h2>
+
+<p>KRP は遠いですが、行きは西院駅から歩きました。
+帰りは天気が悪かったので、丹波口駅から帰りました。</p>
+
+<p>朝からは行けなかったので、13時すぎに到着しました。</p>
+
+<h2>「DLL読み込みの問題」を読み解く</h2>
+
+<p>よく見かける DLL 読み込みの脆弱性がどういうことなのか気になっていたので、途中からになってしまいましたが、聴きに行きました。</p>
+
+<ul>
+<li><p>DLL の検索パス <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms682586(v=vs.85%29.aspx">Dynamic-Link Library Search Order (Windows)</a></p>
+
+<ul>
+<li>KnownDLLs に登録されているかどうか</li>
+<li>実行ファイルがあるディレクトリ (アプリケーションディレクトリ)</li>
+<li>Windows システムディレクトリ</li>
+<li>Windows ディレクトリ</li>
+<li>カレントディレクトリ</li>
+<li>環境変数 PATH</li>
+</ul>
+</li>
+<li><p>sysinternals の Process Monitor (procmon)</p></li>
+<li>Dependency Walker</li>
+<li><p>procmon の使い方の例</p></li>
+<li><p>2010年ごろの状況</p></li>
+<li>DLL 読み込みの脆弱性に対する攻撃手法が公開され、注目を集める</li>
+<li><a href="https://www.jpcert.or.jp/sc-magazine/codezine02-8.html">第8回　WindowsのDLLだけが危ないのか？DLL hijacking vulnerability概説（前編）</a></li>
+<li>ドキュメントと一緒に細工した DLL を置いてアプリを起動するとカレントディレクトリの DLL を読み込む</li>
+<li><p>この対策としてカレントディレクトリの優先順位が下がった</p></li>
+<li><p>2016年ごろから「インストーラ」「自己解凍書庫」に対するDLL読み込み脆弱性の届出が増える</p></li>
+<li><p>インストーラーと一緒に細工した DLL を置いてインストーラーを起動すると同一ディレクトリにある DLL を使ってしまう</p></li>
+<li><p>Windows や Program Files といったシステム領域はアプリ側ではなくシステム側が保護</p></li>
+<li>ユーザディレクトリは管理はユーザーの責任だが</li>
+<li>システム領域外で動作するアプリには、よりセキュアな実装を求めたい</li>
+<li><p>インストーラ、自己解凍書庫、ポータブルアプリなど</p></li>
+<li><p>ユーザーが行うべき対策</p></li>
+<li>あやしいファイルを放置しない</li>
+<li>インストーラーや自己解凍書庫を安全な形で実行する</li>
+<li><p>安全な形で実行: インストーラーをダウンロード、新規にディレクトリを作成、作成したディレクトリにインストーラーを移動、インストーラーを起動</p></li>
+<li><p>開発者が行うべき対策</p></li>
+<li>DLL の読み込み方法に注意する</li>
+<li>アプリ/インストーラーの挙動についてユーザーに説明し、注意を促す</li>
+<li>SetDefaultDllDirectories() や SetDllDirectory() でアプリケーションディレクトリやカレントディレクトリを排除</li>
+<li>DLL 読み込みは可能な限り絶対パスで</li>
+<li><p>インストーラー作成ツールによるインストーラー作成やアーカイバーによる自己解凍書庫作成時にはツールの対応状況を確認</p></li>
+<li><p>開発者が対処しきれないケース</p></li>
+<li>アプリのスタートアップ部分で勝手にロード</li>
+<li>Windows 標準 DLL が独自に他 DLL をロード</li>
+<li>Windows 標準機能 (DLL forwarding, OS 互換機能の発動など)</li>
+<li>動作監視ソフトの影響など</li>
+<li><p>(参考: <a href="http://micco.mars.jp/vul/2017/mhsvi20170515_01.htm">UNLHA32.DLLで作成された自己解凍書庫における任意のDLL読み込みに関する脆弱性</a>など)</p></li>
+<li><p>DLL 読み込みと合わせてコマンド呼び出しについても注意</p></li>
+<li><p>関連情報</p></li>
+<li>メモとれず</li>
+</ul>
+
+
+<p>ユーザーの対策として、ダウンロードしたファイルを実行する際に別途ディレクトリを作って、という話があったので、ブラウザーにダウンロード時にディレクトリを作る機能を要望したりはしていないのでしょうか? という質問をしてみました。
+今の所、そういう話はしていないが、話をしてみるのは良いかもという感じの回答だったと思います。</p>
+
+<h2>Ubuntuはどこへ向かうのか～方針転換の解説～</h2>
+
+<p>どういう系統の話か全然わかってなくて聴きにいったら、 Unity の話でした。
+狭い部屋がほぼいっぱいで人気でした。</p>
+
+<ul>
+<li>R.I.P. Unity 2010-2017</li>
+<li>2007年頃(?) に Netbook の登場</li>
+<li>ディスプレイが狭いので専用のチューニングが求められた</li>
+<li>Dell Inspiron Mini 9 : 日本で発売された Ubuntu プリインストールの Netbook</li>
+<li>1024×600</li>
+<li>Ubuntu Netbook Remix の登場 : Ubuntu 9.04 ベース</li>
+<li>Remix はアンオフィシャル</li>
+<li>Ubuntu Netbook Edition : Ubuntu 10.04 ベースと 10.10 ベースのみ</li>
+<li>Edition はオフィシャルリリース</li>
+<li>10.04 は LTS だが Netbook Edition は LTS ではなかった</li>
+<li>Unity 初登場は Ubuntu Netbook Edition 10.10</li>
+<li>Mutter ベース</li>
+<li>Ubuntu 11.04 : Unity がデフォルトになった最初の Ubuntu</li>
+<li>Desktop Edition と Netbook Edition を統合</li>
+<li>Compiz ベースの Unity と Metacity ベースの Unity 2D</li>
+<li>Ubuntu 11.10 の Unity</li>
+<li>Ubuntu 12.04 LTS : Unity がデフォルトになって初めての LTS</li>
+<li>じゃんけんタイム: 日経 Linux 6 月号</li>
+<li>Ubuntu 12.10 : Unity 2D はなくなった</li>
+<li>Ubuntu 13.04 : Unity 7 になった</li>
+<li><p>逆に言えばここから 4 年間 Unity 7 が続いた</p></li>
+<li><p>Unity 8</p></li>
+<li>デスクトップ用とスマートデバイス用 Ubuntu を統合する UI が必要となった</li>
+<li>スクラッチから開発</li>
+<li>UI だけでなく、ディスプレイマネージャ (Mir) から開発</li>
+<li>X.Org ではスマートデバイスは辛い</li>
+<li>2012年8月: 当初 qml-phone-shell という名前</li>
+<li>2013年6月から Unity 8 に</li>
+<li><p>Ubuntu 17.10 で概ね実用的に (日本語を打たなければという条件付きで)</p></li>
+<li><p>じゃんけんタイム: 日経 Linux 7 月号</p></li>
+<li><p>2017.04.05 <a href="https://insights.ubuntu.com/?p=65030">https://insights.ubuntu.com/?p=65030</a></p></li>
+<li>スマートデバイスやコンバージェンスよりもクラウドや IoT に重点的に投資するという内容</li>
+<li>Unity 8 への投資も中止し、 GNOME に戻る</li>
+<li><p>Ubuntu デスクトップはユーザーも多く今尚重要である</p></li>
+<li><p>現時点での確定事項</p></li>
+<li>GNOME Shell と GDM をデフォルトに</li>
+<li>Ubuntu GNOME はリリースせず</li>
+<li><p>Unity 7 から GNOME Shell への移行サポート</p></li>
+<li><p>現時点での未確定事項</p></li>
+<li>デフォルトのアプリケーション</li>
+<li>インプットメソッド: Fcitx の現行バージョンは Wayland 非対応</li>
+<li><p>ディスプレイマネージャ: Wayland がデフォルトになりそう</p></li>
+<li><p>Unity 7 を使用したいなら Ubuntu 16.04 LTS にするのがおすすめ</p></li>
+<li><p>Unity 8 は yunit というフォークとして生き残る見込み <a href="https://yunit.io/">https://yunit.io/</a></p></li>
+<li><p>Ubuntu のセカンドチョイスは Ubuntu GNOME だった</p></li>
+<li><p>今後その役目は Ubuntu MATE か?</p></li>
+<li><p>Ubuntu Weekly Topics 2017年4月7日号</p></li>
+<li>Ubuntu Weekly Recipe 第 467 回 GNOME 初心者向け</li>
+<li>Software Design</li>
+<li>日経 Linux</li>
+</ul>
+
+
+<h2>Debian updates</h2>
+
+<p>とりあえず OSC に行こうかと思ったきっかけになった Debian の話も聴きました。
+時間がなくなったので後半は急いで終わりました。</p>
+
+<ul>
+<li>Debian とは?</li>
+<li>Debian は連携する個人の集団</li>
+<li>Debian は開発元企業はなく、ボランティアのみ</li>
+<li>世界中に開発者がいる</li>
+<li>Debian Free Software Guideline</li>
+<li><a href="https://www.debian.org/social_contract#guidelines">https://www.debian.org/social_contract#guidelines</a></li>
+<li><a href="http://www.opensource.jp/osd/osd-japanese.html">http://www.opensource.jp/osd/osd-japanese.html</a></li>
+<li><a href="https://www.debian.org/social_contract">https://www.debian.org/social_contract</a></li>
+<li>Debian Policy</li>
+<li>Debian Derivatives</li>
+<li><a href="https://en.wikipedia.org/wiki/List_of_Linux_distributions">https://en.wikipedia.org/wiki/List_of_Linux_distributions</a> の図</li>
+<li>stable, testing, unstable</li>
+<li>Debian JP Project とは?</li>
+<li>次回の関西勉強会は 8/27(日) に IM の話</li>
+<li>Debian 9 Stretch</li>
+<li>2017-06-17: Debian 9.0</li>
+<li>2017-07-22: Debian 9.1</li>
+<li>主な変更点</li>
+<li>サポートアーキテクチャ</li>
+<li>mips64el</li>
+<li>i386 が i686 以降に変更</li>
+<li>サポートから外れたアーキテクチャ: powerpc</li>
+<li>kFreeBSD はテクノロジープレビューから porter (?) になった</li>
+<li>ポメラで Debian (armhf) が動く</li>
+<li>theme: softwaves</li>
+<li>主な Software のバージョン</li>
+<li>クロスコンパイルがデフォルトでサポート</li>
+<li>変更点, 注意点</li>
+<li>実行ファイルは PIE が有効になっている</li>
+<li>iproute2 が推奨、 net-tools は非推奨 (net-tools: ifconfig, arp, netstat, route, &hellip;)</li>
+<li>iceweasel → firefox 、 icedove → thunderbird</li>
+<li>mysql から mariadb : jessie からのアップグレードの際には自動的に mariadb へ</li>
+<li>Xorg がユーザー権限でも動作可能に</li>
+<li>セキュリティ関連</li>
+<li>Firefox, Chromium のセキュリティ更新の提供</li>
+<li>Firefox ESR, Thunderbird ESR</li>
+<li>libv8, nodejs, node-* のセキュリティ更新は提供されない</li>
+<li>OpenSSL: 3DES, RC4 の TLS/SSL 利用は提供されない</li>
+<li>Ruby チームは Redmine と他2個ぐらいのパッケージが必要とする gem を中心にメンテしている</li>
+<li>Adobe Flash が Stretch に入らない</li>
+<li>互換性</li>
+<li>PIE</li>
+<li>NIC : predictable name (jessie からの更新の際には据え置き)</li>
+<li>OpenSSH : 旧式暗号と SSH v2 が無効</li>
+<li>Xorg: evdev から libinput</li>
+<li>Upstart は削除</li>
+<li>デフォルトは systemd</li>
+<li>sysvinit, OpenRC も利用可能</li>
+<li>installer</li>
+<li>GUI インストールがデフォルト</li>
+<li>UEFI のセキュアブートは未対応</li>
+<li>screen 対応</li>
+<li>CD イメージを廃止</li>
+<li>アップグレード</li>
+<li>リリースノートを読むことを推奨</li>
+<li>apt-line が <code>ftp://</code> の場合は <code>http://</code> に変更が必須</li>
+<li>Debian 8.8 以降にあげてから一度再起動してからあげないと PIE 関連ではまる</li>
+</ul>
+
+
+<h2>ライトニングトーク＆閉会式</h2>
+
+<ul>
+<li><a href="https://github.com/verifast/verifast">https://github.com/verifast/verifast</a></li>
+<li>コメントで注釈を入れるとC言語のプログラムを検証してくれる</li>
+<li><p><a href="https://metasepi.connpass.com/event/55350/">#静的コード解析の会 第4回@大阪 - connpass</a></p></li>
+<li><p>近くの海外カンファレンスに行こう！</p></li>
+<li><p>openSUSE.Asia Summit 2017 Tokyo</p></li>
+<li><p><a href="https://opensuseja.connpass.com/event/62902/">openSUSE Leap 42.3 Release Party Kyoto &amp; もくもく会 - connpass</a></p></li>
+<li><p>KRP 周辺グルメガイド</p></li>
+<li><p>順番に紹介していってドラがなったところで終了だった</p></li>
+<li><p>鉄道とオープンデータ</p></li>
+<li><p>時刻表データは自由なものが少ないので架空の路線を作っていろいろやっている話だった</p></li>
+<li><p>どうしてもあれが欲しくなった</p></li>
+<li>500兆円ほしいジェネレーターを fork してクリッピングするようにした</li>
+<li>iOS も対応した</li>
+<li><p><a href="http://tmx3.net/5000choyen/">http://tmx3.net/5000choyen/</a></p></li>
+<li><p>大学で無理やり Splatoon2 をやった話</p></li>
+<li>VPN + mac のインターネット共有</li>
+<li><p>共有する接続経路で VPN を選ぶ必要があった</p></li>
+<li><p>便利？な機能を使って開発していく</p></li>
+<li><p><a href="https://github.com/shiotomo/cPractice">https://github.com/shiotomo/cPractice</a></p></li>
+<li><p>最近の学生コミュニティーについて</p></li>
+<li>ICT トラブルシューティングコンテスト</li>
+<li>ネットワーク講座</li>
+<li>OITLT</li>
+<li>東京に負けない魅力的なコミュニティーとイベントを作りたい</li>
+<li>関西を盛り上げたい</li>
+<li><p>「とある工大生の死活日記」で検索</p></li>
+<li><p>山形で OSC 開催したい！</p></li>
+<li><p>OSC サミットと  11/26(日) OSC 広島のご紹介</p></li>
+<li><p>IT 企業の裏側を知りたい！ アンケート調査</p></li>
+<li>会場でアンケートをとっていたらしく、その結果発表でした。</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ELFとDWARF勉強会に参加しました]]></title>
@@ -1447,112 +1685,6 @@ end
 <p>リリースは twitter などではリリースされたっぽい感じでしたが、たぶん最後のアナウンスっぽい<a href="https://lists.debian.org/debian-announce/2017/msg00003.html">リリースアナウンスのメール</a>が「Sat, 17 Jun 2017 20:22:36 -1000」つまり日本時間だと「2017-06-18 15:22:36 +0900」で、少なくともリリースパーティー中にはリリースされていたようです。</p>
 
 <p>すでにあげた人の話では、特に大きなトラブルもなさそうなので、安心してあげられそうです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 123 回関西 Debian 勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-05-28-kansai-debian-meeting.html"/>
-    <updated>2017-05-28T13:50:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
-    <content type="html"><![CDATA[<p><a href="https://debianjp.connpass.com/event/57323/" title="第 123 回関西 Debian 勉強会">第 123 回関西 Debian 勉強会</a>に参加しました。</p>
-
-<!--more-->
-
-
-<p>以下メモです。</p>
-
-<h2>会場など</h2>
-
-<p>Apache Arrow の勉強会の後、一緒にランチに行くのに参加していたら、ちょっと遅くなってしまって、 13:40 すぎに到着しました。</p>
-
-<h2>オープニング</h2>
-
-<ul>
-<li>事前課題は必須項目になっていなかったため、 connpass での参加登録時に出ていなかったので、その場で発表して資料が更新されていた。</li>
-<li>初参加の人がいた</li>
-<li>初めて作った人とか長い間使っていない人とか</li>
-<li>easypg は表示は復号されているがメモリダンプをしても平文はないらしい</li>
-<li>期限切れと revoke の違い: 期限切れはのばせるが、 revoke は取り消せない</li>
-</ul>
-
-
-<p>ruby の svn のコミットに必要という話は <a href="https://bugs.ruby-lang.org/projects/ruby/wiki/CommitterHowto">https://bugs.ruby-lang.org/projects/ruby/wiki/CommitterHowto</a> <a href="https://bugs.ruby-lang.org/projects/ruby/wiki/CommitterHowtoJa">https://bugs.ruby-lang.org/projects/ruby/wiki/CommitterHowtoJa</a> あたりに書いてあるのですが、今見ると <code>ssh-keygen -b 2048 -f ruby_key</code> になってて古い感じ。英語の方は <code>~/.ssh/id_rsa or ~/.ssh/id_dsa</code> と書いてあるのでもっと古い感じが。</p>
-
-<h3>途中で矢吹さんの話</h3>
-
-<ul>
-<li>カジュアルに使うのも良いけど、暗号関連は色々気にしている人もいるので気をつけましょう (色々なポリシーがあるのを尊重しましょう) という話とか</li>
-<li>cypherpunk : 暗号の民主化</li>
-<li>FST-01 を入手した (まだ秘密鍵は入れていない) ので回覧</li>
-</ul>
-
-
-<h2>GnuPG にまつわるアレコレ - GnuPG2 とか Keybase とか Yubikey とか</h2>
-
-<ul>
-<li>key id は昔は 8 文字だったけど conflict が作れるという話になって、今は 16 文字 (以上?) が普通らしい</li>
-<li>(勉強会中に聞きそびれてしまったけど、GPG の key id が fingerprint の末尾っていうのは、みんなどうやって知るんだろう?)</li>
-<li>(自分は昔の key sign party で fingerprint しか書いてないけど、どうやって fetch するの? と聞いたときに教えてもらったけど。)</li>
-<li>GnuPG とは?</li>
-<li>OpenPGP: RFC になっている</li>
-<li>暗号化によって盗聴を防ぐ (機密性)</li>
-<li>署名によって改ざんを検知可能にする (完全性)</li>
-<li>例: secure-apt, DKIM</li>
-<li>信頼の輪 (Web of trust) によって本人を同定</li>
-<li>過去の資料の参照情報紹介</li>
-<li><a href="https://wiki.debian.org/KansaiDebianMeeting/20150823" title="第 101 回 関西 Debian 勉強会">第 101 回 関西 Debian 勉強会</a>の「wiki:Subkeys」が気になった</li>
-<li>Windows の GUI の GPG クライアントで良いものがない</li>
-<li>mac は GPG Tools というので標準の Mail.app で GPG 対応できるらしい</li>
-<li>Web メールで困る話</li>
-<li>Thunderbird は Enigmail</li>
-<li>鍵の選び方の話</li>
-<li>ED25519 は gnupg 1.4 系 (今は oldstable ブランチ) で復号できない</li>
-<li>今の所は互換性のための RSA4096 と速い ED25519 を併用するのが良いかもしれない</li>
-<li>GnuPG 2 - Stretch での変更点</li>
-<li>gnupg (1.4 → 2.1), gnupg1 (なし → 1.4), gnupg2 (2.0 → drop)</li>
-<li>gnupg 2.1 は初回実行時に自動的に移行が実行されて、2.1 用のファイル (<code>pubring.kbx</code> とか <code>private-keys-v1.d/</code> とか) が作成される</li>
-<li>古いバージョン用のファイル (<code>pubring.gpg</code> とか <code>secring.gpg</code> とか) はそのまま残るので古いバージョンの共存も可能 (だがそれぞれのバージョンのファイルしか更新されないので、併用すると情報がずれていくはず)</li>
-<li>2.0 がどっちのファイルを使うのかは検証してないので不明</li>
-<li>プログラムの分離具合が整理された (<a href="http://miniconf.debian.or.jp/">Mini Debian Conference Japan 2016</a> の<a href="http://miniconf.debian.or.jp/assets/files/gnupg-now.html">g新部さんのスライド</a> の図が非常にわかりやすい (GnuPG programs (2) の図))</li>
-<li>proxy 設定が gpg.conf から dirmngr.conf に変わった</li>
-<li>use-gpg-agent が obsolete (常に有効で単純に無視される)</li>
-<li>大量の ssh 接続に使うと scdaemon がエントロピーが足りないという話</li>
-<li>haveged (はべーじでぃー(と言っていた)) とか rng-tools とか</li>
-<li>disable-scdaemon をつけておくと無駄に scdaemon が起動しなくなる (gpg-agent から scdaemon が起動して scdaemon 対応のデバイスがなければ、すぐに gpg-agent に返ってくるらしいが、起動するだけ無駄という話)</li>
-<li>gpg-agent を ssh-agent として使うのは簡単</li>
-<li>GNOME で gnome keyring daemon は止めやすい</li>
-<li>mate や xfce では ssh-agent を止めにくい</li>
-<li>ssh-agent を入れないときは <code>.xsessionrc</code> で <code>SSH_AUTH_SOCK</code> を自分で設定する必要がある</li>
-<li>mate や xfce では <code>.xsessionrc</code> で設定しても、さらに上書きされるらしい</li>
-<li>YubiKey <a href="https://yubikey.yubion.com/">https://yubikey.yubion.com/</a> <a href="https://www.cloudgate.jp/yubikey.html">https://www.cloudgate.jp/yubikey.html</a></li>
-<li>ED25519 には対応していない</li>
-<li>RSA 4096 で復号で 0.5 秒ぐらい</li>
-<li>(後でし</li>
-<li>Qt5 での GUI ツールとコマンドラインツールがある</li>
-<li>keybase.io というサービスがあるらしいが秘密鍵もアップロードできるらしく?</li>
-<li>アカウントを作ってみた <a href="https://keybase.io/uwabami">https://keybase.io/uwabami</a> が消すかも。</li>
-<li><a href="https://github.com/keybase/client">https://github.com/keybase/client</a> には大量の Issues が。</li>
-</ul>
-
-
-<h2>クロージング</h2>
-
-<ul>
-<li>今後の予定</li>
-<li>来月は17日に stretch がリリース予定なので、25日から18日に予定を変更してリリースパーティの可能性が高そう</li>
-</ul>
-
-
-<h2>よくわからないままだった点</h2>
-
-<ul>
-<li>懇親会への移動中などにある程度話しましたが</li>
-<li><code>gpg --version</code> で出てくる「公開鍵: RSA, ELG, DSA, ECDH, ECDSA, EDDSA」の「EDDSA」(ECDSA ではなく)と「ED25519」は同じ?</li>
-<li>Curve25519 と ED25519 の関係</li>
-<li><a href="https://ja.wikipedia.org/wiki/%E3%82%A8%E3%83%89%E3%83%AF%E3%83%BC%E3%82%BA%E6%9B%B2%E7%B7%9A%E3%83%87%E3%82%B8%E3%82%BF%E3%83%AB%E7%BD%B2%E5%90%8D%E3%82%A2%E3%83%AB%E3%82%B4%E3%83%AA%E3%82%BA%E3%83%A0" title="エドワーズ曲線デジタル署名アルゴリズム">エドワーズ曲線デジタル署名アルゴリズム</a> に多少説明がある</li>
-</ul>
-
 ]]></content>
   </entry>
   
