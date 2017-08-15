@@ -5,11 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: bts - @znz blog</title>
+  <title>OSS Gate Workshopのブランチ名の調査 - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Category: bts">
+  <meta name="description" content="OSS Gate Workshopのブランチ名の調査 2017-08-15 (Tue) 8:00 pm | Comments OSS Gate ワークショップのリポジトリーでは、ワークショップの最後にアンケートを pull request で集めているのですが、
+tutorial/ &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/categories/bts/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-08-15-oss-gate-workshop-branch-name.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,37 +77,391 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: bts</h1>
+    
+      
+      <!-- zenback_title_begin -->
+      
+      <h1 class="entry-title">OSS Gate Workshopのブランチ名の調査</h1>
+      
+      <!-- zenback_title_end -->
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2017-08-15T20:00:00+09:00'><span class='date'>2017-08-15 (Tue)</span> <span class='time'>8:00 pm</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
 
-  
-  <h2>2013</h2>
+<!-- zenback_body_begin -->
 
-<article>
-  
-<h1><a href="/blog/2013-09-20-ubuntu-bugs-related-me.html">Ubuntuでの対応が悪いと感じた話</a></h1>
-<time datetime="2013-09-20T19:43:00+09:00" pubdate><span class='month'>Sep</span> <span class='day'>20</span> <span class='year'>2013</span></time>
+<div class="entry-content"><p><a href="https://github.com/oss-gate/workshop">OSS Gate ワークショップのリポジトリー</a>では、ワークショップの最後にアンケートを pull request で集めているのですが、
+tutorial/retrospectives/README.md には <a href="https://github.com/oss-gate/workshop/commit/0d12651d72f8bcec0cd550da6a4e97d25caa3968">https://github.com/oss-gate/workshop/commit/0d12651d72f8bcec0cd550da6a4e97d25caa3968</a> で「適当なブランチ名」と追加され (今は <a href="https://github.com/oss-gate/workshop/pull/549">#549</a> で <code>add-retrospective</code> に変更済み)、
+以前は全く指針などはなかったので、
+みんなどんなブランチ名を使っていたのか気になったので、
+集計してみました。</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/bts/'>bts</a>, <a class='category' href='/blog/categories/community/'>community</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a></span>
-</footer>
+<!--more-->
 
 
-</article>
+<h2>集計スクリプト</h2>
 
+<p>簡単のため、<code>git log</code> の出力から日付などの可変部分はできるだけまとめて集計するようにしてみました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>#!ruby
+</span><span class='line'>count = Hash.new(0)
+</span><span class='line'>ARGF.each_line do |line|
+</span><span class='line'>  if /Merge pull request #\d+ from / =~ line
+</span><span class='line'>    id, branch = $'.split('/', 2)
+</span><span class='line'>    branch.sub!(Regexp.quote(id), "{id}")
+</span><span class='line'>    branch.sub!(/\d{4}(.?)\d{2}(.?)\d{2}/, 'YYYY\1MM\2DD')
+</span><span class='line'>    branch.sub!(/tokyo|osaka|pixiv/, '{place}')
+</span><span class='line'>    count[branch] += 1
+</span><span class='line'>  end
+</span><span class='line'>end
+</span><span class='line'>count.keys.sort_by do |k|
+</span><span class='line'>  [-count[k], k]
+</span><span class='line'>end.each do |k|
+</span><span class='line'>  puts "#{count[k]}:#{k}"
+</span><span class='line'>end</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>集計結果</h2>
+
+<p>ふりかえり以外の pull request もあるので、すべてがふりかえりのものとは断言できないのですが、
+圧倒的に master, patch-1, patch-2 が多かったです。</p>
+
+<p>master は別ブランチを作っていないことが多いということを示しています。</p>
+
+<p>patch-1, patch-2, patch-3 などは github の Web から Edit で編集を開始するとできるブランチ名だったはずなので、
+Web で操作して作成した pull request かもしれません。</p>
+
+<p><code>masayuki14_closed_workshop</code> は「社内向けのクローズドでWorkshopを開催したので、ふりかえりのアンケートを共有します」とあるので、
+特殊なので無視して良さそうです。</p>
+
+<p>形式がバラバラで集計ではバラバラのままにしていますが、日付・場所・ID・役割 (beginner や mentor など) が入っていることが多く、
+workshop (や meetup)、retrospective (answer, comment, enquete) や add などの単語が使われていることが多いようです。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+<span class='line-number'>70</span>
+<span class='line-number'>71</span>
+<span class='line-number'>72</span>
+<span class='line-number'>73</span>
+<span class='line-number'>74</span>
+<span class='line-number'>75</span>
+<span class='line-number'>76</span>
+<span class='line-number'>77</span>
+<span class='line-number'>78</span>
+<span class='line-number'>79</span>
+<span class='line-number'>80</span>
+<span class='line-number'>81</span>
+<span class='line-number'>82</span>
+<span class='line-number'>83</span>
+<span class='line-number'>84</span>
+<span class='line-number'>85</span>
+<span class='line-number'>86</span>
+<span class='line-number'>87</span>
+<span class='line-number'>88</span>
+<span class='line-number'>89</span>
+<span class='line-number'>90</span>
+<span class='line-number'>91</span>
+<span class='line-number'>92</span>
+<span class='line-number'>93</span>
+<span class='line-number'>94</span>
+<span class='line-number'>95</span>
+<span class='line-number'>96</span>
+<span class='line-number'>97</span>
+<span class='line-number'>98</span>
+<span class='line-number'>99</span>
+<span class='line-number'>100</span>
+<span class='line-number'>101</span>
+<span class='line-number'>102</span>
+<span class='line-number'>103</span>
+<span class='line-number'>104</span>
+<span class='line-number'>105</span>
+<span class='line-number'>106</span>
+<span class='line-number'>107</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% git log | ruby /tmp/s.rb
+</span><span class='line'>99:master
+</span><span class='line'>60:patch-1
+</span><span class='line'>14:patch-2
+</span><span class='line'>6:masayuki14_closed_workshop
+</span><span class='line'>5:{id}
+</span><span class='line'>4:YYYY-MM-DD-{place}
+</span><span class='line'>4:YYYYMMDD_{place}_meetup_{id}
+</span><span class='line'>4:patch-3
+</span><span class='line'>3:retrospectives-YYYY-MM-DD
+</span><span class='line'>3:{id}-patch-1
+</span><span class='line'>2:YYYY-MM-DD-{id}
+</span><span class='line'>2:YYYYMMDD-{place}-workshop
+</span><span class='line'>2:YYYYMMDD_{place}_{id}
+</span><span class='line'>2:add-{id}-comment
+</span><span class='line'>2:knokmki612-patch-1
+</span><span class='line'>1:Add-{id}-enquete
+</span><span class='line'>1:YYYY-MM-DD-{place}-{id}
+</span><span class='line'>1:YYYY-MM-DD-{place}-{id}-answer
+</span><span class='line'>1:YYYY-MM-DD-{place}_{id}_retrospective
+</span><span class='line'>1:YYYYMMDD
+</span><span class='line'>1:YYYYMMDD_oss_gate_{place}_{id}_enquete
+</span><span class='line'>1:YYYYMMDD_retro
+</span><span class='line'>1:YYYYMMDD_ryo-endo
+</span><span class='line'>1:YYYYMMDD_{id}
+</span><span class='line'>1:YYYYMMDD_{place}_mentor_{id}
+</span><span class='line'>1:YYYYMMDD_{place}_{id}_answer
+</span><span class='line'>1:add-YYYYMMDD-{id}
+</span><span class='line'>1:add-YYYYMMDD-{place}
+</span><span class='line'>1:add-cm-wada-yusuke
+</span><span class='line'>1:add-comment
+</span><span class='line'>1:add-mentor-tSU-RooT-11-26
+</span><span class='line'>1:add-questionnaire-desc
+</span><span class='line'>1:add-yaml
+</span><span class='line'>1:add-{id}-0116
+</span><span class='line'>1:add-{id}-YYYY-MM-DD
+</span><span class='line'>1:add_beginner-{id}
+</span><span class='line'>1:add_description_of_oss_gate
+</span><span class='line'>1:add_mentor_yaml_by_{id}
+</span><span class='line'>1:add_questionnaire
+</span><span class='line'>1:add_retrospective_{id}
+</span><span class='line'>1:aggeregate
+</span><span class='line'>1:answer_by_satoryu
+</span><span class='line'>1:begginer-n-ina
+</span><span class='line'>1:beginner-{id}
+</span><span class='line'>1:change_issue_template
+</span><span class='line'>1:enquete
+</span><span class='line'>1:feature/YYYY_MM_DD_{place}_supporter_{id}
+</span><span class='line'>1:feature/add_{id}_answer
+</span><span class='line'>1:feature/retrospective
+</span><span class='line'>1:fill_retrospective_{id}
+</span><span class='line'>1:fix/issue_26
+</span><span class='line'>1:fix/retrospective_27
+</span><span class='line'>1:fix/typo
+</span><span class='line'>1:fix_retrospective
+</span><span class='line'>1:fix_supporter_questionnaire
+</span><span class='line'>1:fix_survey_url
+</span><span class='line'>1:fix_yaml_error
+</span><span class='line'>1:gitter-badge
+</span><span class='line'>1:goto_add_comment
+</span><span class='line'>1:hiroysato
+</span><span class='line'>1:improve_slide_2
+</span><span class='line'>1:improve_slide_split_2
+</span><span class='line'>1:issue_template
+</span><span class='line'>1:issue_template-2
+</span><span class='line'>1:kamimura
+</span><span class='line'>1:link-to-tutorial
+</span><span class='line'>1:make_template
+</span><span class='line'>1:mentor-majima
+</span><span class='line'>1:mentor-matsue
+</span><span class='line'>1:my_retrospectives
+</span><span class='line'>1:opinionaire_YYYYMMDD_morioka
+</span><span class='line'>1:patch-5
+</span><span class='line'>1:question_template
+</span><span class='line'>1:questionnaire
+</span><span class='line'>1:questionnaire-YYYY-MM-DD-{place}
+</span><span class='line'>1:rename
+</span><span class='line'>1:result_of_YYYY_MM_DD
+</span><span class='line'>1:retrospective
+</span><span class='line'>1:retrospective-{id}
+</span><span class='line'>1:retrospective_instruction
+</span><span class='line'>1:retrospective_{id}
+</span><span class='line'>1:retrospectives/{id}
+</span><span class='line'>1:sort_retrospectives
+</span><span class='line'>1:stat-rate
+</span><span class='line'>1:support-yaml-with-bom
+</span><span class='line'>1:survey_2017_3_25
+</span><span class='line'>1:tdtds
+</span><span class='line'>1:tricknotes
+</span><span class='line'>1:tricknotes-patch-1
+</span><span class='line'>1:update-retrospectives-readme
+</span><span class='line'>1:update_for_2016_9_24
+</span><span class='line'>1:write_questionnaire_kohei_otsuka
+</span><span class='line'>1:write_retrospectives
+</span><span class='line'>1:y-goto_surver_YYYYMMDD
+</span><span class='line'>1:y-goto_survey_YYYYMMDD
+</span><span class='line'>1:{id}-enquete-170116
+</span><span class='line'>1:{id}-mentor
+</span><span class='line'>1:{id}-oss-comment
+</span><span class='line'>1:{id}-questionnaire
+</span><span class='line'>1:{id}-workshop-answer1
+</span><span class='line'>1:{id}/n-n-n-
+</span><span class='line'>1:{id}/retrospective
+</span><span class='line'>1:{id}1
+</span><span class='line'>1:{id}_ans
+</span><span class='line'>1:{id}_closed_workshop
+</span><span class='line'>1:{place}_0629</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p>今回は <a href="https://github.com/oss-gate/workshop/pull/549">#549</a> の時に目視で確認していたのを、もうちょっとちゃんと確認してみました。
+ブランチ名やコミットメッセージはみんな色々悩んでつけている感じがして、過去のものを眺めてみると面白いと思います。</p>
+
+<p>OSS Gate のワークショップのふりかえりはワークショップの特性上、できるだけブランチ名も悩まずにとりあえずこれを使ってもらう、というのがあるのが望ましいので、固定の説明に変更しましたが、慣れていれば独自のブランチ名やコミットメッセージでも全く問題なさそうです。</p>
 </div>
 
+<!-- zenback_body_end -->
+
+
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2017-08-15T20:00:00+09:00'><span class='date'>2017-08-15 (Tue)</span> <span class='time'>8:00 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/oss-gate/'>oss-gate</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2017-08-12-oss-gate-osaka.html" title="Previous Post: OSS Gate大阪ワークショップ2017-08-12 with さくらクラブに参加しました">&laquo; OSS Gate大阪ワークショップ2017-08-12 with さくらクラブに参加しました</a>
+      
+      
+    </p>
+  </footer>
 </article>
 
+<section>
+  <!-- X:S ZenBackWidget --><div id="zenback-widget-loader"></div><script type="text/javascript">!function(d,i){if(!d.getElementById(i)){var r=Math.ceil((new Date()*1)*Math.random());var j=d.createElement("script");j.id=i;j.async=true;j.src="//w.zenback.jp/v1/?base_uri=http%3A//blog.n-z.jp/&nsid=122901358100652638%3A%3A122901381991399941&rand="+r;d.body.appendChild(j);}}(document,"zenback-widget-js");</script><!-- X:E ZenBackWidget -->
+
+</section>
+
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -227,7 +582,10 @@ Hatena.BookmarkWidget.load();
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-08-15-oss-gate-workshop-branch-name.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-08-15-oss-gate-workshop-branch-name.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

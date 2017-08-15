@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-08-14T23:22:00+09:00</updated>
+  <updated>2017-08-15T20:54:07+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,299 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[OSS Gate Workshopのブランチ名の調査]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-08-15-oss-gate-workshop-branch-name.html"/>
+    <updated>2017-08-15T20:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/oss-gate-workshop-branch-name</id>
+    <content type="html"><![CDATA[<p><a href="https://github.com/oss-gate/workshop">OSS Gate ワークショップのリポジトリー</a>では、ワークショップの最後にアンケートを pull request で集めているのですが、
+tutorial/retrospectives/README.md には <a href="https://github.com/oss-gate/workshop/commit/0d12651d72f8bcec0cd550da6a4e97d25caa3968">https://github.com/oss-gate/workshop/commit/0d12651d72f8bcec0cd550da6a4e97d25caa3968</a> で「適当なブランチ名」と追加され (今は <a href="https://github.com/oss-gate/workshop/pull/549">#549</a> で <code>add-retrospective</code> に変更済み)、
+以前は全く指針などはなかったので、
+みんなどんなブランチ名を使っていたのか気になったので、
+集計してみました。</p>
+
+<!--more-->
+
+
+<h2>集計スクリプト</h2>
+
+<p>簡単のため、<code>git log</code> の出力から日付などの可変部分はできるだけまとめて集計するようにしてみました。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>#!ruby
+</span><span class='line'>count = Hash.new(0)
+</span><span class='line'>ARGF.each_line do |line|
+</span><span class='line'>  if /Merge pull request #\d+ from / =~ line
+</span><span class='line'>    id, branch = $'.split('/', 2)
+</span><span class='line'>    branch.sub!(Regexp.quote(id), "{id}")
+</span><span class='line'>    branch.sub!(/\d{4}(.?)\d{2}(.?)\d{2}/, 'YYYY\1MM\2DD')
+</span><span class='line'>    branch.sub!(/tokyo|osaka|pixiv/, '{place}')
+</span><span class='line'>    count[branch] += 1
+</span><span class='line'>  end
+</span><span class='line'>end
+</span><span class='line'>count.keys.sort_by do |k|
+</span><span class='line'>  [-count[k], k]
+</span><span class='line'>end.each do |k|
+</span><span class='line'>  puts "#{count[k]}:#{k}"
+</span><span class='line'>end</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>集計結果</h2>
+
+<p>ふりかえり以外の pull request もあるので、すべてがふりかえりのものとは断言できないのですが、
+圧倒的に master, patch-1, patch-2 が多かったです。</p>
+
+<p>master は別ブランチを作っていないことが多いということを示しています。</p>
+
+<p>patch-1, patch-2, patch-3 などは github の Web から Edit で編集を開始するとできるブランチ名だったはずなので、
+Web で操作して作成した pull request かもしれません。</p>
+
+<p><code>masayuki14_closed_workshop</code> は「社内向けのクローズドでWorkshopを開催したので、ふりかえりのアンケートを共有します」とあるので、
+特殊なので無視して良さそうです。</p>
+
+<p>形式がバラバラで集計ではバラバラのままにしていますが、日付・場所・ID・役割 (beginner や mentor など) が入っていることが多く、
+workshop (や meetup)、retrospective (answer, comment, enquete) や add などの単語が使われていることが多いようです。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+<span class='line-number'>70</span>
+<span class='line-number'>71</span>
+<span class='line-number'>72</span>
+<span class='line-number'>73</span>
+<span class='line-number'>74</span>
+<span class='line-number'>75</span>
+<span class='line-number'>76</span>
+<span class='line-number'>77</span>
+<span class='line-number'>78</span>
+<span class='line-number'>79</span>
+<span class='line-number'>80</span>
+<span class='line-number'>81</span>
+<span class='line-number'>82</span>
+<span class='line-number'>83</span>
+<span class='line-number'>84</span>
+<span class='line-number'>85</span>
+<span class='line-number'>86</span>
+<span class='line-number'>87</span>
+<span class='line-number'>88</span>
+<span class='line-number'>89</span>
+<span class='line-number'>90</span>
+<span class='line-number'>91</span>
+<span class='line-number'>92</span>
+<span class='line-number'>93</span>
+<span class='line-number'>94</span>
+<span class='line-number'>95</span>
+<span class='line-number'>96</span>
+<span class='line-number'>97</span>
+<span class='line-number'>98</span>
+<span class='line-number'>99</span>
+<span class='line-number'>100</span>
+<span class='line-number'>101</span>
+<span class='line-number'>102</span>
+<span class='line-number'>103</span>
+<span class='line-number'>104</span>
+<span class='line-number'>105</span>
+<span class='line-number'>106</span>
+<span class='line-number'>107</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% git log | ruby /tmp/s.rb
+</span><span class='line'>99:master
+</span><span class='line'>60:patch-1
+</span><span class='line'>14:patch-2
+</span><span class='line'>6:masayuki14_closed_workshop
+</span><span class='line'>5:{id}
+</span><span class='line'>4:YYYY-MM-DD-{place}
+</span><span class='line'>4:YYYYMMDD_{place}_meetup_{id}
+</span><span class='line'>4:patch-3
+</span><span class='line'>3:retrospectives-YYYY-MM-DD
+</span><span class='line'>3:{id}-patch-1
+</span><span class='line'>2:YYYY-MM-DD-{id}
+</span><span class='line'>2:YYYYMMDD-{place}-workshop
+</span><span class='line'>2:YYYYMMDD_{place}_{id}
+</span><span class='line'>2:add-{id}-comment
+</span><span class='line'>2:knokmki612-patch-1
+</span><span class='line'>1:Add-{id}-enquete
+</span><span class='line'>1:YYYY-MM-DD-{place}-{id}
+</span><span class='line'>1:YYYY-MM-DD-{place}-{id}-answer
+</span><span class='line'>1:YYYY-MM-DD-{place}_{id}_retrospective
+</span><span class='line'>1:YYYYMMDD
+</span><span class='line'>1:YYYYMMDD_oss_gate_{place}_{id}_enquete
+</span><span class='line'>1:YYYYMMDD_retro
+</span><span class='line'>1:YYYYMMDD_ryo-endo
+</span><span class='line'>1:YYYYMMDD_{id}
+</span><span class='line'>1:YYYYMMDD_{place}_mentor_{id}
+</span><span class='line'>1:YYYYMMDD_{place}_{id}_answer
+</span><span class='line'>1:add-YYYYMMDD-{id}
+</span><span class='line'>1:add-YYYYMMDD-{place}
+</span><span class='line'>1:add-cm-wada-yusuke
+</span><span class='line'>1:add-comment
+</span><span class='line'>1:add-mentor-tSU-RooT-11-26
+</span><span class='line'>1:add-questionnaire-desc
+</span><span class='line'>1:add-yaml
+</span><span class='line'>1:add-{id}-0116
+</span><span class='line'>1:add-{id}-YYYY-MM-DD
+</span><span class='line'>1:add_beginner-{id}
+</span><span class='line'>1:add_description_of_oss_gate
+</span><span class='line'>1:add_mentor_yaml_by_{id}
+</span><span class='line'>1:add_questionnaire
+</span><span class='line'>1:add_retrospective_{id}
+</span><span class='line'>1:aggeregate
+</span><span class='line'>1:answer_by_satoryu
+</span><span class='line'>1:begginer-n-ina
+</span><span class='line'>1:beginner-{id}
+</span><span class='line'>1:change_issue_template
+</span><span class='line'>1:enquete
+</span><span class='line'>1:feature/YYYY_MM_DD_{place}_supporter_{id}
+</span><span class='line'>1:feature/add_{id}_answer
+</span><span class='line'>1:feature/retrospective
+</span><span class='line'>1:fill_retrospective_{id}
+</span><span class='line'>1:fix/issue_26
+</span><span class='line'>1:fix/retrospective_27
+</span><span class='line'>1:fix/typo
+</span><span class='line'>1:fix_retrospective
+</span><span class='line'>1:fix_supporter_questionnaire
+</span><span class='line'>1:fix_survey_url
+</span><span class='line'>1:fix_yaml_error
+</span><span class='line'>1:gitter-badge
+</span><span class='line'>1:goto_add_comment
+</span><span class='line'>1:hiroysato
+</span><span class='line'>1:improve_slide_2
+</span><span class='line'>1:improve_slide_split_2
+</span><span class='line'>1:issue_template
+</span><span class='line'>1:issue_template-2
+</span><span class='line'>1:kamimura
+</span><span class='line'>1:link-to-tutorial
+</span><span class='line'>1:make_template
+</span><span class='line'>1:mentor-majima
+</span><span class='line'>1:mentor-matsue
+</span><span class='line'>1:my_retrospectives
+</span><span class='line'>1:opinionaire_YYYYMMDD_morioka
+</span><span class='line'>1:patch-5
+</span><span class='line'>1:question_template
+</span><span class='line'>1:questionnaire
+</span><span class='line'>1:questionnaire-YYYY-MM-DD-{place}
+</span><span class='line'>1:rename
+</span><span class='line'>1:result_of_YYYY_MM_DD
+</span><span class='line'>1:retrospective
+</span><span class='line'>1:retrospective-{id}
+</span><span class='line'>1:retrospective_instruction
+</span><span class='line'>1:retrospective_{id}
+</span><span class='line'>1:retrospectives/{id}
+</span><span class='line'>1:sort_retrospectives
+</span><span class='line'>1:stat-rate
+</span><span class='line'>1:support-yaml-with-bom
+</span><span class='line'>1:survey_2017_3_25
+</span><span class='line'>1:tdtds
+</span><span class='line'>1:tricknotes
+</span><span class='line'>1:tricknotes-patch-1
+</span><span class='line'>1:update-retrospectives-readme
+</span><span class='line'>1:update_for_2016_9_24
+</span><span class='line'>1:write_questionnaire_kohei_otsuka
+</span><span class='line'>1:write_retrospectives
+</span><span class='line'>1:y-goto_surver_YYYYMMDD
+</span><span class='line'>1:y-goto_survey_YYYYMMDD
+</span><span class='line'>1:{id}-enquete-170116
+</span><span class='line'>1:{id}-mentor
+</span><span class='line'>1:{id}-oss-comment
+</span><span class='line'>1:{id}-questionnaire
+</span><span class='line'>1:{id}-workshop-answer1
+</span><span class='line'>1:{id}/n-n-n-
+</span><span class='line'>1:{id}/retrospective
+</span><span class='line'>1:{id}1
+</span><span class='line'>1:{id}_ans
+</span><span class='line'>1:{id}_closed_workshop
+</span><span class='line'>1:{place}_0629</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p>今回は <a href="https://github.com/oss-gate/workshop/pull/549">#549</a> の時に目視で確認していたのを、もうちょっとちゃんと確認してみました。
+ブランチ名やコミットメッセージはみんな色々悩んでつけている感じがして、過去のものを眺めてみると面白いと思います。</p>
+
+<p>OSS Gate のワークショップのふりかえりはワークショップの特性上、できるだけブランチ名も悩まずにとりあえずこれを使ってもらう、というのがあるのが望ましいので、固定の説明に変更しましたが、慣れていれば独自のブランチ名やコミットメッセージでも全く問題なさそうです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[OSS Gate大阪ワークショップ2017-08-12 with さくらクラブに参加しました]]></title>
@@ -4644,112 +4937,6 @@ Role Settings を開くとわかるのですが、なぜか Role Name は自動�
 <p>のように指定して使っていたり (この場合でも meta/main.yml は必要)、 playbook 用の repository の role 以下にそのまま入れていたり (この場合は meta/main.yml は不要) します。</p>
 
 <p>複数 role を登録していて、こういうフローで作業をしている人もいるということで、参考になれば幸いです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第 123 回関西 Debian 勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-05-28-kansai-debian-meeting.html"/>
-    <updated>2017-05-28T13:50:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
-    <content type="html"><![CDATA[<p><a href="https://debianjp.connpass.com/event/57323/" title="第 123 回関西 Debian 勉強会">第 123 回関西 Debian 勉強会</a>に参加しました。</p>
-
-<!--more-->
-
-
-<p>以下メモです。</p>
-
-<h2>会場など</h2>
-
-<p>Apache Arrow の勉強会の後、一緒にランチに行くのに参加していたら、ちょっと遅くなってしまって、 13:40 すぎに到着しました。</p>
-
-<h2>オープニング</h2>
-
-<ul>
-<li>事前課題は必須項目になっていなかったため、 connpass での参加登録時に出ていなかったので、その場で発表して資料が更新されていた。</li>
-<li>初参加の人がいた</li>
-<li>初めて作った人とか長い間使っていない人とか</li>
-<li>easypg は表示は復号されているがメモリダンプをしても平文はないらしい</li>
-<li>期限切れと revoke の違い: 期限切れはのばせるが、 revoke は取り消せない</li>
-</ul>
-
-
-<p>ruby の svn のコミットに必要という話は <a href="https://bugs.ruby-lang.org/projects/ruby/wiki/CommitterHowto">https://bugs.ruby-lang.org/projects/ruby/wiki/CommitterHowto</a> <a href="https://bugs.ruby-lang.org/projects/ruby/wiki/CommitterHowtoJa">https://bugs.ruby-lang.org/projects/ruby/wiki/CommitterHowtoJa</a> あたりに書いてあるのですが、今見ると <code>ssh-keygen -b 2048 -f ruby_key</code> になってて古い感じ。英語の方は <code>~/.ssh/id_rsa or ~/.ssh/id_dsa</code> と書いてあるのでもっと古い感じが。</p>
-
-<h3>途中で矢吹さんの話</h3>
-
-<ul>
-<li>カジュアルに使うのも良いけど、暗号関連は色々気にしている人もいるので気をつけましょう (色々なポリシーがあるのを尊重しましょう) という話とか</li>
-<li>cypherpunk : 暗号の民主化</li>
-<li>FST-01 を入手した (まだ秘密鍵は入れていない) ので回覧</li>
-</ul>
-
-
-<h2>GnuPG にまつわるアレコレ - GnuPG2 とか Keybase とか Yubikey とか</h2>
-
-<ul>
-<li>key id は昔は 8 文字だったけど conflict が作れるという話になって、今は 16 文字 (以上?) が普通らしい</li>
-<li>(勉強会中に聞きそびれてしまったけど、GPG の key id が fingerprint の末尾っていうのは、みんなどうやって知るんだろう?)</li>
-<li>(自分は昔の key sign party で fingerprint しか書いてないけど、どうやって fetch するの? と聞いたときに教えてもらったけど。)</li>
-<li>GnuPG とは?</li>
-<li>OpenPGP: RFC になっている</li>
-<li>暗号化によって盗聴を防ぐ (機密性)</li>
-<li>署名によって改ざんを検知可能にする (完全性)</li>
-<li>例: secure-apt, DKIM</li>
-<li>信頼の輪 (Web of trust) によって本人を同定</li>
-<li>過去の資料の参照情報紹介</li>
-<li><a href="https://wiki.debian.org/KansaiDebianMeeting/20150823" title="第 101 回 関西 Debian 勉強会">第 101 回 関西 Debian 勉強会</a>の「wiki:Subkeys」が気になった</li>
-<li>Windows の GUI の GPG クライアントで良いものがない</li>
-<li>mac は GPG Tools というので標準の Mail.app で GPG 対応できるらしい</li>
-<li>Web メールで困る話</li>
-<li>Thunderbird は Enigmail</li>
-<li>鍵の選び方の話</li>
-<li>ED25519 は gnupg 1.4 系 (今は oldstable ブランチ) で復号できない</li>
-<li>今の所は互換性のための RSA4096 と速い ED25519 を併用するのが良いかもしれない</li>
-<li>GnuPG 2 - Stretch での変更点</li>
-<li>gnupg (1.4 → 2.1), gnupg1 (なし → 1.4), gnupg2 (2.0 → drop)</li>
-<li>gnupg 2.1 は初回実行時に自動的に移行が実行されて、2.1 用のファイル (<code>pubring.kbx</code> とか <code>private-keys-v1.d/</code> とか) が作成される</li>
-<li>古いバージョン用のファイル (<code>pubring.gpg</code> とか <code>secring.gpg</code> とか) はそのまま残るので古いバージョンの共存も可能 (だがそれぞれのバージョンのファイルしか更新されないので、併用すると情報がずれていくはず)</li>
-<li>2.0 がどっちのファイルを使うのかは検証してないので不明</li>
-<li>プログラムの分離具合が整理された (<a href="http://miniconf.debian.or.jp/">Mini Debian Conference Japan 2016</a> の<a href="http://miniconf.debian.or.jp/assets/files/gnupg-now.html">g新部さんのスライド</a> の図が非常にわかりやすい (GnuPG programs (2) の図))</li>
-<li>proxy 設定が gpg.conf から dirmngr.conf に変わった</li>
-<li>use-gpg-agent が obsolete (常に有効で単純に無視される)</li>
-<li>大量の ssh 接続に使うと scdaemon がエントロピーが足りないという話</li>
-<li>haveged (はべーじでぃー(と言っていた)) とか rng-tools とか</li>
-<li>disable-scdaemon をつけておくと無駄に scdaemon が起動しなくなる (gpg-agent から scdaemon が起動して scdaemon 対応のデバイスがなければ、すぐに gpg-agent に返ってくるらしいが、起動するだけ無駄という話)</li>
-<li>gpg-agent を ssh-agent として使うのは簡単</li>
-<li>GNOME で gnome keyring daemon は止めやすい</li>
-<li>mate や xfce では ssh-agent を止めにくい</li>
-<li>ssh-agent を入れないときは <code>.xsessionrc</code> で <code>SSH_AUTH_SOCK</code> を自分で設定する必要がある</li>
-<li>mate や xfce では <code>.xsessionrc</code> で設定しても、さらに上書きされるらしい</li>
-<li>YubiKey <a href="https://yubikey.yubion.com/">https://yubikey.yubion.com/</a> <a href="https://www.cloudgate.jp/yubikey.html">https://www.cloudgate.jp/yubikey.html</a></li>
-<li>ED25519 には対応していない</li>
-<li>RSA 4096 で復号で 0.5 秒ぐらい</li>
-<li>(後でし</li>
-<li>Qt5 での GUI ツールとコマンドラインツールがある</li>
-<li>keybase.io というサービスがあるらしいが秘密鍵もアップロードできるらしく?</li>
-<li>アカウントを作ってみた <a href="https://keybase.io/uwabami">https://keybase.io/uwabami</a> が消すかも。</li>
-<li><a href="https://github.com/keybase/client">https://github.com/keybase/client</a> には大量の Issues が。</li>
-</ul>
-
-
-<h2>クロージング</h2>
-
-<ul>
-<li>今後の予定</li>
-<li>来月は17日に stretch がリリース予定なので、25日から18日に予定を変更してリリースパーティの可能性が高そう</li>
-</ul>
-
-
-<h2>よくわからないままだった点</h2>
-
-<ul>
-<li>懇親会への移動中などにある程度話しましたが</li>
-<li><code>gpg --version</code> で出てくる「公開鍵: RSA, ELG, DSA, ECDH, ECDSA, EDDSA」の「EDDSA」(ECDSA ではなく)と「ED25519」は同じ?</li>
-<li>Curve25519 と ED25519 の関係</li>
-<li><a href="https://ja.wikipedia.org/wiki/%E3%82%A8%E3%83%89%E3%83%AF%E3%83%BC%E3%82%BA%E6%9B%B2%E7%B7%9A%E3%83%87%E3%82%B8%E3%82%BF%E3%83%AB%E7%BD%B2%E5%90%8D%E3%82%A2%E3%83%AB%E3%82%B4%E3%83%AA%E3%82%BA%E3%83%A0" title="エドワーズ曲線デジタル署名アルゴリズム">エドワーズ曲線デジタル署名アルゴリズム</a> に多少説明がある</li>
-</ul>
-
 ]]></content>
   </entry>
   
