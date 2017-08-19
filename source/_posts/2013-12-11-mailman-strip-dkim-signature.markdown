@@ -14,6 +14,21 @@ fml から移行した mailman で Subject の書き換える設定をしてい�
 
 <!--more-->
 
+## 2017-08-17 追記
+
+Debian GNU/Linux 9 (stretch) の mailman 2.1.23 の
+`/usr/lib/mailman/Mailman/Defaults.py` の説明によると、
+いつの間にか `REMOVE_DKIM_HEADERS = Yes` だと `From` ヘッダーを改変した場合しか削除してくれなくなったようで、
+常に削除するには `REMOVE_DKIM_HEADERS = 2` にする必要があるようです。
+`REMOVE_DKIM_HEADERS = 3` で rename して残す設定もできるようです。
+
+反映方法も systemd 対応で `sudo systemctl restart mailman.service` でもできるようになっています。
+
+今まで気づいていなかったのですが、
+Debian GNU/Linux 8 (jessie) の mailman 2.1.18 で配送されたメールにも DKIM-Signature が残っていたので、
+Debian GNU/Linux 7 (wheezy) の mailman 2.1.15 では `Yes` でよかったものが、
+2.1.18 の時にすでに変わっていたようです。
+
 ## mailman の設定
 
 `REMOVE_DKIM_HEADERS` という設定があったので、
