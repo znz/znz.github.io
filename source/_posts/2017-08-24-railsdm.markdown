@@ -1,0 +1,170 @@
+---
+layout: post
+title: "Rails Developers Meetup #4 大阪会場に参加しました"
+date: 2017-08-24 22:52:52 +0900
+comments: true
+categories: event
+---
+[Rails Developers Meetup #4 大阪会場](https://rails-developers-meetup.connpass.com/event/63373/) に参加しました。
+
+<!--more-->
+
+## 会場
+
+最近よくいっているタワーAではなく、タワーBだったので、グランフロント内の案内をみながらたどり着きました。
+
+## オープニング
+
+- 会場の説明
+- ハッシュタグは `#railsdm`
+- プログラムの紹介
+
+## Keynote 01: Dive into Rubygems
+
+- [Dive into Rubygems](http://qiita.com/pocke/items/1db63a3aecade1245f42)
+- rails は new しただけでも依存している gem が結構多い
+- Gem のコードを読んだ実例
+- Gem の読み方
+- gem-src が便利
+- Gem のディレクトリ構成
+- lib: 基本的にlib/直下にはGEMNAME.rbとGEMNAME/しか置かれていない (rubocop とか)
+- spec, test: テストコードは動くexample
+- exe, bin: 実行ファイル (最近は exe)
+- Gem の依存関係
+- `add_development_dependency` を使わずに `Gemfile` に書いてしまっている場合もある
+- Gem をインストールする
+- tmpgem の紹介
+- Gem を作る
+- exe ディレクトリは自分で作る
+- git に stage しないと gem に追加されない (gemspec で `git ls-files -z` を使っているため)
+
+- https://twitter.com/p_ck_/status/803420202008313856 `alias taketemp='cd "$(mktemp -d)"'`
+- zsh の `REPORTTIME` と `TIMEFMT`
+
+## Keynote 02: プロを目指すRailsエンジニアのための公開コードレビュー
+
+- 自己紹介
+- [Everyday Rails](https://leanpub.com/everydayrailsrspec-jp)
+- [「プロを目指す人のためのRuby入門」という本が出る予定](http://blog.jnito.com/entry/2017/05/30/120148)
+- 公開コードレビュー・その1: https://github.com/JunichiIto/train-ticket-rails/pull/27/files
+- 公開コードレビュー・その2: https://github.com/JunichiIto/train-ticket-rails/pull/15/files
+- `calculate` が 0 を返すのが 0 円ではなく、特別扱いするという意味なのが将来バグの元になりそう
+- 出題者の解答例: https://github.com/JunichiIto/train-ticket-rails/compare/answer
+- 気になったポイント
+- 使用済みの切符: 1. nil でなければ真, 2. present? で明治, 3. インスタンスメソッドを使って抽象化
+- 3が読み手にやさしい
+- `?` で終わるメソッドの責務を考える
+- 例: https://github.com/JunichiIto/train-ticket-rails/pull/10/files
+- チェックして `redirect_to`, チェックして `errors.add`
+- いいの?
+- `?` で終わるメソッドは真偽値を返すだけにするのが良いのではないか
+- 例外: ActiveRecord の valid? メソッド
+- redirect_to + return の return っている?
+- 複数回呼ぶと DoubleRenderError になるので、場合によっては必要
+- まとめ
+- メソッドの責務を考えよう
+- いい感じに抽象化しよう: 「意図がわかるロジック」よりも「意図がわかる名前」を
+- 不要なコンテキストをなくそう
+- Rails の機能を使いこなそう
+- この発表までの間に pull request してくれたものは全て動画でコメントする予定
+
+- https://github.com/JunichiIto/train-ticket-rails/compare/answer#diff-c5c8cfc10273d831451b7acc93c3809dR7 で `exited?` を使っていないのは、降りきってないのに validate するのは英語として不自然に感じたから
+- 後置 if を使うかどうかは読んだ時に不自然に感じないかどうか
+
+- https://speakerdeck.com/jnchito/number-railsdm
+
+## 休憩
+
+## LT 01: Bye, tachikoma gem
+
+- [Bye, tachikoma gem](https://www.slideshare.net/sanemat/byetachikomagem)
+- tachikoma gem が deprecated
+- 2015-12-10 に Tachikoma next というスライドを作っていた
+- tachikoma gem の思い出
+- http://tachikoma.io/ は続く
+
+- Saddler gem → Reviewdog
+- https://github.com/packsaddle
+- reviewdog は reviewdog design docs がある
+
+- Heroku の CLI は Go 実装から Pure Node.js に変更したらしい https://blog.heroku.com/evolution-of-heroku-cli-2008-2017
+
+## LT 02: Rubyistだった僕がRailsを使ってみて（仮）
+
+- 1: Ruby で感動したこと
+- ブロックと従属節: 従属節も2つとる自然言語はない
+- 2: Ruby をやらずに Rails から入った人にありがちなこと
+- (面白かったけど速くてメモ取れず)
+- 基本が大事
+- 3: マネーフォワード API
+- 認証: OpenID Connect
+- 認可: OAuth 2.0
+- doorkeeper gem を使っている
+
+## LT 03: Railsで新規サービスを開発する際にやったこと
+
+- https://www.slideshare.net/JyunichiKuriyama/rails-79120665
+- https://ydkr.jp/
+- プロジェクトの目的、目標とは別に自分の目的を決めた: 「技術を正しくつかう」
+- docker による開発環境などを準備
+- テストは必ず書くと決めた
+- モチベーションの維持のため、まえにすすむことを意識
+- どんなによいコードでもサービスが当たらなければ意味ない
+- どう書いてほしいのかどういう考えで作ってるのかを考えながらやるのはよかった
+- 最後に自己紹介
+- 質疑応答
+- 最低限 controller の spec
+
+## LT 04: Webpacker is installed
+
+- webpacker gem
+- Misoca に導入した時の話
+- Before: sprockets, browserify-rails, npm 依存とそうでないものが混在, フルビルドに時間がかかる
+- After: js は webpacker に完全移行, CSS は引き続き sprockets, フルビルドが20〜30秒
+
+- よかったところ
+- 環境に応じた切り替え, fingerprint 付きファイルの生成 などを一気にやってくれる
+- webpack 自体を活用できる
+- 例: CommonsChunkPlugin
+- webpacker 自体の恩恵ではなく、 webpacker はきっかけ
+
+- つらかったところ
+- Rails と webpack の境界が曖昧
+- 開発中の問題: webpack の起動がめんどくさい
+- foreman で一緒に起動はできるが、なんか止まることがある?
+- feature spec でビルドされないことがある
+- `javascript_pack_tag` が更新の時にビルドされない
+
+- 感想
+- 総合してふりかえると webpacker はよかった
+- Rails Way に乗れることは大きい
+- カスタマイズ時には知識が必要
+
+- 質疑応答
+- webpacker のデフォルトのディレクトリ構成に移行した
+
+- https://speakerdeck.com/mugi_uno/webpacker-is-installed
+
+## LT 05: Automation test in RoR project
+
+- 後の工程でバグが見つかると高いコストがかかる
+- UI テスト: 手動テスト vs 自動テスト
+- 自動テストツール cucumber
+- Gherkin language: Cucumber nomenclator
+- Capybara
+- Gherkin to Capybara
+- results
+- Cucumber: tagging
+- Distributed testing with Docker
+
+- 質疑応答
+- Q: エンジニア以外がかけるという話があるが、結局エンジニアが書くことになってつらい?
+- A: 結局エンジニアが書いてるっぽい(?)
+- Q: UI テストに cucumber 以外を使うなら何を使う?
+- A: Selenium IDE を使っている
+
+## クロージング
+
+- 次回予告
+- 次回から TECH PLAY で募集
+- 12月に Rails Meetup 2017 というのをやる
