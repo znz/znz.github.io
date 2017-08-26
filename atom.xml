@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-08-24T22:59:28+09:00</updated>
+  <updated>2017-08-26T22:48:47+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,236 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第30回シェル芸勉強会　大阪サテライト＠さくらインターネット大阪本社に午後から参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-08-26-usptomo-osaka.html"/>
+    <updated>2017-08-26T13:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/usptomo-osaka</id>
+    <content type="html"><![CDATA[<p><a href="https://atnd.org/events/90102">第30回シェル芸勉強会　大阪サテライト＠さくらインターネット大阪本社</a>に午後から参加しました。</p>
+
+<!--more-->
+
+
+<h2>会場</h2>
+
+<p>最近よくいっているグランフロントタワーAのさくらインターネットさんでしたが、今回は初めて部屋の中の方に参加しました。</p>
+
+<h2>第30回シェル芸勉強会</h2>
+
+<p>問題は <a href="https://blog.ueda.tech/?p=10188">【問題のみ】jus共催 第30回危念シェル芸勉強会</a> にあります。</p>
+
+<p>主に macOS の環境で確認しました。</p>
+
+<h3>Q1</h3>
+
+<ul>
+<li><code>awk '/^Keywords:/{print FILENAME ":" $0;nextfile}' posts/*/*.md</code> としてみた。</li>
+<li>nextfile などを調べていたら時間がかかってしまってあまりちゃんとできず。</li>
+<li>ファイル名部分のパスなどの掃除が必要と気づいてなかったのでできていなかった。</li>
+<li>解答例では <code>grep -m 1</code> を使っていたけど、 macOS の grep (BSD grep) 2.5.1-FreeBSD だと動作が違うようで、最初のファイルで止まってしまって、うまく動かなかった。</li>
+</ul>
+
+
+<p>macOS Sierra 10.12.6 の例:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% grep --version
+</span><span class='line'>grep (BSD grep) 2.5.1-FreeBSD
+</span><span class='line'>% grep -m 1 : /etc/passwd /etc/group
+</span><span class='line'>/etc/passwd:nobody:*:-2:-2:Unprivileged User:/var/empty:/usr/bin/false</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Debian GNU/Linux 9.1 (stretch) の例:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ grep --version
+</span><span class='line'>grep (GNU grep) 2.27
+</span><span class='line'>Copyright (C) 2016 Free Software Foundation, Inc.
+</span><span class='line'>ライセンス GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;.
+</span><span class='line'>This is free software: you are free to change and redistribute it.
+</span><span class='line'>There is NO WARRANTY, to the extent permitted by law.
+</span><span class='line'>
+</span><span class='line'>作者 Mike Haertel および その他の方々は &lt;http://git.sv.gnu.org/cgit/grep.git/tree/AUTHORS&gt; を参照してください。
+</span><span class='line'>$ grep -m 1 : /etc/passwd /etc/group
+</span><span class='line'>/etc/passwd:root:x:0:0:root:/root:/bin/bash
+</span><span class='line'>/etc/group:root:x:0:</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Q2</h3>
+
+<ul>
+<li><code>perl -pe 's,(href|src)="(?!http|/)(\./)?,$1="/files/,g' url.html</code></li>
+<li><code>(?!)</code> を使いたかったので Perl で。</li>
+<li>最初に試しに書いたのはゆるすぎていらないところにつきまくっていた。</li>
+<li>正規表現が緩いと charset の属性まで変換してしまうという罠があった。</li>
+<li>気にせず置き換えてあとで <code>/files/http://</code> などになった場合に戻すという方針の人が多かった。</li>
+</ul>
+
+
+<h3>Q3</h3>
+
+<ul>
+<li><code>&lt; list | awk 'BEGIN{print "...";print "..."};/^\* /{print "&lt;li&gt;" $2 "&lt;/li&gt;"};END{print "...";print "..."}'</code></li>
+<li>前後の部分の内容を省略するとこんな感じになった。</li>
+<li><code>cat list | pandoc -t html5 -s</code> して削るという手もありらしい</li>
+<li>Web サーバーにするには list.html の内容だけではなく <code>HTTP/1.1 200 OK</code> の行も追加する必要があった</li>
+</ul>
+
+
+<h3>Q4</h3>
+
+<ul>
+<li>hub コマンドを使ってよかったらしい</li>
+<li>がんばって API をたたくのもありっぽい</li>
+</ul>
+
+
+<h3>Q5</h3>
+
+<ul>
+<li><code>sed -e 's/[ *]//g' -e '1s/^/p /' -e '$!s/$/*/' complex | ruby</code> はかっこ不足だった。(複素数リテラルが優先されると思ってしまっていた。)</li>
+<li><code>sed -e 's/[ *]//g' -e '1s/^/p (/' -e '$!s/$/)*(/' -e '$s/$/)/' complex | ruby</code> でうまくいった。</li>
+<li>別解として1行ごとに解釈して inject してみた : <code>ruby -e 'p ARGF.each_line.map{|s|eval(s.gsub(/(?&lt;!\d)i/,"1i"))}.inject(:*)' complex</code></li>
+</ul>
+
+
+<h3>Q6</h3>
+
+<ul>
+<li>真面目に計算すると <code>ruby -e 'a=[1,1];f=-&gt;(n){a[n]||=f[n-1]+f[n-2]};1.step{|n|if f[n]==6765;p f[n-4];exit;end}'</code> になった。</li>
+<li>自分で計算せずに出そうとすると <code>curl https://en.wikipedia.org/wiki/Fibonacci_number | grep -B4 6765 | head -n 1 | grep -Eo '[[:digit:]]+'</code> になった。英語版 Wikipedia を使っているのは URL が短くてわかりやすいからで、日本語版 Wikipedia の URL でも可能でした。</li>
+<li>最初、curl のダウンロード状況出力の右に隠れてしまって1行見落としていて <code>grep -B5</code> にしてしまっていましたが、 <code>grep -B4</code> でした。</li>
+</ul>
+
+
+<h3>Q7</h3>
+
+<ul>
+<li>zsh の組み込みのみで <code>for n in {00..99}; [[ -z ${(FM)"$(&lt; nums)":#*$n*} ]] &amp;&amp; echo $n</code></li>
+<li>解説は <a href="http://blog.n-z.jp/blog/2014-12-11-zsh-grep.html">zshでgrepのようなことをする</a> を参照</li>
+<li>シーケンスは <code>seq -w 0 99</code> とか <code>{0..9}{0..9}</code> とか</li>
+<li><code>{00..99}</code> は bash 3 だとダメそうだった。 (0 1 &hellip; になった)</li>
+<li><code>grep -o ..</code> は <code>echo 1234 | grep -o ..</code> で 23 が出てこないのでダメ</li>
+<li><code>echo 1234 | sed p | sed '1s/.//' | grep -o ..</code> のようにする</li>
+<li>解答例: <code>cat nums | sed p | sed '1s/.//' | grep -o .. | cat - &lt;(seq -w 0 99) | sort | uniq -u</code></li>
+<li>fold -w 2 とかこういう時に使ってみると良さそうなコマンドは色々あるっぽい</li>
+</ul>
+
+
+<h3>Q8</h3>
+
+<ul>
+<li>問題 差し替え <a href="https://twitter.com/ryuichiueda/status/901330659527897088">https://twitter.com/ryuichiueda/status/901330659527897088</a></li>
+<li><code>ruby -e 'ARGF.each_line.map{|s|[(s[2].ord-s[0].ord).abs,s]}.max[1].display' alphabet</code></li>
+<li><code>z-v</code> という逆順のところも考慮して abs を入れたけどいらなかったかもしれない。</li>
+<li>別解で36進数を使ってみた: <code>ruby -e 'ARGF.each_line.map{|s|[eval(s.gsub(/\w+/){$&amp;.to_i(36)}).abs,s]}.max[1].display' alphabet</code></li>
+<li>abs の代わりにソートして引くという方法もあるらしい</li>
+<li><code>map</code> + <code>max[1]</code> でシュワルツ変換的なことをしなくても <code>max_by</code> でよかったらしい</li>
+<li>解答例は bash のブレース展開を使っていた</li>
+<li>xxd で変換して計算する解答例も紹介されていた</li>
+</ul>
+
+
+<h2>午後の部終了</h2>
+
+<p>午後の部まで参加の人はここで帰っていました。</p>
+
+<h2>LT 大会</h2>
+
+<p>LT は中継はどうなるんだろうと思っていたら、大阪は大阪で LT をしていました。</p>
+
+<h3>シェル芸思考</h3>
+
+<ul>
+<li><a href="https://www.slideshare.net/kunst1080/30lt">第30回シェル芸勉強会LT シェル芸思考</a></li>
+<li>問題を解く時にどう考えているのか</li>
+<li>1: コマンド一撃でオプションを知っていればすぐにできるようなものかどうか考える</li>
+<li>終わりそうにない場合続きを考える</li>
+<li>2: 中間データの形式を設計する</li>
+<li>3: コマンドを組み合わせて解いていく</li>
+<li>メインは 2</li>
+<li>設計の考え方</li>
+<li>形について考える</li>
+<li>例: <a href="https://togetter.com/li/1041621">【ファン迷惑】「響け！ユーフォニアム」という文字列だけで遊ぶシェル芸人達</a></li>
+<li>中間データ1: 11回繰り返す</li>
+<li>中間データ2: 11文字で折り返す</li>
+<li>中間データ3: 10文字で切り出す</li>
+</ul>
+
+
+<h3>FORK 爆弾爆発中のロードアベレージを見る</h3>
+
+<ul>
+<li><a href="https://speakerdeck.com/msr_i386/cgroup">https://speakerdeck.com/msr_i386/cgroup</a></li>
+<li>前回 SysRq でクラッシュさせてカーネルダンプで見た</li>
+<li>今回 実行中にみたい</li>
+<li>uptime コマンド, w コマンド, top コマンド, カーネルダンプの解析</li>
+<li>カーネルダンプは1回のみでリアルタイムは無理</li>
+<li>uptime, w は起動できない</li>
+<li>top は反応が止まるので無理</li>
+<li>cgroup で制御: cpuset を 0-2 と memory を 1GB に制限</li>
+<li>root:bash に制限</li>
+<li>forkbomb というグループを用意する</li>
+<li>仮想4コア, メモリ16GB の VM でデモ</li>
+<li>bash はランダムに kill されるのでデフォルトシェルを zsh にしておいて zsh から bash を起動</li>
+<li>キーボード配列がおかしかったのでメモ帳で入力して貼り付けしたら zsh で実行してしまう事故発生</li>
+<li>VM 再起動待ち</li>
+<li>今度はちゃんと bash で実行</li>
+<li>メモリ 1GB だと 11700 個ぐらい bash が起動している</li>
+<li>ロードアベレージは 10000 を超えていた</li>
+<li>cgconfig.conf は CentOS 7 では非推奨で systemd 経由で使うようになっている</li>
+</ul>
+
+
+<h3>破壊的難読化シェル芸</h3>
+
+<ul>
+<li>難読化シェル芸</li>
+<li>置換による難読化はあまりにも弱い</li>
+<li>難読化シェル芸には新たな武器が必要</li>
+<li>武器っぽいコマンド gunzip (ガンジップ)</li>
+<li>gun(銃)が弱いわけがない</li>
+<li>gzip -cf</li>
+<li>入力できない</li>
+<li>xxd を通す</li>
+<li>xxd -r -p | gunzip</li>
+<li>別のアプローチ</li>
+<li>gunzip の代わりに cut と組み合わせる</li>
+<li>いろいろ探してみつけた例を実行</li>
+</ul>
+
+
+<h3>AWS API リクエストへの署名</h3>
+
+<ul>
+<li>REST API</li>
+<li>リクエストに access key と secret access key で署名する必要がある</li>
+<li>署名バージョン4: AWS4-HMAC-SHA256</li>
+<li>署名のテストスイートも公開されている</li>
+<li>署名のプロセスをシェル芸で追いかける</li>
+<li>CLI / SDK に存在しない API がある: Amazon RDS / DownloadCompleteDBLogFile</li>
+<li>CLI / SDK にあるのは download-db-log-file-portion のみで分割ダウンロードされる</li>
+<li>例に使うのは AWS IAM / ListUsers</li>
+<li>例に使う時刻も固定しておく</li>
+<li>署名作成手順の説明</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Rails Developers Meetup #4 大阪会場に参加しました]]></title>
@@ -5389,96 +5619,6 @@ graphiql-rails の方はエラーの時に <code>SyntaxError: Unexpected token &
 <p>lxc/lxd の話がきけてよかったです。Web 上ではあまり見かけないと思っていましたが、使っているところではちゃんと使っていて、安定して運用できていると聞いて、用途によっては使ってみたいと思いました。</p>
 
 <p>Docker の話も普段 Dokku などで使っていて、なんか色々変わっていっているとは感じていましたが、まとまった話として聞けてよかったです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[ansibleでjsonファイルの設定を更新した]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-06-16-ansible-json.html"/>
-    <updated>2017-06-16T21:26:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ansible-json</id>
-    <content type="html"><![CDATA[<p>ansible で json ファイル (今回は <code>/etc/docker/daemon.json</code>) を更新したかったのですが、 <code>lineinfile</code> や <code>replace</code> や <code>ini_file</code> のように単独のモジュールで簡単にできるものではなかったので、少し工夫をして実現しました。</p>
-
-<!--more-->
-
-
-<h2>動作確認バージョン</h2>
-
-<ul>
-<li>ansible 2.3.1.0</li>
-</ul>
-
-
-<p>combine フィルター (後述) が New in version 2.0 なので、 1.x では動かないと思います。</p>
-
-<h2>実例</h2>
-
-<p><a href="https://github.com/znz/ansible-role-docker">https://github.com/znz/ansible-role-docker</a> や <a href="https://github.com/znz/ansible-playbook-gitlab-dokku/tree/master/provision/roles/docker-dns">https://github.com/znz/ansible-playbook-gitlab-dokku/tree/master/provision/roles/docker-dns</a> にあります。</p>
-
-<h2>json ファイル読み込み</h2>
-
-<p>まずは <code>command</code> モジュールで読み込んで、 <code>set_fact</code> で変数に設定しておきます。</p>
-
-<pre><code>- name: "Read daemon.json"
-  command: cat /etc/docker/daemon.json
-  register: result
-  changed_when: no
-</code></pre>
-
-<p>記事を書いていて気づいたのですが、リモートからファイルを読み込むには <code>slurp</code> モジュールというのがあるようですが、作った時点では知らなかったので、使っていません。</p>
-
-<p>base64 でエンコードされていて b64decode を通す必要があるようなので、何度も参照するなら、次の <code>set_fact</code> を組み合わせた方が良さそうなのは変わらなさそうです。</p>
-
-<h2>json から dict に変換</h2>
-
-<p>json の文字列から <a href="http://docs.ansible.com/ansible/playbooks_filters.html#filters-for-formatting-data"><code>from_json</code>フィルター</a>で変換します。</p>
-
-<pre><code>- set_fact: docker_daemon_json="{{ result.stdout | from_json }}"
-</code></pre>
-
-<h2>combine フィルターでマージ</h2>
-
-<p><a href="http://docs.ansible.com/ansible/playbooks_filters.html#combining-hashes-dictionaries"><code>combine</code>フィルター</a>で設定をマージして、 <code>to_json</code> フィルターで json 文字列に変換してファイルに書き出します。</p>
-
-<p>今回の用途では、ネストしたデータは考慮する必要がなく、トップレベルのキーが一致するもので置き換えられればよかったので、 <code>recursive=True</code> は指定していません。</p>
-
-<p><code>when</code> でのチェックもしておかないと、設定内容としては変わっていないのに、 json 文字列になった時にキーの順番が変わっているのか、 changed になってしまうことがあったので、 <code>when</code> で設定内容に変更がある時だけ書き込むようにしています。</p>
-
-<pre><code>- name: "Update daemon.json"
-  template:
-    src: daemon.json.j2
-    dest: /etc/docker/daemon.json
-    owner: root
-    group: root
-    mode: 0400
-  when: "docker_daemon_json != docker_daemon_json|combine({'dns':dns})"
-  notify:
-  - restart docker
-</code></pre>
-
-<p>templates/daemon.json.j2:</p>
-
-<pre><code>{{ docker_daemon_json | combine({"dns": dns}) | to_json }}
-</code></pre>
-
-<h2>動作確認</h2>
-
-<p>全体ができた後に、</p>
-
-<ul>
-<li>ファイルがない時の動作</li>
-<li>設定が変わらない時の動作</li>
-<li>設定が変わる時の動作</li>
-</ul>
-
-
-<p>も確認しておきます。</p>
-
-<h2>docker のデーモン設定ファイル</h2>
-
-<p>docker の<a href="http://docs.docker.jp/engine/reference/commandline/dockerd.html#daemon-configuration-file">デーモン設定ファイル</a>は <code>insecure-registries</code> (<code>--insecure-registry=[]</code>) や <code>dns</code> や <code>bip</code> など dockerd のオプションで指定できるものはなんでも指定できます。</p>
-
-<p><a href="http://docs.docker.jp/engine/admin/systemd.html#custom-docker-daemon-options">docker デーモンのオプション変更</a>は systemd の docker.service の設定を変更する方法もあるようですが、ローカルの変更をローカルの独立ファイルに隔離できて、バージョンアップの影響も少なそうなので、 daemon.json を使うことにしました。</p>
 ]]></content>
   </entry>
   

@@ -5,13 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>capistrano 3.3.3 が依存している capistrano-stats について - @znz blog</title>
+  <title>第30回シェル芸勉強会　大阪サテライト＠さくらインターネット大阪本社に午後から参加しました - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="capistrano 3.3.3 が依存している capistrano-stats について 2014-12-01 (Mon) 9:33 pm | Comments capistrano が 3.3.3 にあがって
-capistrano-stats
-という gem に依存するようになりました。 &hellip;">
+  <meta name="description" content="第30回シェル芸勉強会　大阪サテライト＠さくらインターネット大阪本社に午後から参加しました 2017-08-26 (Sat) 1:00 pm | Comments 第30回シェル芸勉強会　大阪サテライト＠さくらインターネット大阪本社に午後から参加しました。 会場 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -20,7 +18,7 @@ capistrano-stats
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-12-01-capistrano-stats.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-08-26-usptomo-osaka.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -85,7 +83,7 @@ capistrano-stats
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">capistrano 3.3.3 が依存している capistrano-stats について</h1>
+      <h1 class="entry-title">第30回シェル芸勉強会　大阪サテライト＠さくらインターネット大阪本社に午後から参加しました</h1>
       
       <!-- zenback_title_end -->
       
@@ -97,7 +95,7 @@ capistrano-stats
 
 
 
-<time class='entry-date' datetime='2014-12-01T21:33:21+09:00'><span class='date'>2014-12-01 (Mon)</span> <span class='time'>9:33 pm</span></time>
+<time class='entry-date' datetime='2017-08-26T13:00:00+09:00'><span class='date'>2017-08-26 (Sat)</span> <span class='time'>1:00 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -110,78 +108,228 @@ capistrano-stats
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p>capistrano が 3.3.3 にあがって
-<a href="https://github.com/capistrano/stats">capistrano-stats</a>
-という gem に依存するようになりました。
-これは <code>metrics.capistranorb.com:1200</code> にバージョン情報などを送信して
-capistrano のサポートの改善に役立てようとするもののようです。</p>
+<div class="entry-content"><p><a href="https://atnd.org/events/90102">第30回シェル芸勉強会　大阪サテライト＠さくらインターネット大阪本社</a>に午後から参加しました。</p>
 
 <!--more-->
 
 
-<h2>対象バージョン</h2>
+<h2>会場</h2>
+
+<p>最近よくいっているグランフロントタワーAのさくらインターネットさんでしたが、今回は初めて部屋の中の方に参加しました。</p>
+
+<h2>第30回シェル芸勉強会</h2>
+
+<p>問題は <a href="https://blog.ueda.tech/?p=10188">【問題のみ】jus共催 第30回危念シェル芸勉強会</a> にあります。</p>
+
+<p>主に macOS の環境で確認しました。</p>
+
+<h3>Q1</h3>
 
 <ul>
-<li>capistrano 3.3.3</li>
-<li>capistrano-stats 1.0.3</li>
+<li><code>awk '/^Keywords:/{print FILENAME ":" $0;nextfile}' posts/*/*.md</code> としてみた。</li>
+<li>nextfile などを調べていたら時間がかかってしまってあまりちゃんとできず。</li>
+<li>ファイル名部分のパスなどの掃除が必要と気づいてなかったのでできていなかった。</li>
+<li>解答例では <code>grep -m 1</code> を使っていたけど、 macOS の grep (BSD grep) 2.5.1-FreeBSD だと動作が違うようで、最初のファイルで止まってしまって、うまく動かなかった。</li>
 </ul>
 
 
-<h2>Capfile locked</h2>
+<p>macOS Sierra 10.12.6 の例:</p>
 
-<p>capistrano-stats とは関係ないですが、
-<code>Capfile locked at 3.2.1, but 3.3.3 is loaded</code>
-と出るときは <code>config/deploy.rb</code> の最初の方にある
-<code>lock '3.2.1'</code>
-という行を
-<code>lock '3.3.3'</code>
-に書き換えれば OK です。</p>
-
-<h2>capistrano-stats 1.0.3 の挙動</h2>
-
-<p>初回実行時に
-<code>Do you want to enable statistics? (y/N):</code>
-ときかれて、
-そのまま Enter か <code>n</code> を入力すると ruby や capistrano のバージョンは送信されなくなるのですが、
-(少なくとも私の) 期待に反して
-<code>metrics.capistranorb.com:1200</code>
-への送信自体は発生するようになっています。</p>
-
-<h2>何が問題か</h2>
-
-<p>全く送信してほしくない場合にも通信が発生したり、
-firewall で塞がれている場合にエラーになったり
-という問題があります。</p>
-
-<h2>一時的に無効にするには?</h2>
-
-<p><code>CAPISTRANO_METRICS=localhost:1200 bundle exec cap default</code>
-のように環境変数 <code>CAPISTRANO_METRICS</code> で送っても無視されるところに送信すれば良さそうです。</p>
-
-<h2>完全に無効にするには?</h2>
-
-<p>pull request 1 の
-<a href="https://github.com/capistrano/stats/pull/1" title="Honor the users privacy decision and do not send UDP packets if he does not want to send metrics">Honor the users privacy decision and do not send UDP packets if he does not want to send metrics</a>
-にあるように</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">Rake</span><span class="o">::</span><span class="no">Task</span><span class="o">[</span><span class="s1">&#39;metrics:collect&#39;</span><span class="o">].</span><span class="n">clear_actions</span>
-</span></code></pre></td></tr></table></div></figure>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% grep --version
+</span><span class='line'>grep (BSD grep) 2.5.1-FreeBSD
+</span><span class='line'>% grep -m 1 : /etc/passwd /etc/group
+</span><span class='line'>/etc/passwd:nobody:*:-2:-2:Unprivileged User:/var/empty:/usr/bin/false</span></code></pre></td></tr></table></div></figure>
 
 
-<p>を <code>config/deploy.rb</code> に追加すると送信されなくなりました。</p>
+<p>Debian GNU/Linux 9.1 (stretch) の例:</p>
 
-<h2>今後</h2>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ grep --version
+</span><span class='line'>grep (GNU grep) 2.27
+</span><span class='line'>Copyright (C) 2016 Free Software Foundation, Inc.
+</span><span class='line'>ライセンス GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;.
+</span><span class='line'>This is free software: you are free to change and redistribute it.
+</span><span class='line'>There is NO WARRANTY, to the extent permitted by law.
+</span><span class='line'>
+</span><span class='line'>作者 Mike Haertel および その他の方々は &lt;http://git.sv.gnu.org/cgit/grep.git/tree/AUTHORS&gt; を参照してください。
+</span><span class='line'>$ grep -m 1 : /etc/passwd /etc/group
+</span><span class='line'>/etc/passwd:root:x:0:0:root:/root:/bin/bash
+</span><span class='line'>/etc/group:root:x:0:</span></code></pre></td></tr></table></div></figure>
 
-<p><a href="https://github.com/capistrano/stats/pull/2" title="Allow users to opt-out of sending the UDP ping and improve error handling when the sendto syscall fails">Allow users to opt-out of sending the UDP ping and improve error handling when the sendto syscall fails</a>
-という pull request が続きで出ているので、
-将来のバージョンでは全く送信しない選択肢が用意されるかもしれません。</p>
 
-<h2>2014-12-13 追記</h2>
+<h3>Q2</h3>
 
-<p>その後、
-capistrano 3.3.4 と capistrano-stats 1.1.0 にあがって、
-デフォルトの N を 2 回は全く送信しないようになりました。</p>
+<ul>
+<li><code>perl -pe 's,(href|src)="(?!http|/)(\./)?,$1="/files/,g' url.html</code></li>
+<li><code>(?!)</code> を使いたかったので Perl で。</li>
+<li>最初に試しに書いたのはゆるすぎていらないところにつきまくっていた。</li>
+<li>正規表現が緩いと charset の属性まで変換してしまうという罠があった。</li>
+<li>気にせず置き換えてあとで <code>/files/http://</code> などになった場合に戻すという方針の人が多かった。</li>
+</ul>
+
+
+<h3>Q3</h3>
+
+<ul>
+<li><code>&lt; list | awk 'BEGIN{print "...";print "..."};/^\* /{print "&lt;li&gt;" $2 "&lt;/li&gt;"};END{print "...";print "..."}'</code></li>
+<li>前後の部分の内容を省略するとこんな感じになった。</li>
+<li><code>cat list | pandoc -t html5 -s</code> して削るという手もありらしい</li>
+<li>Web サーバーにするには list.html の内容だけではなく <code>HTTP/1.1 200 OK</code> の行も追加する必要があった</li>
+</ul>
+
+
+<h3>Q4</h3>
+
+<ul>
+<li>hub コマンドを使ってよかったらしい</li>
+<li>がんばって API をたたくのもありっぽい</li>
+</ul>
+
+
+<h3>Q5</h3>
+
+<ul>
+<li><code>sed -e 's/[ *]//g' -e '1s/^/p /' -e '$!s/$/*/' complex | ruby</code> はかっこ不足だった。(複素数リテラルが優先されると思ってしまっていた。)</li>
+<li><code>sed -e 's/[ *]//g' -e '1s/^/p (/' -e '$!s/$/)*(/' -e '$s/$/)/' complex | ruby</code> でうまくいった。</li>
+<li>別解として1行ごとに解釈して inject してみた : <code>ruby -e 'p ARGF.each_line.map{|s|eval(s.gsub(/(?&lt;!\d)i/,"1i"))}.inject(:*)' complex</code></li>
+</ul>
+
+
+<h3>Q6</h3>
+
+<ul>
+<li>真面目に計算すると <code>ruby -e 'a=[1,1];f=-&gt;(n){a[n]||=f[n-1]+f[n-2]};1.step{|n|if f[n]==6765;p f[n-4];exit;end}'</code> になった。</li>
+<li>自分で計算せずに出そうとすると <code>curl https://en.wikipedia.org/wiki/Fibonacci_number | grep -B4 6765 | head -n 1 | grep -Eo '[[:digit:]]+'</code> になった。英語版 Wikipedia を使っているのは URL が短くてわかりやすいからで、日本語版 Wikipedia の URL でも可能でした。</li>
+<li>最初、curl のダウンロード状況出力の右に隠れてしまって1行見落としていて <code>grep -B5</code> にしてしまっていましたが、 <code>grep -B4</code> でした。</li>
+</ul>
+
+
+<h3>Q7</h3>
+
+<ul>
+<li>zsh の組み込みのみで <code>for n in {00..99}; [[ -z ${(FM)"$(&lt; nums)":#*$n*} ]] &amp;&amp; echo $n</code></li>
+<li>解説は <a href="/blog/2014-12-11-zsh-grep.html">zshでgrepのようなことをする</a> を参照</li>
+<li>シーケンスは <code>seq -w 0 99</code> とか <code>{0..9}{0..9}</code> とか</li>
+<li><code>{00..99}</code> は bash 3 だとダメそうだった。 (0 1 &hellip; になった)</li>
+<li><code>grep -o ..</code> は <code>echo 1234 | grep -o ..</code> で 23 が出てこないのでダメ</li>
+<li><code>echo 1234 | sed p | sed '1s/.//' | grep -o ..</code> のようにする</li>
+<li>解答例: <code>cat nums | sed p | sed '1s/.//' | grep -o .. | cat - &lt;(seq -w 0 99) | sort | uniq -u</code></li>
+<li>fold -w 2 とかこういう時に使ってみると良さそうなコマンドは色々あるっぽい</li>
+</ul>
+
+
+<h3>Q8</h3>
+
+<ul>
+<li>問題 差し替え <a href="https://twitter.com/ryuichiueda/status/901330659527897088">https://twitter.com/ryuichiueda/status/901330659527897088</a></li>
+<li><code>ruby -e 'ARGF.each_line.map{|s|[(s[2].ord-s[0].ord).abs,s]}.max[1].display' alphabet</code></li>
+<li><code>z-v</code> という逆順のところも考慮して abs を入れたけどいらなかったかもしれない。</li>
+<li>別解で36進数を使ってみた: <code>ruby -e 'ARGF.each_line.map{|s|[eval(s.gsub(/\w+/){$&amp;.to_i(36)}).abs,s]}.max[1].display' alphabet</code></li>
+<li>abs の代わりにソートして引くという方法もあるらしい</li>
+<li><code>map</code> + <code>max[1]</code> でシュワルツ変換的なことをしなくても <code>max_by</code> でよかったらしい</li>
+<li>解答例は bash のブレース展開を使っていた</li>
+<li>xxd で変換して計算する解答例も紹介されていた</li>
+</ul>
+
+
+<h2>午後の部終了</h2>
+
+<p>午後の部まで参加の人はここで帰っていました。</p>
+
+<h2>LT 大会</h2>
+
+<p>LT は中継はどうなるんだろうと思っていたら、大阪は大阪で LT をしていました。</p>
+
+<h3>シェル芸思考</h3>
+
+<ul>
+<li><a href="https://www.slideshare.net/kunst1080/30lt">第30回シェル芸勉強会LT シェル芸思考</a></li>
+<li>問題を解く時にどう考えているのか</li>
+<li>1: コマンド一撃でオプションを知っていればすぐにできるようなものかどうか考える</li>
+<li>終わりそうにない場合続きを考える</li>
+<li>2: 中間データの形式を設計する</li>
+<li>3: コマンドを組み合わせて解いていく</li>
+<li>メインは 2</li>
+<li>設計の考え方</li>
+<li>形について考える</li>
+<li>例: <a href="https://togetter.com/li/1041621">【ファン迷惑】「響け！ユーフォニアム」という文字列だけで遊ぶシェル芸人達</a></li>
+<li>中間データ1: 11回繰り返す</li>
+<li>中間データ2: 11文字で折り返す</li>
+<li>中間データ3: 10文字で切り出す</li>
+</ul>
+
+
+<h3>FORK 爆弾爆発中のロードアベレージを見る</h3>
+
+<ul>
+<li><a href="https://speakerdeck.com/msr_i386/cgroup">https://speakerdeck.com/msr_i386/cgroup</a></li>
+<li>前回 SysRq でクラッシュさせてカーネルダンプで見た</li>
+<li>今回 実行中にみたい</li>
+<li>uptime コマンド, w コマンド, top コマンド, カーネルダンプの解析</li>
+<li>カーネルダンプは1回のみでリアルタイムは無理</li>
+<li>uptime, w は起動できない</li>
+<li>top は反応が止まるので無理</li>
+<li>cgroup で制御: cpuset を 0-2 と memory を 1GB に制限</li>
+<li>root:bash に制限</li>
+<li>forkbomb というグループを用意する</li>
+<li>仮想4コア, メモリ16GB の VM でデモ</li>
+<li>bash はランダムに kill されるのでデフォルトシェルを zsh にしておいて zsh から bash を起動</li>
+<li>キーボード配列がおかしかったのでメモ帳で入力して貼り付けしたら zsh で実行してしまう事故発生</li>
+<li>VM 再起動待ち</li>
+<li>今度はちゃんと bash で実行</li>
+<li>メモリ 1GB だと 11700 個ぐらい bash が起動している</li>
+<li>ロードアベレージは 10000 を超えていた</li>
+<li>cgconfig.conf は CentOS 7 では非推奨で systemd 経由で使うようになっている</li>
+</ul>
+
+
+<h3>破壊的難読化シェル芸</h3>
+
+<ul>
+<li>難読化シェル芸</li>
+<li>置換による難読化はあまりにも弱い</li>
+<li>難読化シェル芸には新たな武器が必要</li>
+<li>武器っぽいコマンド gunzip (ガンジップ)</li>
+<li>gun(銃)が弱いわけがない</li>
+<li>gzip -cf</li>
+<li>入力できない</li>
+<li>xxd を通す</li>
+<li>xxd -r -p | gunzip</li>
+<li>別のアプローチ</li>
+<li>gunzip の代わりに cut と組み合わせる</li>
+<li>いろいろ探してみつけた例を実行</li>
+</ul>
+
+
+<h3>AWS API リクエストへの署名</h3>
+
+<ul>
+<li>REST API</li>
+<li>リクエストに access key と secret access key で署名する必要がある</li>
+<li>署名バージョン4: AWS4-HMAC-SHA256</li>
+<li>署名のテストスイートも公開されている</li>
+<li>署名のプロセスをシェル芸で追いかける</li>
+<li>CLI / SDK に存在しない API がある: Amazon RDS / DownloadCompleteDBLogFile</li>
+<li>CLI / SDK にあるのは download-db-log-file-portion のみで分割ダウンロードされる</li>
+<li>例に使うのは AWS IAM / ListUsers</li>
+<li>例に使う時刻も固定しておく</li>
+<li>署名作成手順の説明</li>
+</ul>
+
 </div>
 
 <!-- zenback_body_end -->
@@ -200,12 +348,12 @@ capistrano 3.3.4 と capistrano-stats 1.1.0 にあがって、
 
 
 
-<time class='entry-date' datetime='2014-12-01T21:33:21+09:00'><span class='date'>2014-12-01 (Mon)</span> <span class='time'>9:33 pm</span></time>
+<time class='entry-date' datetime='2017-08-26T13:00:00+09:00'><span class='date'>2017-08-26 (Sat)</span> <span class='time'>1:00 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/capistrano/'>capistrano</a>, <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
+    <a class='category' href='/blog/categories/event/'>event</a>
   
 </span>
 
@@ -232,10 +380,8 @@ capistrano 3.3.4 と capistrano-stats 1.1.0 にあがって、
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2014-11-19-rubymotion-mokumoku-osaka.html" title="Previous Post: 第 17 回 RubyMotion もくもく会 in Osaka に参加した">&laquo; 第 17 回 RubyMotion もくもく会 in Osaka に参加した</a>
+        <a class="basic-alignment left" href="/blog/2017-08-24-railsdm.html" title="Previous Post: Rails Developers Meetup #4 大阪会場に参加しました">&laquo; Rails Developers Meetup #4 大阪会場に参加しました</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2014-12-06-zsh-enter.html" title="Next Post: zshでEnterを連打したときにいろいろ実行する">zshでEnterを連打したときにいろいろ実行する &raquo;</a>
       
     </p>
   </footer>
@@ -373,8 +519,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-12-01-capistrano-stats.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2014-12-01-capistrano-stats.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-08-26-usptomo-osaka.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-08-26-usptomo-osaka.html';
         var disqus_script = 'embed.js';
       
     (function () {

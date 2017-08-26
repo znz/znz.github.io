@@ -4,7 +4,7 @@
   <title><![CDATA[Category: event | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/event/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-08-24T22:59:28+09:00</updated>
+  <updated>2017-08-26T22:48:47+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,221 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第30回シェル芸勉強会　大阪サテライト＠さくらインターネット大阪本社に午後から参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-08-26-usptomo-osaka.html"/>
+    <updated>2017-08-26T13:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/usptomo-osaka</id>
+    <content type="html"><![CDATA[<p><a href="https://atnd.org/events/90102">第30回シェル芸勉強会　大阪サテライト＠さくらインターネット大阪本社</a>に午後から参加しました。</p>
+
+<!--more-->
+
+
+<h2>会場</h2>
+
+<p>最近よくいっているグランフロントタワーAのさくらインターネットさんでしたが、今回は初めて部屋の中の方に参加しました。</p>
+
+<h2>第30回シェル芸勉強会</h2>
+
+<p>問題は <a href="https://blog.ueda.tech/?p=10188">【問題のみ】jus共催 第30回危念シェル芸勉強会</a> にあります。</p>
+
+<p>主に macOS の環境で確認しました。</p>
+
+<h3>Q1</h3>
+
+<ul>
+<li><code>awk '/^Keywords:/{print FILENAME ":" $0;nextfile}' posts/*/*.md</code> としてみた。</li>
+<li>nextfile などを調べていたら時間がかかってしまってあまりちゃんとできず。</li>
+<li>ファイル名部分のパスなどの掃除が必要と気づいてなかったのでできていなかった。</li>
+<li>解答例では <code>grep -m 1</code> を使っていたけど、 macOS の grep (BSD grep) 2.5.1-FreeBSD だと動作が違うようで、最初のファイルで止まってしまって、うまく動かなかった。</li>
+</ul>
+
+
+<p>macOS Sierra 10.12.6 の例:</p>
+
+<pre><code>% grep --version
+grep (BSD grep) 2.5.1-FreeBSD
+% grep -m 1 : /etc/passwd /etc/group
+/etc/passwd:nobody:*:-2:-2:Unprivileged User:/var/empty:/usr/bin/false
+</code></pre>
+
+<p>Debian GNU/Linux 9.1 (stretch) の例:</p>
+
+<pre><code>$ grep --version
+grep (GNU grep) 2.27
+Copyright (C) 2016 Free Software Foundation, Inc.
+ライセンス GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+作者 Mike Haertel および その他の方々は &lt;http://git.sv.gnu.org/cgit/grep.git/tree/AUTHORS&gt; を参照してください。
+$ grep -m 1 : /etc/passwd /etc/group
+/etc/passwd:root:x:0:0:root:/root:/bin/bash
+/etc/group:root:x:0:
+</code></pre>
+
+<h3>Q2</h3>
+
+<ul>
+<li><code>perl -pe 's,(href|src)="(?!http|/)(\./)?,$1="/files/,g' url.html</code></li>
+<li><code>(?!)</code> を使いたかったので Perl で。</li>
+<li>最初に試しに書いたのはゆるすぎていらないところにつきまくっていた。</li>
+<li>正規表現が緩いと charset の属性まで変換してしまうという罠があった。</li>
+<li>気にせず置き換えてあとで <code>/files/http://</code> などになった場合に戻すという方針の人が多かった。</li>
+</ul>
+
+
+<h3>Q3</h3>
+
+<ul>
+<li><code>&lt; list | awk 'BEGIN{print "...";print "..."};/^\* /{print "&lt;li&gt;" $2 "&lt;/li&gt;"};END{print "...";print "..."}'</code></li>
+<li>前後の部分の内容を省略するとこんな感じになった。</li>
+<li><code>cat list | pandoc -t html5 -s</code> して削るという手もありらしい</li>
+<li>Web サーバーにするには list.html の内容だけではなく <code>HTTP/1.1 200 OK</code> の行も追加する必要があった</li>
+</ul>
+
+
+<h3>Q4</h3>
+
+<ul>
+<li>hub コマンドを使ってよかったらしい</li>
+<li>がんばって API をたたくのもありっぽい</li>
+</ul>
+
+
+<h3>Q5</h3>
+
+<ul>
+<li><code>sed -e 's/[ *]//g' -e '1s/^/p /' -e '$!s/$/*/' complex | ruby</code> はかっこ不足だった。(複素数リテラルが優先されると思ってしまっていた。)</li>
+<li><code>sed -e 's/[ *]//g' -e '1s/^/p (/' -e '$!s/$/)*(/' -e '$s/$/)/' complex | ruby</code> でうまくいった。</li>
+<li>別解として1行ごとに解釈して inject してみた : <code>ruby -e 'p ARGF.each_line.map{|s|eval(s.gsub(/(?&lt;!\d)i/,"1i"))}.inject(:*)' complex</code></li>
+</ul>
+
+
+<h3>Q6</h3>
+
+<ul>
+<li>真面目に計算すると <code>ruby -e 'a=[1,1];f=-&gt;(n){a[n]||=f[n-1]+f[n-2]};1.step{|n|if f[n]==6765;p f[n-4];exit;end}'</code> になった。</li>
+<li>自分で計算せずに出そうとすると <code>curl https://en.wikipedia.org/wiki/Fibonacci_number | grep -B4 6765 | head -n 1 | grep -Eo '[[:digit:]]+'</code> になった。英語版 Wikipedia を使っているのは URL が短くてわかりやすいからで、日本語版 Wikipedia の URL でも可能でした。</li>
+<li>最初、curl のダウンロード状況出力の右に隠れてしまって1行見落としていて <code>grep -B5</code> にしてしまっていましたが、 <code>grep -B4</code> でした。</li>
+</ul>
+
+
+<h3>Q7</h3>
+
+<ul>
+<li>zsh の組み込みのみで <code>for n in {00..99}; [[ -z ${(FM)"$(&lt; nums)":#*$n*} ]] &amp;&amp; echo $n</code></li>
+<li>解説は <a href="/blog/2014-12-11-zsh-grep.html">zshでgrepのようなことをする</a> を参照</li>
+<li>シーケンスは <code>seq -w 0 99</code> とか <code>{0..9}{0..9}</code> とか</li>
+<li><code>{00..99}</code> は bash 3 だとダメそうだった。 (0 1 &hellip; になった)</li>
+<li><code>grep -o ..</code> は <code>echo 1234 | grep -o ..</code> で 23 が出てこないのでダメ</li>
+<li><code>echo 1234 | sed p | sed '1s/.//' | grep -o ..</code> のようにする</li>
+<li>解答例: <code>cat nums | sed p | sed '1s/.//' | grep -o .. | cat - &lt;(seq -w 0 99) | sort | uniq -u</code></li>
+<li>fold -w 2 とかこういう時に使ってみると良さそうなコマンドは色々あるっぽい</li>
+</ul>
+
+
+<h3>Q8</h3>
+
+<ul>
+<li>問題 差し替え <a href="https://twitter.com/ryuichiueda/status/901330659527897088">https://twitter.com/ryuichiueda/status/901330659527897088</a></li>
+<li><code>ruby -e 'ARGF.each_line.map{|s|[(s[2].ord-s[0].ord).abs,s]}.max[1].display' alphabet</code></li>
+<li><code>z-v</code> という逆順のところも考慮して abs を入れたけどいらなかったかもしれない。</li>
+<li>別解で36進数を使ってみた: <code>ruby -e 'ARGF.each_line.map{|s|[eval(s.gsub(/\w+/){$&amp;.to_i(36)}).abs,s]}.max[1].display' alphabet</code></li>
+<li>abs の代わりにソートして引くという方法もあるらしい</li>
+<li><code>map</code> + <code>max[1]</code> でシュワルツ変換的なことをしなくても <code>max_by</code> でよかったらしい</li>
+<li>解答例は bash のブレース展開を使っていた</li>
+<li>xxd で変換して計算する解答例も紹介されていた</li>
+</ul>
+
+
+<h2>午後の部終了</h2>
+
+<p>午後の部まで参加の人はここで帰っていました。</p>
+
+<h2>LT 大会</h2>
+
+<p>LT は中継はどうなるんだろうと思っていたら、大阪は大阪で LT をしていました。</p>
+
+<h3>シェル芸思考</h3>
+
+<ul>
+<li><a href="https://www.slideshare.net/kunst1080/30lt">第30回シェル芸勉強会LT シェル芸思考</a></li>
+<li>問題を解く時にどう考えているのか</li>
+<li>1: コマンド一撃でオプションを知っていればすぐにできるようなものかどうか考える</li>
+<li>終わりそうにない場合続きを考える</li>
+<li>2: 中間データの形式を設計する</li>
+<li>3: コマンドを組み合わせて解いていく</li>
+<li>メインは 2</li>
+<li>設計の考え方</li>
+<li>形について考える</li>
+<li>例: <a href="https://togetter.com/li/1041621">【ファン迷惑】「響け！ユーフォニアム」という文字列だけで遊ぶシェル芸人達</a></li>
+<li>中間データ1: 11回繰り返す</li>
+<li>中間データ2: 11文字で折り返す</li>
+<li>中間データ3: 10文字で切り出す</li>
+</ul>
+
+
+<h3>FORK 爆弾爆発中のロードアベレージを見る</h3>
+
+<ul>
+<li><a href="https://speakerdeck.com/msr_i386/cgroup">https://speakerdeck.com/msr_i386/cgroup</a></li>
+<li>前回 SysRq でクラッシュさせてカーネルダンプで見た</li>
+<li>今回 実行中にみたい</li>
+<li>uptime コマンド, w コマンド, top コマンド, カーネルダンプの解析</li>
+<li>カーネルダンプは1回のみでリアルタイムは無理</li>
+<li>uptime, w は起動できない</li>
+<li>top は反応が止まるので無理</li>
+<li>cgroup で制御: cpuset を 0-2 と memory を 1GB に制限</li>
+<li>root:bash に制限</li>
+<li>forkbomb というグループを用意する</li>
+<li>仮想4コア, メモリ16GB の VM でデモ</li>
+<li>bash はランダムに kill されるのでデフォルトシェルを zsh にしておいて zsh から bash を起動</li>
+<li>キーボード配列がおかしかったのでメモ帳で入力して貼り付けしたら zsh で実行してしまう事故発生</li>
+<li>VM 再起動待ち</li>
+<li>今度はちゃんと bash で実行</li>
+<li>メモリ 1GB だと 11700 個ぐらい bash が起動している</li>
+<li>ロードアベレージは 10000 を超えていた</li>
+<li>cgconfig.conf は CentOS 7 では非推奨で systemd 経由で使うようになっている</li>
+</ul>
+
+
+<h3>破壊的難読化シェル芸</h3>
+
+<ul>
+<li>難読化シェル芸</li>
+<li>置換による難読化はあまりにも弱い</li>
+<li>難読化シェル芸には新たな武器が必要</li>
+<li>武器っぽいコマンド gunzip (ガンジップ)</li>
+<li>gun(銃)が弱いわけがない</li>
+<li>gzip -cf</li>
+<li>入力できない</li>
+<li>xxd を通す</li>
+<li>xxd -r -p | gunzip</li>
+<li>別のアプローチ</li>
+<li>gunzip の代わりに cut と組み合わせる</li>
+<li>いろいろ探してみつけた例を実行</li>
+</ul>
+
+
+<h3>AWS API リクエストへの署名</h3>
+
+<ul>
+<li>REST API</li>
+<li>リクエストに access key と secret access key で署名する必要がある</li>
+<li>署名バージョン4: AWS4-HMAC-SHA256</li>
+<li>署名のテストスイートも公開されている</li>
+<li>署名のプロセスをシェル芸で追いかける</li>
+<li>CLI / SDK に存在しない API がある: Amazon RDS / DownloadCompleteDBLogFile</li>
+<li>CLI / SDK にあるのは download-db-log-file-portion のみで分割ダウンロードされる</li>
+<li>例に使うのは AWS IAM / ListUsers</li>
+<li>例に使う時刻も固定しておく</li>
+<li>署名作成手順の説明</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Rails Developers Meetup #4 大阪会場に参加しました]]></title>
@@ -951,244 +1166,6 @@
 <h2>ドキュメント</h2>
 
 <p>モデレーター(進行役)やサポートメンター用のドキュメントが不足しているようなので、もっとまとめられると良さそうに思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[オープンソースカンファレンス2017 Kyotoに参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-08-05-osc2017-kyoto.html"/>
-    <updated>2017-08-05T20:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/osc2017-kyoto</id>
-    <content type="html"><![CDATA[<p><a href="https://www.ospn.jp/osc2017-kyoto/">オープンソースカンファレンス2017 Kyoto</a>
-に参加しました。</p>
-
-<!--more-->
-
-
-<p>以下、メモです。</p>
-
-<h2>会場</h2>
-
-<p>KRP は遠いですが、行きは西院駅から歩きました。
-帰りは天気が悪かったので、丹波口駅から帰りました。</p>
-
-<p>朝からは行けなかったので、13時すぎに到着しました。</p>
-
-<h2>「DLL読み込みの問題」を読み解く</h2>
-
-<p>よく見かける DLL 読み込みの脆弱性がどういうことなのか気になっていたので、途中からになってしまいましたが、聴きに行きました。</p>
-
-<ul>
-<li><p>DLL の検索パス <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms682586(v=vs.85%29.aspx">Dynamic-Link Library Search Order (Windows)</a></p>
-
-<ul>
-<li>KnownDLLs に登録されているかどうか</li>
-<li>実行ファイルがあるディレクトリ (アプリケーションディレクトリ)</li>
-<li>Windows システムディレクトリ</li>
-<li>Windows ディレクトリ</li>
-<li>カレントディレクトリ</li>
-<li>環境変数 PATH</li>
-</ul>
-</li>
-<li><p>sysinternals の Process Monitor (procmon)</p></li>
-<li>Dependency Walker</li>
-<li><p>procmon の使い方の例</p></li>
-<li><p>2010年ごろの状況</p></li>
-<li>DLL 読み込みの脆弱性に対する攻撃手法が公開され、注目を集める</li>
-<li><a href="https://www.jpcert.or.jp/sc-magazine/codezine02-8.html">第8回　WindowsのDLLだけが危ないのか？DLL hijacking vulnerability概説（前編）</a></li>
-<li>ドキュメントと一緒に細工した DLL を置いてアプリを起動するとカレントディレクトリの DLL を読み込む</li>
-<li><p>この対策としてカレントディレクトリの優先順位が下がった</p></li>
-<li><p>2016年ごろから「インストーラ」「自己解凍書庫」に対するDLL読み込み脆弱性の届出が増える</p></li>
-<li><p>インストーラーと一緒に細工した DLL を置いてインストーラーを起動すると同一ディレクトリにある DLL を使ってしまう</p></li>
-<li><p>Windows や Program Files といったシステム領域はアプリ側ではなくシステム側が保護</p></li>
-<li>ユーザディレクトリは管理はユーザーの責任だが</li>
-<li>システム領域外で動作するアプリには、よりセキュアな実装を求めたい</li>
-<li><p>インストーラ、自己解凍書庫、ポータブルアプリなど</p></li>
-<li><p>ユーザーが行うべき対策</p></li>
-<li>あやしいファイルを放置しない</li>
-<li>インストーラーや自己解凍書庫を安全な形で実行する</li>
-<li><p>安全な形で実行: インストーラーをダウンロード、新規にディレクトリを作成、作成したディレクトリにインストーラーを移動、インストーラーを起動</p></li>
-<li><p>開発者が行うべき対策</p></li>
-<li>DLL の読み込み方法に注意する</li>
-<li>アプリ/インストーラーの挙動についてユーザーに説明し、注意を促す</li>
-<li>SetDefaultDllDirectories() や SetDllDirectory() でアプリケーションディレクトリやカレントディレクトリを排除</li>
-<li>DLL 読み込みは可能な限り絶対パスで</li>
-<li><p>インストーラー作成ツールによるインストーラー作成やアーカイバーによる自己解凍書庫作成時にはツールの対応状況を確認</p></li>
-<li><p>開発者が対処しきれないケース</p></li>
-<li>アプリのスタートアップ部分で勝手にロード</li>
-<li>Windows 標準 DLL が独自に他 DLL をロード</li>
-<li>Windows 標準機能 (DLL forwarding, OS 互換機能の発動など)</li>
-<li>動作監視ソフトの影響など</li>
-<li><p>(参考: <a href="http://micco.mars.jp/vul/2017/mhsvi20170515_01.htm">UNLHA32.DLLで作成された自己解凍書庫における任意のDLL読み込みに関する脆弱性</a>など)</p></li>
-<li><p>DLL 読み込みと合わせてコマンド呼び出しについても注意</p></li>
-<li><p>関連情報</p></li>
-<li><a href="https://www.slideshare.net/jpcert_securecoding/dll-78581339">DLL読み込みの問題を読み解く</a></li>
-</ul>
-
-
-<p>ユーザーの対策として、ダウンロードしたファイルを実行する際に別途ディレクトリを作って、という話があったので、ブラウザーにダウンロード時にディレクトリを作る機能を要望したりはしていないのでしょうか? という質問をしてみました。
-今の所、そういう話はしていないが、話をしてみるのは良いかもというかランダムなディレクトリを作るのは利便性が問題なのではとか、ブラウザーのアップデーターはランダムなディレクトリを作って実行しているから大丈夫という感じの回答だったと思います。</p>
-
-<h2>Ubuntuはどこへ向かうのか～方針転換の解説～</h2>
-
-<p>どういう系統の話か全然わかってなくて聴きにいったら、 Unity の話でした。
-狭い部屋がほぼいっぱいで人気でした。</p>
-
-<ul>
-<li>R.I.P. Unity 2010-2017</li>
-<li>2007年頃(?) に Netbook の登場</li>
-<li>ディスプレイが狭いので専用のチューニングが求められた</li>
-<li>Dell Inspiron Mini 9 : 日本で発売された Ubuntu プリインストールの Netbook</li>
-<li>1024×600</li>
-<li>Ubuntu Netbook Remix の登場 : Ubuntu 9.04 ベース</li>
-<li>Remix はアンオフィシャル</li>
-<li>Ubuntu Netbook Edition : Ubuntu 10.04 ベースと 10.10 ベースのみ</li>
-<li>Edition はオフィシャルリリース</li>
-<li>10.04 は LTS だが Netbook Edition は LTS ではなかった</li>
-<li>Unity 初登場は Ubuntu Netbook Edition 10.10</li>
-<li>Mutter ベース</li>
-<li>Ubuntu 11.04 : Unity がデフォルトになった最初の Ubuntu</li>
-<li>Desktop Edition と Netbook Edition を統合</li>
-<li>Compiz ベースの Unity と Metacity ベースの Unity 2D</li>
-<li>Ubuntu 11.10 の Unity</li>
-<li>Ubuntu 12.04 LTS : Unity がデフォルトになって初めての LTS</li>
-<li>じゃんけんタイム: 日経 Linux 6 月号</li>
-<li>Ubuntu 12.10 : Unity 2D はなくなった</li>
-<li>Ubuntu 13.04 : Unity 7 になった</li>
-<li><p>逆に言えばここから 4 年間 Unity 7 が続いた</p></li>
-<li><p>Unity 8</p></li>
-<li>デスクトップ用とスマートデバイス用 Ubuntu を統合する UI が必要となった</li>
-<li>スクラッチから開発</li>
-<li>UI だけでなく、ディスプレイマネージャ (Mir) から開発</li>
-<li>X.Org ではスマートデバイスは辛い</li>
-<li>2012年8月: 当初 qml-phone-shell という名前</li>
-<li>2013年6月から Unity 8 に</li>
-<li><p>Ubuntu 17.10 で概ね実用的に (日本語を打たなければという条件付きで)</p></li>
-<li><p>じゃんけんタイム: 日経 Linux 7 月号</p></li>
-<li><p>2017.04.05 <a href="https://insights.ubuntu.com/?p=65030">https://insights.ubuntu.com/?p=65030</a></p></li>
-<li>スマートデバイスやコンバージェンスよりもクラウドや IoT に重点的に投資するという内容</li>
-<li>Unity 8 への投資も中止し、 GNOME に戻る</li>
-<li><p>Ubuntu デスクトップはユーザーも多く今尚重要である</p></li>
-<li><p>現時点での確定事項</p></li>
-<li>GNOME Shell と GDM をデフォルトに</li>
-<li>Ubuntu GNOME はリリースせず</li>
-<li><p>Unity 7 から GNOME Shell への移行サポート</p></li>
-<li><p>現時点での未確定事項</p></li>
-<li>デフォルトのアプリケーション</li>
-<li>インプットメソッド: Fcitx の現行バージョンは Wayland 非対応</li>
-<li><p>ディスプレイマネージャ: Wayland がデフォルトになりそう</p></li>
-<li><p>Unity 7 を使用したいなら Ubuntu 16.04 LTS にするのがおすすめ</p></li>
-<li><p>Unity 8 は yunit というフォークとして生き残る見込み <a href="https://yunit.io/">https://yunit.io/</a></p></li>
-<li><p>Ubuntu のセカンドチョイスは Ubuntu GNOME だった</p></li>
-<li><p>今後その役目は Ubuntu MATE か?</p></li>
-<li><p>Ubuntu Weekly Topics 2017年4月7日号</p></li>
-<li>Ubuntu Weekly Recipe 第 467 回 GNOME 初心者向け</li>
-<li>Software Design</li>
-<li>日経 Linux</li>
-</ul>
-
-
-<h2>Debian updates</h2>
-
-<p>とりあえず OSC に行こうかと思ったきっかけになった Debian の話も聴きました。
-時間がなくなったので後半は急いで終わりました。</p>
-
-<ul>
-<li>Debian とは?</li>
-<li>Debian は連携する個人の集団</li>
-<li>Debian は開発元企業はなく、ボランティアのみ</li>
-<li>世界中に開発者がいる</li>
-<li>Debian Free Software Guideline</li>
-<li><a href="https://www.debian.org/social_contract#guidelines">https://www.debian.org/social_contract#guidelines</a></li>
-<li><a href="http://www.opensource.jp/osd/osd-japanese.html">http://www.opensource.jp/osd/osd-japanese.html</a></li>
-<li><a href="https://www.debian.org/social_contract">https://www.debian.org/social_contract</a></li>
-<li>Debian Policy</li>
-<li>Debian Derivatives</li>
-<li><a href="https://en.wikipedia.org/wiki/List_of_Linux_distributions">https://en.wikipedia.org/wiki/List_of_Linux_distributions</a> の図</li>
-<li>stable, testing, unstable</li>
-<li>Debian JP Project とは?</li>
-<li>次回の関西勉強会は 8/27(日) に IM の話</li>
-<li>Debian 9 Stretch</li>
-<li>2017-06-17: Debian 9.0</li>
-<li>2017-07-22: Debian 9.1</li>
-<li>主な変更点</li>
-<li>サポートアーキテクチャ</li>
-<li>mips64el</li>
-<li>i386 が i686 以降に変更</li>
-<li>サポートから外れたアーキテクチャ: powerpc</li>
-<li>kFreeBSD はテクノロジープレビューから porter (?) になった</li>
-<li>ポメラで Debian (armhf) が動く</li>
-<li>theme: softwaves</li>
-<li>主な Software のバージョン</li>
-<li>クロスコンパイルがデフォルトでサポート</li>
-<li>変更点, 注意点</li>
-<li>実行ファイルは PIE が有効になっている</li>
-<li>iproute2 が推奨、 net-tools は非推奨 (net-tools: ifconfig, arp, netstat, route, &hellip;)</li>
-<li>iceweasel → firefox 、 icedove → thunderbird</li>
-<li>mysql から mariadb : jessie からのアップグレードの際には自動的に mariadb へ</li>
-<li>Xorg がユーザー権限でも動作可能に</li>
-<li>セキュリティ関連</li>
-<li>Firefox, Chromium のセキュリティ更新の提供</li>
-<li>Firefox ESR, Thunderbird ESR</li>
-<li>libv8, nodejs, node-* のセキュリティ更新は提供されない</li>
-<li>OpenSSL: 3DES, RC4 の TLS/SSL 利用は提供されない</li>
-<li>Ruby チームは Redmine と他2個ぐらいのパッケージが必要とする gem を中心にメンテしている</li>
-<li>Adobe Flash が Stretch に入らない</li>
-<li>互換性</li>
-<li>PIE</li>
-<li>NIC : predictable name (jessie からの更新の際には据え置き)</li>
-<li>OpenSSH : 旧式暗号と SSH v2 が無効</li>
-<li>Xorg: evdev から libinput</li>
-<li>Upstart は削除</li>
-<li>デフォルトは systemd</li>
-<li>sysvinit, OpenRC も利用可能</li>
-<li>installer</li>
-<li>GUI インストールがデフォルト</li>
-<li>UEFI のセキュアブートは未対応</li>
-<li>screen 対応</li>
-<li>CD イメージを廃止</li>
-<li>アップグレード</li>
-<li>リリースノートを読むことを推奨</li>
-<li>apt-line が <code>ftp://</code> の場合は <code>http://</code> に変更が必須</li>
-<li>Debian 8.8 以降にあげてから一度再起動してからあげないと PIE 関連ではまる</li>
-</ul>
-
-
-<h2>ライトニングトーク＆閉会式</h2>
-
-<ul>
-<li><a href="https://github.com/verifast/verifast">https://github.com/verifast/verifast</a></li>
-<li>コメントで注釈を入れるとC言語のプログラムを検証してくれる</li>
-<li><p><a href="https://metasepi.connpass.com/event/55350/">#静的コード解析の会 第4回@大阪 - connpass</a></p></li>
-<li><p>近くの海外カンファレンスに行こう！</p></li>
-<li><p>openSUSE.Asia Summit 2017 Tokyo</p></li>
-<li><p><a href="https://opensuseja.connpass.com/event/62902/">openSUSE Leap 42.3 Release Party Kyoto &amp; もくもく会 - connpass</a></p></li>
-<li><p>KRP 周辺グルメガイド</p></li>
-<li><p>順番に紹介していってドラがなったところで終了だった</p></li>
-<li><p>鉄道とオープンデータ</p></li>
-<li><p>時刻表データは自由なものが少ないので架空の路線を作っていろいろやっている話だった</p></li>
-<li><p>どうしてもあれが欲しくなった</p></li>
-<li>500兆円ほしいジェネレーターを fork してクリッピングするようにした</li>
-<li>iOS も対応した</li>
-<li><p><a href="http://tmx3.net/5000choyen/">http://tmx3.net/5000choyen/</a></p></li>
-<li><p>大学で無理やり Splatoon2 をやった話</p></li>
-<li>VPN + mac のインターネット共有</li>
-<li><p>共有する接続経路で VPN を選ぶ必要があった</p></li>
-<li><p>便利？な機能を使って開発していく</p></li>
-<li><p><a href="https://github.com/shiotomo/cPractice">https://github.com/shiotomo/cPractice</a></p></li>
-<li><p>最近の学生コミュニティーについて</p></li>
-<li>ICT トラブルシューティングコンテスト</li>
-<li>ネットワーク講座</li>
-<li>OITLT</li>
-<li>東京に負けない魅力的なコミュニティーとイベントを作りたい</li>
-<li>関西を盛り上げたい</li>
-<li><p>「とある工大生の死活日記」で検索</p></li>
-<li><p>山形で OSC 開催したい！</p></li>
-<li><p>OSC サミットと  11/26(日) OSC 広島のご紹介</p></li>
-<li><p>IT 企業の裏側を知りたい！ アンケート調査</p></li>
-<li>会場でアンケートをとっていたらしく、その結果発表でした。</li>
-</ul>
-
 ]]></content>
   </entry>
   
