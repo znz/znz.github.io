@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-08-27T23:11:49+09:00</updated>
+  <updated>2017-09-10T22:43:14+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,117 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Ruby の文字リテラルについて]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-09-10-ruby-char-literal.html"/>
+    <updated>2017-09-10T22:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ruby-char-literal</id>
+    <content type="html"><![CDATA[<p>Ruby には <code>?a</code> で 1 文字のみの文字列を返す文字リテラルというものがあります。</p>
+
+<p>Ruby を 1.9 以降から使い始めた人には <code>'a'</code> などの文字列リテラルとの使い分けや <code>String#chr</code> の存在意義などがわからないと思ったので、知っている範囲で歴史的経緯を説明してみたいと思います。</p>
+
+<!--more-->
+
+
+<h2>Ruby 1.8 以前と Ruby 1.9 以降の違い</h2>
+
+<p>マルチエンコーディング対応が入る前の文字リテラルは1バイト文字用のリテラルで、多バイト文字は使えませんでした。
+コントロールやメタは昔から使えました。</p>
+
+<p>以降の実行例も含めて、実行例は 2.0 以降も同じなので、省略しています。
+1.8.6 以前は未確認ですが、1.8.7 とほぼ同じはずです。</p>
+
+<pre><code>% rbenv each ruby -ve 'p ?a'
+ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+97
+ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+"a"
+% rbenv each ruby -ve 'p ?あ'
+ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+-e:1: Invalid char `\201' in expression
+-e:1: Invalid char `\202' in expression
+ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+"あ"
+% rbenv each ruby -ve 'p ?\C-a'
+ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+1
+ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+"\u0001"
+% rbenv each ruby -ve 'p ?\M-a'
+ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+225
+ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+"\xE1"
+</code></pre>
+
+<h2>文字とは?</h2>
+
+<p>文字を表すのに専用のクラスを導入するという案もあったようですが、Ruby は大クラス主義だという点や、必要とされる機能が文字列とほとんど変わらない、文字というのを文字列とは別に定義するのは難しいなどの理由から、最終的には1文字だけの String で文字を表すことになったと記憶しています。
+詳細はメーリングリストや redmine の issue の議論などを探してみてください。</p>
+
+<h2>getc と文字リテラル</h2>
+
+<p>文字リテラルの用途として CUI アプリなどで <code>getc</code> で入力した文字との比較という使われ方があったようで、 <code>getc</code> などを使っているプログラムが、文字リテラルと比較する書き方をしていれば壊れないようになっています。</p>
+
+<pre><code>% rbenv each ruby -ve 'p ARGF.getc' /dev/zero
+ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+0
+ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+"\u0000"
+% rbenv each ruby -ve 'p ARGF.getc == ?\C-@' /dev/zero
+ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+true
+ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+true
+</code></pre>
+
+<h2><code>String#chr</code></h2>
+
+<p><a href="https://docs.ruby-lang.org/ja/latest/method/String/i/chr.html">String#chr</a> は単独で見ると <code>str[0]</code> などで代用できるので不要そうなメソッドですが、
+文字リテラルや <code>getc</code> の返り値を文字列にするのに <code>chr</code> が使われていたので、
+<code>String#chr</code> も互換性のために存在します。</p>
+
+<pre><code>% rbenv each ruby -ve 'p ?a.chr'
+ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+"a"
+ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+"a"
+% rbenv each ruby -ve 'p ARGF.read(1) == ?\C-@.chr' /dev/zero
+ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+true
+ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+true
+</code></pre>
+
+<h2>ord</h2>
+
+<p>逆に <code>ord</code> は <code>str[0]</code> の返り値が文字列に変わってしまったので、常に数値が欲しい時にも使っていました。</p>
+
+<pre><code>% rbenv each ruby -ve 'p ?\C-@.ord'
+ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+0
+ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+0
+% rbenv each ruby -ve 'p "a"[0]'
+ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+97
+ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+"a"
+% rbenv each ruby -ve 'p "a"[0].ord'
+ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+97
+ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+97
+</code></pre>
+
+<h2>結論</h2>
+
+<p>新規に書くプログラムで積極的に文字リテラル ( <code>?a</code> ) を使う必要性はほとんどないので、普通は文字列リテラルだけ使っておけば良いと思います。</p>
+
+<p><code>getc</code> などとの組み合わせのときに文字リテラルを使えば意味を明確にできますが、今更 1.8 以前との互換性を気にすることもないと思うので、古いプログラムで使われていたときに読めればいいだけで、書くときに使う必要はないと思います。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第78回 Ruby関西 勉強会に参加しました]]></title>
@@ -971,166 +1082,6 @@ int main() {
 <p>ruby の sample はリリースに含まれていても、そのバージョンで動作確認されているとは限らないようです。</p>
 
 <p><code>readline().print</code> は <code>Kernel#readline</code> が <code>String</code> を返して、その <code>Kernel#print</code> を呼んでいるようなので、どのくらい古い ruby だと動くのか、それとも最初から動かなかったのか、よくわかりませんでした。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第77回 Ruby関西 勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-03-04-rubykansai77.html"/>
-    <updated>2017-03-04T13:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubykansai77</id>
-    <content type="html"><![CDATA[<p><a href="https://rubykansai.doorkeeper.jp/events/58025" title="第77回 Ruby関西 勉強会">第77回 Ruby関西 勉強会</a>
-に参加しました。</p>
-
-<!--more-->
-
-
-<p>以下、そのメモです。</p>
-
-<h2>会場</h2>
-
-<ul>
-<li>地図が最初はグランフロントをさしていた。(昨晩直しました。) (doorkeeper のシステムで住所を変えただけど、地図の方は変わらないらしい。)</li>
-<li>会場はヒルトンプラザウエストで、ヒルトンプラザイーストとどちらなのかわかりにくい。</li>
-<li>工事中が多くて場所がわかっていてもたどり着きにくかったらしい。</li>
-</ul>
-
-
-<h2>最適化のやり方</h2>
-
-<ul>
-<li><a href="http://oke-ya.com/devil.html">あくまのおしごと</a>の宣伝</li>
-<li>KEN_ALL.CSV を読み込んで東西南北を含む行をカウントするプログラムを例に</li>
-<li>最初に全部読んでメモリ上にのせて <code>each_line</code> (メモリ効率を気にするなら元の <code>open</code> 中に <code>f.gets</code> の方が良さそう)</li>
-<li>配列を find せずに Hash を使う</li>
-<li>配列に対象行をためていって length をとるのではなく数値でカウント</li>
-<li>同じメソッド呼び出しをローカル変数に代入して減らす</li>
-<li><code>sort</code> から <code>sort_by</code></li>
-<li>早すぎる最適化はするべきではない</li>
-<li>気をつけるポイント</li>
-<li>IO はなるべく短く</li>
-<li>データ構造(もたせ方)を工夫する</li>
-<li>ループの中でオブジェクトをなるべく作らない</li>
-<li>文字列、配列、ハッシュは数値やシンボルとくらべてメモリ消費量が多い点を心得ておく</li>
-<li>質疑応答</li>
-<li>データが大きい時や大きさがわからないときは一気に読まない方が良さそう</li>
-<li>SQL にあるような何行かごとに処理というのは専用のメソッドはなさそう</li>
-<li><code>/北|南|東|西/</code> は <code>/[北南東西]/</code> の方が良いのではないかというツッコミ</li>
-<li>西東京みたいなのは西と東でカウントされるのかという話 - 片方しかカウントされない実装になっていた。</li>
-<li>カウント対象は限定されているので、ループの中で <code>||=</code> で初期化するのではなく <code>{"北" =&gt; 0}'</code> のように初期値をもつのもあり。 <code>Hash.new { 0 }</code> のような方法もあり。</li>
-<li>最後にもう一度、<a href="http://oke-ya.com/devil.html">あくまのおしごと</a>の宣伝</li>
-<li><a href="https://www.slideshare.net/yalab/ruby-72795596">Rubyコードの最適化</a></li>
-</ul>
-
-
-<h2>Rails 5.1.0.beta1はどのようにモダンなJavaScript開発を実現しているのか？</h2>
-
-<ul>
-<li>webpacker gem を使ったデモ</li>
-<li><code>bundle exec rails webpacker:install:react</code></li>
-<li>config/webpack/shared.js でビルドする対象を指定</li>
-<li>bin/webpack-dev-server は localhost:8080 で待ち受ける express のサーバー</li>
-<li>bin/webpack は public 以下に出力</li>
-<li><code>javascript_pack_tag</code> の実装確認</li>
-<li><code>dev_server_host</code> が設定されていればそこから、なければ digest もしくは直接</li>
-<li>質疑応答</li>
-<li>フロントエンドを知らない人は sprockets で良いのではないか</li>
-<li>sprockets と webpacker の違い</li>
-<li>deploy するときは? webpacker-dev-server ではなく、 webpack で public 以下に生成する</li>
-<li>情報源は? rails guide などにはまだ。 master でもまだ変化が続いている。</li>
-<li>スタイルシートはコンパイルしてくれないのか? 現状デフォルトで生成される config では対象ではない。 webpack の知識があって設定すれば可能。</li>
-<li><a href="https://speakerdeck.com/chimame/rails-5-dot-1-0-dot-beta1hadofalseyounimodannajavascriptkai-fa-woshi-xian-siteirufalseka">Rails 5.1.0.beta1はどのようにモダンなJavaScript開発を実現しているのか？ // Speaker Deck</a></li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>14:20 まで</li>
-</ul>
-
-
-<h2>Welcome to tebukuro</h2>
-
-<ul>
-<li>tebukuro とは</li>
-<li>イベント、チケット管理サービス</li>
-<li>Shinosaka.rb のプロダクト</li>
-<li>なぜ tebukuro</li>
-<li>既存サービスへの不満</li>
-<li>使っているもの</li>
-<li>rails</li>
-<li>postgresql</li>
-<li>node.js など</li>
-<li>CI: Wercker から Jenkins に移行中</li>
-<li>開発環境は docker compose</li>
-<li>本番環境も docker</li>
-<li>Dcoker を使う理由</li>
-<li>コンテナ指向でシンプルに保てる</li>
-<li>どの環境でも動作する</li>
-<li>スケーラブル: コンテナ単位で可能</li>
-<li>GCP</li>
-<li>なぜOSSなのか</li>
-<li>開発方法も他のOSSと同じ</li>
-<li>OSS開発の敷居をさげるための素振りもできる</li>
-<li>英語の勉強もできちゃう</li>
-<li>もう一つのねらい</li>
-<li>betaやalphaのライブラリを積極的に採用</li>
-<li>バグを踏んでライブラリへのPRチャンスを作る</li>
-<li>PRとはいかずともissue報告はできる</li>
-<li>目指すコミュニティ</li>
-<li><a href="https://github.com/shinosakarb/tebukuro">https://github.com/shinosakarb/tebukuro</a></li>
-</ul>
-
-
-<h2>Create React App ではじめる Rails の SPA</h2>
-
-<ul>
-<li>ライブコーディング</li>
-<li>実装を見ると <code>.html</code> が <code>index.html</code> より優先されるっぽい</li>
-<li>RFC とかは単語が一般的すぎて見つけられなかったというコネタ</li>
-<li>(後で <a href="https://www.rfc-editor.org/retrieve/bulk/">https://www.rfc-editor.org/retrieve/bulk/</a> からダウンロードして txt ファイルを index.html で検索してみたけど、書いてなさそうだった。調べていた時に思い出したけど IIS は index ではなかった (確認したら default だった) ので RFC に書かれている可能性は低そう)</li>
-<li>yarn は yarnpkg コマンドの方が主流になるかもしれないらしい</li>
-<li>react-router-dom</li>
-<li>公式サイトは v4 系のドキュメントになっている</li>
-<li>webpack も公式サイトは 2 系のドキュメントになっていて 1 系はではないらしい</li>
-<li>react-router-dom が beta7 になっていて、公式サイトのデモが beta6 では動かなかった。</li>
-<li>時間がなかったので、 OAuth との組み合わせは完成版でデモ</li>
-</ul>
-
-
-<h2>Rubyのオススメの機能７選</h2>
-
-<ul>
-<li><a href="http://qiita.com/cuzic/items/a265f140fdff289d5c07">Ruby のオススメの機能７選</a></li>
-<li><code>Enumerator.new</code></li>
-<li><code>Object#tap</code></li>
-<li><code>Float::INFINITY</code></li>
-<li><code>Enumerable#each_slice</code></li>
-<li><code>Array#shelljoin</code></li>
-<li>(単純に実行するだけなら複数引数の <code>system</code> などを使った方が良さそうと思っていたけど、多段 ssh とかの時には確かに良さそう。)</li>
-<li><code>SecureRandom.hex</code></li>
-<li>Flip Flop 演算子</li>
-<li>質疑応答</li>
-<li>配列に <code>with_index(1)</code> は使えないので、<code>each.with_index(1)</code> にする必要がある</li>
-<li><code>each_with_index</code> だと初期値を指定できないので、この場合は使えない</li>
-</ul>
-
-
-<h2>Ruby初級者向けレッスン &mdash; ブロック</h2>
-
-<p>初心者の人は少なかった。
-告知タイミングなどの問題で、スタッフの人が多かった。</p>
-
-<p>追加して <code>self</code> が欲しい時は <code>Array#&lt;&lt;</code> とか <code>Hash#update</code> とか。</p>
-
-<h2>クロージング</h2>
-
-<ul>
-<li><a href="https://rails-follow-up-osaka.doorkeeper.jp/events/58097">Rails Follow-up Osaka #7</a></li>
-<li><a href="https://rubykansai.doorkeeper.jp/events/57723">関西Ruby会議2017 CFP</a>募集中</li>
-</ul>
-
 ]]></content>
   </entry>
   

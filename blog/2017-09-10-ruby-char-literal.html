@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: html5 - @znz blog</title>
+  <title>Ruby の文字リテラルについて - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Category: html5">
+  <meta name="description" content="Ruby の文字リテラルについて 2017-09-10 (Sun) 10:00 pm | Comments Ruby には ?a で 1 文字のみの文字列を返す文字リテラルというものがあります。 Ruby を 1.9 以降から使い始めた人には 'a' などの文字列リテラルとの使い分けや &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/categories/html5/index.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-09-10-ruby-char-literal.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -76,68 +76,265 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: html5</h1>
+    
+      
+      <!-- zenback_title_begin -->
+      
+      <h1 class="entry-title">Ruby の文字リテラルについて</h1>
+      
+      <!-- zenback_title_end -->
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2017-09-10T22:00:00+09:00'><span class='date'>2017-09-10 (Sun)</span> <span class='time'>10:00 pm</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://blog.n-z.jp">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
 
-  
-  <h2>2014</h2>
+<!-- zenback_body_begin -->
 
-<article>
-  
-<h1><a href="/blog/2014-03-03-auto-change-background.html">ページの切り替わりごとに背景の自動変更</a></h1>
-<time datetime="2014-03-03T23:25:01+09:00" pubdate><span class='month'>Mar</span> <span class='day'>03</span> <span class='year'>2014</span></time>
+<div class="entry-content"><p>Ruby には <code>?a</code> で 1 文字のみの文字列を返す文字リテラルというものがあります。</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/coffeescript/'>coffeescript</a>, <a class='category' href='/blog/categories/html5/'>html5</a>, <a class='category' href='/blog/categories/javascript/'>javascript</a>, <a class='category' href='/blog/categories/rails/'>rails</a></span>
-</footer>
+<p>Ruby を 1.9 以降から使い始めた人には <code>'a'</code> などの文字列リテラルとの使い分けや <code>String#chr</code> の存在意義などがわからないと思ったので、知っている範囲で歴史的経緯を説明してみたいと思います。</p>
+
+<!--more-->
 
 
-</article>
+<h2>Ruby 1.8 以前と Ruby 1.9 以降の違い</h2>
+
+<p>マルチエンコーディング対応が入る前の文字リテラルは1バイト文字用のリテラルで、多バイト文字は使えませんでした。
+コントロールやメタは昔から使えました。</p>
+
+<p>以降の実行例も含めて、実行例は 2.0 以降も同じなので、省略しています。
+1.8.6 以前は未確認ですが、1.8.7 とほぼ同じはずです。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% rbenv each ruby -ve 'p ?a'
+</span><span class='line'>ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+</span><span class='line'>97
+</span><span class='line'>ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+</span><span class='line'>"a"
+</span><span class='line'>% rbenv each ruby -ve 'p ?あ'
+</span><span class='line'>ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+</span><span class='line'>-e:1: Invalid char `\201' in expression
+</span><span class='line'>-e:1: Invalid char `\202' in expression
+</span><span class='line'>ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+</span><span class='line'>"あ"
+</span><span class='line'>% rbenv each ruby -ve 'p ?\C-a'
+</span><span class='line'>ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+</span><span class='line'>1
+</span><span class='line'>ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+</span><span class='line'>"\u0001"
+</span><span class='line'>% rbenv each ruby -ve 'p ?\M-a'
+</span><span class='line'>ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+</span><span class='line'>225
+</span><span class='line'>ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+</span><span class='line'>"\xE1"</span></code></pre></td></tr></table></div></figure>
 
 
+<h2>文字とは?</h2>
 
-  
-  <h2>2013</h2>
+<p>文字を表すのに専用のクラスを導入するという案もあったようですが、Ruby は大クラス主義だという点や、必要とされる機能が文字列とほとんど変わらない、文字というのを文字列とは別に定義するのは難しいなどの理由から、最終的には1文字だけの String で文字を表すことになったと記憶しています。
+詳細はメーリングリストや redmine の issue の議論などを探してみてください。</p>
 
-<article>
-  
-<h1><a href="/blog/2013-10-20-web-barcode-reader.html">ブラウザのみで使えるバーコードリーダーを作った</a></h1>
-<time datetime="2013-10-20T19:27:00+09:00" pubdate><span class='month'>Oct</span> <span class='day'>20</span> <span class='year'>2013</span></time>
+<h2>getc と文字リテラル</h2>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/html5/'>html5</a>, <a class='category' href='/blog/categories/javascript/'>javascript</a></span>
-</footer>
+<p>文字リテラルの用途として CUI アプリなどで <code>getc</code> で入力した文字との比較という使われ方があったようで、 <code>getc</code> などを使っているプログラムが、文字リテラルと比較する書き方をしていれば壊れないようになっています。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% rbenv each ruby -ve 'p ARGF.getc' /dev/zero
+</span><span class='line'>ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+</span><span class='line'>0
+</span><span class='line'>ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+</span><span class='line'>"\u0000"
+</span><span class='line'>% rbenv each ruby -ve 'p ARGF.getc == ?\C-@' /dev/zero
+</span><span class='line'>ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+</span><span class='line'>true
+</span><span class='line'>ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+</span><span class='line'>true</span></code></pre></td></tr></table></div></figure>
 
 
-</article>
+<h2><code>String#chr</code></h2>
+
+<p><a href="https://docs.ruby-lang.org/ja/latest/method/String/i/chr.html">String#chr</a> は単独で見ると <code>str[0]</code> などで代用できるので不要そうなメソッドですが、
+文字リテラルや <code>getc</code> の返り値を文字列にするのに <code>chr</code> が使われていたので、
+<code>String#chr</code> も互換性のために存在します。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% rbenv each ruby -ve 'p ?a.chr'
+</span><span class='line'>ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+</span><span class='line'>"a"
+</span><span class='line'>ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+</span><span class='line'>"a"
+</span><span class='line'>% rbenv each ruby -ve 'p ARGF.read(1) == ?\C-@.chr' /dev/zero
+</span><span class='line'>ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+</span><span class='line'>true
+</span><span class='line'>ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+</span><span class='line'>true</span></code></pre></td></tr></table></div></figure>
 
 
+<h2>ord</h2>
 
-<article>
-  
-<h1><a href="/blog/2013-09-18-auto-open-autocomplete.html">jQuery UI Autocomplete を自動で開く</a></h1>
-<time datetime="2013-09-18T15:43:00+09:00" pubdate><span class='month'>Sep</span> <span class='day'>18</span> <span class='year'>2013</span></time>
+<p>逆に <code>ord</code> は <code>str[0]</code> の返り値が文字列に変わってしまったので、常に数値が欲しい時にも使っていました。</p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/coffeescript/'>coffeescript</a>, <a class='category' href='/blog/categories/html5/'>html5</a>, <a class='category' href='/blog/categories/javascript/'>javascript</a>, <a class='category' href='/blog/categories/jquery-ui/'>jquery-ui</a>, <a class='category' href='/blog/categories/rails/'>rails</a></span>
-</footer>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% rbenv each ruby -ve 'p ?\C-@.ord'
+</span><span class='line'>ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+</span><span class='line'>0
+</span><span class='line'>ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+</span><span class='line'>0
+</span><span class='line'>% rbenv each ruby -ve 'p "a"[0]'
+</span><span class='line'>ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+</span><span class='line'>97
+</span><span class='line'>ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+</span><span class='line'>"a"
+</span><span class='line'>% rbenv each ruby -ve 'p "a"[0].ord'
+</span><span class='line'>ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
+</span><span class='line'>97
+</span><span class='line'>ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
+</span><span class='line'>97</span></code></pre></td></tr></table></div></figure>
 
 
-</article>
+<h2>結論</h2>
 
+<p>新規に書くプログラムで積極的に文字リテラル ( <code>?a</code> ) を使う必要性はほとんどないので、普通は文字列リテラルだけ使っておけば良いと思います。</p>
+
+<p><code>getc</code> などとの組み合わせのときに文字リテラルを使えば意味を明確にできますが、今更 1.8 以前との互換性を気にすることもないと思うので、古いプログラムで使われていたときに読めればいいだけで、書くときに使う必要はないと思います。</p>
 </div>
 
+<!-- zenback_body_end -->
+
+
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Kazuhiro NISHIYAMA</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2017-09-10T22:00:00+09:00'><span class='date'>2017-09-10 (Sun)</span> <span class='time'>10:00 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ruby/'>ruby</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+  
+</div>
+
+    
+    <script async src="http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<!-- footer -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:728px;height:90px"
+     data-ad-client="ca-pub-4711975605457723"
+     data-ad-slot="4115794291"></ins>
+<script>
+(adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2017-08-27-lilo-tokaidolug.html" title="Previous Post: LILO&東海道らぐオフラインミーティング 2017/08/27 に参加しました">&laquo; LILO&東海道らぐオフラインミーティング 2017/08/27 に参加しました</a>
+      
+      
+    </p>
+  </footer>
 </article>
 
+<section>
+  <!-- X:S ZenBackWidget --><div id="zenback-widget-loader"></div><script type="text/javascript">!function(d,i){if(!d.getElementById(i)){var r=Math.ceil((new Date()*1)*Math.random());var j=d.createElement("script");j.id=i;j.async=true;j.src="//w.zenback.jp/v1/?base_uri=http%3A//blog.n-z.jp/&nsid=122901358100652638%3A%3A122901381991399941&rand="+r;d.body.appendChild(j);}}(document,"zenback-widget-js");</script><!-- X:E ZenBackWidget -->
+
+</section>
+
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -258,7 +455,10 @@ Hatena.BookmarkWidget.load();
       var disqus_shortname = 'znzblog';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-09-10-ruby-char-literal.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-09-10-ruby-char-literal.html';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
