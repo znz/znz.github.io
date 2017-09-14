@@ -5,12 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>bash で PATH を配列に分解の続き - @znz blog</title>
+  <title>第11回 HosCon - GMO Hosting Conference - @大阪 に参加しました - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="bash で PATH を配列に分解の続き 2016-10-07 (Fri) 9:39 pm | Comments zsh だと PATH と同期している配列変数として path があるのですが、
-bash にはそういうものがなくて困ったので、分解する方法を考えてみた話の続きです。 &hellip;">
+  <meta name="description" content="第11回 HosCon - GMO Hosting Conference - @大阪 に参加しました 2017-09-14 (Thu) 10:46 pm | Comments 第11回 HosCon - GMO Hosting Conference - @大阪 に参加したので、そのメモです。 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +18,7 @@ bash にはそういうものがなくて困ったので、分解する方法を
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2016-10-07-bash-path-to-array-again.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-09-14-hoscon.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -84,7 +83,7 @@ bash にはそういうものがなくて困ったので、分解する方法を
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">bash で PATH を配列に分解の続き</h1>
+      <h1 class="entry-title">第11回 HosCon - GMO Hosting Conference - @大阪 に参加しました</h1>
       
       <!-- zenback_title_end -->
       
@@ -96,7 +95,7 @@ bash にはそういうものがなくて困ったので、分解する方法を
 
 
 
-<time class='entry-date' datetime='2016-10-07T21:39:31+09:00'><span class='date'>2016-10-07 (Fri)</span> <span class='time'>9:39 pm</span></time>
+<time class='entry-date' datetime='2017-09-14T22:46:24+09:00'><span class='date'>2017-09-14 (Thu)</span> <span class='time'>10:46 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -109,181 +108,149 @@ bash にはそういうものがなくて困ったので、分解する方法を
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p>zsh だと <code>PATH</code> と同期している配列変数として <code>path</code> があるのですが、
-bash にはそういうものがなくて困ったので、分解する方法を考えてみた話の続きです。
-末尾の空文字列や改行に対応しました。</p>
+<div class="entry-content"><p><a href="https://gmohoscon.connpass.com/event/63440/">第11回 HosCon - GMO Hosting Conference - @大阪</a> に参加したので、そのメモです。</p>
 
 <!--more-->
 
 
-<h2>昨日の方法の問題点</h2>
+<h2>会場</h2>
 
-<p><a href="/blog/2016-10-06-bash-path-to-array.html">昨日の記事</a> に書きましたが、末尾の空文字列の処理に問題がありました。
-また、書いていませんでしたが、改行に対応できていませんでした。</p>
+<p>グランフロントタワー B の 梅田・GMO Yours での開催でした。
+前に何かの勉強会で一度来たことがあるような気がするのですが、何だったか思い出せませんでした。</p>
 
-<h2>末尾対応</h2>
+<p>タワー B 自体は最近 Rails Developers Meetup #4 大阪会場 で来ていました。</p>
 
-<p><code>PATH= bash -c 'ls'</code> を <code>/bin</code> やそれ以外で実行してみたら
-空の <code>PATH</code> はカレントディレクトリのみと同じ意味のようなので、
-「<a href="https://twitter.com/fixedpoint_jp/status/784229832930369536">末尾の空文字列に対応するために、PATHにの最後に:を追加した文字列をreadすればいい?</a>」
-という指摘のように末尾に <code>:</code> を追加する方法で良さそうでした。</p>
+<h2>その他</h2>
 
-<p>つまり、以下のようになります。</p>
+<p>ハッシュタグは <code>#hoscon</code> でしたが、ツイートはあまりありませんでした。</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> bash -c <span class="s1">&#39;PATH=/bin:; IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH:&quot;; declare -p path&#39;</span>
-</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot; [1]=&quot;&quot;)&#39;</span>
-</span><span class='line'><span class="gp">%</span> bash -c <span class="s1">&#39;PATH=/bin; IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH:&quot;; declare -p path&#39;</span>
-</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot;)&#39;</span>
-</span><span class='line'><span class="gp">%</span> bash -c <span class="s1">&#39;PATH=; IFS=: read -r -a path &lt;&lt;&lt;&quot;$PATH:&quot;; declare -p path&#39;</span>
-</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;&quot;)&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
+<p><a href="https://twitter.com/rzl5/status/908276901914882049">https://twitter.com/rzl5/status/908276901914882049</a> に写真がありますが、 ConoHa カードをもらったので、使ってみたいと思いました。</p>
 
+<h2>コンテナ基盤であるLXC/LXDを本番環境で運用する話</h2>
 
-<p>「PATH自体が空だった場合は振舞いが変わるけど。」という話もありましたが、
-<code>PATH</code> 探索を再現できれば良いということを考えると空の場合も問題なさそうでした。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> bash -c <span class="s1">&#39;PATH=; ls&#39;</span>
-</span><span class='line'><span class="go">bash: ls: No such file or directory</span>
-</span><span class='line'><span class="gp">%</span> <span class="nb">cd</span> /bin
-</span><span class='line'><span class="gp">%</span> bash -c <span class="s1">&#39;PATH=; ls /bin/bash&#39;</span>
-</span><span class='line'><span class="go">/bin/bash</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>改行対応</h2>
-
-<p>いろいろ試していると改行を含む <code>PATH</code> を扱えないことに気づいたのですが、
-<code>-d $'\0'</code> (以下の例ではコマンドラインのエスケープでひどいことになっていますが) を
-指定して区切り文字を変えると here string の末尾に付く改行も入力の一部として
-扱われてしまうのでうまくいかないようでしたが、末尾の要素を <code>unset</code> で削除することで
-良い感じになりました。</p>
-
-<p><code>$'\0'</code> は NUL 文字で C 言語での終端文字なので、普通は <code>PATH</code> の途中に入らないことが期待できるので、ありえない文字として指定しています。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> bash -c <span class="s1">&#39;PATH=/bin; IFS=: read -d $&#39;</span><span class="s2">&quot;&#39;&quot;</span><span class="s1">&#39;\0&#39;</span><span class="s2">&quot;&#39;&quot;</span><span class="s1">&#39; -r -a path &lt;&lt;&lt;&quot;$PATH:&quot;; declare -p path&#39;</span>
-</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot; [1]=&quot;</span>
-</span><span class='line'><span class="go">&quot;)&#39;</span>
-</span><span class='line'><span class="gp">%</span> bash -c <span class="s1">&#39;PATH=/bin; IFS=: read -d $&#39;</span><span class="s2">&quot;&#39;&quot;</span><span class="s1">&#39;\0&#39;</span><span class="s2">&quot;&#39;&quot;</span><span class="s1">&#39; -r -a path &lt;&lt;&lt;&quot;$PATH:&quot;; unset path[-1]; declare -p path&#39;</span>
-</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/bin&quot;)&#39;</span>
-</span><span class='line'><span class="gp">%</span> bash -c <span class="s1">&#39;PATH=/foo$&#39;</span><span class="s2">&quot;&#39;&quot;</span><span class="s1">&#39;\n&#39;</span><span class="s2">&quot;&#39;&quot;</span><span class="s1">&#39;bar:/bin; IFS=: read -d $&#39;</span><span class="s2">&quot;&#39;&quot;</span><span class="s1">&#39;\0&#39;</span><span class="s2">&quot;&#39;&quot;</span><span class="s1">&#39; -r -a path &lt;&lt;&lt;&quot;$PATH:&quot;; unset path[-1]; declare -p path&#39;</span>
-</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/foo</span>
-</span><span class='line'><span class="go">bar&quot; [1]=&quot;/bin&quot;)&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
+<ul>
+<li>2011年に物理からKVMによる完全仮想化へ</li>
+<li>完全仮想化はリソースに無駄があるということで準仮想化、コンテナ化へ</li>
+<li>なぜLXDか?</li>
+<li>他に検討した選択肢は Docker, KVM, OpenVZ, (VMware は高いので選択肢に入らず)</li>
+<li>質問: Linux だけで Windows や BSD はなかった? カーネルモジュールなども問題なかった? → Linux で、カスタマイズはしていたが共通の kernel だったので問題なく集約できた。</li>
+<li>質問: OpenVZ が遅かった? → 一般的には遅くないかもしれないが、試した環境ではコンテナより遅かった。</li>
+<li>LXDは2017年2月から運用開始</li>
+<li>ホストOSは Ubuntu 16.04 LTS</li>
+<li>ゲストOSは使い慣れたCentOS</li>
+<li>なぜZFSか?　→ 公式がオススメしているのとベンチマークの結果がよかった</li>
+<li>今も苦労している部分はある</li>
+<li>fio で計測</li>
+<li>ZFS を採用した理由: 機能性、柔軟性, 比較対象: lvm, dir</li>
+<li>ホストシステム構築時のトラブル</li>
+<li>オープンファイル数の上限など色々な上限に引っかかった</li>
+<li>ネットワーク編</li>
+<li>NIC の MAC アドレスがかぶっていた</li>
+<li>LXD 運用編</li>
+<li>Apache RLimitNPROC にひっかかった</li>
+<li>ホストのロードアベレージが急激に上昇 → ZFS がボトルネックだったのでチューニングを実施 (ZFS ARC?)</li>
+<li>2ラック (KVM) → 1ラック (LXD)</li>
+<li>質問タイム</li>
+<li>LXD で新しくサービスできるようになったことはある? → 新たなサービスはないが、快適なディスクIOを提供できている</li>
+<li>まだリリースできていないが、準専有の基盤ができた</li>
+<li>ZFS はメモリをたくさん使って残りがユーザーの領域? → ご想像にお任せします</li>
+<li>どのようなところで運用負荷の軽減? 運用でカバーしているところ? → 物理が減ったので楽になった。リソースの制限の自動化を目標に手動でやっている。物理より柔軟にできるのが良い。</li>
+<li>ライブマイグレーションをしているかどうか? → やっていない。今後対応していく。</li>
+<li>内製でコントロールパネルのようなものを作っている? → ない。全部コマンドで。</li>
+<li>CentOS? → 既存のノウハウをいかすために選んだ。</li>
+<li>OS のアップデートはどうしている? → カーネル以外は通常のアップデート</li>
+<li>ホスト側のリソース監視はしていると思うが、コンテナ側はどうしている? → 緩めの limit を設定してる</li>
+<li>PHP などのバージョン違い? → 問い合わせで個別に対応することもある</li>
+<li>サポートが終了したものはなるべく引き継がない</li>
+<li>CentOS 6? 7? → 7</li>
+</ul>
 
 
-<p>わかりやすいようにファイルにして実行すると以下のような感じです。</p>
+<h2>休憩</h2>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> cat /tmp/p.bash
-</span><span class='line'><span class="go">PATH=/foo$&#39;\n&#39;bar:/bin</span>
-</span><span class='line'><span class="go">IFS=: read -d $&#39;\0&#39; -r -a path &lt;&lt;&lt;&quot;$PATH:&quot;</span>
-</span><span class='line'><span class="go">unset path[-1]</span>
-</span><span class='line'><span class="go">declare -p path</span>
-</span><span class='line'><span class="go">PATH=/foo$&#39;\n&#39;bar:/bin:</span>
-</span><span class='line'><span class="go">IFS=: read -d $&#39;\0&#39; -r -a path &lt;&lt;&lt;&quot;$PATH:&quot;</span>
-</span><span class='line'><span class="go">unset path[-1]</span>
-</span><span class='line'><span class="go">declare -p path</span>
-</span><span class='line'><span class="gp">%</span> bash /tmp/p.bash
-</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/foo</span>
-</span><span class='line'><span class="go">bar&quot; [1]=&quot;/bin&quot;)&#39;</span>
-</span><span class='line'><span class="go">declare -a path=&#39;([0]=&quot;/foo</span>
-</span><span class='line'><span class="go">bar&quot; [1]=&quot;/bin&quot; [2]=&quot;&quot;)&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
+<p><!-- 20:12 から? -->20:16 まで</p>
 
+<h2>ロリポップ！マネージドクラウド FastContainerの裏側</h2>
 
-<h2>他の処理例</h2>
-
-<p><code>/etc/group</code> くらいのデータになると awk などを使った方が良いと思いますが、
-<code>/etc/group</code> (末尾に空文字列が入ることがある) のパースも良い感じにできるようです。</p>
-
-<p>設定されていない状態でも構わなかったり、
-末尾に空文字列が入らないことがわかっている <code>/etc/passwd</code> などの場合は
-bash の組み込みコマンドだけでいけそうです。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-</pre></td><td class='code'><pre><code class='console'><span class='line'><span class="gp">%</span> cat /tmp/t.bash
-</span><span class='line'><span class="gp">#</span>!/bin/bash
-</span><span class='line'><span class="go">sed &#39;s/$/:/&#39; /etc/group | while IFS=: read -r -a group; do</span>
-</span><span class='line'><span class="go">  declare -p group</span>
-</span><span class='line'><span class="go">done</span>
-</span><span class='line'><span class="gp">%</span> bash /tmp/t.bash
-</span><span class='line'><span class="go">declare -a group=&#39;([0]=&quot;root&quot; [1]=&quot;x&quot; [2]=&quot;0&quot; [3]=&quot;&quot;)&#39;</span>
-</span><span class='line'><span class="go">declare -a group=&#39;([0]=&quot;daemon&quot; [1]=&quot;x&quot; [2]=&quot;1&quot; [3]=&quot;&quot;)&#39;</span>
-</span><span class='line'><span class="go">declare -a group=&#39;([0]=&quot;bin&quot; [1]=&quot;x&quot; [2]=&quot;2&quot; [3]=&quot;&quot;)&#39;</span>
-</span><span class='line'><span class="go">declare -a group=&#39;([0]=&quot;sys&quot; [1]=&quot;x&quot; [2]=&quot;3&quot; [3]=&quot;&quot;)&#39;</span>
-</span><span class='line'><span class="go">declare -a group=&#39;([0]=&quot;adm&quot; [1]=&quot;x&quot; [2]=&quot;4&quot; [3]=&quot;syslog,vagrant&quot;)&#39;</span>
-</span><span class='line'><span class="go">(略)</span>
-</span><span class='line'><span class="go">declare -a group=&#39;([0]=&quot;lpadmin&quot; [1]=&quot;x&quot; [2]=&quot;114&quot; [3]=&quot;vagrant&quot;)&#39;</span>
-</span><span class='line'><span class="go">declare -a group=&#39;([0]=&quot;sambashare&quot; [1]=&quot;x&quot; [2]=&quot;115&quot; [3]=&quot;vagrant&quot;)&#39;</span>
-</span><span class='line'><span class="go">declare -a group=&#39;([0]=&quot;vboxsf&quot; [1]=&quot;x&quot; [2]=&quot;999&quot; [3]=&quot;&quot;)&#39;</span>
-</span><span class='line'><span class="go">declare -a group=&#39;([0]=&quot;scanner&quot; [1]=&quot;x&quot; [2]=&quot;116&quot; [3]=&quot;&quot;)&#39;</span>
-</span><span class='line'><span class="go">declare -a group=&#39;([0]=&quot;colord&quot; [1]=&quot;x&quot; [2]=&quot;117&quot; [3]=&quot;&quot;)&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
+<ul>
+<li>ロリポップ！マネージドクラウドは FastContainer アーキテクチャを採用していて、コンテナエンジンに haconiwa</li>
+<li>質問: 価格? → 価格についてはまだ未定</li>
+<li>オートスケール</li>
+<li>質問: 何をもってマネージド? → コンテナの起動の仕方が特殊 (FastContainer) で、完全に root 権限があるわけではないなど</li>
+<li>質問: データベース? → データベースはコンテナで動いていないので、オートスケールではない</li>
+<li>質問: オートスケールは php だけ? → apache + php</li>
+<li>質問: データベースがオートスケールではないのなら、ユーザーごとのリソース制御? → まだ未確定</li>
+<li>質問: 具体的にアクセスが増えると、とは? → 実際は CPU のスロットルタイムをみているので、CPU の負荷が高くなれば。</li>
+<li>逆に負荷が下がればコンテナを減らす。</li>
+<li>質問: ユーザーごとのリソースの分割? 他のユーザーの影響は受けるのか? → 基本的には影響は受けない。リソースは分離している。ホスト自体が重くなっても負荷分散できるアーキテクチャになっている。</li>
+<li>FastContainer とは?</li>
+<li>FastCGI のコンテナ版といったイメージ</li>
+<li>リクエスト契機で Web アプリのコンテナが起動</li>
+<li><p>一度起動したコンテナはその後しばらく使い回して、一定時間が経過したら終了</p></li>
+<li><p>利点</p></li>
+<li>オートスケール</li>
+<li>リクエストがないと停止するのでリソースの節約</li>
+<li>いろんなコンテナで色々なアプリを提供</li>
+<li>常に最新</li>
+<li><p>他のマシンへの載せ替えも楽</p></li>
+<li><p>マネージドクラウドの構成</p></li>
+<li>CMDB というところでコンテナの情報を管理</li>
+<li>質問: 構成が速度に影響があるか? → ある。今は動くものを優先。 nfs が重いというのは多方面から突っ込まれている</li>
+<li>質問: 起動していない時と起動している時のパフォーマンスの差? → 確かにたちがっていない状態のアクセスは時間がかかる。調整中</li>
+<li>質問: どこが大きくなっていく? compute? → 今のところ compute と datapool が増えるのを想定している。</li>
+<li>パフォーマンスは調整していく段階なので、今後機会があれば。</li>
+<li>ngx_mruby</li>
+<li>haconiwa</li>
+<li>コンテナ</li>
+<li>基本は1コンテナに1プロセス</li>
+<li>ssh も sshd コンテナ経由</li>
+<li>FastContainer リクエスト制御フロー</li>
+<li>質問 → 今はチューニングがすんでいないので初回は 2,3 秒ぐらいかかる</li>
+<li>質問 → ユーザーが予約枠を設定していて、そこまでしか上がらないようにしている</li>
+<li><p>予約枠は金額で設定できるようにしたい</p></li>
+<li><p>コンテナの死</p></li>
+<li>コンテナの寿命: lifetime が設定されていて一定時間経過で自動停止</li>
+<li>なぜ寿命?</li>
+<li>リソースの節約</li>
+<li>新しくなるタイミングでライブラリなども更新されてセキュア</li>
+<li>別ホストに移行したい時も CMDB をいじるだけ</li>
+<li>compute のメンテも簡単</li>
+<li><p>質問: リクエストが有る限り死なない? → lifetime で死ぬ</p></li>
+<li><p>オートスケール</p></li>
+<li>haconiwa が cgroup から各コンテナの CPU, I/O 負荷を計測・監視</li>
+<li>ユーザーはコンテナの予約枠を設定可能</li>
+<li>スケールインは CMDB の変更だけで停止は自動停止任せ</li>
+<li><p>予約枠を取るだけでオートスケール</p></li>
+<li><p>コンテナの種類も増やしていきたい</p></li>
+<li><p>質問タイム</p></li>
+<li>予約枠? パケット量をみる? → 設計中。基本的には使ったぶんだけ課金する予定?</li>
+<li>コンテナのサーバー自体が高負荷になったり物理的な障害が起きても自動でフェイルオーバー? → 自動ではできていない。手動でのせかえることはできる。自動化は可能ではある。</li>
+<li>SSL 証明書? Symantec のような台数分の場合とか → あとで</li>
+<li>オートスケールをする監視をしている間隔? → 暫定で1秒</li>
+<li>オートスケールの課金の指標は? ニュースで取り上げられる予定だから、とか。 → 設計中</li>
+<li>聞き逃し</li>
+<li>WAN の IP は共有? → 共有</li>
+<li>コンテナはドメインでみている</li>
+<li>IP アドレス単位で他のユーザーの影響は受ける可能性がある</li>
+<li>現状 CMDB はデータベースのフェイルオーバー任せなので、そこが止まると止まる可能性はある</li>
+<li>のせるアプリの開発環境? → 将来的には用意したい</li>
+<li>聞き逃し → コンテナ単位でどのくらいパフォーマンスが出ているかだそうとか色々話はある</li>
+</ul>
 
 
-<h2>まとめ</h2>
+<h2>懇親会</h2>
 
-<p>最終的には</p>
+<p>5分休憩の後で懇親会でした。</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nv">IFS</span><span class="o">=</span>: <span class="nb">read</span> -d <span class="s1">$&#39;\0&#39;</span> -r -a path <span class="o">&lt;&lt;&lt;</span><span class="s2">&quot;$PATH:&quot;</span>
-</span><span class='line'><span class="nb">unset </span>path<span class="o">[</span>-1<span class="o">]</span>
-</span></code></pre></td></tr></table></div></figure>
+<h2>感想</h2>
 
+<p>LXD を採用したという話自体は以前に別の勉強会で聞いたことがあったので、それと重複した話もありましたが、もっと技術的につっこんだ話も聞けておもしろかったです。</p>
 
-<p>で <code>PATH</code> を配列に変換できることがわかりました。</p>
+<p>LXD は他では使っているという話を聞いたことがないので、使っている人はもっと情報を出してくれればいいのに、という気がしています。
+個人的には、情報がなくて探しても何もわからないよりは、Docker のように情報がたくさんあって玉石混交で、自分で見極めないといけない、という状態の方が望ましいです。</p>
 
-<p>入力データに改行がないとわかっているなら <code>-d $'\0'</code> などは省略できるので、
-入力データの性質に応じて適度に手を抜きつつ処理をするのが良いのではないでしょうか。</p>
+<p>マネージドクラウドの話は haconiwa って作ってみたというようなものじゃなくて、ちゃんと実用的に使うためのものだったのかというのが驚きました。
+FastContainer は用途があえば良さそうな感じなので、機会があれば使ってみたいと思いました。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -302,12 +269,12 @@ bash の組み込みコマンドだけでいけそうです。</p>
 
 
 
-<time class='entry-date' datetime='2016-10-07T21:39:31+09:00'><span class='date'>2016-10-07 (Fri)</span> <span class='time'>9:39 pm</span></time>
+<time class='entry-date' datetime='2017-09-14T22:46:24+09:00'><span class='date'>2017-09-14 (Thu)</span> <span class='time'>10:46 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/bash/'>bash</a>, <a class='category' href='/blog/categories/linux/'>linux</a>, <a class='category' href='/blog/categories/shell/'>shell</a>
+    <a class='category' href='/blog/categories/event/'>event</a>
   
 </span>
 
@@ -334,10 +301,8 @@ bash の組み込みコマンドだけでいけそうです。</p>
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2016-10-06-bash-path-to-array.html" title="Previous Post: bash で PATH を配列に分解">&laquo; bash で PATH を配列に分解</a>
+        <a class="basic-alignment left" href="/blog/2017-09-10-ruby-char-literal.html" title="Previous Post: Ruby の文字リテラルについて">&laquo; Ruby の文字リテラルについて</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2016-11-05-rubykansai75.html" title="Next Post: 第75回 Ruby関西 勉強会に参加しました">第75回 Ruby関西 勉強会に参加しました &raquo;</a>
       
     </p>
   </footer>
@@ -475,8 +440,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2016-10-07-bash-path-to-array-again.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2016-10-07-bash-path-to-array-again.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-09-14-hoscon.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-09-14-hoscon.html';
         var disqus_script = 'embed.js';
       
     (function () {

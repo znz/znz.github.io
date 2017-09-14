@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-09-10T22:43:14+09:00</updated>
+  <updated>2017-09-14T23:19:02+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,157 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第11回 HosCon - GMO Hosting Conference - @大阪 に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-09-14-hoscon.html"/>
+    <updated>2017-09-14T22:46:24+09:00</updated>
+    <id>http://blog.n-z.jp/blog/hoscon</id>
+    <content type="html"><![CDATA[<p><a href="https://gmohoscon.connpass.com/event/63440/">第11回 HosCon - GMO Hosting Conference - @大阪</a> に参加したので、そのメモです。</p>
+
+<!--more-->
+
+
+<h2>会場</h2>
+
+<p>グランフロントタワー B の 梅田・GMO Yours での開催でした。
+前に何かの勉強会で一度来たことがあるような気がするのですが、何だったか思い出せませんでした。</p>
+
+<p>タワー B 自体は最近 Rails Developers Meetup #4 大阪会場 で来ていました。</p>
+
+<h2>その他</h2>
+
+<p>ハッシュタグは <code>#hoscon</code> でしたが、ツイートはあまりありませんでした。</p>
+
+<p><a href="https://twitter.com/rzl5/status/908276901914882049">https://twitter.com/rzl5/status/908276901914882049</a> に写真がありますが、 ConoHa カードをもらったので、使ってみたいと思いました。</p>
+
+<h2>コンテナ基盤であるLXC/LXDを本番環境で運用する話</h2>
+
+<ul>
+<li>2011年に物理からKVMによる完全仮想化へ</li>
+<li>完全仮想化はリソースに無駄があるということで準仮想化、コンテナ化へ</li>
+<li>なぜLXDか?</li>
+<li>他に検討した選択肢は Docker, KVM, OpenVZ, (VMware は高いので選択肢に入らず)</li>
+<li>質問: Linux だけで Windows や BSD はなかった? カーネルモジュールなども問題なかった? → Linux で、カスタマイズはしていたが共通の kernel だったので問題なく集約できた。</li>
+<li>質問: OpenVZ が遅かった? → 一般的には遅くないかもしれないが、試した環境ではコンテナより遅かった。</li>
+<li>LXDは2017年2月から運用開始</li>
+<li>ホストOSは Ubuntu 16.04 LTS</li>
+<li>ゲストOSは使い慣れたCentOS</li>
+<li>なぜZFSか?　→ 公式がオススメしているのとベンチマークの結果がよかった</li>
+<li>今も苦労している部分はある</li>
+<li>fio で計測</li>
+<li>ZFS を採用した理由: 機能性、柔軟性, 比較対象: lvm, dir</li>
+<li>ホストシステム構築時のトラブル</li>
+<li>オープンファイル数の上限など色々な上限に引っかかった</li>
+<li>ネットワーク編</li>
+<li>NIC の MAC アドレスがかぶっていた</li>
+<li>LXD 運用編</li>
+<li>Apache RLimitNPROC にひっかかった</li>
+<li>ホストのロードアベレージが急激に上昇 → ZFS がボトルネックだったのでチューニングを実施 (ZFS ARC?)</li>
+<li>2ラック (KVM) → 1ラック (LXD)</li>
+<li>質問タイム</li>
+<li>LXD で新しくサービスできるようになったことはある? → 新たなサービスはないが、快適なディスクIOを提供できている</li>
+<li>まだリリースできていないが、準専有の基盤ができた</li>
+<li>ZFS はメモリをたくさん使って残りがユーザーの領域? → ご想像にお任せします</li>
+<li>どのようなところで運用負荷の軽減? 運用でカバーしているところ? → 物理が減ったので楽になった。リソースの制限の自動化を目標に手動でやっている。物理より柔軟にできるのが良い。</li>
+<li>ライブマイグレーションをしているかどうか? → やっていない。今後対応していく。</li>
+<li>内製でコントロールパネルのようなものを作っている? → ない。全部コマンドで。</li>
+<li>CentOS? → 既存のノウハウをいかすために選んだ。</li>
+<li>OS のアップデートはどうしている? → カーネル以外は通常のアップデート</li>
+<li>ホスト側のリソース監視はしていると思うが、コンテナ側はどうしている? → 緩めの limit を設定してる</li>
+<li>PHP などのバージョン違い? → 問い合わせで個別に対応することもある</li>
+<li>サポートが終了したものはなるべく引き継がない</li>
+<li>CentOS 6? 7? → 7</li>
+</ul>
+
+
+<h2>休憩</h2>
+
+<p><!-- 20:12 から? -->20:16 まで</p>
+
+<h2>ロリポップ！マネージドクラウド FastContainerの裏側</h2>
+
+<ul>
+<li>ロリポップ！マネージドクラウドは FastContainer アーキテクチャを採用していて、コンテナエンジンに haconiwa</li>
+<li>質問: 価格? → 価格についてはまだ未定</li>
+<li>オートスケール</li>
+<li>質問: 何をもってマネージド? → コンテナの起動の仕方が特殊 (FastContainer) で、完全に root 権限があるわけではないなど</li>
+<li>質問: データベース? → データベースはコンテナで動いていないので、オートスケールではない</li>
+<li>質問: オートスケールは php だけ? → apache + php</li>
+<li>質問: データベースがオートスケールではないのなら、ユーザーごとのリソース制御? → まだ未確定</li>
+<li>質問: 具体的にアクセスが増えると、とは? → 実際は CPU のスロットルタイムをみているので、CPU の負荷が高くなれば。</li>
+<li>逆に負荷が下がればコンテナを減らす。</li>
+<li>質問: ユーザーごとのリソースの分割? 他のユーザーの影響は受けるのか? → 基本的には影響は受けない。リソースは分離している。ホスト自体が重くなっても負荷分散できるアーキテクチャになっている。</li>
+<li>FastContainer とは?</li>
+<li>FastCGI のコンテナ版といったイメージ</li>
+<li>リクエスト契機で Web アプリのコンテナが起動</li>
+<li><p>一度起動したコンテナはその後しばらく使い回して、一定時間が経過したら終了</p></li>
+<li><p>利点</p></li>
+<li>オートスケール</li>
+<li>リクエストがないと停止するのでリソースの節約</li>
+<li>いろんなコンテナで色々なアプリを提供</li>
+<li>常に最新</li>
+<li><p>他のマシンへの載せ替えも楽</p></li>
+<li><p>マネージドクラウドの構成</p></li>
+<li>CMDB というところでコンテナの情報を管理</li>
+<li>質問: 構成が速度に影響があるか? → ある。今は動くものを優先。 nfs が重いというのは多方面から突っ込まれている</li>
+<li>質問: 起動していない時と起動している時のパフォーマンスの差? → 確かにたちがっていない状態のアクセスは時間がかかる。調整中</li>
+<li>質問: どこが大きくなっていく? compute? → 今のところ compute と datapool が増えるのを想定している。</li>
+<li>パフォーマンスは調整していく段階なので、今後機会があれば。</li>
+<li>ngx_mruby</li>
+<li>haconiwa</li>
+<li>コンテナ</li>
+<li>基本は1コンテナに1プロセス</li>
+<li>ssh も sshd コンテナ経由</li>
+<li>FastContainer リクエスト制御フロー</li>
+<li>質問 → 今はチューニングがすんでいないので初回は 2,3 秒ぐらいかかる</li>
+<li>質問 → ユーザーが予約枠を設定していて、そこまでしか上がらないようにしている</li>
+<li><p>予約枠は金額で設定できるようにしたい</p></li>
+<li><p>コンテナの死</p></li>
+<li>コンテナの寿命: lifetime が設定されていて一定時間経過で自動停止</li>
+<li>なぜ寿命?</li>
+<li>リソースの節約</li>
+<li>新しくなるタイミングでライブラリなども更新されてセキュア</li>
+<li>別ホストに移行したい時も CMDB をいじるだけ</li>
+<li>compute のメンテも簡単</li>
+<li><p>質問: リクエストが有る限り死なない? → lifetime で死ぬ</p></li>
+<li><p>オートスケール</p></li>
+<li>haconiwa が cgroup から各コンテナの CPU, I/O 負荷を計測・監視</li>
+<li>ユーザーはコンテナの予約枠を設定可能</li>
+<li>スケールインは CMDB の変更だけで停止は自動停止任せ</li>
+<li><p>予約枠を取るだけでオートスケール</p></li>
+<li><p>コンテナの種類も増やしていきたい</p></li>
+<li><p>質問タイム</p></li>
+<li>予約枠? パケット量をみる? → 設計中。基本的には使ったぶんだけ課金する予定?</li>
+<li>コンテナのサーバー自体が高負荷になったり物理的な障害が起きても自動でフェイルオーバー? → 自動ではできていない。手動でのせかえることはできる。自動化は可能ではある。</li>
+<li>SSL 証明書? Symantec のような台数分の場合とか → あとで</li>
+<li>オートスケールをする監視をしている間隔? → 暫定で1秒</li>
+<li>オートスケールの課金の指標は? ニュースで取り上げられる予定だから、とか。 → 設計中</li>
+<li>聞き逃し</li>
+<li>WAN の IP は共有? → 共有</li>
+<li>コンテナはドメインでみている</li>
+<li>IP アドレス単位で他のユーザーの影響は受ける可能性がある</li>
+<li>現状 CMDB はデータベースのフェイルオーバー任せなので、そこが止まると止まる可能性はある</li>
+<li>のせるアプリの開発環境? → 将来的には用意したい</li>
+<li>聞き逃し → コンテナ単位でどのくらいパフォーマンスが出ているかだそうとか色々話はある</li>
+</ul>
+
+
+<h2>懇親会</h2>
+
+<p>5分休憩の後で懇親会でした。</p>
+
+<h2>感想</h2>
+
+<p>LXD を採用したという話自体は以前に別の勉強会で聞いたことがあったので、それと重複した話もありましたが、もっと技術的につっこんだ話も聞けておもしろかったです。</p>
+
+<p>LXD は他では使っているという話を聞いたことがないので、使っている人はもっと情報を出してくれればいいのに、という気がしています。
+個人的には、情報がなくて探しても何もわからないよりは、Docker のように情報がたくさんあって玉石混交で、自分で見極めないといけない、という状態の方が望ましいです。</p>
+
+<p>マネージドクラウドの話は haconiwa って作ってみたというようなものじゃなくて、ちゃんと実用的に使うためのものだったのかというのが驚きました。
+FastContainer は用途があえば良さそうな感じなので、機会があれば使ってみたいと思いました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Ruby の文字リテラルについて]]></title>
@@ -3869,1535 +4020,6 @@ Perl では閉じる識別子のインデント分が削られます。</p>
 <li>Perl の仕様の方が行頭にある程度の空白を残したい場合は都合が良さそうと感じました。</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Shinosaka.rb #27 (GraphQL) に参加した]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-06-24-shinosaka-rb-graphql.html"/>
-    <updated>2017-06-24T13:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/shinosaka-rb-graphql</id>
-    <content type="html"><![CDATA[<p><a href="https://shinosakarb.doorkeeper.jp/events/61090">Shinosaka.rb #27</a> に参加しました。
-Shinosaka.rb 自体は初参加でした。</p>
-
-<p>今回は GraphQL の解説と node と rails でのハンズオンでした。</p>
-
-<!--more-->
-
-
-<p>以下、メモです。</p>
-
-<h2>メモ</h2>
-
-<ul>
-<li><a href="http://www.kokuchpro.com/event/tddbcosaka4/">TDDBC大阪4.0 2017年7月1日（大阪府） - こくちーずプロ（告知'sプロ）</a></li>
-<li><a href="https://management30.doorkeeper.jp/events/61787">［認定証発行］アジャイル・リーダーシップとチェンジ・マネジメント・ワークショップ（Management 3.0） - Management 3.0（アジャイル・リーダーシップ、チェンジ･マネジメント、イノベーション・マネジメント） | Doorkeeper</a></li>
-<li>自己紹介</li>
-<li>QraphQL とは?</li>
-<li>単一のエンドポイント</li>
-<li>ライブラリーもいろんな言語や環境に対応している</li>
-<li>REST API がツライから</li>
-<li>GraphQL の微妙な点: pagination, 認証も考慮されていない</li>
-<li>React との相性が良い: データ駆動</li>
-<li>GitHub が GraphQL を採用: <a href="https://developer.github.com/v4/explorer/">https://developer.github.com/v4/explorer/</a></li>
-<li><a href="http://graphql.org/">http://graphql.org/</a></li>
-</ul>
-
-
-<h2>動作確認環境</h2>
-
-<ul>
-<li>macOS Sierra 10.12.5</li>
-<li>node v8.1.2</li>
-<li>npm 5.0.3</li>
-<li>graphql などのバージョン: <a href="https://github.com/znz/getting_started_graphql">https://github.com/znz/getting_started_graphql</a> を参照</li>
-<li>ruby ruby 2.3.3p222 (2016-11-21 revision 56859) [x86_64-darwin15]</li>
-<li>Bundler version 1.15.1</li>
-<li>Rails 5.1.1</li>
-<li>graphql 1.6.4, graphiql-rails 1.4.2</li>
-<li>その他: <a href="https://github.com/znz/getting_started_graphql_ruby">https://github.com/znz/getting_started_graphql_ruby</a> を参照</li>
-</ul>
-
-
-<h2>ソースコード</h2>
-
-<ul>
-<li>node 版は <a href="https://github.com/znz/getting_started_graphql">https://github.com/znz/getting_started_graphql</a> を参照</li>
-<li>Rails 版は <a href="https://github.com/znz/getting_started_graphql_ruby">https://github.com/znz/getting_started_graphql_ruby</a> を参照</li>
-</ul>
-
-
-<p>途中での graphiql での確認方法は下の作業メモの方に書いてあるので、あわせて参照してください。</p>
-
-<h2>感想</h2>
-
-<p>作業メモが長く続くので、先に感想を書いておきます。</p>
-
-<p>node の方はエラーも json で帰ってきてブラウザーで見えて開発環境として使いやすそうな感じでしたが、
-graphiql-rails の方はエラーの時に <code>SyntaxError: Unexpected token &lt; in JSON at position 0</code> とだけ出て、
-詳細はサーバー側のログをみないといけないので、node に比べるとちょっと使いづらいかもしれない、と思いました。</p>
-
-<p>GraphQL 自体は色々と利点も多そうだと思いましたが、サーバー側は結局 REST とは別に作り込まないといけなさそうで、
-アクセス権限などを考えると、既存のアプリケーションで簡単に置き換えられるものでもなさそうかな、と思いました。</p>
-
-<h2>実際に使ってみる</h2>
-
-<ul>
-<li><a href="http://graphql.org/code/">http://graphql.org/code/</a></li>
-<li>npm init -y</li>
-<li>npm install graphql</li>
-</ul>
-
-
-<h2>step 1</h2>
-
-<p>index.js として以下の内容を作成:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>'use strict'
-</span><span class='line'>
-</span><span class='line'>const { graphql, buildSchema } = require('graphql')
-</span><span class='line'>
-</span><span class='line'>const schema = buildSchema(`
-</span><span class='line'>type Query {
-</span><span class='line'>  foo: String
-</span><span class='line'>}
-</span><span class='line'>
-</span><span class='line'>type Schema {
-</span><span class='line'>  query: Query
-</span><span class='line'>}
-</span><span class='line'>`)
-</span><span class='line'>
-</span><span class='line'>const resolvers = {
-</span><span class='line'>  foo: () =&gt; 'bar',
-</span><span class='line'>}
-</span><span class='line'>
-</span><span class='line'>const query = `
-</span><span class='line'>query myQuery {
-</span><span class='line'>  foo
-</span><span class='line'>}
-</span><span class='line'>`
-</span><span class='line'>
-</span><span class='line'>graphql(schema, query, resolvers)
-</span><span class='line'>  .then(result =&gt; console.log(result))
-</span><span class='line'>  .catch(err =&gt; console.log(err))</span></code></pre></td></tr></table></div></figure>
-
-
-<p>実行結果:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% node.index.js
-</span><span class='line'>{ data: { foo: 'bar' } }</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>step 2</h2>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const schema = buildSchema(`
-</span><span class='line'>type Query {
-</span><span class='line'>  id: ID,
-</span><span class='line'>  title: String,
-</span><span class='line'>  watched: Boolean,
-</span><span class='line'>}
-</span><span class='line'>
-</span><span class='line'>type Schema {
-</span><span class='line'>  query: Query
-</span><span class='line'>}
-</span><span class='line'>`)</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const resolvers = {
-</span><span class='line'>  id: () =&gt; 1,
-</span><span class='line'>  title: () =&gt; 'bar',
-</span><span class='line'>  watched: () =&gt; true,
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const query = `
-</span><span class='line'>query myQuery {
-</span><span class='line'>  id,
-</span><span class='line'>  title,
-</span><span class='line'>  watched,
-</span><span class='line'>}
-</span><span class='line'>`</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% node index.js
-</span><span class='line'>{ data: { id: '1', title: 'bar', watched: true } }</span></code></pre></td></tr></table></div></figure>
-
-
-<p>query から watched を削ると <code>{ data: { id: '1', title: 'bar' } }</code> になる。</p>
-
-<h2>step 3</h2>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const schema = buildSchema(`
-</span><span class='line'>type Video {
-</span><span class='line'>  id: ID,
-</span><span class='line'>  title: String,
-</span><span class='line'>  watched: Boolean,
-</span><span class='line'>}
-</span><span class='line'>
-</span><span class='line'>type Query {
-</span><span class='line'>  video: Video
-</span><span class='line'>}
-</span><span class='line'>
-</span><span class='line'>type Schema {
-</span><span class='line'>  query: Query
-</span><span class='line'>}
-</span><span class='line'>`)</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const resolvers = {
-</span><span class='line'>  video: () =&gt;({
-</span><span class='line'>    id: 1,
-</span><span class='line'>    title: 'bar',
-</span><span class='line'>    watched: true
-</span><span class='line'>  }),
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const query = `
-</span><span class='line'>query myQuery {
-</span><span class='line'>  video {
-</span><span class='line'>    id,
-</span><span class='line'>    title,
-</span><span class='line'>    watched,
-</span><span class='line'>  }
-</span><span class='line'>}
-</span><span class='line'>`</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>step 4</h2>
-
-<p>videos 対応</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const schema = buildSchema(`
-</span><span class='line'>type Video {
-</span><span class='line'>  id: ID,
-</span><span class='line'>  title: String,
-</span><span class='line'>  watched: Boolean,
-</span><span class='line'>}
-</span><span class='line'>
-</span><span class='line'>type Query {
-</span><span class='line'>  video: Video,
-</span><span class='line'>  videos: [Video],
-</span><span class='line'>}
-</span><span class='line'>
-</span><span class='line'>type Schema {
-</span><span class='line'>  query: Query
-</span><span class='line'>}
-</span><span class='line'>`)</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const videoA = {
-</span><span class='line'>  id: 1,
-</span><span class='line'>  title: 'title1',
-</span><span class='line'>  watched: true
-</span><span class='line'>}
-</span><span class='line'>const videoB = {
-</span><span class='line'>  id: 2,
-</span><span class='line'>  title: 'title2',
-</span><span class='line'>  watched: false
-</span><span class='line'>}
-</span><span class='line'>const videos = [videoA, videoB]</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const resolvers = {
-</span><span class='line'>  video: () =&gt; ({
-</span><span class='line'>    id: 1,
-</span><span class='line'>    title: 'bar',
-</span><span class='line'>    watched: true,
-</span><span class='line'>  }),
-</span><span class='line'>  videos: () =&gt; videos,
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const query = `
-</span><span class='line'>query myQuery {
-</span><span class='line'>  videos {
-</span><span class='line'>    id,
-</span><span class='line'>    title,
-</span><span class='line'>    watched,
-</span><span class='line'>  }
-</span><span class='line'>}
-</span><span class='line'>`</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% node index.js
-</span><span class='line'>{ data: { videos: [ [Object], [Object] ] } }</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>step 5</h2>
-
-<p><code>yarn add express express-graphql</code> or <code>npm install express express-graphql</code></p>
-
-<p><code>require('graphql')</code> の行の上に追加:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const express = require('express')
-</span><span class='line'>const graphqlHTTP = require('express-graphql')</span></code></pre></td></tr></table></div></figure>
-
-
-<p>追加:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const PORT = process.env.PORT || 3000
-</span><span class='line'>const server = express()</span></code></pre></td></tr></table></div></figure>
-
-
-<p>末尾の <code>graphql</code> の呼び出しを置き換え:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>server.use('/graphql', graphqlHTTP({
-</span><span class='line'>  schema,
-</span><span class='line'>  graphiql: true,
-</span><span class='line'>  rootValue: resolvers,
-</span><span class='line'>}))
-</span><span class='line'>
-</span><span class='line'>server.listen(PORT, () =&gt; {
-</span><span class='line'>  console.log(`Listening on http://localhost:${PORT}`)
-</span><span class='line'>})</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>http://localhost:3000/graphql</code> を開いて</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>{
-</span><span class='line'>  videos {
-</span><span class='line'>    id,
-</span><span class='line'>    title,
-</span><span class='line'>    watched,
-</span><span class='line'>  }
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-<p>などを試す。</p>
-
-<p>右上の Docs でスキーマも見える。</p>
-
-<h2>step 6</h2>
-
-<p>graphql の require のところを書き換え:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const {
-</span><span class='line'>  GraphQLSchema,
-</span><span class='line'>  GraphQLObjectType,
-</span><span class='line'>  GraphQLID,
-</span><span class='line'>  GraphQLString,
-</span><span class='line'>  GraphQLBoolean,
-</span><span class='line'>} = require('graphql')</span></code></pre></td></tr></table></div></figure>
-
-
-<p>buildSchema を書き換え:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const videoType = new GraphQLObjectType({
-</span><span class='line'>  name: 'Video',
-</span><span class='line'>  description: 'video',
-</span><span class='line'>  fields: {
-</span><span class='line'>    id: {
-</span><span class='line'>      type: GraphQLID,
-</span><span class='line'>      description: 'id of video',
-</span><span class='line'>    },
-</span><span class='line'>    title: {
-</span><span class='line'>      type: GraphQLString,
-</span><span class='line'>      description: 'title of video'
-</span><span class='line'>    },
-</span><span class='line'>    watched: {
-</span><span class='line'>      type: GraphQLBoolean,
-</span><span class='line'>      description: 'has watched'
-</span><span class='line'>    }
-</span><span class='line'>  }
-</span><span class='line'>})</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const queryType = new GraphQLObjectType({
-</span><span class='line'>  name: 'QueryType',
-</span><span class='line'>  description: 'root query',
-</span><span class='line'>  fields: {
-</span><span class='line'>    video: {
-</span><span class='line'>      type: videoType,
-</span><span class='line'>      resolve: () =&gt; new Promise(resolve =&gt; {
-</span><span class='line'>        resolve({
-</span><span class='line'>          id: 1,
-</span><span class='line'>          title: 'title1',
-</span><span class='line'>          watched: true,
-</span><span class='line'>        })
-</span><span class='line'>      })
-</span><span class='line'>    }
-</span><span class='line'>  }
-</span><span class='line'>})</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const schema = new GraphQLSchema({
-</span><span class='line'>  query: queryType,
-</span><span class='line'>})</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>node index.js</code> を再起動して <code>http://localhost:3000/graphql</code> で</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>{
-</span><span class='line'>  video {
-</span><span class='line'>    id
-</span><span class='line'>    title
-</span><span class='line'>    watched
-</span><span class='line'>  }
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-<p>などを試す。</p>
-
-<h2>休憩</h2>
-
-<h2>id: 1 だけ欲しいときなど</h2>
-
-<p>videos を移動して data.js を作成:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>'use strict'
-</span><span class='line'>
-</span><span class='line'>const videoA = {
-</span><span class='line'>  id: 1,
-</span><span class='line'>  title: 'title1',
-</span><span class='line'>  watched: true
-</span><span class='line'>}
-</span><span class='line'>const videoB = {
-</span><span class='line'>  id: 2,
-</span><span class='line'>  title: 'title2',
-</span><span class='line'>  watched: false
-</span><span class='line'>}
-</span><span class='line'>const videos = [videoA, videoB]
-</span><span class='line'>
-</span><span class='line'>const getVideoById = (id) =&gt; new Promise(resolve =&gt; {
-</span><span class='line'>  const [video] = videos.filter(v =&gt; (v.id + '') === id)
-</span><span class='line'>  resolve(video)
-</span><span class='line'>})
-</span><span class='line'>
-</span><span class='line'>exports.getVideoById = getVideoById</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const { getVideoById } = require('./data')</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const queryType = new GraphQLObjectType({
-</span><span class='line'>  name: 'QueryType',
-</span><span class='line'>  description: 'root query',
-</span><span class='line'>  fields: {
-</span><span class='line'>    video: {
-</span><span class='line'>      type: videoType,
-</span><span class='line'>      args: {
-</span><span class='line'>        id: {
-</span><span class='line'>          type: GraphQLID,
-</span><span class='line'>          description: 'id of video',
-</span><span class='line'>        },
-</span><span class='line'>      },
-</span><span class='line'>      resolve: (_, args) =&gt; getVideoById(args.id)
-</span><span class='line'>    }
-</span><span class='line'>  }
-</span><span class='line'>})</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>node index.js</code> を再起動して <code>http://localhost:3000/graphql</code> で</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>{
-</span><span class='line'>  video(id: 2) {
-</span><span class='line'>    id
-</span><span class='line'>    title
-</span><span class='line'>    watched
-</span><span class='line'>  }
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-<p>などを試す。</p>
-
-<h2>id を必須にしたい</h2>
-
-<p><code>require('graphql')</code> のところに <code>GraphQLNonNull,</code> を追加。</p>
-
-<p><code>type: new GraphQLNonNull(GraphQLID),</code> にする。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>{
-</span><span class='line'>  "errors": [
-</span><span class='line'>    {
-</span><span class='line'>      "message": "Unknown operation named \"null\"."
-</span><span class='line'>    }
-</span><span class='line'>  ]
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-<p>になってしまったが、 getVideos の追加の後、もう一度試したら動いたので謎。
-謎のエラーが発生した時は Prettify を押すとエラーが起きなくなるみたい。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>{
-</span><span class='line'>  video {
-</span><span class='line'>    id
-</span><span class='line'>    title
-</span><span class='line'>    watched
-</span><span class='line'>  }
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-<p>などを試すと以下のように意図通りのエラーになる。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>{
-</span><span class='line'>  "errors": [
-</span><span class='line'>    {
-</span><span class='line'>      "message": "Field \"video\" argument \"id\" of type \"ID!\" is required but not provided.",
-</span><span class='line'>      "locations": [
-</span><span class='line'>        {
-</span><span class='line'>          "line": 2,
-</span><span class='line'>          "column": 3
-</span><span class='line'>        }
-</span><span class='line'>      ]
-</span><span class='line'>    }
-</span><span class='line'>  ]
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>配列</h2>
-
-<p><code>GraphQLList</code> を追加</p>
-
-<p>data.js に追加:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const getVideos = () =&gt; new Promise(resolve =&gt; resolve(videos))</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>exports.getVideos = getVideos</span></code></pre></td></tr></table></div></figure>
-
-
-<p>index.js:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const { getVideoById, getVideos } = require('./data')</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>videos: {
-</span><span class='line'>  type: new GraphQLList(videoType),
-</span><span class='line'>  resolve: getVideos,
-</span><span class='line'>},</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>node index.js</code> を再起動して <code>http://localhost:3000/graphql</code> で</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>{
-</span><span class='line'>  videos {
-</span><span class='line'>    id
-</span><span class='line'>    title
-</span><span class='line'>    watched
-</span><span class='line'>  }
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-<p>などを試す。</p>
-
-<h2>mutation</h2>
-
-<p>schema に mutation を追加:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const schema = new GraphQLSchema({
-</span><span class='line'>  query: queryType,
-</span><span class='line'>  mutation: mutationType,
-</span><span class='line'>})</span></code></pre></td></tr></table></div></figure>
-
-
-<p>schema の上に追加:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const mutationType = new GraphQLObjectType({
-</span><span class='line'>  name: 'Mutation',
-</span><span class='line'>  description: 'Mutation type',
-</span><span class='line'>  fields: {
-</span><span class='line'>    createVideo: {
-</span><span class='line'>      type: videoType,
-</span><span class='line'>      args: {
-</span><span class='line'>        title: {
-</span><span class='line'>          type: new GraphQLNonNull(GraphQLString),
-</span><span class='line'>          description: 'title of video',
-</span><span class='line'>        },
-</span><span class='line'>      },
-</span><span class='line'>      resolve: (_, args) =&gt; {
-</span><span class='line'>        return createVideo(args)
-</span><span class='line'>      }
-</span><span class='line'>    },
-</span><span class='line'>  },
-</span><span class='line'>})</span></code></pre></td></tr></table></div></figure>
-
-
-<p>data.js:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const createVideo = ({ title }) =&gt; {
-</span><span class='line'>  const maxId = Math.max.apply(null, videos.map(v =&gt; v.id))
-</span><span class='line'>  const watched = false
-</span><span class='line'>  const video = {
-</span><span class='line'>    id: maxId + 1,
-</span><span class='line'>    title,
-</span><span class='line'>    watched,
-</span><span class='line'>  }
-</span><span class='line'>  return video
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-<p>(videos への push が抜けていた。)</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>exports.createVideo = createVideo</span></code></pre></td></tr></table></div></figure>
-
-
-<p>index.js:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const { getVideoById, getVideos, createVideo } = require('./data')</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>node index.js</code> を再起動して <code>http://localhost:3000/graphql</code> で</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>mutation M {
-</span><span class='line'>  createVideo(title: "hoge") {
-</span><span class='line'>    id
-</span><span class='line'>    title
-</span><span class='line'>    watched
-</span><span class='line'>  }
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-<p>を試す。</p>
-
-<p>この時点の index.js:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-<span class='line-number'>51</span>
-<span class='line-number'>52</span>
-<span class='line-number'>53</span>
-<span class='line-number'>54</span>
-<span class='line-number'>55</span>
-<span class='line-number'>56</span>
-<span class='line-number'>57</span>
-<span class='line-number'>58</span>
-<span class='line-number'>59</span>
-<span class='line-number'>60</span>
-<span class='line-number'>61</span>
-<span class='line-number'>62</span>
-<span class='line-number'>63</span>
-<span class='line-number'>64</span>
-<span class='line-number'>65</span>
-<span class='line-number'>66</span>
-<span class='line-number'>67</span>
-<span class='line-number'>68</span>
-<span class='line-number'>69</span>
-<span class='line-number'>70</span>
-<span class='line-number'>71</span>
-<span class='line-number'>72</span>
-<span class='line-number'>73</span>
-<span class='line-number'>74</span>
-<span class='line-number'>75</span>
-<span class='line-number'>76</span>
-<span class='line-number'>77</span>
-<span class='line-number'>78</span>
-<span class='line-number'>79</span>
-<span class='line-number'>80</span>
-<span class='line-number'>81</span>
-<span class='line-number'>82</span>
-<span class='line-number'>83</span>
-<span class='line-number'>84</span>
-<span class='line-number'>85</span>
-<span class='line-number'>86</span>
-<span class='line-number'>87</span>
-<span class='line-number'>88</span>
-<span class='line-number'>89</span>
-<span class='line-number'>90</span>
-<span class='line-number'>91</span>
-<span class='line-number'>92</span>
-<span class='line-number'>93</span>
-<span class='line-number'>94</span>
-<span class='line-number'>95</span>
-<span class='line-number'>96</span>
-<span class='line-number'>97</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>'use strict'
-</span><span class='line'>
-</span><span class='line'>const express = require('express')
-</span><span class='line'>const graphqlHTTP = require('express-graphql')
-</span><span class='line'>const {
-</span><span class='line'>  GraphQLSchema,
-</span><span class='line'>  GraphQLObjectType,
-</span><span class='line'>  GraphQLID,
-</span><span class='line'>  GraphQLString,
-</span><span class='line'>  GraphQLBoolean,
-</span><span class='line'>  GraphQLNonNull,
-</span><span class='line'>  GraphQLList,
-</span><span class='line'>} = require('graphql')
-</span><span class='line'>const { getVideoById, getVideos, createVideo } = require('./data')
-</span><span class='line'>
-</span><span class='line'>const PORT = process.env.PORT || 3000
-</span><span class='line'>const server = express()
-</span><span class='line'>
-</span><span class='line'>/*
-</span><span class='line'>video
-</span><span class='line'>  id
-</span><span class='line'>  title
-</span><span class='line'>  watched
-</span><span class='line'>*/
-</span><span class='line'>
-</span><span class='line'>const videoType = new GraphQLObjectType({
-</span><span class='line'>  name: 'Video',
-</span><span class='line'>  description: 'video',
-</span><span class='line'>  fields: {
-</span><span class='line'>    id: {
-</span><span class='line'>      type: GraphQLID,
-</span><span class='line'>      description: 'id of video',
-</span><span class='line'>    },
-</span><span class='line'>    title: {
-</span><span class='line'>      type: GraphQLString,
-</span><span class='line'>      description: 'title of video'
-</span><span class='line'>    },
-</span><span class='line'>    watched: {
-</span><span class='line'>      type: GraphQLBoolean,
-</span><span class='line'>      description: 'has watched'
-</span><span class='line'>    }
-</span><span class='line'>  }
-</span><span class='line'>})
-</span><span class='line'>
-</span><span class='line'>const queryType = new GraphQLObjectType({
-</span><span class='line'>  name: 'QueryType',
-</span><span class='line'>  description: 'root query',
-</span><span class='line'>  fields: {
-</span><span class='line'>    videos: {
-</span><span class='line'>      type: new GraphQLList(videoType),
-</span><span class='line'>      resolve: getVideos,
-</span><span class='line'>    },
-</span><span class='line'>    video: {
-</span><span class='line'>      type: videoType,
-</span><span class='line'>      args: {
-</span><span class='line'>        id: {
-</span><span class='line'>          type: new GraphQLNonNull(GraphQLID),
-</span><span class='line'>          description: 'id of video',
-</span><span class='line'>        }
-</span><span class='line'>      },
-</span><span class='line'>      resolve: (_, args) =&gt; getVideoById(args.id)
-</span><span class='line'>    }
-</span><span class='line'>  }
-</span><span class='line'>})
-</span><span class='line'>
-</span><span class='line'>const mutationType = new GraphQLObjectType({
-</span><span class='line'>  name: 'Mutation',
-</span><span class='line'>  description: 'Mutation type',
-</span><span class='line'>  fields: {
-</span><span class='line'>    createVideo: {
-</span><span class='line'>      type: videoType,
-</span><span class='line'>      args: {
-</span><span class='line'>        title: {
-</span><span class='line'>          type: new GraphQLNonNull(GraphQLString),
-</span><span class='line'>          description: 'title of video',
-</span><span class='line'>        },
-</span><span class='line'>      },
-</span><span class='line'>      resolve: (_, args) =&gt; {
-</span><span class='line'>        return createVideo(args)
-</span><span class='line'>      }
-</span><span class='line'>    },
-</span><span class='line'>  },
-</span><span class='line'>})
-</span><span class='line'>
-</span><span class='line'>const schema = new GraphQLSchema({
-</span><span class='line'>  query: queryType,
-</span><span class='line'>  mutation: mutationType,
-</span><span class='line'>})
-</span><span class='line'>
-</span><span class='line'>server.use('/graphql', graphqlHTTP({
-</span><span class='line'>  schema,
-</span><span class='line'>  graphiql: true,
-</span><span class='line'>}))
-</span><span class='line'>
-</span><span class='line'>server.listen(PORT, () =&gt; {
-</span><span class='line'>  console.log(`Listening on http://localhost:${PORT}`)
-</span><span class='line'>})</span></code></pre></td></tr></table></div></figure>
-
-
-<p>data.js:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>'use strict'
-</span><span class='line'>
-</span><span class='line'>const videoA = {
-</span><span class='line'>  id: 1,
-</span><span class='line'>  title: 'title1',
-</span><span class='line'>  watched: true
-</span><span class='line'>}
-</span><span class='line'>const videoB = {
-</span><span class='line'>  id: 2,
-</span><span class='line'>  title: 'title2',
-</span><span class='line'>  watched: false
-</span><span class='line'>}
-</span><span class='line'>const videos = [videoA, videoB]
-</span><span class='line'>
-</span><span class='line'>const getVideos = () =&gt; new Promise(resolve =&gt; resolve(videos))
-</span><span class='line'>
-</span><span class='line'>const createVideo = ({ title }) =&gt; {
-</span><span class='line'>  const maxId = Math.max.apply(null, videos.map(v =&gt; v.id))
-</span><span class='line'>  const watched = false
-</span><span class='line'>  const video = {
-</span><span class='line'>    id: maxId + 1,
-</span><span class='line'>    title,
-</span><span class='line'>    watched,
-</span><span class='line'>  }
-</span><span class='line'>  videos.push(video)
-</span><span class='line'>  return video
-</span><span class='line'>}
-</span><span class='line'>
-</span><span class='line'>const getVideoById = (id) =&gt; new Promise(resolve =&gt; {
-</span><span class='line'>  const [video] = videos.filter(v =&gt; (v.id + '') === id)
-</span><span class='line'>  resolve(video)
-</span><span class='line'>})
-</span><span class='line'>
-</span><span class='line'>exports.getVideoById = getVideoById
-</span><span class='line'>exports.getVideos = getVideos
-</span><span class='line'>exports.createVideo = createVideo</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>createVideo の args を分離したい</h2>
-
-<p>require のところに <code>GraphQLInputObjectType,</code> を追加。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>const videoInputType = new GraphQLInputObjectType({
-</span><span class='line'>  name: 'VideoInputType',
-</span><span class='line'>  description: 'video input type',
-</span><span class='line'>  fields: {
-</span><span class='line'>    title: {
-</span><span class='line'>      type: new GraphQLNonNull(GraphQLString),
-</span><span class='line'>      description: 'title of video',
-</span><span class='line'>    },
-</span><span class='line'>  }
-</span><span class='line'>})
-</span><span class='line'>
-</span><span class='line'>const mutationType = new GraphQLObjectType({
-</span><span class='line'>  name: 'Mutation',
-</span><span class='line'>  description: 'Mutation type',
-</span><span class='line'>  fields: {
-</span><span class='line'>    createVideo: {
-</span><span class='line'>      type: videoType,
-</span><span class='line'>      args: {
-</span><span class='line'>        video: {
-</span><span class='line'>          type: new GraphQLNonNull(videoInputType)
-</span><span class='line'>        },
-</span><span class='line'>      },
-</span><span class='line'>      resolve: (_, args) =&gt; {
-</span><span class='line'>        return createVideo(args.video)
-</span><span class='line'>      }
-</span><span class='line'>    },
-</span><span class='line'>  },
-</span><span class='line'>})</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>node index.js</code> を再起動して <code>http://localhost:3000/graphql</code> で</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>mutation M {
-</span><span class='line'>  createVideo(video: {title: "hoge"}) {
-</span><span class='line'>    id
-</span><span class='line'>    title
-</span><span class='line'>    watched
-</span><span class='line'>  }
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-<p>を試す (<code>video:</code> で一段増えているので注意)</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>{
-</span><span class='line'>  videos {
-</span><span class='line'>    id
-</span><span class='line'>    title
-</span><span class='line'>  }
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-<p>などを試す。</p>
-
-<h2>休憩</h2>
-
-<h3>createVideo も Promise にするとどうか</h3>
-
-<p>createVideo の末尾を <code>return Promise.resolve(video)</code> にしても問題なく動いた。</p>
-
-<h2>ruby でどうか</h2>
-
-<ul>
-<li><code>rails new getting_started_graphql_ruby</code></li>
-<li><a href="http://graphql-ruby.org/getting_started">http://graphql-ruby.org/getting_started</a></li>
-<li>Gemfile に <code>gem 'graphql'</code> を追加</li>
-<li><code>bundle install</code></li>
-<li><code>rails g graphql:install</code></li>
-<li>Gemfile に <code>graphiql-rails</code> が追加されているので <code>bundle install</code></li>
-</ul>
-
-
-<h2>video 追加</h2>
-
-<ul>
-<li><code>rails g graphql:object Video id:Int title:String watched:Boolean</code></li>
-<li>id は Int ではなく ID が正しいので <code>rails d graphql:object Video id:Int title:String watched:Boolean</code> で消してやり直し</li>
-<li><code>rails g graphql:object Video id:ID title:String watched:Boolean</code></li>
-<li><code>app/graphql/types/query_type.rb</code> を変更</li>
-</ul>
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>  field :video do
-</span><span class='line'>    type Types::VideoType
-</span><span class='line'>    argument :id, !types.ID
-</span><span class='line'>    description 'Find video by ID'
-</span><span class='line'>    resolve -&gt;(obj, args, ctx) { Video.find(args["id"]) }
-</span><span class='line'>  end</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>rails s</code> を起動して <code>http://localhost:3000/graphiql</code> (express-graphql での例と違って <code>/graphql</code> ではなく <code>i</code> が入る) で</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>{
-</span><span class='line'>  video(id: 1) {
-</span><span class='line'>    id
-</span><span class='line'>    title
-</span><span class='line'>  }
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-<p>を試すと server 側で <code>NameError (uninitialized constant Video):</code> になるのを確認。</p>
-
-<ul>
-<li><code>rails g model video title watched:boolean</code></li>
-<li><code>rake db:migrate</code></li>
-<li><code>rails c</code> で <code>Video.create(title: "Hoge", watched: false)</code> などでレコードを作成しておく</li>
-<li>graphiql で試す</li>
-</ul>
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>{
-</span><span class='line'>  video(id: 1) {
-</span><span class='line'>    id
-</span><span class='line'>    title
-</span><span class='line'>    watched
-</span><span class='line'>  }
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>mutation</h2>
-
-<ul>
-<li><code>app/graphql/mutations/create_video.rb</code></li>
-</ul>
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'># 動かない
-</span><span class='line'>Mutations::CreateVideo = GraphQL::Relay::Mutation.define do
-</span><span class='line'>  name "CreateVideo"
-</span><span class='line'>
-</span><span class='line'>  return_field :video, Types::VideoType
-</span><span class='line'>
-</span><span class='line'>  input_field :title, !types.String
-</span><span class='line'>
-</span><span class='line'>  resolve -&gt;(obj, args, ctx) {
-</span><span class='line'>    return Video.create(title: args["title"])
-</span><span class='line'>  }
-</span><span class='line'>end</span></code></pre></td></tr></table></div></figure>
-
-
-<ul>
-<li><code>app/graphql/getting_started_graphql_ruby_schema.rb</code> に <code>mutation(Mutations::CreateVideo)</code> を追加</li>
-<li><code>GraphQL::Schema::InvalidTypeError (CreateVideo has an invalid type: must be an instance of GraphQL::BaseType, not GraphQL::Relay::Mutation</code> になってうまくいかない</li>
-<li><code>rails g graphql:mutation</code> は relay mutation 用で違うらしい</li>
-</ul>
-
-
-<h2>クライアント</h2>
-
-<ul>
-<li><a href="http://dev.apollodata.com/react/">http://dev.apollodata.com/react/</a> が redux っぽくてしっくりきたらしい。</li>
-<li>rack-cors の設定が必要?</li>
-<li><a href="https://github.com/facebook/relay">https://github.com/facebook/relay</a></li>
-</ul>
-
-
-<h2>mutation の動くコード例</h2>
-
-<p>rito さんに動く例をみせてもらって修正。</p>
-
-<p><code>app/graphql/mutations/video.rb</code>:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>Mutations::Video = GraphQL::ObjectType.define do
-</span><span class='line'>  name "mutation"
-</span><span class='line'>
-</span><span class='line'>  field :video, Types::VideoType do
-</span><span class='line'>    description "Create a video"
-</span><span class='line'>    argument :title, !types.String
-</span><span class='line'>
-</span><span class='line'>    resolve -&gt;(obj, args, ctx) {
-</span><span class='line'>      Video.create(title: args["title"], watched: false)
-</span><span class='line'>    }
-</span><span class='line'>  end
-</span><span class='line'>end</span></code></pre></td></tr></table></div></figure>
-
-
-<p>(<code>name "Video"</code> にすると <code>Duplicate type definition found for name 'Video'</code> で動かなかった。)</p>
-
-<p><code>app/graphql/getting_started_graphql_ruby_schema.rb</code>:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>GettingStartedGraphqlRubySchema = GraphQL::Schema.define do
-</span><span class='line'>  query(Types::QueryType)
-</span><span class='line'>  mutation(Mutations::Video)
-</span><span class='line'>end</span></code></pre></td></tr></table></div></figure>
-
-
-<p><code>http://localhost:3000/graphiql</code> で以下を試す。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>mutation M {
-</span><span class='line'>  video(title: "foo") {
-</span><span class='line'>    id
-</span><span class='line'>    title
-</span><span class='line'>    watched
-</span><span class='line'>  }
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>{
-</span><span class='line'>  video(id: 2) {
-</span><span class='line'>    id
-</span><span class='line'>    title
-</span><span class='line'>    watched
-</span><span class='line'>  }
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
-
-
-<p>追加されたのがみえたら OK</p>
-
-<p>時間切れで試せなかったけど、 mutation を複数追加する場合はどうなるのかがわからなかった。</p>
 ]]></content>
   </entry>
   

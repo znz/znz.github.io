@@ -4,7 +4,7 @@
   <title><![CDATA[Category: event | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/event/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-09-10T22:43:14+09:00</updated>
+  <updated>2017-09-14T23:19:02+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,157 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第11回 HosCon - GMO Hosting Conference - @大阪 に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-09-14-hoscon.html"/>
+    <updated>2017-09-14T22:46:24+09:00</updated>
+    <id>http://blog.n-z.jp/blog/hoscon</id>
+    <content type="html"><![CDATA[<p><a href="https://gmohoscon.connpass.com/event/63440/">第11回 HosCon - GMO Hosting Conference - @大阪</a> に参加したので、そのメモです。</p>
+
+<!--more-->
+
+
+<h2>会場</h2>
+
+<p>グランフロントタワー B の 梅田・GMO Yours での開催でした。
+前に何かの勉強会で一度来たことがあるような気がするのですが、何だったか思い出せませんでした。</p>
+
+<p>タワー B 自体は最近 Rails Developers Meetup #4 大阪会場 で来ていました。</p>
+
+<h2>その他</h2>
+
+<p>ハッシュタグは <code>#hoscon</code> でしたが、ツイートはあまりありませんでした。</p>
+
+<p><a href="https://twitter.com/rzl5/status/908276901914882049">https://twitter.com/rzl5/status/908276901914882049</a> に写真がありますが、 ConoHa カードをもらったので、使ってみたいと思いました。</p>
+
+<h2>コンテナ基盤であるLXC/LXDを本番環境で運用する話</h2>
+
+<ul>
+<li>2011年に物理からKVMによる完全仮想化へ</li>
+<li>完全仮想化はリソースに無駄があるということで準仮想化、コンテナ化へ</li>
+<li>なぜLXDか?</li>
+<li>他に検討した選択肢は Docker, KVM, OpenVZ, (VMware は高いので選択肢に入らず)</li>
+<li>質問: Linux だけで Windows や BSD はなかった? カーネルモジュールなども問題なかった? → Linux で、カスタマイズはしていたが共通の kernel だったので問題なく集約できた。</li>
+<li>質問: OpenVZ が遅かった? → 一般的には遅くないかもしれないが、試した環境ではコンテナより遅かった。</li>
+<li>LXDは2017年2月から運用開始</li>
+<li>ホストOSは Ubuntu 16.04 LTS</li>
+<li>ゲストOSは使い慣れたCentOS</li>
+<li>なぜZFSか?　→ 公式がオススメしているのとベンチマークの結果がよかった</li>
+<li>今も苦労している部分はある</li>
+<li>fio で計測</li>
+<li>ZFS を採用した理由: 機能性、柔軟性, 比較対象: lvm, dir</li>
+<li>ホストシステム構築時のトラブル</li>
+<li>オープンファイル数の上限など色々な上限に引っかかった</li>
+<li>ネットワーク編</li>
+<li>NIC の MAC アドレスがかぶっていた</li>
+<li>LXD 運用編</li>
+<li>Apache RLimitNPROC にひっかかった</li>
+<li>ホストのロードアベレージが急激に上昇 → ZFS がボトルネックだったのでチューニングを実施 (ZFS ARC?)</li>
+<li>2ラック (KVM) → 1ラック (LXD)</li>
+<li>質問タイム</li>
+<li>LXD で新しくサービスできるようになったことはある? → 新たなサービスはないが、快適なディスクIOを提供できている</li>
+<li>まだリリースできていないが、準専有の基盤ができた</li>
+<li>ZFS はメモリをたくさん使って残りがユーザーの領域? → ご想像にお任せします</li>
+<li>どのようなところで運用負荷の軽減? 運用でカバーしているところ? → 物理が減ったので楽になった。リソースの制限の自動化を目標に手動でやっている。物理より柔軟にできるのが良い。</li>
+<li>ライブマイグレーションをしているかどうか? → やっていない。今後対応していく。</li>
+<li>内製でコントロールパネルのようなものを作っている? → ない。全部コマンドで。</li>
+<li>CentOS? → 既存のノウハウをいかすために選んだ。</li>
+<li>OS のアップデートはどうしている? → カーネル以外は通常のアップデート</li>
+<li>ホスト側のリソース監視はしていると思うが、コンテナ側はどうしている? → 緩めの limit を設定してる</li>
+<li>PHP などのバージョン違い? → 問い合わせで個別に対応することもある</li>
+<li>サポートが終了したものはなるべく引き継がない</li>
+<li>CentOS 6? 7? → 7</li>
+</ul>
+
+
+<h2>休憩</h2>
+
+<p><!-- 20:12 から? -->20:16 まで</p>
+
+<h2>ロリポップ！マネージドクラウド FastContainerの裏側</h2>
+
+<ul>
+<li>ロリポップ！マネージドクラウドは FastContainer アーキテクチャを採用していて、コンテナエンジンに haconiwa</li>
+<li>質問: 価格? → 価格についてはまだ未定</li>
+<li>オートスケール</li>
+<li>質問: 何をもってマネージド? → コンテナの起動の仕方が特殊 (FastContainer) で、完全に root 権限があるわけではないなど</li>
+<li>質問: データベース? → データベースはコンテナで動いていないので、オートスケールではない</li>
+<li>質問: オートスケールは php だけ? → apache + php</li>
+<li>質問: データベースがオートスケールではないのなら、ユーザーごとのリソース制御? → まだ未確定</li>
+<li>質問: 具体的にアクセスが増えると、とは? → 実際は CPU のスロットルタイムをみているので、CPU の負荷が高くなれば。</li>
+<li>逆に負荷が下がればコンテナを減らす。</li>
+<li>質問: ユーザーごとのリソースの分割? 他のユーザーの影響は受けるのか? → 基本的には影響は受けない。リソースは分離している。ホスト自体が重くなっても負荷分散できるアーキテクチャになっている。</li>
+<li>FastContainer とは?</li>
+<li>FastCGI のコンテナ版といったイメージ</li>
+<li>リクエスト契機で Web アプリのコンテナが起動</li>
+<li><p>一度起動したコンテナはその後しばらく使い回して、一定時間が経過したら終了</p></li>
+<li><p>利点</p></li>
+<li>オートスケール</li>
+<li>リクエストがないと停止するのでリソースの節約</li>
+<li>いろんなコンテナで色々なアプリを提供</li>
+<li>常に最新</li>
+<li><p>他のマシンへの載せ替えも楽</p></li>
+<li><p>マネージドクラウドの構成</p></li>
+<li>CMDB というところでコンテナの情報を管理</li>
+<li>質問: 構成が速度に影響があるか? → ある。今は動くものを優先。 nfs が重いというのは多方面から突っ込まれている</li>
+<li>質問: 起動していない時と起動している時のパフォーマンスの差? → 確かにたちがっていない状態のアクセスは時間がかかる。調整中</li>
+<li>質問: どこが大きくなっていく? compute? → 今のところ compute と datapool が増えるのを想定している。</li>
+<li>パフォーマンスは調整していく段階なので、今後機会があれば。</li>
+<li>ngx_mruby</li>
+<li>haconiwa</li>
+<li>コンテナ</li>
+<li>基本は1コンテナに1プロセス</li>
+<li>ssh も sshd コンテナ経由</li>
+<li>FastContainer リクエスト制御フロー</li>
+<li>質問 → 今はチューニングがすんでいないので初回は 2,3 秒ぐらいかかる</li>
+<li>質問 → ユーザーが予約枠を設定していて、そこまでしか上がらないようにしている</li>
+<li><p>予約枠は金額で設定できるようにしたい</p></li>
+<li><p>コンテナの死</p></li>
+<li>コンテナの寿命: lifetime が設定されていて一定時間経過で自動停止</li>
+<li>なぜ寿命?</li>
+<li>リソースの節約</li>
+<li>新しくなるタイミングでライブラリなども更新されてセキュア</li>
+<li>別ホストに移行したい時も CMDB をいじるだけ</li>
+<li>compute のメンテも簡単</li>
+<li><p>質問: リクエストが有る限り死なない? → lifetime で死ぬ</p></li>
+<li><p>オートスケール</p></li>
+<li>haconiwa が cgroup から各コンテナの CPU, I/O 負荷を計測・監視</li>
+<li>ユーザーはコンテナの予約枠を設定可能</li>
+<li>スケールインは CMDB の変更だけで停止は自動停止任せ</li>
+<li><p>予約枠を取るだけでオートスケール</p></li>
+<li><p>コンテナの種類も増やしていきたい</p></li>
+<li><p>質問タイム</p></li>
+<li>予約枠? パケット量をみる? → 設計中。基本的には使ったぶんだけ課金する予定?</li>
+<li>コンテナのサーバー自体が高負荷になったり物理的な障害が起きても自動でフェイルオーバー? → 自動ではできていない。手動でのせかえることはできる。自動化は可能ではある。</li>
+<li>SSL 証明書? Symantec のような台数分の場合とか → あとで</li>
+<li>オートスケールをする監視をしている間隔? → 暫定で1秒</li>
+<li>オートスケールの課金の指標は? ニュースで取り上げられる予定だから、とか。 → 設計中</li>
+<li>聞き逃し</li>
+<li>WAN の IP は共有? → 共有</li>
+<li>コンテナはドメインでみている</li>
+<li>IP アドレス単位で他のユーザーの影響は受ける可能性がある</li>
+<li>現状 CMDB はデータベースのフェイルオーバー任せなので、そこが止まると止まる可能性はある</li>
+<li>のせるアプリの開発環境? → 将来的には用意したい</li>
+<li>聞き逃し → コンテナ単位でどのくらいパフォーマンスが出ているかだそうとか色々話はある</li>
+</ul>
+
+
+<h2>懇親会</h2>
+
+<p>5分休憩の後で懇親会でした。</p>
+
+<h2>感想</h2>
+
+<p>LXD を採用したという話自体は以前に別の勉強会で聞いたことがあったので、それと重複した話もありましたが、もっと技術的につっこんだ話も聞けておもしろかったです。</p>
+
+<p>LXD は他では使っているという話を聞いたことがないので、使っている人はもっと情報を出してくれればいいのに、という気がしています。
+個人的には、情報がなくて探しても何もわからないよりは、Docker のように情報がたくさんあって玉石混交で、自分で見極めないといけない、という状態の方が望ましいです。</p>
+
+<p>マネージドクラウドの話は haconiwa って作ってみたというようなものじゃなくて、ちゃんと実用的に使うためのものだったのかというのが驚きました。
+FastContainer は用途があえば良さそうな感じなので、機会があれば使ってみたいと思いました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[LILO&東海道らぐオフラインミーティング 2017/08/27 に参加しました]]></title>
@@ -923,325 +1074,6 @@ $ grep -m 1 : /etc/passwd /etc/group
 
 <p>恒例の抽選での書籍プレゼントは、全員分あるということだったので、どうするのかと思ったら、今までのボール投げとは違ってくじ引きでした。
 書籍は2冊もらえた人もいたようです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[姫路IT系勉強会 2017.08 出張版に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-08-19-histudy.html"/>
-    <updated>2017-08-19T13:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/histudy</id>
-    <content type="html"><![CDATA[<p><a href="https://histudy.connpass.com/event/57870/">姫路IT系勉強会 2017.08 出張版</a>に参加しました。
-公式の記録は勉強会のページからリンクされている HackMD のページ<!-- https://hackmd.io/s/rJ7lA-r_- -->に残っています。</p>
-
-<!--more-->
-
-
-<p>以下、メモです。</p>
-
-<h2>会場</h2>
-
-<p>最近よく行っているさくらインターネット様のイベントスペースでした。</p>
-
-<p>阪急梅田駅の茶屋町口から出て、ヨドバシの北側を通って行ったら、外は少し暑かったので、南側の地下を通った方がよかったと思いました。</p>
-
-<h2>紹介</h2>
-
-<ul>
-<li>5年たっている</li>
-<li>毎月第3土曜日</li>
-<li>細分化していると人が集まらないのでなんでもあり</li>
-<li>今は座談会形式</li>
-<li>HackMD にみんなで記録する</li>
-</ul>
-
-
-<h2>自己紹介</h2>
-
-<ul>
-<li>人数が多かった</li>
-</ul>
-
-
-<h2>始まったきっかけ</h2>
-
-<ul>
-<li>ハックカフェで姫路から神戸や大阪は遠いという話があった</li>
-<li>講師をたてるのが大変だったので福岡の勉強会を参考にして座談会形式に</li>
-<li>兵庫県は長続きしている勉強会がなかった</li>
-<li>言語系が途中から増えた</li>
-<li>明石高専の人とか</li>
-<li>巣立っていた人が活躍しているのをみるのも楽しい</li>
-<li>プログラミングを知らない状態から勉強会で教えてもらってシステムを作った人も</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<h2>GIT の脆弱性</h2>
-
-<ul>
-<li><a href="https://github.com/greymd/CVE-2017-1000117">https://github.com/greymd/CVE-2017-1000117</a></li>
-<li><a href="https://www.debian.org/security/2017/">https://www.debian.org/security/2017/</a> で git に続いて subversion や cvs も同様っぽいセキュリティアップデートが出ている</li>
-<li>twitter によると <a href="https://community.atlassian.com/t5/Agile-articles/Git-Mercurial-SVN-%E3%81%AE%E8%84%86%E5%BC%B1%E6%80%A7%E3%81%AE%E5%BD%B1%E9%9F%BF%E3%82%92%E5%8F%97%E3%81%91%E3%82%8B%E8%A3%BD%E5%93%81%E3%81%A8%E5%AF%BE%E5%BF%9C%E6%96%B9%E6%B3%95%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6/ba-p/625280">https://community.atlassian.com/t5/Agile-articles/Git-Mercurial-SVN-%E3%81%AE%E8%84%86%E5%BC%B1%E6%80%A7%E3%81%AE%E5%BD%B1%E9%9F%BF%E3%82%92%E5%8F%97%E3%81%91%E3%82%8B%E8%A3%BD%E5%93%81%E3%81%A8%E5%AF%BE%E5%BF%9C%E6%96%B9%E6%B3%95%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6/ba-p/625280</a> という情報もあるらしい</li>
-</ul>
-
-
-<h2>電源断耐性のあるファイルシステムを知りたい</h2>
-
-<ul>
-<li>UPS を使えばいいのでは</li>
-<li>RasPi などの話っぽい?</li>
-<li>UPS につないだ NAS でネットワークブートすれば良いのでは</li>
-<li>設定は外だししてデータは unionfs とか使う?</li>
-<li>データは外に置くのが良さそう?</li>
-</ul>
-
-
-<h2>自宅NW更改してみた</h2>
-
-<ul>
-<li>自宅(ラックマウント)サーバーはじめました</li>
-<li>エアフローと火事には気をつけましょう</li>
-</ul>
-
-
-<h2>自宅サーバーを稼働し続ける上で安全性を保つために必要なことは?</h2>
-
-<ul>
-<li>クラウドがオススメ</li>
-<li>自宅サーバーのメリットはストレージの安さ</li>
-<li>ロマンがある</li>
-<li>NAPT とか</li>
-<li>さくらのクラウドのようないきなり外に晒されている環境で勉強するとか、VPC に隔離されている AWS とか</li>
-<li><a href="https://www.vultr.com/">https://www.vultr.com/</a> が東京リージョンもあって Hourly Pricing もあって安いので、このあたりで試してみるのも良い</li>
-</ul>
-
-
-<h2>情報系の勉強をするにあたって、何かアドバイスをください</h2>
-
-<ul>
-<li>何か作りたいものを作ってみる</li>
-</ul>
-
-
-<h2>ファイルの共有をしたい話</h2>
-
-<ul>
-<li>さくらのサーバーで WordPress を使っている</li>
-<li>WordPress にこだわらず他の方法を考えた方が良い</li>
-</ul>
-
-
-<h2>Chocolatey やろうぜ</h2>
-
-<ul>
-<li>Chocolatey (ちょこれってぃー)</li>
-<li>PowerShell の実行ポリシーの変更が必要</li>
-<li>config ファイルでインストールを自動化できる</li>
-<li>例: <a href="https://github.com/223n/Chocolatey/blob/master/packages.config">https://github.com/223n/Chocolatey/blob/master/packages.config</a></li>
-<li>パッケージがなければ作れば良い</li>
-</ul>
-
-
-<h2>Boxstarter</h2>
-
-<ul>
-<li><a href="https://chocolatey.org/packages/boxstarter">https://chocolatey.org/packages/boxstarter</a></li>
-<li>Windows Update のインストールや再起動などもできるらしい</li>
-<li>別パッケージで Hyper-V にも対応しているらしい</li>
-</ul>
-
-
-<h2>DNSSEC について</h2>
-
-<ul>
-<li><a href="https://www.sakura.ad.jp/news/sakurainfo/newsentry.php?id=1683">ルートゾーンKSKロールオーバーによる影響について | さくらインターネット</a> の話かと思ったらそうでもなかった?</li>
-<li>主にキャッシュサーバーに影響する話のはずなのに、権威サーバーの話しかなかった</li>
-</ul>
-
-
-<h2>なぜヤツラは働き方改革といえば IT となるのか?</h2>
-
-<ul>
-<li>いろいろ議論していた</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<h2>AWK &amp; sed プログラミング</h2>
-
-<ul>
-<li>DWARF の話をしたという話からちょっと DWARF の紹介</li>
-<li>awk についてのアンケート</li>
-<li><a href="https://github.com/takubo/awkGL">https://github.com/takubo/awkGL</a></li>
-<li>awkGL のデモ</li>
-<li><a href="https://github.com/takubo/gsed-dbg">https://github.com/takubo/gsed-dbg</a></li>
-<li>sed のデバッガーのデモ</li>
-</ul>
-
-
-<h2>Infrastructure as code は実際どのくらい進んでる?</h2>
-
-<ul>
-<li><a href="http://amzn.to/2wjc9IU">Infrastructure as Code ―クラウドにおけるサーバ管理の原則とプラクティス</a> という日本語の本もある</li>
-<li>シェルスクリプトならまだまし</li>
-<li>手順書の場合もある</li>
-<li>それさえもない場合もある</li>
-<li>ansible とか chef とか puppet とか</li>
-<li>ネットワークなどのホストごとの設定は terraform がある</li>
-<li>ネットワーク事業者などは半年に1回ぐらい壊れるものがでてくるので普通に使っている</li>
-<li>ansible は最近は RedHat が関わっているので説得しやすい?</li>
-<li>複数台構成は ansible だけだと辛くなるので terraform も使う</li>
-<li>さくらのクラウドはサンドボックスリージョンがあるので terraform の試行錯誤もしやすい</li>
-<li>terraform はさくらのクラウドプラグインもある</li>
-<li>terraform まで必要ない場合は usacloud というのもある</li>
-<li>会場アンケート: 業務で自動化ツールを使っている人は少ない、個人で使っている人は割といる</li>
-</ul>
-
-
-<h2>おうちのネット環境 速い? 遅い?</h2>
-
-<ul>
-<li>パズドラが繋がらない</li>
-<li>IPoE で IPv6 経由で解決</li>
-</ul>
-
-
-<h2>技術系書籍執筆環境はどうしてますか?</h2>
-
-<ul>
-<li>textlint? gitbook?</li>
-<li>Re:VIEW?</li>
-<li>執筆途中を見せたい</li>
-<li>技術書典</li>
-<li>投稿サイトからや同人誌からというのもある</li>
-</ul>
-
-
-<h2>Mac OS サーバー (Xserve) の使い方</h2>
-
-<ul>
-<li>OS は El Capitan まで</li>
-<li>CI サーバーにするのが良さそう</li>
-</ul>
-
-
-<h2>VR の世界教えて</h2>
-
-<ul>
-<li>360 度カメラで撮影した内容を VR でみたい (動画でも写真でも良い)</li>
-<li>THETA</li>
-<li><a href="http://www.pano-vr.com/service/panocreator/">PanoCreator – パノラマVR専用CMS - | パノラマ工房</a></li>
-<li>ハコスコ</li>
-<li><a href="http://www.asahi.com/multimedia/vr360/">http://www.asahi.com/multimedia/vr360/</a></li>
-<li>360度だと自分がうつりこまないようにするのに頭の上にのせるとかしないといけないので、撮影が難しい</li>
-<li>最近は180度というのもあるらしい</li>
-<li>THETA の画質はそれなり (特に上下)</li>
-</ul>
-
-
-<h2>クーベルネイテスでコンテナ管理</h2>
-
-<ul>
-<li>kubernetes</li>
-<li>よくわかっていないので知りたいという話</li>
-<li>lxd などを含めたコンテナ全般の理解を深めないと厳しいのでは</li>
-</ul>
-
-
-<h2>vagrant のプロビジョナー ansible_local の使い方</h2>
-
-<ul>
-<li>hosts ファイルが送り込まれないので、実行対象を絞れない</li>
-<li>ホスト側が Windows でも使えるので便利</li>
-<li><a href="https://github.com/wate/lde">https://github.com/wate/lde</a></li>
-</ul>
-
-
-<h2>ip-link(8)で何が面白いの</h2>
-
-<p>特に使っている人はいなかった。</p>
-
-<h2>初代 OpenBlockS</h2>
-
-<ul>
-<li><a href="http://www.plathome.co.jp/support/labo/obs/">http://www.plathome.co.jp/support/labo/obs/</a></li>
-<li>NetBSD なら動く?</li>
-</ul>
-
-
-<h2>vagrant proxmox が動かない</h2>
-
-<ul>
-<li>自己解決していた</li>
-</ul>
-
-
-<h2>ライセンス管理について</h2>
-
-<!-- http://d.hatena.ne.jp/fu7mu4/ -->
-
-
-<ul>
-<li>和をもって貴しとなす</li>
-<li><a href="https://www.openchainproject.org/">https://www.openchainproject.org/</a></li>
-<li>Xmppframework for IOS。自身はBSDライセンスだけどスタティックリンクのlibidn(LGPLv2.1+)が必要 <a href="https://github.com/robbiehanson/XMPPFramework/issues/217">https://github.com/robbiehanson/XMPPFramework/issues/217</a></li>
-<li>Electron App で npm で入るライブラリーのライセンス問題</li>
-<li>Xampp for Windows のMercury MTSは商用不可。そしてXAMPP Control panel のソースが見当たらない(GPL?) <a href="https://twitter.com/sato_makoto/status/898849752757919744">https://twitter.com/sato_makoto/status/898849752757919744</a></li>
-<li><a href="https://github.com/fzaninotto/Faker/issues/881">https://github.com/fzaninotto/Faker/issues/881</a></li>
-<li><a href="http://techlife.cookpad.com/entry/oss-policy">オープンソースソフトウェアポリシーをつくろう - クックパッド開発者ブログ</a></li>
-<li>OSS ライセンスを見つける</li>
-<li>重量級: 例 protex, Palamida, Protecode</li>
-<li>中級: 例 Fossology</li>
-<li>軽量級: 例 oslc</li>
-<li>Fossology オススメ <a href="https://www.fossology.org/">https://www.fossology.org/</a></li>
-<li>ライセンス読もう <a href="https://tldrlegal.com/">https://tldrlegal.com/</a></li>
-</ul>
-
-
-<h2>自宅NW更改してみた の続き</h2>
-
-<!-- twitter.com/sperkbird -->
-
-
-<p>BGP とかは名前や概要は知っていても実際に使ったことはなかったので、よくわからない部分もありました。</p>
-
-<h2>MySQL to PostgreSQL + Redmine 移行</h2>
-
-<ul>
-<li>変換元は AWS 上の Ubuntu</li>
-<li>手元の Debian で変換</li>
-<li>yaml_db は redmine が必要だったので不採用</li>
-<li>PGLoader のパッケージだとエラーでうまくいかなかったので自分でコンパイルしたバイナリで変換完了</li>
-<li>移行先は Ubuntu or Debian ではなく Amazon Linux だった</li>
-</ul>
-
-
-<h2>Terraform で始める「Infrastructure as Code」入門</h2>
-
-<ul>
-<li><a href="https://github.com/sacloud">https://github.com/sacloud</a></li>
-</ul>
-
-
-<h2>さくらのクラウド</h2>
-
-<ul>
-<li><a href="http://cloud.sakura.ad.jp/">http://cloud.sakura.ad.jp/</a></li>
-<li>会場アンケート: 個人で使ったことがある人は割といるが、仕事で使っている人はほとんどいない</li>
-</ul>
-
-
-<h2>感想</h2>
-
-<p>アンカンファレンス形式ということで、LILO＆東海道らぐのようなものを想定していたら、それよりも緩いというか、
-全員に付箋が配られて、話のネタ (自分で話をする必要はない) を記入するという方式だったので、驚きました。</p>
-
-<p>タイムテーブルに書かれているのはあくまでも目安で、基本的にお題は集まった付箋からその場で決まっているようでした。</p>
-
-<p>懇親会は、引き続き同じ場所で17時以降にやって、本編よりも深いネタもやるという感じでした。</p>
 ]]></content>
   </entry>
   
