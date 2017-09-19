@@ -1,0 +1,422 @@
+---
+layout: post
+title: "RubyKaigi 2017 の2日目に参加しました"
+date: 2017-09-19 09:42:14 +0900
+comments: true
+categories: event ruby rubykaigi
+---
+[RubyKaigi 2017](http://rubykaigi.org/2017) の2日目に参加したので、そのメモです。
+
+<!--more-->
+
+## ドリコムさんのスポンサーセッション
+
+## The Many Faces of Module
+
+- 島根との時差ボケで眠い
+- RubyKaigi は世界最大の Ruby カンファレンス
+- The best and brightest
+- matz が母国語で話をする (翻訳付き) のはここ (と RubyWorld Conference (技術よりではない) だけ)
+- Recent topics
+- amatsuda さんが発表内容のハードルを上げてくる
+- どこのカンファレンスでもコミュニティの主要な日本人をみかける
+- Performance, Concurrency, Static Types は他のセッションにお任せ
+- 天才プログラマーではなく、才能ある言語デザイナーだと思っている
+- あまり評判のよくない言語も含めて例外なくすべてのプログラミング言語を愛している
+- "matz に他言語に攻撃的であるので嫌い"と言われることがある
+- 理由を聞いたことがある
+- いいところはいい、悪いところは悪いと言った時に Ruby の宣伝のように取られることがあるらしい
+- Python の ML に、という過去のあやまちのようなこともあることはある
+- Simula (1968) : 最初のオブジェクト指向言語と言われている
+- Lisp や Smalltalk 経由でオブジェクト指向を取り込んでいる
+- Dr. Kristen Nygaard : すべてのオブジェクト指向言語はわしの孫のようなもの、と言われたという話
+- 継承の概念が重要
+- 単一継承と多重継承
+- 多重継承は調べられた限りでは Lisp (Flavors) が最初
+- 多重継承はダイヤモンド継承とかのネットワーク構造になりうる
+- 言語設計者は最悪のケースを考えなければいけない、なぜならするやつがいるから
+- [C3 linearization algorithm](https://en.wikipedia.org/wiki/C3_linearization)
+- Mixin : Lisp では Flavors と呼ばれていた
+- MIT 近くにあった Steve's ice cream shop が発想の元
+- バニラアイスクリームにチョコチップを、という感じ
+- Flavors は抽象クラスでインスタンスは作れない
+- Flavors 同士を混ぜる (継承する) ことはできるが、元のクラスの方は混ぜることができない
+- Ruby の module の話
+- 1: Module は mixin の単位として作られたのが最初の用途
+- 他の機能としても使われるようになってきた
+- 2: ネームスペース、たとえば `class Net::HTTP`
+- 3: シングルトン、たとえば `module FileUtils`
+- 4: 機能の集まり、たとえば `module Math`
+- `module_function`
+- 5: メソッド結合の単位として
+- AMC (alias method chain) の呪い
+- 複数回使うと壊れやすい
+- `Module#prepend` : 同じ名前で複数の提案があったので、誰が元祖かわからない
+- 欠点はダイナミックさが足りない: 一度入れたものを外せない
+- include や prepend が外せないのは意図的にそうしている
+- しばらく聞き流していたが CLOS (Common Lisp Object System) の method combination を思い出した
+- アスペクト指向プログラミングにも繋がる
+- 似ているのは同じ人 (Gregor Kiczales) が考えた機能だった
+- 6: refinement の単位
+- オープンクラスの機能を利用してモンキーパッチングができる
+- 昔は ゴリラパッチング
+- さらに昔は ゲリラパッチング
+- 有名な利用例は Active Support
+- 全体に影響があるので、一箇所にまとめておくのが良い
+- できるからやればよいというものではない
+- できれば特定の範囲に影響範囲をせばめたい
+- 変数がグローバル変数だけだったのがローカル変数ができたように
+- 似た発想: ClassBox (Java/Smalltalk), Selector Namespace (Smallscript / (ECMAScript4))
+- local rebinding : 置き換えたものがメソッドを呼び出した先でも置き換えられるかどうかに違いがある
+- GUI で Windows 風のボタンにするか Mac 風のボタンにするかを切り替えられたり
+- Selector namespace = lexical
+- ClassBox は先まで置き換えるので強力
+- Refinement
+- 使用例: 既存のクラスにメソッドを追加したい
+- C# extension のようなもの
+- 想定している使用例 RSpec
+- using をあちこち書かないといけないのでまだ使われていない
+- refinement が最適な解決策とは思っていない
+- local rebinding がないから
+- 知らないところで挙動が変わるということがないということとのトレードオフ
+- 7: Structural signature
+- Structural type check に使われるかも
+
+- Performance
+- Benchmark Suite, MJIT, Rubex
+- Concurrency
+- Fiber, (Guild), Auto Fiber
+- normalperson さん: 会ったことある人がほとんどいない, 飛行機に乗らない,  プロプラなサービスは使わない, unicorn の人
+- Static analyses or インタラクティブプログラミング
+- これもいくつか発表がある
+
+- Ruby は my language ではなく our language
+- コミュニティの努力
+- みんなで Ruby をもっと良くしていこう、世界を良くしていこう
+
+- Sponsors
+
+- 質疑応答
+- Q(ujm?): 遠い将来に複数のライブラリの複数バージョンを同時に使用できる構想はあるか? → そういう触れ込みの言語はあるがうまくいっている例がまだなさそう。Ruby のネームスペースはシンプル。誰でも使えるようなパッケージシステムはまだできてない。発明されれば取り込みたい。
+
+## An introduction and future of Ruby coverage library
+
+- Esoteric Recipe
+- Ruby に対する主な貢献
+- 今日の話はそのうちテストカバレッジの話
+- 会場アンケート
+- Ruby or Rails を production で使っている人? → 多い
+- テストをしている? → 多い
+- カバレッジを測定している? → それなり
+- カバレッジとは?
+- 実行 (テスト) されていないコードを見つけるなど
+- 関数カバレッジ
+- 行カバレッジが良く使われている
+- コメントや else や end の行は無視される (対応する iseq がない行)
+- 後置 if で行全体は実行されたと判断されるなどが弱点
+- ブランチカバレッジ
+- ビジュアライズが難しい
+- 今までは行カバレッジしかサポートしていなかった
+- 他のカバレッジの紹介
+- C0/C1/C2 カバレッジ
+- C0 = 行カバレッジ
+- C1 = branch or path?
+- C2 = condition or path?
+- Ruby にとってカバレッジは重要
+- あまり使われていない理由は?
+- あまり知られていない? 使われ方が知られていない? 機能が不十分?
+- カバレッジはコードについての網羅だけで仕様をカバーしているかどうかは計測できない
+- カバレッジは指標であって、ゴールではない
+- カバレッジをゴールにすると、あまりよくないテストをつくりがち
+- テストデザインをちゃんと考えながら追加するのが大事
+- 目安
+- 人が傷ついたりするような重要なモジュールは 100% にした方が良いが他はそうでもない
+- 環境によって実行されないコードもあったりするのでほどほどに
+- SimpleCov
+- 使い方は test/test_helper.rb の頭で `require "simplecov"; SimpleCov.start`
+- `coverage.so` は後でロードされたライブラリは測定対象にならないので、測定対象より前に、というのが重要
+- テスト結果は nil になっている行は無視される行
+- `def` の行はメソッド定義自体の実行回数で、メソッドの内容が実行された回数ではない
+- Ruby 本体用に作ったので experimental feature と書いてあるが、使われるようになったので気軽に変更しにくくなった
+- Concov
+- 他の言語
+- C/++: GCOV/LCOV
+- Java: いろいろ
+- JavaScript: Istanbul
+- Ruby 2.5 に向けての計画
+- 関数カバレッジとブランチカバレッジをサポートしたい
+- API を後悔しないものにしたいので、意見があれば [Add branch coverage](https://bugs.ruby-lang.org/issues/13901) にコメントを
+- API はキーワード引数を受け取れるようにした
+- 結果の同じ行に
+- カバレッジのオーバーヘッド
+- LCOV の可視化例
+- securerandom の環境依存のところが実行されていない例
+- 今後の予定
+- callsite coverage: `obj.foo.bar` の foo で例外が実行された場合とか
+- Block coverage: `ary.map { ... }` で空配列だけだとブロックの中が実行されない可能性
+- 質疑応答
+- Q(すとうさん) 実行されなくても大丈夫なところはメモしておけると、あとで見直すときにわかるので、何かないか? → `coverage.so` ではなく、ラッパー側で。
+- Q(hsbt) SimpleCov は coverage.so だけで取れるようにならない? 依存ライブラリを減らしたい。 → 改良がどんどん進む余地がある部分は、将来の拡張の余地がなくなるので、あまりやる気がない。
+- amatsuda: SimpleCov のメンテナもやっているので、ブランチカバレッジ対応とか必要があればやる気はある
+- Q(amatsuda) 手伝って欲しいところとか? → Java とかだと IDE との連携が便利らしい。そのへんのエコシステムを一緒に作ってくれる人が増えるとありがたい
+
+## What visually impaired programmers are thinking about Ruby?
+
+- 自己紹介
+- Non Visual Desktop Access (NVDA)
+- Mac には Insert キーがないので、Escape キーを代わりに使える拡張
+- Excel の罫線の読み上げなど他の国の人がやらないようなところをやっている
+- 島根県 CMS はアクセシビリティがしっかりしている
+- https://github.com/edhowland/viper
+- Mac のターミナルの読み上げ機能を利用して文字を出力して読み上げさせるエディタ
+- Braille Memo BM46
+- Console (Terminal) applications
+- Terminal + screen reader だけ使っている人はエンジニアもいる
+- デモ
+- 展示ディスプレイとの組み合わせでリモートの Linux マシンの Emacs を操作して ruby プログラムを編集するようなデモ
+- インデントはビープ音で表現していた
+- Screen reader, Tactile
+- アクセシビリティ対応のモダンなテキストエディタ: Visual Studio Code, Eclipse
+- Eclipse のデモ
+- Ruby の利点
+- 日本語ドキュメント
+- 読みやすい、描きやすい、コード量が少ない
+- サーバーエンジニア用のツール
+- テスト駆動
+- Ruby の欠点
+- Windows アプリの作り方に良い方法がない
+- GUI がなかなか良いものがない (visual ではない方法で)
+- Tk はアクセシブルではない
+- そういうときは、お手上げか文字認識で頑張るしかない
+- GUI フレームワークとアクセシビリティ
+- アプリケーションは OS から問い合わせが来た時に適切な情報を返せる必要がある
+- wxRuby は良いが、開発が止まっていて残念
+- ドキュメンテーションツール: rdoc, yard
+- ハッピーだったり辛かったりするデモ: Windows 10 + NVDA + Firefox
+- メインのランドマークに移動するショートカットキーがある
+- 見出しでジャンプできたりできなかったり
+- rdoc はマウスホバーするとソース表示のトグルが出てくるのが気づきにくい
+- yard もソースを展開して読むことができる
+- メソッドが見出しになっていると探しやすくて良いのに、という話がある
+- なぜ重要か?
+- 標準に準拠
+- 機械処理などにも強い
+- 誰もがハンディキャップを持つ可能性がある
+- デジタルになることがそもそも可能性を広げている
+- Ruby のアクセシビリティは良いがまだ良くできる
+- 知り合いの視覚障害者が来てくれるかと思ったが、ハードルが高かったようなので、そういう人たちも来れるようになると嬉しい
+- 質疑応答
+- Q: 健常者が普通に作っているだけでは気づきにくい点があるので、実際にチェックしてもらうのが重要 → NPA とかでアクセシビリティ診断とかやっている
+- Q: ドキュメントのアクセシビリティ。他の言語 sphinx とか? → 確認できてない。興味はある人はいる。悪い評判は聞いたことがない。また調べて Python のコミュニティで発表したい。
+
+## Regular Expressions Inside Out
+
+- 会場アンケート
+- 正規表現を使ったことある人? → ほとんど
+- 正規表現でてこずったことある人? → ほとんど
+- 中身を見たことある人? → 1,2人
+- Onigmo, Onigumo
+- 鬼雲? 鬼蜘蛛?
+- 最小の例: `//`
+- 何もマッチしない? → wrong
+- どんな文字にもマッチしない
+- 空文字列にマッチ
+- 文字の先頭・間・末尾にマッチ
+- `'abcde'.gsub //, 'x'`
+- 空の正規表現が隠れていることがある: `"xyz" =~ /a+|b*/`
+- 有効な使い方
+- `=~` (`match`), `sub` の他に `slice`, `split`, `scan`, `gsub`
+- Pure Ruby で効率的な Unocode の正規化
+- `unicode_normalize`
+- Unicode Standard Annex #15
+- German to NFC
+- `gsub /[AaOoUu]\u0308/, {...hash...}`
+- Unicode にはもっとたくさんの組み合わせがある
+- `/[BaseCharacters][CombinationCharacters]*/`
+- 実際のものは `lib/unicode_normalize/tables.rb` にある
+- 文字にしたいが nobu に反対されている(?)ので `\uXXXX` のまま
+- ハッシュも工夫している
+- Ruby が速くなれば速くなる
+- gsub にハッシュを渡せるのは Ruby だけなので他の言語だとできない
+- gsub にハッシュが使えるようになった developer meeting が初参加だった
+- Improving Unicode Property Support
+- `\p{Digit}`, `\p{Hiragana}`
+- Unicode はコードポイントは ISO 10646 互換
+- Properties などは Unicode での追加
+- プロパティは Boolean properties (二値プロパティ), Enumerable properties (多値プロパティ) がある
+- データ量が多い
+- enc/unicode/10.0.0/nam2ctype.h
+- [Change Unicode property implementation in Onigmo from inversion lists to direct lookup](https://bugs.ruby-lang.org/issues/13240)
+- 二値プロパティは反転リストで持っている
+- 多値プロパティはプロパティの値ごとに反転リストを持つ必要がある
+- 値は Unicode 10.0.0 で 138 個ある
+- チェックは二分探索
+- svn.ruby-lang.org でダウンロードしようとすると拒否されるぐらい大きい (checkout はできる)
+- 新しい表現方法
+- プロパティが一緒のものは同値類にする
+- 定数時間で探索できる
+- まだサイズが大きかったので、二段階の同値類にした
+- パフォーマンス: 二分探索で対数時間かかっていたのが、定数時間になった
+- [Method(s) to access Unicode properties for characters/strings](https://bugs.ruby-lang.org/issues/13241)
+- 問題点もまだある
+- まとめ
+- 質疑応答
+- Q: 実装は Ruby 本体に入っている? Onigmo に入っている? → Ruby 本体の Onigmo 部分に入る、最終的には同期を取るので調整が必要
+
+## Type Checking Ruby Programs with Annotations
+
+- 4個の Ruby のタイプチェッカーを実装した
+- 2005, Type inference, structural subtyping
+- 2007, Type inference, polymorphic record types
+- 2009, Control flow analysis
+- 2017, Local type inference, structural subtyping
+- なぜ型チェッカーが必要か?
+- バグ発見
+- ドキュメントが検証可能
+- 自動補完
+- リファクタリングしやすい
+- 高度なプログラム解析に使える、セキュリティチェッカーとか
+- Ruby の型チェック
+- 少なくとも12年いろんな人が試して来た
+- Ruby は変数に型がないので、型推論しようとした
+- Static Type inference for Ruby
+- Diamondback Ruby
+- structural subtyping ベースなので、 polymorphic types は推論できない
+- Type inference for Ruby Programs Based on Polymorphic Record Types
+- RubyKaigi 2008
+- ML の型推論と polymorphic record types ベースで polymorphic types が推論できる
+- いくつかの組み込みで型を提供できない
+- polymorphic recursion (Array cannot be polymorphic)
+- Non regular types (`Array#map`)
+- Type Checking for Ruby
+- ここまでのまとめ
+- Ruby プログラムから型推論は構築できない
+- subtyping を選んでも polymorphic type inference を選んでも限界があるから
+- Requirements
+- Correctness: 型チェッカーが通れば実行時に型エラーが起きない
+- Static: 実行せずに
+- No annotation: 型推論
+- Relaxing Requirements
+- Forget Correctness
+- Incorrect type checking でもプログラマーの助けになる
+- TypeScript accepts unsound co-varieant subtyping on function parameters
+- Lint tools: アドホックな悪いプログラムのパターン集だが役たっている
+- Type Checking at Runtime
+- メソッドボディの実行前にチェック
+- Annotate Ruby Programs
+- https://github.com/soutaro/steep
+- Key Ideas
+- Gradual Typing : アノテーションがなければチェックしない
+- Programmers annotate their Ruby programs
+- Another language to define types
+- 例
+- Annotating Constants?
+- Type Definition
+- What is Signature?
+- Signature Code Separation
+- Steep まとめ
+- Q(jokerさん): DSL は Ruby で? → racc などを使って ruby で実装しているが、ruby のコンテキストで動くわけではない。
+- Q: 聞き取れず (たくさんサポートするのは大変とかいう話?)
+- Q(ko1) rails? → TypeScript はコミュニティでたくさん揃っているので、そういう感じになって欲しい
+- Q(yugui) Active Support? How can we (community) help you? → 聞き取れず
+- Q(mame) Ruby core に入れたい? add-on? → パフォーマンスがなんとかまでしか聞き取れず
+
+## Ruby Language Server
+
+- 自己紹介
+- 手書き麻雀フォント
+- qwik2md
+- asakusarb.esa.io
+- 麻雀, Ruby, Docker 好き
+- Language Server とは?
+- エディターやツールに便利な情報を提供してくれるツール
+- Language Server Protocol (LSP) (JSON-RPC ベース) でやりとり
+- syntax error のチェックとか整形とか
+- Editor → LSP Client (Plugin) → Language Server
+- LSP Client はエディターごとのものと汎用的なものがある
+- 汎用的なものの場合は Boot setting for Ruby などが必要
+- 利点欠点まとめ
+- まず VS Code 向けを作り始め
+- Language Server に必要なもの
+- JSON-RPC
+- トランスポートは socket でも stdio でも http でも使える
+- サンプルは node ipc
+- 既存の json-rpc の gem は http のみ対応っぽいので、実装する必要あり
+- Language Server は STDIO が多数派らしいということで、STDIO を選択
+- Language Server Protocol
+- initialize で capabilities を返すので徐々に実装していける
+- TypeScript から Ruby のコードを生成して language\_server gem を作れた
+- まだ alpha 段階
+- pure Ruby
+- syntax check
+- 自動補完や定義へのジャンプは実装中
+- 使い方
+- dokcer か gem で使う
+- 具体的な実装
+- syntax check は `ruby -wc` を使っている
+- 自動補完は rcodetools を使っている
+- https://github.com/rcodetools/rcodetools
+- そのまま組み込めなかったので wrapper 層がある
+- 実際に実行するので副作用がある
+- Ripper を使っている
+- 定義ジャンプ
+- Future prospects
+- Conclusion
+- language server が一般的になっている
+- 一実装として language\_server gem を作った
+- 気に入らなければ language\_serer-protocol gem を使って別実装を
+- http://langserver.org/ の一覧に追加された
+- Q(ko1) このために ruby をこうしてほしいという意見があれば → warning を正規表現で頑張るのではなく、機械可読可能に
+- 逆質問: `ruby -wc` を実行するのではなく、今実行している ruby 上でやりたい → ko1: ISeq を使えば良い
+- 逆質問: ripper が苦しいので parser gem にしようかと検討している。理由は始点と終点が欲しい。 → mame さんが検討している
+- Q(mame) ripper は遅くないですか? → parser gem より速かった。
+- Q(mame) 編集段階の壊れたものも ripper に渡す? → その通り
+- Q(shugo) protocol の仕様としてインデントの計算をして返すものはあるのか? → format が近そう
+- カラースキーマーや syntax highlight がまだ PR 段階など、 LSP 自体が発展途中
+
+## Write once, run on every boards: portable mruby
+
+- 自己紹介
+- ローカルな話
+- Sessalet
+- 別ボードへの移植
+- ハードウェアを操作する部分はC言語で書いて mrbgems を作成する必要がある
+- デモ
+- GR-PEACH
+- Nucleo F411RE
+- Architecture 表
+- Writing Ruby Code
+- Sensors
+- Motor はモーターごとに挙動が違うので別クラス
+- ハードウェア依存部分
+- CMSIS : デバッグ用の共通仕様
+- HAL (Hardware Abstraction Layer)
+- mbed library, C++
+- Arduino & mbed
+- Arduino : library, IDE
+- 利点: サンプルがたくさん、たくさんのボードをサポートしている
+- Arduino 互換機
+- mruby の普及に必要なものを Arduino から mbed から学んだ
+- まとめ
+- ボード非依存なコードを
+- ボード依存部分はまとめる
+- たくさんサンプルがあると良い
+- Q: 3秒スリープをどうやってるかみたいな質問 → ハードウェアのライブラリにそれ用の機能がある
+
+## Lightning Talks
+
+自分も発表していたので、疲れてメモは取れず。
+
+発表資料はいつも通り[github](https://github.com/znz/rubykaigi2017-frozen_string_literal), [Rabbit Slide Show](https://slide.rabbit-shocker.org/authors/znz/rubykaigi2017-how-to-specify-frozenstringliteral-true/), [slideshare](https://www.slideshare.net/znzjp/how-to-specify-frozenstringliteral-true), [Speaker Deck](https://speakerdeck.com/znz/how-to-specify-frozen-string-literal-true), [RubyGems](https://rubygems.org/gems/rabbit-slide-znz-rubykaigi2017-frozen_string_literal) にあげています。
+
+<iframe src="https://slide.rabbit-shocker.org/authors/znz/rubykaigi2017-frozen_string_literal/viewer.html"
+        width="640" height="524"
+        frameborder="0"
+        marginwidth="0"
+        marginheight="0"
+        scrolling="no"
+        style="border: 1px solid #ccc; border-width: 1px 1px 0; margin-bottom: 5px"
+        allowfullscreen> </iframe>
+<div style="margin-bottom: 5px">
+  <a href="https://slide.rabbit-shocker.org/authors/znz/rubykaigi2017-frozen_string_literal/" title="How to specify `frozen_string_literal: true`">How to specify `frozen_string_literal: true`</a>
+</div>
