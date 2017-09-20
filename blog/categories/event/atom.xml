@@ -4,7 +4,7 @@
   <title><![CDATA[Category: event | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/event/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-09-20T00:42:59+09:00</updated>
+  <updated>2017-09-21T00:21:10+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,385 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[RubyKaigi 2017 の3日目に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-09-20-rubykaigi2017.html"/>
+    <updated>2017-09-20T09:59:32+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubykaigi2017</id>
+    <content type="html"><![CDATA[<p><a href="http://rubykaigi.org/2017">RubyKaigi 2017</a> の3日目に参加したので、そのメモです。</p>
+
+<!--more-->
+
+
+<h2>朝</h2>
+
+<p>時間があれば広島平和記念資料館に行こうかと思っていましたが、宿を出るのが遅くなってしまって時間がなかったので行けませんでした。</p>
+
+<h2>Compacting GC in MRI</h2>
+
+<ul>
+<li>自己紹介</li>
+<li>草生える の英語解説で有名になった</li>
+<li>Copy on Write Optimization</li>
+<li><code>require 'objspace'</code> と <code>ObjectSpace.memsize_of(obj)</code> で CoW の確認</li>
+<li>fork と CoW</li>
+<li>CoW Page Fault</li>
+<li>Unicorn での話</li>
+<li>Page Fault を減らす方法</li>
+<li>共有メモリの変更が原因</li>
+<li>Garbage Collector の影響</li>
+<li>Object Allocation</li>
+<li>空きがあるとオブジェクトのサイズは OS のページより小さいので、1オブジェクトの生成でもページ全体のコピーが発生するのでコンパクションする</li>
+<li>Two Finger Compaction (2本指コンパクション) というアルゴリズムを選んだ</li>
+<li>欠点: 遅い、オブジェクトがランダムな場所に移動する</li>
+<li>利点: 簡単!</li>
+<li>アルゴリズム: オブジェクトの移動をして、参照の更新</li>
+<li>Free Pointer と Scan Pointer で左右からみていってオブジェクトを左に空きを右に固まるように交換していく</li>
+<li>オブジェクトを順番に見ていって参照を更新</li>
+<li>移動先番号にしていたところを空きに変更</li>
+<li>unicorn の fork 前に rails の読み込みと GC.start をするようにした</li>
+<li>gc.c への変更の詳細解説</li>
+<li>C 実装されている中にオブジェクトへのポインターを持っていると更新できないので、移動するとクラッシュする</li>
+<li>そのため、そういうオブジェクトは移動しないようにピン留めしておく</li>
+<li><code>hash_key(オブジェクト)</code> がメモリアドレスなので、移動できない</li>
+<li>Dual References</li>
+<li>C と Ruby の両方から参照されている場合も移動するとクラッシュする</li>
+<li>グローバル変数もヒューリスティックスにピン留めする</li>
+<li>文字列リテラル</li>
+<li>リテラルを移動すると bytecode を変更する必要があるが、難しいのでまだ対応していない</li>
+<li>結局何も移動できない?</li>
+<li>ほとんどの問題は解決できる</li>
+<li>現在使用中の Rails のコードでも 46% のオブジェクトは移動可能</li>
+<li>コンパクション前後のグラフ</li>
+<li>メモリ検査ツール</li>
+<li><code>ObjectSpace.dump_all</code> : JSON でファイルに書き出せる</li>
+<li>ヒープの断片化のグラフ</li>
+<li><code>/proc/${PID}/smaps</code> はスキップ</li>
+<li>まとめ</li>
+<li>小さいプログラムにはあまり節約にならないのでプロダクションでテスト中</li>
+<li>コンパクションは不可能だと思っていたが、その質問に答えることができなかったので、もっと早く試せばよかったと思った</li>
+<li>不可能と思っても可能かもしれない</li>
+</ul>
+
+
+<h2>Irb 20th anniversary memorial session: Reish and Irb2</h2>
+
+<ul>
+<li>勝手に20周年記念講演</li>
+<li>ちょっと irb の話と Reish の話をする</li>
+<li>Ruby 考古学の復習と追加の話</li>
+<li>irb の昔の名前の rbc の由来は bc コマンド</li>
+<li>他に perl -de 0 や sample/eval.rb が開発のきっかけ</li>
+<li>REPL (Read-Eval-Print-Loop)</li>
+<li>Lisp の <code>(loop (print (eval (read))))</code></li>
+<li>Ruby 的には <code>loop{p eval gets}</code></li>
+<li>複雑な構文の言語では初ではないか</li>
+<li>REPL の用途</li>
+<li>Ruby の振る舞いを確かめる</li>
+<li>ライブラリなどのデバッグ用コンソール</li>
+<li>情報科学入門 Rubyを使って学ぶ という本では irb を使っているらしい</li>
+<li>しかし irb 上で生活している人はいなさそう</li>
+<li>そこで Reish</li>
+<li>shell の上でも ruby 的な生活を満喫するため</li>
+<li>Enumerable, Iterator (たぶん今ではブロックと呼ばれるもの全般をさしてそう), OO, ほか</li>
+<li>何がシェルっぽいか: comma なし <code>""</code> とかなくても良い文字列ベース</li>
+<li>Reish のコードは Ruby に変換して実行</li>
+<li>パイプラインは lazy enumerator で繋がっている</li>
+<li>ブロックも使えるが do を予約語にはしにくかったので <code>ls -l --do</code> という感じになっている (<code>{}</code> は普通)</li>
+<li>デモ</li>
+<li><a href="https://github.com/keiju/reish">https://github.com/keiju/reish</a></li>
+<li>job コントロールもある</li>
+<li>job ごとに Thread を起動している</li>
+<li>補完</li>
+<li>irb 再考</li>
+<li>長い間開発は停止していたが Reish の開発で irb の方も構想が見えてきた</li>
+<li>irb の lexer は使っている gem があるので、大幅に変更は難しそう</li>
+<li>Reish は完全なパーサーを持っていて、高機能なことができている</li>
+<li>irb2 = reirb ?</li>
+<li>zsh の <code>ls --a[TAB]</code> で出てくるヘルプのようなことができるとうれしそう</li>
+<li>zsh は 複数行の編集機能 (zle) があったり</li>
+<li>Reish 用のマルチラインエディタ Reidline を開発中</li>
+<li>Q(次の時間の発表者のaycabtaさん) メモ取れず</li>
+</ul>
+
+
+<h2>昼休み</h2>
+
+<p>途中の時間でセッションを諦めて見にいくのは難しいかなと思って、コンビニで軽く食事をして、広島平和記念資料館に行ってきました。(Twitter で RubyKaigi 2017 の名札を見せると無料で入れるという情報があったため)</p>
+
+<p>本館はリニューアル工事中で、東館だけが開いているということのようでした。</p>
+
+<p>小学校の修学旅行できた覚えがあるのですが、最初の上の階をぐるっと見て回る常設展示は最近の情報もあって、昔来た時には絶対なかったものだなあと思いつつ見ていました。</p>
+
+<p>最後に階段を降りた後にあった企画展示室のところは、昔トラウマになった白黒写真などが少しありました。もらったパンフレットには、閉館中の本館で展示していた資料などを展示していると書いてあるので、本館が復活すれば、昔見たようなものがたくさんあるのではないかと思いました。</p>
+
+<h2>Ruby Parser In IRB 20th Anniversary&hellip;Now Let Time Resume</h2>
+
+<ul>
+<li><a href="https://bugs.ruby-lang.org/issues/11389">https://bugs.ruby-lang.org/issues/11389</a></li>
+<li>asakusa.rb とか</li>
+<li>IRB: 1997, RDoc: 2003</li>
+<li>RDoc は IRB の lexical analyser を使っていた</li>
+<li>legacy になってしまってメンテナンスコストが増大していた</li>
+<li>private def foo のような書き方の対応とか</li>
+<li>IRB: 1997, RDoc: 2003, Ripper: 2004</li>
+<li>parse.y, IRB, RDoc の3個の Ruby パーサーが重複して含まれている</li>
+<li>2016年12月から作業開始</li>
+<li>RDoc がクラッシュしたので直した</li>
+<li>古い実装と書き直した実装で出力を比べて見たら、 RDoc がバグっていたので古い lexer で新しいものに対応した</li>
+<li>最終的にマージされた</li>
+<li>後置 if と普通の if の区別などに <code>lex_state</code> が重要</li>
+<li><a href="https://github.com/ruby/rdoc/pull/512">https://github.com/ruby/rdoc/pull/512</a></li>
+<li>RDoc 6 beta</li>
+<li>質疑応答 (翻訳は zzak)</li>
+<li>Q(ujm): <code>lex_state</code> を古い ripper では pure ruby で実装したのはどうやったみたいな質問っぽい → メモ取れず</li>
+<li>Q(かねこさん): ripper は使っているバージョンの ruby で動くので、古い ruby バージョンのドキュメントを処理すると問題が起きることもあるのでは? → 壊れることもあるかもしれないが、大丈夫なのではないかという感じ(?)</li>
+<li>Q(tenderlove): ripper はコード内のコメントを保存していますか? → AST の段階ではコメントは含まれないが、tokenize しかしていないので、開始、中身の謎の文字列、終端のようになって、中が何を意味するかには踏み込まないので、情報が消えたりはしない。</li>
+<li>Q(ujm): RDoc は既存のものと互換性があるように ripper に置き換えたが次は何に挑戦する予定? → Ruby コードの情報をとるライブラリ、 irb の TAB キーでの補完でドキュメント (RDoc) も出るようにしたい</li>
+<li>Q: irb のパーサーをどうにかする予定は? → nobu が ripper に置き換えようとしたが諦めた。多分できそうだが、大変そう。メソッドドキュメントの表示をしたい。</li>
+<li>nobu の irb は syntax highlight がついていた。</li>
+<li>syntax highlight もやりたい。</li>
+<li>Q: Cのファイルのドキュメントは? → 今回の変更とは無関係。</li>
+<li>C extension のドキュメントの方も必要に応じてみた方が良いのかもしれないが、まだ見ていない。</li>
+<li>Q(ujm): 6ページあった修正点の中からピックアップするなら? → legacy な lexer で、新しい ruby syntax のサポートが大変だった</li>
+<li>テストが壊れた</li>
+<li>Q: 聞き取れず → 答えられない</li>
+<li>Q: 1日どれくらいやっている? → 1ヶ月ぐらい、1日16時間?</li>
+</ul>
+
+
+<h2>一回休み</h2>
+
+<p>セッションは諦めて休憩していました。</p>
+
+<h2>Writing Lint for Ruby</h2>
+
+<ul>
+<li>SideCI</li>
+<li>Lint ツール: RuboCop, Reek, Brakeman, Querly, &hellip;</li>
+<li>Rules of Lint, Lint tools をかけるようになることがこのプレゼンの目標</li>
+<li>lint tool があればより安全にプログラムが作れるようになる</li>
+<li>Lint とは何か?</li>
+<li>もともと C 言語用のツールの名前だったが、今ではいろんな言語にある</li>
+<li>RuboCop の例を紹介</li>
+<li><code>if 10 &lt; x &lt; 20</code> は実行するとエラー</li>
+<li><code>foo bar { body }</code> や <code>x *y</code> は曖昧</li>
+<li>そういうコードをチェックする</li>
+<li>どう動くか?</li>
+<li>AST (Abstract Syntax Tree) で扱う</li>
+<li>parser gem を使って AST に変換している</li>
+<li>parser gem の AST の node は type と children を持つ</li>
+<li>行、桁、ソースなどのメタデータも持っている</li>
+<li>他のパーサー</li>
+<li>Ripper は標準で含まれているが、パースで想定するバージョンと実行する ruby のバージョンが同じになってしまう</li>
+<li>ruby 2.4 で ruby 2.0.0 の lint ができない</li>
+<li>ruby_parser は使ったことがないが parser gem と似たような感じらしい</li>
+<li>Traverser: Depth-first search をして node ごとに <code>on_send</code> などの <code>on_#{node.type}</code> を呼び出す</li>
+<li>if の条件に Integer リテラルのみを直接書いた場合に警告を出す例</li>
+<li>Lint の限界 (Ruby の場合)</li>
+<li>ローカル変数はただの変数</li>
+<li><code>num = 1; if num; something; end</code> のようなコードは対象外</li>
+<li>不可能ではないが複雑になる: たとえば Brakeman では追跡している</li>
+<li>メソッドの定義やクラスや定数が正確にはわからない</li>
+<li><code>sprintf('%s, %s', str)</code> は警告されるが <code>sprintf</code> が再定義されていると意味がない可能性があるが、そんなことはしないだろうと想定して動いている</li>
+<li>動的なものは Lint より Test の方が向いている</li>
+<li>Lint は AST がわかる</li>
+<li>Lint は実行せずに解析できる</li>
+<li>トレードオフがある</li>
+<li>RuboCop に cop (ルール) を追加する</li>
+<li>汎用的なものはヘルパーメソッドがあるので書きやすい: <code>if 1 ; end</code>, <code>ruby -cw</code> のようなもの</li>
+<li>デモ: <code>rake new_cop[Lint/LitInCond]</code></li>
+<li>特定のフレームワークに対して追加したい場合</li>
+<li>RuboCop Plugin としてかける</li>
+<li>例: backus/rubocop-rspec</li>
+<li>1から作る場合</li>
+<li>たとえば Lint + Git Diff, Ruby + YAML 用など</li>
+<li>新しく作った方が作りやすい</li>
+<li>質疑応答</li>
+<li>Q: sprintf の再定義のような <code>Kernel</code> に再定義しているのを検出する cop は? → ない。ある程度は作れそう。本体には入りそうにない。</li>
+<li>Q: デフォルト false では? → デフォルト false のものはメンテされないという現実があるので入れたくない。</li>
+<li>Q(mame): RuboCop のゴールは? <code>10 &lt; x &lt; 20</code> のような初心者が陥りがちなものだけではなく、コーディングスタイルを押し付けられる感じがある? → 二面性がある。スタイルチェッカーと Lint としての側面がある。どっちも増えそう。</li>
+<li>アップデートが辛い問題はツールを作っている。Style 系をオフにするとか。</li>
+<li>Q: 汎用的なもののようにみえるが、プロジェクト固有のものはどうすれば? → 自社用のプラグインを作る or soutaro さんが作っている YAML でかくものがあるのでそれを使う のが良いのではないか</li>
+<li>Q: カスタムコップを作りたい場合のドキュメントがなさそうな理由は? → 現状カスタムコップ、プラグインを作る仕組みが整備されていない。issue が止まったままなので頑張りたい。</li>
+<li>Q: <code>new_cop</code> タスクは stable? → 本体に入っているので大丈夫だが、将来的に変更される可能性はあるかも。</li>
+<li>Q: Rails は本体に config が入っているが? → 現状では特にロードマップはない。個人的には rails 関連は外に切り出したい。</li>
+<li>Q: 一部は <code>ruby -cw</code> にあった方が良いのでは? → 本体に持っていく動きは今のところない。<code>ruby -cw</code> とかぶっているものもある。パフォーマンス的にできるのかというものもある。</li>
+<li>Q: メモ取れず → ローカル変数をトレースするのはやりたいが、良い方法を思いついていないので、手がついていない。</li>
+<li>Q: 速度が遅いのが気になっている。 parser gem が遅いのではないか。バージョンをわけたいという希望はないので ripper で高速化できないか? → ライブラリの CI で困りそう。インターフェースが違うので簡単に移行できない。</li>
+<li>Q(znz): feature request の issue を書いたことがあるが、request だけだと難しい? → できるだけ実装するか、無理なら無理と返信したいが、たまっていてなかなか手が回っていない。</li>
+</ul>
+
+
+<h2>How to write synchronization mechanisms for Fiber</h2>
+
+<ul>
+<li>dRuby 本まだ買えます</li>
+<li>Web 版もあります</li>
+<li>Process - Thread - Fiber</li>
+<li>80s はプロセスへの憧れがあった</li>
+<li>90s のノンプリエンティブな協調型マルチタスクって Fiber じゃん?</li>
+<li>実際のシステムは、プロセスだけ隔離しても結局はダメだった</li>
+<li>ほかのプロセスとどうにかして共有が必要だった</li>
+<li>IPC はめんどくさい</li>
+<li>説明や使うのがめんどくさい</li>
+<li>Thread: 多くの人にはプロセスの方がいいと思う</li>
+<li>ほかのスレッドのメモリを触らないようにものすごく気をつける必要がある</li>
+<li>Thread を使うには OS よりうまく扱えるという傲慢さが必要</li>
+<li>Fiber: ほとんどの人には Thread の方がいいと思う</li>
+<li>Fiber を使うには Ruby よりコンテキストスイッチをうまく扱えるという傲慢さが必要</li>
+<li>Fiber → 自動的にスイッチしてよ → Thread → メモリを自動的に保護してよ → Process</li>
+<li>Fiber を使ったフレームワークがすごいらしい</li>
+<li>Fiber を使うプログラムを自分でも作って見たいと思った</li>
+<li>Thread よりも難しいと思ったら、その通りだったので共有したい</li>
+<li>Fibonacci の例</li>
+<li>ループで書くと簡単</li>
+<li>Fiber で書く例 (初日であったような感じ)</li>
+<li><code>Fiber.new</code>, <code>Fiber#resume</code>, <code>Fiber.yield</code></li>
+<li>new しただけでは実行されない</li>
+<li>resume で Fiber にコンテキストを移す</li>
+<li>一度目は先頭へ</li>
+<li>二度目以降は <code>Fiber.yield</code> したところへ</li>
+<li>これは何度目の resume かな…</li>
+<li>resume と yield の概念がとっつきにくい</li>
+<li>Enumerator で書き直す</li>
+<li>おすすめ</li>
+<li>次のテーマは同期 (待ち合わせ)</li>
+<li>Thread での Queue を介した協調の Fiber 版を書きたい</li>
+<li>rendez-vous (Rdv) の実装</li>
+<li>イディオム: とりあえず resume、行き詰まったら yield</li>
+<li>Fiber.new してすぐに resume すると Thread.new のように使える</li>
+<li>やれることがなくなったら yield して Fiber.current を覚えてもらう</li>
+<li>実装例: push, pop</li>
+<li>Fiber だと条件検査の排他制御が不要</li>
+<li>Thread だと危険</li>
+<li>動きの例</li>
+<li>同期の条件検査に排他制御が入らないので、Fiber のつもりが Thread だったというのは危険なので、Auto Fiber のようなものより、Thread のつもりが Fiber だったの方が安全ではないか</li>
+<li>Multiplexer: socket のある例</li>
+<li><code>read_nonblock</code> を使う</li>
+<li>ブロックしそうな時 (<code>IO::WaitReadable</code>) に yield してメインループに戻る</li>
+<li>block-ish nonblock I/O</li>
+<li>ライブラリを作った: <a href="https://github.com/seki/bartender">https://github.com/seki/bartender</a></li>
+<li>実際のアプリケーション例</li>
+<li>tiny_drb の抜粋</li>
+<li>昔よく見たバグの話</li>
+<li>デモは作って見たが、見てもよくわからなかったので、説明</li>
+<li>Multiplexer のまとめ</li>
+<li>Fiber 入門のまとめ: 難しいよね</li>
+<li>Fiber は難しいところが面白い</li>
+<li>全体が暗記できるぐらいのサイズだったので罠を避けられた</li>
+<li>すみずみまでわかっていないとハマることがある</li>
+<li>ハマる可能性があると覚えておけば大丈夫</li>
+<li>例: twitter クライアントの gem が全部読んで String にしてから JSON.parse するのでハマったので、ストリーム対応の JSON.parse はあるのかな?</li>
+<li>ハマりそう: RDBMS のドライバ</li>
+<li>質疑応答</li>
+<li>Q: 読み書きしようとして安直にするとブロックするが、読めるだけ読むのがあるが書く方は? → 書く方もかけるだけ書くというのがある</li>
+<li>Q: gets とか使えなくて不便? → 聞き取れず</li>
+<li>Q(cuzic): Fiber の方が良いユースケースは? → Enumerator が良い例</li>
+<li>Q(cuzic): 外部イテレーターではなく agent のようなパフォーマンスがよくなるという例は? → ゲームのキャラクターを動かすような誰かがビートを刻むような例は良さそう。 I/O は向いてなさそう。 Auto Fiber や co-routine の例をみると良い例があるのかも。</li>
+<li>Q(joker): Thread で書いた場合は GIL で1コアでしか動かないが、(聞き取れず)だと別実装だと複数コア使えるとかあるが、Auto Fiber とかだと使えるようになる? → Fiber は Thread の中で動くので無理ではないか</li>
+<li>Q(joker): 外部イテレーターにするとか見せ方の変更はできるが、マルチコアでパフォーマンスの改善という用途ではない? → そう理解している</li>
+<li>Q: Thread と Fiber は違うのになぜ Fiber という名前なのかという感じの質問っぽい → Windows でそういう名前だから</li>
+</ul>
+
+
+<h2>MEDLEY のスポンサーセッション</h2>
+
+<ul>
+<li>会場アンケート</li>
+<li>知っている人? → 少ない</li>
+<li>昨日呑んだくれて疲れている人? → それなり?</li>
+<li>遠隔診療が実質解禁されたので CLINICS というアプリを作った</li>
+<li>医療 x IT への挑戦</li>
+</ul>
+
+
+<h2>Towards Ruby 3x3 performance</h2>
+
+<ul>
+<li>Ruby 3 performance goal</li>
+<li>RTL (register transfer language) insns</li>
+<li>RTL insns と stack insns の比較</li>
+<li>RTL insns の精製方法</li>
+<li>RTL insns のオペランド</li>
+<li>RTL complications</li>
+<li>RTL insn combing and specialization</li>
+<li>Speculative insn generation</li>
+<li>RTL insn status and future work</li>
+<li>Possible JIT approaches</li>
+<li>Option 1: Writing own JIT from scratch</li>
+<li>メンテナンスするのが大変</li>
+<li>Option 2: Using widely used optimizing compilers</li>
+<li>コンパイルが遅い</li>
+<li>Option 3: Using existing JITs</li>
+<li>License issues and patent minefield</li>
+<li>Own or existing JITs vs GCC/LLVM based JITs</li>
+<li>How to use GCC/LLVM for implementing JITs</li>
+<li>MJIT: <strong>M</strong>RI JIT, <strong>M</strong>ethod JIT</li>
+<li>Example</li>
+<li>MJIT performance results</li>
+<li>どれが何かわからないグラフ</li>
+<li>途中からちゃんと下まで出てきた</li>
+<li>Recommendations to use GCC/LLVM for a JIT</li>
+<li>MJIT status and future directions</li>
+<li>RTL と MJIT が MRI の一部になるかはわからないがこの方向性で頑張る</li>
+<li>質疑応答</li>
+<li>Q(tenderlove): (メモ取れず)</li>
+<li>Q: inline 化の話っぽい</li>
+<li>Q: メモリ使用量の話っぽい</li>
+<li>Q(ujm): make check が通らない理由は? → 並列実行とか callcc とか GC が関わるものとか(?)</li>
+<li>Q: モチベーションは? → (よくわからず)</li>
+<li>Q(ko1): GCC でループが最適化が測地になる例があったが、再定義対応は? → (よくわからず)</li>
+<li>matz のコメント</li>
+</ul>
+
+
+<h2>クロージング</h2>
+
+<ul>
+<li>MINASWAN 乙</li>
+<li>936枚チケットが売れた</li>
+<li>Next: Sendai May 31 (Thu) - June 2 (Sat)</li>
+</ul>
+
+
+<h2>全体の感想</h2>
+
+<p>とりとめもなく色々と。</p>
+
+<p>Twitter で @takatayoshitake さんとかの情報提供が色々と便利でした。(特に最終日のロッカー情報)</p>
+
+<p>Twitter のハッシュタグ <code>#rubykaigi</code> は流れが速いと全然追いきれないので、あとで togetter でみれるかなと思っていたら、今年は特になさそうで残念な思いをしました。
+RubyKaigi 全体のハッシュタグも、部屋ごとのハッシュタグも入り口に書いてあっただけで、特にアナウンスはなかった気がするので、部屋ごとのハッシュタグはつけずに <code>#rubykaigi</code> だけのツイートを、その人がどの部屋に参加していたか識別してまとめに振り分ける、という判断をしつつ、まとめを作ってくれる人が必要そうな気がします。</p>
+
+<p>台風が移動に影響したり、カープ優勝でセールがあったりなど、外部要因でもいろんなことがあったのが印象深かったです。</p>
+
+<p>3トラックあったので、興味があったのに見に行けなかったものも多いので、あとでチェックしたいと思いました。</p>
+
+<p>昼の弁当スポンサーがなかった代わりに、夜の懇親会が大量にあったのがよかったです。</p>
+
+<p>LT の発表は通訳の人との打ち合わせがない分、気軽だった代わりに、ちゃんと時間で切られる LT が久しぶりだったので、非常に緊張しました。
+そして、実際には練習より早口だったのか、予定よりたくさん喋っても時間が余ってしまうという感じになってしまいました。
+ネタが多い分には、後でRuby関西で使うなりブログに書くなり、他の発表場所はあるので、今後機会があれば多めに用意して調整できるようにしてみたい、と思いました。
+日本語での発表でも、発表資料は頑張って英語で書いておいたからか、<a href="https://twitter.com/drbrain/status/910069298789588998">英語での反応があった</a>のが嬉しかったです。
+基本的に何か反応があると嬉しいものなので(承認欲求)、発表とかしないという人でも、積極的にいいねをしたり、スターをつけたりすると良いと思います。</p>
+
+<p>開催の頭が連休だと、休みの部分を観光に、と思っても、期間中に出て来たオススメ情報を活用できないので、来年のように、後に休みが続く方が嬉しいと思いました。
+今回の場合は、台風で日曜に観光は無理だったということがありましたが、広島平和記念資料館に無料で入れるという特典が、前日に知らずに行っていたら無駄になる、ということがおきたのではないかと思いました。</p>
+
+<p>基本的に人を覚えるのが苦手なので、今回会った人で、次回忘れていたらすみません。</p>
+
+<p>Workshop は気になったのと、普通の発表は後で録画をみることもできる、というので、できれば参加したかったのですが、 <a href="https://github.com/rubydata/rubykaigi2017">https://github.com/rubydata/rubykaigi2017</a> の事前準備をしようとしたら、前日に止まっていたホテルだと帯域制限らしき状態になってしまって、 <code>rake docker:pull</code> できなかったということもあって諦めました。
+Afternoon Break の時間に重なっていた方も、 LT の前の接続確認をする必要があったので、諦めました。</p>
+
+<p>LT の接続確認は、なぜか最大化したときの表示がリサイズ前の範囲しか表示されない、という現象がなおらず (以前は次のページに移動したり、一覧ページに移動したりすればなおっていた)、発表準備期間中に n0kada さんが rabbit の方に終了時に落ちる (正常終了ではなく SEGV 的な終わり方をする) のを報告していたので、同じ macOS っぽいとわかっていたので、どうしていたのかきいてみたら、 <code>rabbit -S 1920,1080 hoge.md</code> のように <code>-S</code> で画面サイズを指定して起動すれば良いと教えてもらって解決しました。ありがとうございました。</p>
+
+<h2>まとめ</h2>
+
+<p>色々と大変なこともありましたが、大きな問題もなく、無事終わって良い RubyKaigi でした。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[RubyKaigi 2017 の2日目に参加しました]]></title>
@@ -1219,135 +1598,6 @@ Twitter のハッシュタグ <code>#rubykaigi</code> をみていると、会�
 
 <p>マネージドクラウドの話は haconiwa って作ってみたというようなものじゃなくて、ちゃんと実用的に使うためのものだったのかというのが驚きました。
 FastContainer は用途があえば良さそうな感じなので、機会があれば使ってみたいと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[LILO&東海道らぐオフラインミーティング 2017/08/27 に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-08-27-lilo-tokaidolug.html"/>
-    <updated>2017-08-27T13:33:33+09:00</updated>
-    <id>http://blog.n-z.jp/blog/lilo-tokaidolug</id>
-    <content type="html"><![CDATA[<p><a href="https://lilo.connpass.com/event/64381/">LILO&amp;東海道らぐオフラインミーティング 2017/08/27</a> に参加しました。</p>
-
-<p>今回もアンカンファレンス形式でした。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<ul>
-<li>会場はいつもの 4 階でした。</li>
-<li>ハッシュタグ: <code>#lilo_jp</code> <code>#東海道らぐ</code></li>
-<li>登録参加者数 12名</li>
-<li>自己紹介から</li>
-<li>最初の発表は発表者の希望により非公開</li>
-<li>途中からきた人は発表の合間に随時自己紹介</li>
-</ul>
-
-
-<h2>自分の発表</h2>
-
-<ul>
-<li>自分の lilo.linux.or.jp の話</li>
-<li>発表資料に入れていなかった部分については以下の通り</li>
-<li>OGP を入れたきっかけは <a href="https://togetter.com/li/1107707">LILO&amp;東海道らぐオフラインミーティング 2017/05/06の記録 - Togetterまとめ</a> で connpass だけ概要と画像が出ていたため</li>
-<li><a href="https://developers.facebook.com/tools/debug/">Open Graph Debugger - Developers Facebook</a> (Facebook アカウントがないと使えない?) は OGP がなくても自動検出した内容で埋められるため、本当に反映されるかどうかの確認には使えなかった覚えがあります</li>
-<li><a href="https://ja.osdn.net/projects/clamav-jp/lists/archive/users/2017-August/000280.html">[clamav-jp 281] ウィルスDB更新の異常について（解決済）</a></li>
-<li><a href="http://qiita.com/ttdoda/items/f16422d709e264cbb8a1">Postfix 2.12 の compatibility_level</a></li>
-<li>dokuwiki は <a href="https://bugs.debian.org/854592">#854592 dokuwiki: Unable to login, missing usr/share/php/Crypt/AES.php</a> で消えていた</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<h2>GPD-Pocket に Ubuntu 17.04 をインストールした話</h2>
-
-<ul>
-<li>東海道らぐ四日市 11/25</li>
-<li>GPD-Pocket でも Ubuntu 17.04 が動いた</li>
-<li>Kernel 4.13RC + Intel Graphics Driver OSS + 蓋開閉</li>
-<li>色々な条件で試してNGだったが、偶然蓋を開けたら画面がうつった</li>
-<li>ATOM はバニラカーネルの時点でバグがあるらしい</li>
-</ul>
-
-
-<h2>Fireduck OS</h2>
-
-<ul>
-<li>東海道LUG有志によるLinuxディストリビューションプロジェクト</li>
-<li>○○焼き → Fire duck (あひる焼き)</li>
-<li>タブレット向け</li>
-<li><a href="https://github.com/TokaidoLUG/fireduckos">https://github.com/TokaidoLUG/fireduckos</a></li>
-<li>アーキテクチャ説明</li>
-<li>悩み事</li>
-<li>journald が起動したプロセスの出力をファイルに書き込むので重い</li>
-<li>OSM のアプリ?</li>
-<li>UEFI32 向けに 64 bit 環境で 32 bit 向けのビルドが必要なので multilib を使った</li>
-<li><a href="https://github.com/TokaidoLUG/meta-intel-mobile">https://github.com/TokaidoLUG/meta-intel-mobile</a></li>
-<li><a href="https://github.com/TokaidoLUG">Tokaido Linux User Group</a></li>
-<li>欲しいアプリの話</li>
-<li>資料は <a href="https://www.slideshare.net/wata2ki">https://www.slideshare.net/wata2ki</a> に公開予定</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>懇親会参加者の確認</li>
-</ul>
-
-
-<h2>つなぎの発表</h2>
-
-<ul>
-<li>オープンソースカンファレンス広島の紹介</li>
-<li>Allwinner タブレットの実演</li>
-<li>firefox を動かして、ネットワークが繋がっていないので about:mozilla とか about:robots とか</li>
-</ul>
-
-
-<h2>State of the Map 2017 に行ってきたよ</h2>
-
-<ul>
-<li>Open Street Map の国際会議</li>
-<li>日本で国際会議をやるのは珍しい</li>
-<li>会津若松市は LibreOffice を使っているので、ついでに話を聞きに行った</li>
-<li>写真を見ながら色々な話</li>
-<li>Maps With Me というアプリが便利らしい</li>
-</ul>
-
-
-<h2>最後の話</h2>
-
-<p>プロジェクターに映らなかったので、集まって話をきいていました。</p>
-
-<h2>クロージング</h2>
-
-<ul>
-<li>今後の予定など</li>
-<li>会場費は学生以外が 100 円でした。</li>
-</ul>
-
-
-<h2>発表した内容</h2>
-
-<p>スライドはいつも通り <a href="http://slide.rabbit-shocker.org/authors/znz/lilo-20170827/">Rabbit Slide Show</a> (<a href="https://rubygems.org/gems/rabbit-slide-znz-lilo-20170827">RubyGems</a>), <a href="https://slideshare.net/znzjp/lilolinuxorjp-20178">SlideShare</a>, <a href="https://speakerdeck.com/u/znz/p/lilo-dot-linux-dot-or-dot-jp-falsehua-2017nian-8yue">Speaker Deck</a> にあげています。(ソースは <a href="https://github.com/znz/lilo-20170827">github</a> にあげています。)</p>
-
-<iframe src="https://slide.rabbit-shocker.org/authors/znz/lilo-20170827/viewer.html"
-        width="640" height="524"
-        frameborder="0"
-        marginwidth="0"
-        marginheight="0"
-        scrolling="no"
-        style="border: 1px solid #ccc; border-width: 1px 1px 0; margin-bottom: 5px"
-        allowfullscreen> </iframe>
-
-
-<div style="margin-bottom: 5px">
-  <a href="https://slide.rabbit-shocker.org/authors/znz/lilo-20170827/" title="lilo.linux.or.jp の話 (2017年8月)">lilo.linux.or.jp の話 (2017年8月)</a>
-</div>
-
 ]]></content>
   </entry>
   
