@@ -4,7 +4,7 @@
   <title><![CDATA[Category: event | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/event/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-09-21T00:21:10+09:00</updated>
+  <updated>2017-09-23T21:35:00+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,264 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Developers.IO 2017 WORLD in 大阪 に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-09-23-cmdevio2017.html"/>
+    <updated>2017-09-23T21:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/cmdevio2017</id>
+    <content type="html"><![CDATA[<p><a href="http://dev.classmethod.jp/news/developers-io-2017-world-osaka/">Developers.IO 2017 WORLD in 大阪</a> に参加したので、そのメモです。
+主に OAuth の話が気になったので行ってみたのですが、他の話もおもしろかったです。</p>
+
+<p>ハッシュタグは <code>#cmdevio2017</code> でした。</p>
+
+<!--more-->
+
+
+<h2>会場</h2>
+
+<p>スカイビルのタワーウエストは初めて入った気がします。(イーストの方は映画館があるので、そこまでは行ったことがありました。)</p>
+
+<h2>ごあいさつと会場の説明</h2>
+
+<p>スカイビルの場所がわかりにくくて迷った話とか、 Developers.IO の東京で複数トラックでやっていたもののうち、アンケートで評判が良かったものを各地を回ってやっている話とかがありました。</p>
+
+<h2>クラメソの請求を支える技術（サーバーレス編）</h2>
+
+<ul>
+<li>会場アンケート: 20代, 30代, 40代で3分の1ずつぐらい?</li>
+<li>自己紹介<!-- @czkuk --></li>
+<li>刷新の経緯</li>
+<li>請求書が毎月300枚になってつらい</li>
+<li>請求システムを刷新した話</li>
+<li>新システムのポイント</li>
+<li>データの一元管理</li>
+<li>API, OAuth 2.0</li>
+<li>Python simple_salesforce</li>
+<li>MFクラウド請求で CSV フォーマットが変更されるということがあったので、ベータが提供されていた API に乗り換えた</li>
+<li>OAuth 2.0 のクライアントとしての利用は簡単</li>
+<li>Problem: Salesforce 24時間API呼び出し上限</li>
+<li>更新がわからないので、全部のデータに対して API を呼び出したら、あっという間に上限に</li>
+<li>Solved: S3 ETag</li>
+<li>登録できた JSON ファイルは S3 にキャッシュ</li>
+<li>変更のみを登録できるようになって解決</li>
+<li>とある運用担当者の訴え: 「絶対にサーバーは管理したくないでござる」</li>
+<li>Problem: 処理に時間がかる</li>
+<li>Lambda は5分で強制タイムアウトがある</li>
+<li>Solved: SQS worker Queue</li>
+<li>Lambda ログ監視</li>
+<li>CloudWatch Logs の Lambda によるログ監視</li>
+<li>ログレベルごとに通知先を変えられる log2sns2.yml がオススメ</li>
+<li>成功したら請求担当のみ、失敗したら開発者にもとか</li>
+<li>AWS 月額利用費 $17</li>
+<li>Salesforce について</li>
+<li>請求締め部分は外製</li>
+<li>visualforce, apex で画面を内製</li>
+<li>カバレッジが高くないとリリースできないとか、よくできている</li>
+<li>Trailhead で自習</li>
+<li>外製? 内製?</li>
+<li>仕様が固めやすい部分は外製</li>
+<li>画面などトライアンドエラー部分は内製</li>
+<li>過度なカスタマイズはしない</li>
+<li>業務をパッケージにあわせる</li>
+<li>刷新後</li>
+<li>半月かかってた請求業務が数時間に</li>
+<li>営業への契約確認 → ほぼゼロ</li>
+<li>「しがないOL」がJavaプログラマーに</li>
+<li>請求システムの話終了</li>
+<li>昔話</li>
+<li>糊付けエンジニア</li>
+<li>「なんでもできる人なんていない」</li>
+<li>同じシステムに長く関わっている人は少ない</li>
+<li>1年ぐらいが多くて、5年以上は少ない</li>
+<li>40歳の生存戦略</li>
+<li>半径5メートルの人を幸せにするのが良い</li>
+</ul>
+
+
+<h2>基礎からのOAuth2.0</h2>
+
+<ul>
+<li><a href="http://bit.ly/cmdevio2017-oauth2">http://bit.ly/cmdevio2017-oauth2</a></li>
+<li>自己紹介<!-- @daisuke_m --></li>
+<li>OAuth の動機: 認証、属性取得、委譲</li>
+<li>OAuth は認証の委譲プロトコルではなく、認可の委譲プロトコル</li>
+<li>認証と認可の基礎知識</li>
+<li>認証 (Authentication) : 通信相手が誰か、確認すること。</li>
+<li>認可 (Authorization) : リクエストが許可されるかどうかを決めること。(ポリシー定義段階)</li>
+<li>厳密には「ポリシー施行段階」は別だが、あまり区別しなくても良い</li>
+<li>認証と認可は、本来、相互に独立した概念。</li>
+<li>401 Unauthorized : 認証の失敗 『お前誰だよ』</li>
+<li>RFC さえ混同しているが、本来は Unauthenticated が正しいのでは。</li>
+<li>403 Forbidden : 認可の不足 『理解した。だが断る』</li>
+<li>鍵 (key) と錠 (lock)</li>
+<li>ユーザーには「鍵 (key)」を与えて、リソースには「錠 (lock)」をかける</li>
+<li>認証の委譲 (OpenID Connect)</li>
+<li>登場人物: End-User, Relying Party (RP), ID Provider (IdP)</li>
+<li>RP=アプリ, ID Provider=TwitterとかFacebookとか</li>
+<li>図解</li>
+<li>ID Token</li>
+<li>JWT (JSON Web Token) (じょっとと読むらしい)</li>
+<li>ヘッダ、ペイロード、電子署名 (ID Provider の秘密鍵で署名)</li>
+<li>Relying Party が ID Provider の公開鍵で検証</li>
+<li>神は誰か? 問題</li>
+<li>よくある Web+DBシステム: アプリケーション</li>
+<li>API データソースになっても同様</li>
+<li>OAuth においては神様はユーザー</li>
+<li>だから OAuth は認可の委譲プロトコル</li>
+<li>みなさんが OAuth を使いたくないであろう理由</li>
+<li>ここから OAuth の話</li>
+<li>OAuth 2.0 の登場人物 : Resource owner (RO), Client, Authorization server (AS), Resource server (RS)</li>
+<li>例: RO=ユーザー, Client=togetter, ASとRS=twitter</li>
+<li>図解</li>
+<li>アクセストークン (AT) とは、リソースにかかった「錠」を開ける「鍵」</li>
+<li>つまり、鍵に「誰?」を求めてはいけない。</li>
+<li>では「OAuth認証」とは一体…?</li>
+<li>認証したいだけなのに、渡す権限が大きすぎて怖い。</li>
+<li>これを認証の根拠としてよい、という裏付けが弱い。</li>
+<li>OAuth 2.0 が成し遂げたいこと (一部)</li>
+<li>(リストはメモが取れなかったので公開されている資料参照)</li>
+<li>Client が AT を得るフロー 4種</li>
+<li>1: Client credentials grant</li>
+<li>client id/secret を AT に引き換えるだけ</li>
+<li>リソースオーナー不在</li>
+<li>ユースケース: 古いスキームに適合。 Twitter の public timeline など。</li>
+<li>2: Resource owner password grant</li>
+<li>RO のユーザー名とパスワードを AT に引き換えるだけ</li>
+<li>ユースケース: 公式クライアント向け</li>
+<li>3: Implicit grant</li>
+<li>AT がユーザーやブラウザーに見えてしまう</li>
+<li>ユースケース: モバイルや JS アプリケーションなど、エンドユーザーの支配下にあるクライアント向け</li>
+<li>4: Authorization code grant</li>
+<li>フロントチャネル・バックチャネル</li>
+<li>3 の場合は AT がフロントチャネルを通るので User Agent に漏れる</li>
+<li>4 の場合は AT をフロントチャネルに流さない</li>
+<li>最悪 AC は漏れても、単独であればリスクは低い</li>
+<li>AC のライフタイムは短い</li>
+<li>AC → AT の引き換えには client id/secret が必要</li>
+<li>ユースケース: サーバーサイド Web アプリケーション向け</li>
+<li>OAuth 2.0 が規定しないこと</li>
+<li>1: Resource owner とのインタラクション様式</li>
+<li>2: Resource owner の権限及びその確認</li>
+<li>よく考えて設計しないと、 User が持っていない権限を Client に与えてしまう</li>
+<li>OAuth における「スコープ」とは</li>
+<li>User が委譲に同意した権限の種類</li>
+<li>Client が行使できる権限の種類ではない</li>
+<li>Client が AT を使って行使できる権限 = User が持っている権限と Client が持つ AT のスコープの共通部分</li>
+<li>3: アクセストークンに関する諸々</li>
+<li>3a: AuthZ server における AT の生成方法</li>
+<li>現実的にはランダムか JWT の二択</li>
+<li>3b: Client における RS への AT の送り方</li>
+<li>3c: Resource server における AT の確認方法</li>
+<li>ランダムなら AuthZ server にきくしかない</li>
+<li>Sprint Security OAuth 2 独自実装</li>
+<li>JWT トークンは revoke しづらい</li>
+<li>まとめ</li>
+<li>認証と認可の概念</li>
+<li>アクセストークンの意味</li>
+<li>認可コードの意味</li>
+<li>スコープの意味</li>
+</ul>
+
+
+<h2>クラメソのWebサイトを支える技術</h2>
+
+<ul>
+<li>自己紹介<!-- @suzryo --></li>
+<li>コーポレートサイト 2016年12月にリニューアル</li>
+<li>静的ウェブサイトホスティング</li>
+<li>AWS</li>
+<li>S3: ファイル置き場</li>
+<li>Amazon CloudFront: CDN</li>
+<li>ACM: SSL の証明書管理</li>
+<li>Amazon Route53 (ルートフィフティスリー): クラウドDNS</li>
+<li>Amazon Route53 (ALIAS): A レコードと応答、ホスト名の省略 (ZoneApex) 設定可能</li>
+<li>Amazon Route53 (ヘルスチェック)</li>
+<li>Amazon Route53 (ヘルスチェック+DNSファイルオーバー利用例)</li>
+<li>重み付けラウンドロビン (スポットインスタンス活用)</li>
+<li>Amazon Route53 (GeoDNS利用例)</li>
+<li>Route53ヘルスチェックとDatadog連携</li>
+<li>AWSWAF</li>
+<li>ステージングの表示制限にも利用</li>
+<li>Amazon EC2 (CMS)</li>
+<li>WordPress + staticpress</li>
+<li>S3 に転送して公開</li>
+<li>コーポレートサイト (動的ページ) は SaaS 利用</li>
+<li>問い合わせフォーム : kintone + salesforce</li>
+<li>サイト内検索: Google カスタム検索エンジン</li>
+<li>ブログサイト <a href="http://dev.classmethod.jp/">http://dev.classmethod.jp/</a> 2011年7月1日公開</li>
+<li>掲載記事数: 年間約3000件ペース (1日平均8.2件)</li>
+<li>初期は EC2 スタンドアローン</li>
+<li>Offload S3 導入: 画像データをS3、CloudFront で配信</li>
+<li>RDS 導入: MySQL を RDS 化、DB 運用の省力化</li>
+<li>ELB, Elasticbeanstalk 導入: ELB 配下で負荷分散、EB で管理改善</li>
+<li>nginx 導入: ページキャッシュを追加</li>
+<li>ApacheBench</li>
+<li>Amazon Aurora 導入</li>
+<li>拡張方針: キャッシュを多段化、クラウドの柔軟性を活用</li>
+<li>アクセスログの解析</li>
+<li>nginx → ltsv → fluentd → Amazon Kinesis Firehose → DB (アイコンでは何かわからず)</li>
+<li>Athena</li>
+<li>AWS WAF 連携 <a href="http://dev.classmethod.jp/cloud/aws/ids-with-kinesis-waf/">http://dev.classmethod.jp/cloud/aws/ids-with-kinesis-waf/</a></li>
+<li>改善計画</li>
+<li>評価システム: 執筆者評価, 記事のSNSシェア数</li>
+<li>既存評価システム: ページ表示の度にSNS情報取得、再集計</li>
+<li>新評価システム: 非同期に取得、S3 の集計済みデータを参照</li>
+<li>AWS のマネージドサービス弄り倒してます</li>
+<li>個々の詳細はブログにて</li>
+<li>SaaS の紹介</li>
+<li>Datadog</li>
+<li>エラー率とか通知とか</li>
+</ul>
+
+
+<h2>Alexaで変わる開発、変わらない開発</h2>
+
+<ul>
+<li>Alexa の概要</li>
+<li>Amazon Echo: スマートスピーカー, Alexa の機能を呼び出せる, 米英独など国外で展開中</li>
+<li>Amazon Alexa: Amazon が提供する音声アシスタント, Echo という端末が呼び出しているサービス, 標準機能の他に、拡張機能を開発して呼び出せる</li>
+<li>Alexa Custom Skill: アプリのように、独自開発のスキルを呼び出せる, 自作エンドポイントを登録して審査に通ればOK</li>
+<li>Alexa Voice Service: Alexa のフロント側の規格, アプリにも組み込める</li>
+<li>アプリ例: Friendly Voice Assistant</li>
+<li>Alexa スキルの開発</li>
+<li>サンプル: <a href="https://github.com/alexa/skill-sample-nodejs-highlowgame">https://github.com/alexa/skill-sample-nodejs-highlowgame</a></li>
+<li>amazon.com でログイン → Alexa → Alexa Skill Kit で作成</li>
+<li>デモ</li>
+<li>使うサンプルを <a href="https://github.com/alexa/skill-sample-nodejs-fact">https://github.com/alexa/skill-sample-nodejs-fact</a> に変更</li>
+<li>開発者コンソールで文字列でのテスト</li>
+<li>APP ID の指定が <code>""</code> で括られていないように見えたけど、一瞬だったので見落としかなと思っていたら、エラーになったので、指摘してみたらやっぱりそこだったようでした。</li>
+<li>echosim.io で音声でのテスト</li>
+<li>デモ終了</li>
+<li>スキルの構成要素: wake word, launch, invocation name, utterance, slot value</li>
+<li>画像は <a href="https://developer.amazon.com/designing-for-voice/what-users-say/">https://developer.amazon.com/designing-for-voice/what-users-say/</a> 参照</li>
+<li>Utterance をユーザが言うと Intent がプログラムに渡ってくる</li>
+<li><a href="https://github.com/alexa/alexa-skills-kit-sdk-for-nodejs">https://github.com/alexa/alexa-skills-kit-sdk-for-nodejs</a></li>
+<li>普通の Lambda の開発では webpack は使わないが、Alexa では使った方が良さそう</li>
+<li>初回起動時間: 約5秒 → 約2秒</li>
+<li>5秒は不安になる</li>
+<li>ルーティング機能がプラットフォーム側</li>
+<li>Lambda はステートレスだが、Skill が State を提供していて、会話を実現している</li>
+<li>視覚表現はある?</li>
+<li>Echo Show にはカードというのがある</li>
+<li>HTML っぽいのは何?</li>
+<li>SSML</li>
+</ul>
+
+
+<h2>感想</h2>
+
+<p>知り合いが一人もいない勉強会に参加したのは久しぶりのような気がしました。</p>
+
+<p>鍵と錠のたとえとか、 OAuth 2.0 が成し遂げたいことを元に複数フローで何ができていて、何ができていないのかなど、非常にわかりやすくて良かったです。</p>
+
+<p>Salesforce も連携する何かを作るかもしれないので、 Trailhead というものの存在を知れたのは良かったです。</p>
+
+<p>自社サイトを例にして Amazon のサービスの運用例を知れたのもおもしろかったです。</p>
+
+<p>Alexa はそういうものもあるのか、とか、会話にするのは技術的な難しさよりもただ大変そう、という感じでおもしろかったです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[RubyKaigi 2017 の3日目に参加しました]]></title>
@@ -1447,157 +1705,6 @@ Twitter のハッシュタグ <code>#rubykaigi</code> をみていると、会�
 <h2>退出</h2>
 
 <p>17時を過ぎても続いていて、移動しないと間に合わなくなりそうだったので、Lisp の話の途中で出ました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第11回 HosCon - GMO Hosting Conference - @大阪 に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-09-14-hoscon.html"/>
-    <updated>2017-09-14T22:46:24+09:00</updated>
-    <id>http://blog.n-z.jp/blog/hoscon</id>
-    <content type="html"><![CDATA[<p><a href="https://gmohoscon.connpass.com/event/63440/">第11回 HosCon - GMO Hosting Conference - @大阪</a> に参加したので、そのメモです。</p>
-
-<!--more-->
-
-
-<h2>会場</h2>
-
-<p>グランフロントタワー B の 梅田・GMO Yours での開催でした。
-前に何かの勉強会で一度来たことがあるような気がするのですが、何だったか思い出せませんでした。</p>
-
-<p>タワー B 自体は最近 Rails Developers Meetup #4 大阪会場 で来ていました。</p>
-
-<h2>その他</h2>
-
-<p>ハッシュタグは <code>#hoscon</code> でしたが、ツイートはあまりありませんでした。</p>
-
-<p><a href="https://twitter.com/rzl5/status/908276901914882049">https://twitter.com/rzl5/status/908276901914882049</a> に写真がありますが、 ConoHa カードをもらったので、使ってみたいと思いました。</p>
-
-<h2>コンテナ基盤であるLXC/LXDを本番環境で運用する話</h2>
-
-<ul>
-<li>2011年に物理からKVMによる完全仮想化へ</li>
-<li>完全仮想化はリソースに無駄があるということで準仮想化、コンテナ化へ</li>
-<li>なぜLXDか?</li>
-<li>他に検討した選択肢は Docker, KVM, OpenVZ, (VMware は高いので選択肢に入らず)</li>
-<li>質問: Linux だけで Windows や BSD はなかった? カーネルモジュールなども問題なかった? → Linux で、カスタマイズはしていたが共通の kernel だったので問題なく集約できた。</li>
-<li>質問: OpenVZ が遅かった? → 一般的には遅くないかもしれないが、試した環境ではコンテナより遅かった。</li>
-<li>LXDは2017年2月から運用開始</li>
-<li>ホストOSは Ubuntu 16.04 LTS</li>
-<li>ゲストOSは使い慣れたCentOS</li>
-<li>なぜZFSか?　→ 公式がオススメしているのとベンチマークの結果がよかった</li>
-<li>今も苦労している部分はある</li>
-<li>fio で計測</li>
-<li>ZFS を採用した理由: 機能性、柔軟性, 比較対象: lvm, dir</li>
-<li>ホストシステム構築時のトラブル</li>
-<li>オープンファイル数の上限など色々な上限に引っかかった</li>
-<li>ネットワーク編</li>
-<li>NIC の MAC アドレスがかぶっていた</li>
-<li>LXD 運用編</li>
-<li>Apache RLimitNPROC にひっかかった</li>
-<li>ホストのロードアベレージが急激に上昇 → ZFS がボトルネックだったのでチューニングを実施 (ZFS ARC?)</li>
-<li>2ラック (KVM) → 1ラック (LXD)</li>
-<li>質問タイム</li>
-<li>LXD で新しくサービスできるようになったことはある? → 新たなサービスはないが、快適なディスクIOを提供できている</li>
-<li>まだリリースできていないが、準専有の基盤ができた</li>
-<li>ZFS はメモリをたくさん使って残りがユーザーの領域? → ご想像にお任せします</li>
-<li>どのようなところで運用負荷の軽減? 運用でカバーしているところ? → 物理が減ったので楽になった。リソースの制限の自動化を目標に手動でやっている。物理より柔軟にできるのが良い。</li>
-<li>ライブマイグレーションをしているかどうか? → やっていない。今後対応していく。</li>
-<li>内製でコントロールパネルのようなものを作っている? → ない。全部コマンドで。</li>
-<li>CentOS? → 既存のノウハウをいかすために選んだ。</li>
-<li>OS のアップデートはどうしている? → カーネル以外は通常のアップデート</li>
-<li>ホスト側のリソース監視はしていると思うが、コンテナ側はどうしている? → 緩めの limit を設定してる</li>
-<li>PHP などのバージョン違い? → 問い合わせで個別に対応することもある</li>
-<li>サポートが終了したものはなるべく引き継がない</li>
-<li>CentOS 6? 7? → 7</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<p><!-- 20:12 から? -->20:16 まで</p>
-
-<h2>ロリポップ！マネージドクラウド FastContainerの裏側</h2>
-
-<ul>
-<li>ロリポップ！マネージドクラウドは FastContainer アーキテクチャを採用していて、コンテナエンジンに haconiwa</li>
-<li>質問: 価格? → 価格についてはまだ未定</li>
-<li>オートスケール</li>
-<li>質問: 何をもってマネージド? → コンテナの起動の仕方が特殊 (FastContainer) で、完全に root 権限があるわけではないなど</li>
-<li>質問: データベース? → データベースはコンテナで動いていないので、オートスケールではない</li>
-<li>質問: オートスケールは php だけ? → apache + php</li>
-<li>質問: データベースがオートスケールではないのなら、ユーザーごとのリソース制御? → まだ未確定</li>
-<li>質問: 具体的にアクセスが増えると、とは? → 実際は CPU のスロットルタイムをみているので、CPU の負荷が高くなれば。</li>
-<li>逆に負荷が下がればコンテナを減らす。</li>
-<li>質問: ユーザーごとのリソースの分割? 他のユーザーの影響は受けるのか? → 基本的には影響は受けない。リソースは分離している。ホスト自体が重くなっても負荷分散できるアーキテクチャになっている。</li>
-<li>FastContainer とは?</li>
-<li>FastCGI のコンテナ版といったイメージ</li>
-<li>リクエスト契機で Web アプリのコンテナが起動</li>
-<li><p>一度起動したコンテナはその後しばらく使い回して、一定時間が経過したら終了</p></li>
-<li><p>利点</p></li>
-<li>オートスケール</li>
-<li>リクエストがないと停止するのでリソースの節約</li>
-<li>いろんなコンテナで色々なアプリを提供</li>
-<li>常に最新</li>
-<li><p>他のマシンへの載せ替えも楽</p></li>
-<li><p>マネージドクラウドの構成</p></li>
-<li>CMDB というところでコンテナの情報を管理</li>
-<li>質問: 構成が速度に影響があるか? → ある。今は動くものを優先。 nfs が重いというのは多方面から突っ込まれている</li>
-<li>質問: 起動していない時と起動している時のパフォーマンスの差? → 確かにたちがっていない状態のアクセスは時間がかかる。調整中</li>
-<li>質問: どこが大きくなっていく? compute? → 今のところ compute と datapool が増えるのを想定している。</li>
-<li>パフォーマンスは調整していく段階なので、今後機会があれば。</li>
-<li>ngx_mruby</li>
-<li>haconiwa</li>
-<li>コンテナ</li>
-<li>基本は1コンテナに1プロセス</li>
-<li>ssh も sshd コンテナ経由</li>
-<li>FastContainer リクエスト制御フロー</li>
-<li>質問 → 今はチューニングがすんでいないので初回は 2,3 秒ぐらいかかる</li>
-<li>質問 → ユーザーが予約枠を設定していて、そこまでしか上がらないようにしている</li>
-<li><p>予約枠は金額で設定できるようにしたい</p></li>
-<li><p>コンテナの死</p></li>
-<li>コンテナの寿命: lifetime が設定されていて一定時間経過で自動停止</li>
-<li>なぜ寿命?</li>
-<li>リソースの節約</li>
-<li>新しくなるタイミングでライブラリなども更新されてセキュア</li>
-<li>別ホストに移行したい時も CMDB をいじるだけ</li>
-<li>compute のメンテも簡単</li>
-<li><p>質問: リクエストが有る限り死なない? → lifetime で死ぬ</p></li>
-<li><p>オートスケール</p></li>
-<li>haconiwa が cgroup から各コンテナの CPU, I/O 負荷を計測・監視</li>
-<li>ユーザーはコンテナの予約枠を設定可能</li>
-<li>スケールインは CMDB の変更だけで停止は自動停止任せ</li>
-<li><p>予約枠を取るだけでオートスケール</p></li>
-<li><p>コンテナの種類も増やしていきたい</p></li>
-<li><p>質問タイム</p></li>
-<li>予約枠? パケット量をみる? → 設計中。基本的には使ったぶんだけ課金する予定?</li>
-<li>コンテナのサーバー自体が高負荷になったり物理的な障害が起きても自動でフェイルオーバー? → 自動ではできていない。手動でのせかえることはできる。自動化は可能ではある。</li>
-<li>SSL 証明書? Symantec のような台数分の場合とか → あとで</li>
-<li>オートスケールをする監視をしている間隔? → 暫定で1秒</li>
-<li>オートスケールの課金の指標は? ニュースで取り上げられる予定だから、とか。 → 設計中</li>
-<li>聞き逃し</li>
-<li>WAN の IP は共有? → 共有</li>
-<li>コンテナはドメインでみている</li>
-<li>IP アドレス単位で他のユーザーの影響は受ける可能性がある</li>
-<li>現状 CMDB はデータベースのフェイルオーバー任せなので、そこが止まると止まる可能性はある</li>
-<li>のせるアプリの開発環境? → 将来的には用意したい</li>
-<li>聞き逃し → コンテナ単位でどのくらいパフォーマンスが出ているかだそうとか色々話はある</li>
-</ul>
-
-
-<h2>懇親会</h2>
-
-<p>5分休憩の後で懇親会でした。</p>
-
-<h2>感想</h2>
-
-<p>LXD を採用したという話自体は以前に別の勉強会で聞いたことがあったので、それと重複した話もありましたが、もっと技術的につっこんだ話も聞けておもしろかったです。</p>
-
-<p>LXD は他では使っているという話を聞いたことがないので、使っている人はもっと情報を出してくれればいいのに、という気がしています。
-個人的には、情報がなくて探しても何もわからないよりは、Docker のように情報がたくさんあって玉石混交で、自分で見極めないといけない、という状態の方が望ましいです。</p>
-
-<p>マネージドクラウドの話は haconiwa って作ってみたというようなものじゃなくて、ちゃんと実用的に使うためのものだったのかというのが驚きました。
-FastContainer は用途があえば良さそうな感じなので、機会があれば使ってみたいと思いました。</p>
 ]]></content>
   </entry>
   
