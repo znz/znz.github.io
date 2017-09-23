@@ -1,0 +1,242 @@
+---
+layout: post
+title: "Developers.IO 2017 WORLD in 大阪 に参加しました"
+date: 2017-09-23 21:00:00 +0900
+comments: true
+categories: event
+---
+[Developers.IO 2017 WORLD in 大阪](http://dev.classmethod.jp/news/developers-io-2017-world-osaka/) に参加したので、そのメモです。
+主に OAuth の話が気になったので行ってみたのですが、他の話もおもしろかったです。
+
+ハッシュタグは `#cmdevio2017` でした。
+
+<!--more-->
+
+## 会場
+
+スカイビルのタワーウエストは初めて入った気がします。(イーストの方は映画館があるので、そこまでは行ったことがありました。)
+
+## ごあいさつと会場の説明
+
+スカイビルの場所がわかりにくくて迷った話とか、 Developers.IO の東京で複数トラックでやっていたもののうち、アンケートで評判が良かったものを各地を回ってやっている話とかがありました。
+
+## クラメソの請求を支える技術（サーバーレス編）
+
+- 会場アンケート: 20代, 30代, 40代で3分の1ずつぐらい?
+- 自己紹介<!-- @czkuk -->
+- 刷新の経緯
+- 請求書が毎月300枚になってつらい
+- 請求システムを刷新した話
+- 新システムのポイント
+- データの一元管理
+- API, OAuth 2.0
+- Python simple\_salesforce
+- MFクラウド請求で CSV フォーマットが変更されるということがあったので、ベータが提供されていた API に乗り換えた
+- OAuth 2.0 のクライアントとしての利用は簡単
+- Problem: Salesforce 24時間API呼び出し上限
+- 更新がわからないので、全部のデータに対して API を呼び出したら、あっという間に上限に
+- Solved: S3 ETag
+- 登録できた JSON ファイルは S3 にキャッシュ
+- 変更のみを登録できるようになって解決
+- とある運用担当者の訴え: 「絶対にサーバーは管理したくないでござる」
+- Problem: 処理に時間がかる
+- Lambda は5分で強制タイムアウトがある
+- Solved: SQS worker Queue
+- Lambda ログ監視
+- CloudWatch Logs の Lambda によるログ監視
+- ログレベルごとに通知先を変えられる log2sns2.yml がオススメ
+- 成功したら請求担当のみ、失敗したら開発者にもとか
+- AWS 月額利用費 $17
+- Salesforce について
+- 請求締め部分は外製
+- visualforce, apex で画面を内製
+- カバレッジが高くないとリリースできないとか、よくできている
+- Trailhead で自習
+- 外製? 内製?
+- 仕様が固めやすい部分は外製
+- 画面などトライアンドエラー部分は内製
+- 過度なカスタマイズはしない
+- 業務をパッケージにあわせる
+- 刷新後
+- 半月かかってた請求業務が数時間に
+- 営業への契約確認 → ほぼゼロ
+- 「しがないOL」がJavaプログラマーに
+- 請求システムの話終了
+- 昔話
+- 糊付けエンジニア
+- 「なんでもできる人なんていない」
+- 同じシステムに長く関わっている人は少ない
+- 1年ぐらいが多くて、5年以上は少ない
+- 40歳の生存戦略
+- 半径5メートルの人を幸せにするのが良い
+
+## 基礎からのOAuth2.0
+
+- http://bit.ly/cmdevio2017-oauth2
+- 自己紹介<!-- @daisuke_m -->
+- OAuth の動機: 認証、属性取得、委譲
+- OAuth は認証の委譲プロトコルではなく、認可の委譲プロトコル
+- 認証と認可の基礎知識
+- 認証 (Authentication) : 通信相手が誰か、確認すること。
+- 認可 (Authorization) : リクエストが許可されるかどうかを決めること。(ポリシー定義段階)
+- 厳密には「ポリシー施行段階」は別だが、あまり区別しなくても良い
+- 認証と認可は、本来、相互に独立した概念。
+- 401 Unauthorized : 認証の失敗 『お前誰だよ』
+- RFC さえ混同しているが、本来は Unauthenticated が正しいのでは。
+- 403 Forbidden : 認可の不足 『理解した。だが断る』
+- 鍵 (key) と錠 (lock)
+- ユーザーには「鍵 (key)」を与えて、リソースには「錠 (lock)」をかける
+- 認証の委譲 (OpenID Connect)
+- 登場人物: End-User, Relying Party (RP), ID Provider (IdP)
+- RP=アプリ, ID Provider=TwitterとかFacebookとか
+- 図解
+- ID Token
+- JWT (JSON Web Token) (じょっとと読むらしい)
+- ヘッダ、ペイロード、電子署名 (ID Provider の秘密鍵で署名)
+- Relying Party が ID Provider の公開鍵で検証
+- 神は誰か? 問題
+- よくある Web+DBシステム: アプリケーション
+- API データソースになっても同様
+- OAuth においては神様はユーザー
+- だから OAuth は認可の委譲プロトコル
+- みなさんが OAuth を使いたくないであろう理由
+- ここから OAuth の話
+- OAuth 2.0 の登場人物 : Resource owner (RO), Client, Authorization server (AS), Resource server (RS)
+- 例: RO=ユーザー, Client=togetter, ASとRS=twitter
+- 図解
+- アクセストークン (AT) とは、リソースにかかった「錠」を開ける「鍵」
+- つまり、鍵に「誰?」を求めてはいけない。
+- では「OAuth認証」とは一体…?
+- 認証したいだけなのに、渡す権限が大きすぎて怖い。
+- これを認証の根拠としてよい、という裏付けが弱い。
+- OAuth 2.0 が成し遂げたいこと (一部)
+- (リストはメモが取れなかったので公開されている資料参照)
+- Client が AT を得るフロー 4種
+- 1: Client credentials grant
+- client id/secret を AT に引き換えるだけ
+- リソースオーナー不在
+- ユースケース: 古いスキームに適合。 Twitter の public timeline など。
+- 2: Resource owner password grant
+- RO のユーザー名とパスワードを AT に引き換えるだけ
+- ユースケース: 公式クライアント向け
+- 3: Implicit grant
+- AT がユーザーやブラウザーに見えてしまう
+- ユースケース: モバイルや JS アプリケーションなど、エンドユーザーの支配下にあるクライアント向け
+- 4: Authorization code grant
+- フロントチャネル・バックチャネル
+- 3 の場合は AT がフロントチャネルを通るので User Agent に漏れる
+- 4 の場合は AT をフロントチャネルに流さない
+- 最悪 AC は漏れても、単独であればリスクは低い
+- AC のライフタイムは短い
+- AC → AT の引き換えには client id/secret が必要
+- ユースケース: サーバーサイド Web アプリケーション向け
+- OAuth 2.0 が規定しないこと
+- 1: Resource owner とのインタラクション様式
+- 2: Resource owner の権限及びその確認
+- よく考えて設計しないと、 User が持っていない権限を Client に与えてしまう
+- OAuth における「スコープ」とは
+- User が委譲に同意した権限の種類
+- Client が行使できる権限の種類ではない
+- Client が AT を使って行使できる権限 = User が持っている権限と Client が持つ AT のスコープの共通部分
+- 3: アクセストークンに関する諸々
+- 3a: AuthZ server における AT の生成方法
+- 現実的にはランダムか JWT の二択
+- 3b: Client における RS への AT の送り方
+- 3c: Resource server における AT の確認方法
+- ランダムなら AuthZ server にきくしかない
+- Sprint Security OAuth 2 独自実装
+- JWT トークンは revoke しづらい
+- まとめ
+- 認証と認可の概念
+- アクセストークンの意味
+- 認可コードの意味
+- スコープの意味
+
+## クラメソのWebサイトを支える技術
+
+- 自己紹介<!-- @suzryo -->
+- コーポレートサイト 2016年12月にリニューアル
+- 静的ウェブサイトホスティング
+- AWS
+- S3: ファイル置き場
+- Amazon CloudFront: CDN
+- ACM: SSL の証明書管理
+- Amazon Route53 (ルートフィフティスリー): クラウドDNS
+- Amazon Route53 (ALIAS): A レコードと応答、ホスト名の省略 (ZoneApex) 設定可能
+- Amazon Route53 (ヘルスチェック)
+- Amazon Route53 (ヘルスチェック+DNSファイルオーバー利用例)
+- 重み付けラウンドロビン (スポットインスタンス活用)
+- Amazon Route53 (GeoDNS利用例)
+- Route53ヘルスチェックとDatadog連携
+- AWSWAF
+- ステージングの表示制限にも利用
+- Amazon EC2 (CMS)
+- WordPress + staticpress
+- S3 に転送して公開
+- コーポレートサイト (動的ページ) は SaaS 利用
+- 問い合わせフォーム : kintone + salesforce
+- サイト内検索: Google カスタム検索エンジン
+- ブログサイト http://dev.classmethod.jp/ 2011年7月1日公開
+- 掲載記事数: 年間約3000件ペース (1日平均8.2件)
+- 初期は EC2 スタンドアローン
+- Offload S3 導入: 画像データをS3、CloudFront で配信
+- RDS 導入: MySQL を RDS 化、DB 運用の省力化
+- ELB, Elasticbeanstalk 導入: ELB 配下で負荷分散、EB で管理改善
+- nginx 導入: ページキャッシュを追加
+- ApacheBench
+- Amazon Aurora 導入
+- 拡張方針: キャッシュを多段化、クラウドの柔軟性を活用
+- アクセスログの解析
+- nginx → ltsv → fluentd → Amazon Kinesis Firehose → DB (アイコンでは何かわからず)
+- Athena
+- AWS WAF 連携 http://dev.classmethod.jp/cloud/aws/ids-with-kinesis-waf/
+- 改善計画
+- 評価システム: 執筆者評価, 記事のSNSシェア数
+- 既存評価システム: ページ表示の度にSNS情報取得、再集計
+- 新評価システム: 非同期に取得、S3 の集計済みデータを参照
+- AWS のマネージドサービス弄り倒してます
+- 個々の詳細はブログにて
+- SaaS の紹介
+- Datadog
+- エラー率とか通知とか
+
+## Alexaで変わる開発、変わらない開発
+
+- Alexa の概要
+- Amazon Echo: スマートスピーカー, Alexa の機能を呼び出せる, 米英独など国外で展開中
+- Amazon Alexa: Amazon が提供する音声アシスタント, Echo という端末が呼び出しているサービス, 標準機能の他に、拡張機能を開発して呼び出せる
+- Alexa Custom Skill: アプリのように、独自開発のスキルを呼び出せる, 自作エンドポイントを登録して審査に通ればOK
+- Alexa Voice Service: Alexa のフロント側の規格, アプリにも組み込める
+- アプリ例: Friendly Voice Assistant
+- Alexa スキルの開発
+- サンプル: https://github.com/alexa/skill-sample-nodejs-highlowgame
+- amazon.com でログイン → Alexa → Alexa Skill Kit で作成
+- デモ
+- 使うサンプルを https://github.com/alexa/skill-sample-nodejs-fact に変更
+- 開発者コンソールで文字列でのテスト
+- APP ID の指定が `""` で括られていないように見えたけど、一瞬だったので見落としかなと思っていたら、エラーになったので、指摘してみたらやっぱりそこだったようでした。
+- echosim.io で音声でのテスト
+- デモ終了
+- スキルの構成要素: wake word, launch, invocation name, utterance, slot value
+- 画像は https://developer.amazon.com/designing-for-voice/what-users-say/ 参照
+- Utterance をユーザが言うと Intent がプログラムに渡ってくる
+- https://github.com/alexa/alexa-skills-kit-sdk-for-nodejs
+- 普通の Lambda の開発では webpack は使わないが、Alexa では使った方が良さそう
+- 初回起動時間: 約5秒 → 約2秒
+- 5秒は不安になる
+- ルーティング機能がプラットフォーム側
+- Lambda はステートレスだが、Skill が State を提供していて、会話を実現している
+- 視覚表現はある?
+- Echo Show にはカードというのがある
+- HTML っぽいのは何?
+- SSML
+
+## まとめ
+
+鍵と錠のたとえとか、 OAuth 2.0 が成し遂げたいことを元に複数フローで何ができていて、何ができていないのかなど、非常にわかりやすくて良かったです。
+
+Salesforce も連携する何かを作るかもしれないので、 Trailhead というものの存在を知れたのは良かったです。
+
+自社サイトを例にして Amazon のサービスの運用例を知れたのもおもしろかったです。
+
+Alexa はそういうものもあるのか、とか、会話にするのは技術的な難しさよりもただ大変そう、という感じでおもしろかったです。
