@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-09-23T21:35:00+09:00</updated>
+  <updated>2017-09-28T23:00:31+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,210 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Rails Developers Meetup #5 大阪会場に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-09-28-railsdm.html"/>
+    <updated>2017-09-28T19:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/railsdm</id>
+    <content type="html"><![CDATA[<p><a href="https://techplay.jp/event/631423">Rails Developers Meetup #5 大阪会場</a> に参加しました。</p>
+
+<!--more-->
+
+
+<h2>会場</h2>
+
+<p>前回と同じ場所なので、スムーズに到着することができました。</p>
+
+<p>今回は、ストリーミングの問題なのか、聞き取りにくいことが多かったので、特に質疑応答はメモが取れていません。</p>
+
+<h2>オープニング</h2>
+
+<ul>
+<li>会場の説明</li>
+<li>ハッシュタグは <code>#railsdm</code></li>
+<li>プログラムの紹介</li>
+</ul>
+
+
+<h2>Railsで日報共有アプリケーションをOSSとして開発している話</h2>
+
+<ul>
+<li><p><a href="https://speakerdeck.com/kami/railsderi-bao-gong-you-apurikesiyonwoosstositekai-fa-siteiruhua">https://speakerdeck.com/kami/railsderi-bao-gong-you-apurikesiyonwoosstositekai-fa-siteiruhua</a></p></li>
+<li><p>Rails で SPA の事例</p></li>
+<li>Repost という日報共有アプリケーション <a href="https://github.com/kami-zh/repost">https://github.com/kami-zh/repost</a></li>
+<li>Slack 連携部分を例に説明</li>
+<li>View → Action → API → Reducer → View</li>
+<li><p>Mastodon の app/javascript や package.json も参考になる</p></li>
+<li><p>Rails 5.1 での機能をどう使ったか</p></li>
+<li>webpacker</li>
+<li>rails new するときに &ndash;webpack=react をつける</li>
+<li>必要に応じて yarn add</li>
+<li>開発時は bin/webpack-dev-server</li>
+<li>webpacker 3 系は多くの設定がライブラリ側に吸収されてアプリケーション側はシンプルにできる</li>
+<li><code>javascript_pack_tag</code></li>
+<li>Rails 5.1 から yarn をサポート</li>
+<li>yarn は install / add / remove ぐらいを知っておけば良い</li>
+<li><code>ActionDispatch::SystemTestCase</code></li>
+<li>トランザクション管理をしてくれる</li>
+<li><p>参考: <code>Minitest::Retry</code> がちょっと不安定なテストに便利 <a href="https://github.com/y-yagi/minitest-retry">https://github.com/y-yagi/minitest-retry</a></p></li>
+<li><p>工夫したこと</p></li>
+<li>ユニットテストと E2E テストをしっかり書いた</li>
+<li>Sprockets は削除した</li>
+<li>セットアップを楽にする: bin/setup, bin/update をメンテナンスする</li>
+<li>モーダルは慎重に導入する</li>
+<li><a href="https://github.com/rails/rails/pull/30614">Install JavaScript dependencies on bin/update</a></li>
+<li><p>Rails の資産を活用する: Turbolinks や FormHelper など</p></li>
+<li><p>余談</p></li>
+<li><p>知識欲求駆動開発</p></li>
+<li><p>質疑応答</p></li>
+<li>webpack-dev-server との同時起動に foreman は使っていない</li>
+<li>react は使ってよかった感じ</li>
+<li>react, vue, angular などから react を選んだ理由は? → 使ってみたかったから</li>
+</ul>
+
+
+<h2>パフォーマンス計測CIサービスを作って得た知見</h2>
+
+<ul>
+<li><p><a href="https://www.slideshare.net/zaruhiroyukisakuraba/ci-80250430">https://www.slideshare.net/zaruhiroyukisakuraba/ci-80250430</a></p></li>
+<li><p>個人で開発しているパフォーマンス計測をする CI サービス</p></li>
+<li><p>現在は Rails のみサポート、プライベートベータ</p></li>
+<li><p>OAuth Apps と GitHub Apps の違い</p></li>
+<li>OAuth Apps (従来のもの) ユーザーに対してインストール</li>
+<li>GitHub Apps はリポジトリに対してインストール、マーケットプレイスに出せる</li>
+<li>コメントもユーザーとしてか、独自権限にできるかの違いがある</li>
+<li><p>マーケットプレイスに出す条件はちょっと厳しい (250人以上にインストールされていることとか)</p></li>
+<li><p>GitHub Apps を作るのは簡単</p></li>
+<li>アクセストークンと API</li>
+<li>JWT の expire に注意: 10分や8分だとうまくいかないことがあったので5分にした</li>
+<li>取得できるユーザー情報は限定的</li>
+<li>GitHub Apps の API は少しずつ解放されている</li>
+<li><p>GitHub Enterprise ではまだ使えないかも</p></li>
+<li><p>GitHub Apps で気をつけるところ</p></li>
+<li>Webhook を取りこぼすとデータロスト</li>
+<li>パーミッションの変更はなるべくしない: ユーザーに承認してもらう必要があるがわかりにくい</li>
+<li>GitHub Apps のインストールの導線: インストール後がわかりにくいらしい</li>
+<li><p>ローカルで webhook を受け取る方法: ngrok は無料だと起動のたびにホスト名が変わるので面倒、ポートフォワーディングをしている</p></li>
+<li><p>Docker in Docker</p></li>
+<li>privileged オプションが必要</li>
+<li>良い点: 階層構造なので管理しやすい</li>
+<li>悪い点: パフォーマンス, privileged オプションで怖い, ボリュームが残ってしまう</li>
+<li><p>そもそも製作者自身があまり推奨していない</p></li>
+<li><p><code>/var/lib/docker.sock</code> を共有</p></li>
+<li>良い点: シンプル, ビルドキャッシュも簡単</li>
+<li>悪い点: 他のコンテナが丸見え</li>
+<li><p>内部利用限定なら良いかも</p></li>
+<li><p>オーケストレーション</p></li>
+<li>GKE + k8s</li>
+<li><p>小規模/シンプルなら Heroku おすすめ</p></li>
+<li><p>CI, 計測の仕方</p></li>
+<li>CI サービスを作るのに使った小技</li>
+<li>resources をちゃんと指定しないとパフォーマンスがぶれる</li>
+<li><p>Container Builder のローカル開発環境がある <a href="https://github.com/GoogleCloudPlatform/container-builder-local">https://github.com/GoogleCloudPlatform/container-builder-local</a></p></li>
+<li><p>個人開発プロジェクトについて</p></li>
+<li>毎日やるのが大事</li>
+<li>コードを捨てるのを躊躇しない</li>
+<li>何のためにやるのか</li>
+<li>途中経過も公開する</li>
+<li><p>やらないことを決める</p></li>
+<li><p>質疑応答</p></li>
+<li>個人開発でも k8s を使っている? → 使っている</li>
+<li>heroku ではなく k8s を使う理由 → docker のため</li>
+<li>(メモ取れず)</li>
+</ul>
+
+
+<h2>休憩</h2>
+
+<h2>マイクロサービスにおける非同期アーキテクチャ</h2>
+
+<ul>
+<li><p><a href="https://www.slideshare.net/ota42y/ss-80254350">https://www.slideshare.net/ota42y/ss-80254350</a></p></li>
+<li><p>microservice</p></li>
+<li>外から見たときは一つのアプリ</li>
+<li>内部的にはドメインごとに別々のサーバー</li>
+<li>API で連携</li>
+<li>非同期もある</li>
+<li><p>巨大かつ複雑になりやすい → 知見</p></li>
+<li><p>非同期処理</p></li>
+<li>今回は特に Job Queue の話</li>
+<li><p>ActiveJob は Rails 標準なので一般的な構成のはず</p></li>
+<li><p>歴史</p></li>
+<li>牧歌的時代: なんでも delayed_job に突っ込む</li>
+<li>RDB に保存する</li>
+<li>delay メソッドを挟むだけ</li>
+<li>障害発生: job がどんどん溜まっていった</li>
+<li>delayed_job では job の同時実行を防ぐ機構がある</li>
+<li>index がきかない where 句の絞り込み＆ソート → テーブルロック</li>
+<li>処理速度 ＜ 増加速度 になって打つ手がなくなる</li>
+<li>大移行時代</li>
+<li>非同期処理の整理</li>
+<li>巨大な処理はクリティカルかどうかで場合分け</li>
+<li>重要度に応じて処理分け</li>
+<li>クリティカルではないものは別バックエンドへ移動して delayed_job の job 数を減らした</li>
+<li>移行先として sidekiq, resque から sidekiq を選んだ</li>
+<li><p>クリティカルではないものは delayed_job から ActiveJob(+sidekiq) に書き換え</p></li>
+<li><p>複数サービスへの連携</p></li>
+<li>結合度が高かった</li>
+<li>イベント駆動アーキテクチャ</li>
+<li>Event の送受信に変更</li>
+<li>具体的には AWS の SNS (Simple Notification Service) と SQS (Simple Queue Service) を利用</li>
+<li>送信側が SNS で受信側のサービスごとに SQS</li>
+<li>癖があるので注意: 複数回や並列実行を考慮して、べき等である必要がある、など</li>
+<li>統一フォーマットが必要</li>
+<li>移行するなら、送信側・受信側両方移行する必要がある</li>
+<li><p>楽にするための gem を作った <a href="https://github.com/ota42y/rising_dragon">https://github.com/ota42y/rising_dragon</a></p></li>
+<li><p>質疑応答</p></li>
+<li>Queue をどうわけているか? → ほとんどわけていない</li>
+</ul>
+
+
+<h2>5000兆人欲しい！ 優秀なRailsエンジニアを採用するための3つ(仮)の方法</h2>
+
+<ul>
+<li>日本の Rails エンジニアの数は推定10万人ぐらい?</li>
+<li>世界中の人の数 74億人</li>
+<li><code>'74億人' &gt; '5000兆人' #=&gt; true</code></li>
+<li>制限を外す</li>
+<li>Rails 経験者にこだわらない</li>
+<li>日本人にこだわらない</li>
+<li>エンジニアにこだわらない</li>
+</ul>
+
+
+<h2>Railsを6年間やってきたぼくが最近Railsでハマったこと</h2>
+
+<ul>
+<li><a href="https://speakerdeck.com/kazumax1218/railswo6nian-jian-yatutekitabokugazui-jin-railsdehamatutakoto">https://speakerdeck.com/kazumax1218/railswo6nian-jian-yatutekitabokugazui-jin-railsdehamatutakoto</a></li>
+<li>1: カラム追加時に index がはられない</li>
+<li><code>add_column</code> には index オプションがなかった</li>
+<li>対策: <code>add_index</code> を使う</li>
+<li>2: try</li>
+<li>メソッドがない場合 (typo など) も例外を出さずに nil を返す</li>
+<li>対策: <code>try!</code> を使うか ruby 2.3 以降ならぼっち演算子 <code>&amp;.</code> を使う</li>
+<li>3: fragment cache</li>
+<li>共通のパーシャルを変更してもキャッシュがクリアされない</li>
+<li>template が見つからないのでダイジェストが計算できていなかった</li>
+<li>対策: パスを省略しない</li>
+<li>パーシャルのパスが動的な場合も注意</li>
+<li>プチ情報</li>
+<li>Rails 5 からは <code>rails dev:cache</code> で簡単にキャッシュの ON/OFF を切り替えられるようになった</li>
+<li>fragment cache のログを出す設定がある</li>
+<li>4: 新規作成画面に戻ったら作成したはずのレコードが消えた</li>
+<li>原因: <code>has_one</code> に <code>dependent: :destroy</code> がついていると <code>build_xxx</code> 時にレコードが削除される</li>
+<li>対策: new アクションで <code>build_xxx</code> を使わない</li>
+</ul>
+
+
+<h2>次回予告</h2>
+
+<ul>
+<li>次回 10/19</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Developers.IO 2017 WORLD in 大阪 に参加しました]]></title>
@@ -4789,114 +4993,6 @@ Heroku にデプロイするときも git でデプロイするなら同様に�
 <p>次は staging 環境と production 環境に Heroku を使う例を紹介します。</p>
 
 <p>GitLab + Dokku 関連の記事は<a href="http://blog.n-z.jp/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[GitLabと連携するDokkuの初期設定]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-07-10-gitlab-dokku.html"/>
-    <updated>2017-07-10T21:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/gitlab-dokku</id>
-    <content type="html"><![CDATA[<p>GitLab と Dokku (と一部 Heroku) を使って CI/CD (Continuous Integration / Continuous Deployment) 環境を作ってみた話の続きです。
-今回は Dokku の設定の話になります。</p>
-
-<p><a href="http://blog.n-z.jp/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Ubuntu 16.04.2 LTS</li>
-<li>Omnibus GitLab 9.1.4-ce.0 (インストール時) から 9.3.5-ce.0 (記事執筆時)</li>
-<li>gitlab-ci-multi-runner 9.2.0 (インストール時) から 9.3.0 (記事執筆時)</li>
-<li>Dokku 0.9.4 (インストール時) から 0.10.2 (記事執筆時)</li>
-</ul>
-
-
-<h2>Dokku とは?</h2>
-
-<p><a href="http://dokku.viewdocs.io/dokku/">Dokku - The smallest PaaS implementation you&rsquo;ve ever seen</a>は bash で書かれた OSS の PaaS です。</p>
-
-<p>Heroku のように git push でデプロイするというのが基本的な使い方になります。</p>
-
-<p>環境変数の操作などのような heroku コマンドで操作に相当することは ssh 経由と Dokku ホスト上での dokku コマンドの両方でできることが多いです。
-プラグインのインストールなど、一部の操作は Dokku ホスト上で直接実行する必要があります。</p>
-
-<p>データベースなどはプラグインで対応しています。</p>
-
-<p>Dokku の更新が止まっていた時にできた <a href="https://github.com/dokku-alt/dokku-alt">Dokku Alternative</a> という fork もありましたが、メンテナンスが止まっているので使うべきではありません。</p>
-
-<p>最近はコアプラグインから少しずつ Go 言語への移行を進めているようです。</p>
-
-<h2>インストール</h2>
-
-<p><a href="http://dokku.viewdocs.io/dokku/">Dokku</a> に書いてあるように <code>bootstrap.sh</code> を使うと自動で <code>get.docker.com</code> からの docker のインストールも含めて、 apt から dokku をインストールしてくれます。</p>
-
-<h2>初期設定</h2>
-
-<p>debconf であらかじめ設定しておくか、<code>web_config</code> を使って設定します。</p>
-
-<p>デフォルトのままなどで <code>web_config</code> が有効な場合、 Dokku をインストールしたホストをブラウザーで開くと初期設定画面が出てきます。</p>
-
-<p>そこでデプロイや ssh 経由での操作に使う ssh の公開鍵の登録とホスト名の設定をします。
-ホスト名はアプリケーションごとに個別のバーチャルホストを別途設定できるので、とりあえず xip.io や nip.io を使っておくのが手軽だと思います。</p>
-
-<h2>プラグインのインストール</h2>
-
-<p><a href="http://dokku.viewdocs.io/dokku/community/plugins/">プラグイン一覧</a>から Compatibility を確認して必要なプラグインをインストールします。</p>
-
-<p>Heroku と似た感じで使いたいのなら <a href="https://github.com/dokku/dokku-postgres">dokku postgres</a> を入れておくと良いと思います。</p>
-
-<p>Dokku ホストで</p>
-
-<pre><code>sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git postgres
-</code></pre>
-
-<p>でインストールできます。</p>
-
-<p><a href="https://github.com/dokku/dokku-maintenance">dokku-maintenance</a> のように Heroku だと標準で対応していることがプラグインになっていたり、
-<a href="https://github.com/F4-Group/dokku-apt">dokku-apt</a> のように Heroku だと複数 buildpack で対応していたようなことがプラグインになっていたりすることもあります。</p>
-
-<h2>ssh の公開鍵設定</h2>
-
-<p>後で GitLab CI の secret variables に秘密鍵を設定するので、専用の鍵ペアを作成して、 <a href="http://dokku.viewdocs.io/dokku/deployment/user-management/">User Management</a> の方法で Dokku に公開鍵を登録しておきます。</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% ssh-keygen
-</span><span class='line'>Generating public/private rsa key pair.
-</span><span class='line'>Enter file in which to save the key (/home/vagrant/.ssh/id_rsa): /home/vagrant/.ssh/id_gitlab
-</span><span class='line'>Enter passphrase (empty for no passphrase):
-</span><span class='line'>Enter same passphrase again:
-</span><span class='line'>Your identification has been saved in /home/vagrant/.ssh/id_gitlab.
-</span><span class='line'>Your public key has been saved in /home/vagrant/.ssh/id_gitlab.pub.
-</span><span class='line'>The key fingerprint is:
-</span><span class='line'>(略)
-</span><span class='line'>% cat ~/.ssh/id_gitlab.pub | ssh dokku@dokku.example.jp ssh-keys:add gitlab</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>動作確認</h2>
-
-<p>データベースの必要な例を試すなら、<a href="http://dokku.viewdocs.io/dokku/deployment/application-deployment/">Deploy tutorial</a>を試してみると良いと思います。</p>
-
-<p>データベースの不要な例を試すなら、<a href="https://devcenter.heroku.com/articles/rack">Deploying Rack-based Apps | Heroku Dev Center</a> の <code>heroku create</code> を <code>git remote add dokku dokku@dokku.example.test:hello</code> に変えて、 <code>git push heroku master</code> の代わりに <code>git push dokku master</code> で試してみたりすると良いと思います。</p>
-
-<h2>まとめ</h2>
-
-<p>Dokku のインストールから簡単な動作確認方法まで紹介しました。
-次は <code>.gitlab-ci.yml</code> を作成して連携する話です。</p>
-
-<p><a href="http://blog.n-z.jp/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
 ]]></content>
   </entry>
   

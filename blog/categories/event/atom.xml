@@ -4,7 +4,7 @@
   <title><![CDATA[Category: event | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/event/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-09-23T21:35:00+09:00</updated>
+  <updated>2017-09-28T23:00:31+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,210 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Rails Developers Meetup #5 大阪会場に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-09-28-railsdm.html"/>
+    <updated>2017-09-28T19:30:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/railsdm</id>
+    <content type="html"><![CDATA[<p><a href="https://techplay.jp/event/631423">Rails Developers Meetup #5 大阪会場</a> に参加しました。</p>
+
+<!--more-->
+
+
+<h2>会場</h2>
+
+<p>前回と同じ場所なので、スムーズに到着することができました。</p>
+
+<p>今回は、ストリーミングの問題なのか、聞き取りにくいことが多かったので、特に質疑応答はメモが取れていません。</p>
+
+<h2>オープニング</h2>
+
+<ul>
+<li>会場の説明</li>
+<li>ハッシュタグは <code>#railsdm</code></li>
+<li>プログラムの紹介</li>
+</ul>
+
+
+<h2>Railsで日報共有アプリケーションをOSSとして開発している話</h2>
+
+<ul>
+<li><p><a href="https://speakerdeck.com/kami/railsderi-bao-gong-you-apurikesiyonwoosstositekai-fa-siteiruhua">https://speakerdeck.com/kami/railsderi-bao-gong-you-apurikesiyonwoosstositekai-fa-siteiruhua</a></p></li>
+<li><p>Rails で SPA の事例</p></li>
+<li>Repost という日報共有アプリケーション <a href="https://github.com/kami-zh/repost">https://github.com/kami-zh/repost</a></li>
+<li>Slack 連携部分を例に説明</li>
+<li>View → Action → API → Reducer → View</li>
+<li><p>Mastodon の app/javascript や package.json も参考になる</p></li>
+<li><p>Rails 5.1 での機能をどう使ったか</p></li>
+<li>webpacker</li>
+<li>rails new するときに &ndash;webpack=react をつける</li>
+<li>必要に応じて yarn add</li>
+<li>開発時は bin/webpack-dev-server</li>
+<li>webpacker 3 系は多くの設定がライブラリ側に吸収されてアプリケーション側はシンプルにできる</li>
+<li><code>javascript_pack_tag</code></li>
+<li>Rails 5.1 から yarn をサポート</li>
+<li>yarn は install / add / remove ぐらいを知っておけば良い</li>
+<li><code>ActionDispatch::SystemTestCase</code></li>
+<li>トランザクション管理をしてくれる</li>
+<li><p>参考: <code>Minitest::Retry</code> がちょっと不安定なテストに便利 <a href="https://github.com/y-yagi/minitest-retry">https://github.com/y-yagi/minitest-retry</a></p></li>
+<li><p>工夫したこと</p></li>
+<li>ユニットテストと E2E テストをしっかり書いた</li>
+<li>Sprockets は削除した</li>
+<li>セットアップを楽にする: bin/setup, bin/update をメンテナンスする</li>
+<li>モーダルは慎重に導入する</li>
+<li><a href="https://github.com/rails/rails/pull/30614">Install JavaScript dependencies on bin/update</a></li>
+<li><p>Rails の資産を活用する: Turbolinks や FormHelper など</p></li>
+<li><p>余談</p></li>
+<li><p>知識欲求駆動開発</p></li>
+<li><p>質疑応答</p></li>
+<li>webpack-dev-server との同時起動に foreman は使っていない</li>
+<li>react は使ってよかった感じ</li>
+<li>react, vue, angular などから react を選んだ理由は? → 使ってみたかったから</li>
+</ul>
+
+
+<h2>パフォーマンス計測CIサービスを作って得た知見</h2>
+
+<ul>
+<li><p><a href="https://www.slideshare.net/zaruhiroyukisakuraba/ci-80250430">https://www.slideshare.net/zaruhiroyukisakuraba/ci-80250430</a></p></li>
+<li><p>個人で開発しているパフォーマンス計測をする CI サービス</p></li>
+<li><p>現在は Rails のみサポート、プライベートベータ</p></li>
+<li><p>OAuth Apps と GitHub Apps の違い</p></li>
+<li>OAuth Apps (従来のもの) ユーザーに対してインストール</li>
+<li>GitHub Apps はリポジトリに対してインストール、マーケットプレイスに出せる</li>
+<li>コメントもユーザーとしてか、独自権限にできるかの違いがある</li>
+<li><p>マーケットプレイスに出す条件はちょっと厳しい (250人以上にインストールされていることとか)</p></li>
+<li><p>GitHub Apps を作るのは簡単</p></li>
+<li>アクセストークンと API</li>
+<li>JWT の expire に注意: 10分や8分だとうまくいかないことがあったので5分にした</li>
+<li>取得できるユーザー情報は限定的</li>
+<li>GitHub Apps の API は少しずつ解放されている</li>
+<li><p>GitHub Enterprise ではまだ使えないかも</p></li>
+<li><p>GitHub Apps で気をつけるところ</p></li>
+<li>Webhook を取りこぼすとデータロスト</li>
+<li>パーミッションの変更はなるべくしない: ユーザーに承認してもらう必要があるがわかりにくい</li>
+<li>GitHub Apps のインストールの導線: インストール後がわかりにくいらしい</li>
+<li><p>ローカルで webhook を受け取る方法: ngrok は無料だと起動のたびにホスト名が変わるので面倒、ポートフォワーディングをしている</p></li>
+<li><p>Docker in Docker</p></li>
+<li>privileged オプションが必要</li>
+<li>良い点: 階層構造なので管理しやすい</li>
+<li>悪い点: パフォーマンス, privileged オプションで怖い, ボリュームが残ってしまう</li>
+<li><p>そもそも製作者自身があまり推奨していない</p></li>
+<li><p><code>/var/lib/docker.sock</code> を共有</p></li>
+<li>良い点: シンプル, ビルドキャッシュも簡単</li>
+<li>悪い点: 他のコンテナが丸見え</li>
+<li><p>内部利用限定なら良いかも</p></li>
+<li><p>オーケストレーション</p></li>
+<li>GKE + k8s</li>
+<li><p>小規模/シンプルなら Heroku おすすめ</p></li>
+<li><p>CI, 計測の仕方</p></li>
+<li>CI サービスを作るのに使った小技</li>
+<li>resources をちゃんと指定しないとパフォーマンスがぶれる</li>
+<li><p>Container Builder のローカル開発環境がある <a href="https://github.com/GoogleCloudPlatform/container-builder-local">https://github.com/GoogleCloudPlatform/container-builder-local</a></p></li>
+<li><p>個人開発プロジェクトについて</p></li>
+<li>毎日やるのが大事</li>
+<li>コードを捨てるのを躊躇しない</li>
+<li>何のためにやるのか</li>
+<li>途中経過も公開する</li>
+<li><p>やらないことを決める</p></li>
+<li><p>質疑応答</p></li>
+<li>個人開発でも k8s を使っている? → 使っている</li>
+<li>heroku ではなく k8s を使う理由 → docker のため</li>
+<li>(メモ取れず)</li>
+</ul>
+
+
+<h2>休憩</h2>
+
+<h2>マイクロサービスにおける非同期アーキテクチャ</h2>
+
+<ul>
+<li><p><a href="https://www.slideshare.net/ota42y/ss-80254350">https://www.slideshare.net/ota42y/ss-80254350</a></p></li>
+<li><p>microservice</p></li>
+<li>外から見たときは一つのアプリ</li>
+<li>内部的にはドメインごとに別々のサーバー</li>
+<li>API で連携</li>
+<li>非同期もある</li>
+<li><p>巨大かつ複雑になりやすい → 知見</p></li>
+<li><p>非同期処理</p></li>
+<li>今回は特に Job Queue の話</li>
+<li><p>ActiveJob は Rails 標準なので一般的な構成のはず</p></li>
+<li><p>歴史</p></li>
+<li>牧歌的時代: なんでも delayed_job に突っ込む</li>
+<li>RDB に保存する</li>
+<li>delay メソッドを挟むだけ</li>
+<li>障害発生: job がどんどん溜まっていった</li>
+<li>delayed_job では job の同時実行を防ぐ機構がある</li>
+<li>index がきかない where 句の絞り込み＆ソート → テーブルロック</li>
+<li>処理速度 ＜ 増加速度 になって打つ手がなくなる</li>
+<li>大移行時代</li>
+<li>非同期処理の整理</li>
+<li>巨大な処理はクリティカルかどうかで場合分け</li>
+<li>重要度に応じて処理分け</li>
+<li>クリティカルではないものは別バックエンドへ移動して delayed_job の job 数を減らした</li>
+<li>移行先として sidekiq, resque から sidekiq を選んだ</li>
+<li><p>クリティカルではないものは delayed_job から ActiveJob(+sidekiq) に書き換え</p></li>
+<li><p>複数サービスへの連携</p></li>
+<li>結合度が高かった</li>
+<li>イベント駆動アーキテクチャ</li>
+<li>Event の送受信に変更</li>
+<li>具体的には AWS の SNS (Simple Notification Service) と SQS (Simple Queue Service) を利用</li>
+<li>送信側が SNS で受信側のサービスごとに SQS</li>
+<li>癖があるので注意: 複数回や並列実行を考慮して、べき等である必要がある、など</li>
+<li>統一フォーマットが必要</li>
+<li>移行するなら、送信側・受信側両方移行する必要がある</li>
+<li><p>楽にするための gem を作った <a href="https://github.com/ota42y/rising_dragon">https://github.com/ota42y/rising_dragon</a></p></li>
+<li><p>質疑応答</p></li>
+<li>Queue をどうわけているか? → ほとんどわけていない</li>
+</ul>
+
+
+<h2>5000兆人欲しい！ 優秀なRailsエンジニアを採用するための3つ(仮)の方法</h2>
+
+<ul>
+<li>日本の Rails エンジニアの数は推定10万人ぐらい?</li>
+<li>世界中の人の数 74億人</li>
+<li><code>'74億人' &gt; '5000兆人' #=&gt; true</code></li>
+<li>制限を外す</li>
+<li>Rails 経験者にこだわらない</li>
+<li>日本人にこだわらない</li>
+<li>エンジニアにこだわらない</li>
+</ul>
+
+
+<h2>Railsを6年間やってきたぼくが最近Railsでハマったこと</h2>
+
+<ul>
+<li><a href="https://speakerdeck.com/kazumax1218/railswo6nian-jian-yatutekitabokugazui-jin-railsdehamatutakoto">https://speakerdeck.com/kazumax1218/railswo6nian-jian-yatutekitabokugazui-jin-railsdehamatutakoto</a></li>
+<li>1: カラム追加時に index がはられない</li>
+<li><code>add_column</code> には index オプションがなかった</li>
+<li>対策: <code>add_index</code> を使う</li>
+<li>2: try</li>
+<li>メソッドがない場合 (typo など) も例外を出さずに nil を返す</li>
+<li>対策: <code>try!</code> を使うか ruby 2.3 以降ならぼっち演算子 <code>&amp;.</code> を使う</li>
+<li>3: fragment cache</li>
+<li>共通のパーシャルを変更してもキャッシュがクリアされない</li>
+<li>template が見つからないのでダイジェストが計算できていなかった</li>
+<li>対策: パスを省略しない</li>
+<li>パーシャルのパスが動的な場合も注意</li>
+<li>プチ情報</li>
+<li>Rails 5 からは <code>rails dev:cache</code> で簡単にキャッシュの ON/OFF を切り替えられるようになった</li>
+<li>fragment cache のログを出す設定がある</li>
+<li>4: 新規作成画面に戻ったら作成したはずのレコードが消えた</li>
+<li>原因: <code>has_one</code> に <code>dependent: :destroy</code> がついていると <code>build_xxx</code> 時にレコードが削除される</li>
+<li>対策: new アクションで <code>build_xxx</code> を使わない</li>
+</ul>
+
+
+<h2>次回予告</h2>
+
+<ul>
+<li>次回 10/19</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Developers.IO 2017 WORLD in 大阪 に参加しました]]></title>
@@ -1504,207 +1708,6 @@ Twitter のハッシュタグ <code>#rubykaigi</code> をみていると、会�
 <p>食べ物の列は待っていれば短くなるかなと思って、話をしながら待っていたらそんなことはなかったので、並んでみたらギリギリ少し残っていたのが食べられて、その後で野菜が残っているのをみつけたのでそれを食べたりしていたので、全然食べられないということはなかったので、二次会には行きませんでした。</p>
 
 <p>明日の懇親会と違って、オフィシャルパーティーはみんな集まっているので、複数人で話したいこと(<a href="https://bugs.ruby-lang.org/issues/13904">getter for original information of Enumerator</a>の件)は、この日のうちに話しておくべきだと思ったのですが、集められなかったので無理でした。後から確認したら、頑張って英語で書いたおかげで代わりにメンテナーを説得しようとしてくれる人がいて、結果的には大丈夫そうです。いいたかったのも、直接は関係がないので mrkn さんとかに説得を頑張って欲しいと言いたかっただけぐらいなので、明日以降に個別に言っておいても良いかもしれないと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[姫路IT系勉強会 2017.09 に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-09-16-histudy.html"/>
-    <updated>2017-09-16T13:40:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/histudy</id>
-    <content type="html"><![CDATA[<p>RubyKaigi 2017 への移動途中に参加可能だったので、<a href="https://histudy.connpass.com/event/66084/">姫路IT系勉強会 2017.09</a>に参加しました。
-公式の記録は勉強会のページからリンクされている HackMD のページ<!-- https://hackmd.io/s/r1rUBZF9Z -->に残っています。</p>
-
-<!--more-->
-
-
-<p>以下、メモです。</p>
-
-<h2>会場</h2>
-
-<p>iPod touch の connpass アプリの「マップで見る」でピンが表示されている場所に向かっている途中でさとうさんをみつけたので、一緒に行こうとしたら会場の建物の前だったようで、ピンが表示されていた場所はずれていたように思いました。</p>
-
-<h2>自己紹介</h2>
-
-<p>まずは connpass の参加者一覧を元に自己紹介でした。</p>
-
-<h2>休憩</h2>
-
-<h2>HTML の勉強方法</h2>
-
-<ul>
-<li>Hexo のテーマを作り始めたが HTML4 の頃の知識で止まっているので、モダンな HTML, CSS の勉強方法は?</li>
-<li>初心者向けとかのサイトではなく、差分だけ知りたい</li>
-<li><a href="https://caniuse.com/#search=flexbox">https://caniuse.com/#search=flexbox</a> とか</li>
-<li>Hexo 界隈では sass ではなく Stylus がよく使われているらしい</li>
-<li><a href="https://www.w3schools.com/cssref/css3_browsersupport.asp">https://www.w3schools.com/cssref/css3_browsersupport.asp</a></li>
-<li>Bootstrap とかフレームワークはどうかという話</li>
-<li>フルスタックなものと軽量なものを知っておくと良い?</li>
-<li><a href="http://bourbon.io/">http://bourbon.io/</a> : 軽量な sass の mixin 集</li>
-<li><a href="http://neat.bourbon.io/">http://neat.bourbon.io/</a> を組み合わせると grid system も使える</li>
-<li><a href="http://bitters.bourbon.io/">http://bitters.bourbon.io/</a> だと基本的なスタイルまで付いている</li>
-<li><a href="http://bourbon.io/docs/">http://bourbon.io/docs/</a> deprecated になっているものが多い</li>
-<li>フルスタックが鬱陶しい人にはおすすめ</li>
-<li>軽量なフレームワークで流行っているものはあまりない?</li>
-<li>node の sass は ruby の sass とほぼ互換性があるらしい</li>
-<li>node に限らないが独自作法が大変な話</li>
-<li>プラグインアーキテクチャが流行っているらしい</li>
-<li>ruby は PHP などに比べて非互換がきついことがある</li>
-<li>node はタスクランナー周りのものがたくさんあってメンテナンスされなくなってきて、npm 直接使うことが多くなっている</li>
-<li>Web 界隈は色々とカオス</li>
-<li>作った後、ちゃんと更新されていないものがきつい</li>
-<li>awesome から github を辿っていって使うと少しまし <a href="https://github.com/sindresorhus/awesome">https://github.com/sindresorhus/awesome</a></li>
-<li>CentOS とか古いので wpscan でチェックすると色々言われる?</li>
-</ul>
-
-
-<h2>WordPress の話</h2>
-
-<ul>
-<li>なぜか話が来たが、情報が少なくてよくわからず</li>
-<li>とりあえず WordPress の情報が集まっている場所は?</li>
-<li>まず WordBench がおすすめ</li>
-<li>おすすめプラグイン</li>
-<li>WordPressプラグイン100選 の目次から良さそうなプラグインを探す</li>
-<li>パーミッションをちゃんとしよう</li>
-<li>関連する話が先週の<a href="https://histudy.connpass.com/event/66082/">加古川IT系インフラ勉強会 2017.09</a>であったらしい</li>
-<li>困ったら金で解決という手段もある</li>
-</ul>
-
-
-<h2>Markdown の話</h2>
-
-<ul>
-<li>途中抜けているところがあっても手順書があるだけまし</li>
-</ul>
-
-
-<h2>女子中学生チケット詐欺事件</h2>
-
-<ul>
-<li><a href="https://gist.github.com/shunirr/2bd6a5a00b966e1e534b443790c68eda">女子中学生チケット詐欺事件</a> (オリジナル)</li>
-<li><a href="https://gist.github.com/kawabata/fefd78b84856ed7900c69eb9aba3af19">女子中学生チケット詐欺事件</a> (詳しい fork 版)</li>
-</ul>
-
-
-<h2>Markdown の話</h2>
-
-<ul>
-<li>話が戻って発表</li>
-<li><a href="https://gitpitch.com/sky-y/himeji-it-2017-09">Markdownのカオスと付き合う</a> (発表資料)</li>
-<li><a href="https://bitjourney.kibe.la/shared/entries/f740d533-0d57-44fe-a891-dfe669d16121">Markdownはなぜ拡張され続けるのか</a> は一読をおすすめ</li>
-<li><a href="https://babelmark.github.io/?text=%40__gfx__">https://babelmark.github.io/?text=%40__gfx__</a> が strong になることがある問題</li>
-<li>Markdown きつい問題 → 根本的な解決策はない</li>
-<li>他の軽量マークアップ言語: reST など以外にも Ruby の RD や Perl の POD なども昔からある</li>
-<li>表現力が高いマークアップ言語はなかなか流行らない: SGML vs HTML など (XHTML → HTML5 とか)</li>
-<li>無難な記法: CommonMark か GFM (GitHub Flavored Markdown) がおすすめ</li>
-<li><code>#</code> の後ろにスペースを入れた方が良いなど、標準的な書き方を覚えておけば方言に対応しやすい</li>
-<li><a href="http://commonmark.org/help/">http://commonmark.org/help/</a> が基本</li>
-<li>改行の扱い <a href="https://babelmark.github.io/?text=abc%0Adef%0A%0Aghi%0Ajkl">https://babelmark.github.io/?text=abc%0Adef%0A%0Aghi%0Ajkl</a> 連続の改行で p が分割されて単独の改行は br になったりならなかったり</li>
-<li>改行の扱いは CommonMark と GFM で違う</li>
-<li>ASCII Art などなら code block を使えば良い</li>
-<li>表現力の高いものから低いものに変換するとゴミ (HTML 断片) が入ったりする</li>
-<li><p>CSV から Markdown? : pandoc のフィルターにあるかも</p></li>
-<li><p>org-mode から HTML にエクスポートで使っている話</p></li>
-<li><p>markdown にエクスポートもできるらしい</p></li>
-<li><p>ドキュメントを書くことを普及させたい</p></li>
-<li><p>同じ名前なのが混乱の元?</p></li>
-<li>継承して拡張とかできるので別の名前をつけるのも難しそう</li>
-<li>CommonMark で統一しようとしている</li>
-<li><p>GFM も参考になる</p></li>
-<li><p>Markdown は英語圏のメールなどの文章を書く時の一般的な作法が元になっているらしい</p></li>
-<li><p>最低限のドキュメントは書きましょうという話</p></li>
-<li>ansible とか terraform とか</li>
-<li>Jupyter</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<p>15:50 まで</p>
-
-<h2>Perl の Acme::EyeDrops</h2>
-
-<ul>
-<li>デモ</li>
-<li>プログラム解説</li>
-<li>改行と空白削除</li>
-<li>文ごとに改行追加</li>
-<li>などなど順番に変更していってプログラム解説</li>
-<li>ビット演算とか Web 系の人はしらなさそう</li>
-<li>カラーコードで16進数は知ってそうだが、ビット演算はしらなさそう</li>
-<li>ビット演算を知らないとパーミッションとかもわからなさそう</li>
-<li><code>(?{...})</code> は Perl 5.18 から <code>use re "eval"</code> が必要になっている</li>
-</ul>
-
-
-<h2>BlueBorne</h2>
-
-<ul>
-<li>Android で Bluetooth テザリングを便利に使っていたのに使えなくなった</li>
-<li>カーナビはアップデートとかできなさそうなので厳しい</li>
-<li>車はエンジン系とエンタメ系のエンタメ系しか Bluetooth で繋がらないので問題があったとしても大丈夫?</li>
-<li>CAN という規格 (認証とかがない) でエンジン系と通信ができるので可能性はある?</li>
-<li>iOS は大丈夫だったので iPhone で Bluetooth イヤホンとか使ってる人は大丈夫</li>
-<li>サーバーは関係なさそう</li>
-</ul>
-
-
-<h2>これから未来ある開発言語またはシステムは?</h2>
-
-<ul>
-<li>言語は教養として全然違うものを勉強するのが良いのではないか。 Prolog とか PostScript とか SQL とか</li>
-<li>仕事という面では PHP がとりあえずわかれば Web 担当になれる</li>
-<li>WordPress をカスタマイズする時とか PHP が必須になる</li>
-<li>機械学習なら Python になりそう</li>
-<li>未来はわからないので直近を考える</li>
-<li>JavaScript が作れるものの幅が一番広い</li>
-<li>大穴狙いなら COBOL?</li>
-<li>COBOL のプログラムはまだなくなりそうにない</li>
-<li>Ruby のようにコミュニティの雰囲気が良いという観点で選ぶのもあり (元々楽しくプログラミングという基本思想があるので、それが影響しているのかコミュニティの雰囲気が良い)</li>
-<li>この勉強会はなんでもありなので、派生したものを作るのは歓迎</li>
-</ul>
-
-
-<h2>HoloLens とかの話</h2>
-
-<ul>
-<li>HoloLens は完全に視界をおおう VR ではなく、現実世界にホログラムを載せるようなもの</li>
-<li>最近は WinMR というのもあるらしい</li>
-<li>HoloLens は Windows 10</li>
-<li>Edge も VR に対応しているらしい</li>
-<li>開発環境とかは?</li>
-<li>Unity</li>
-<li>ユニバーサル Windows プラットフォーム (UWP)</li>
-<li>Unreal Engine</li>
-<li>まずは企業向けで使われるようになる?</li>
-<li>研究は長い間されていたが、やっと実用化されるようになってきた</li>
-<li>脆弱性対策の話</li>
-<li>VR アプリのデバッグ</li>
-<li>通常の Windows アプリとしてのデバッグ</li>
-<li>体験のデバッグ</li>
-<li>酔う対策は、まだ知見が足りない</li>
-</ul>
-
-
-<h2>Lisp 入門?</h2>
-
-<ul>
-<li>ふわっとした理由で Lisp を勉強したいということだったので色々紹介的な話</li>
-<li>Lisp-1 と Lisp-2</li>
-<li>Scheme と Common Lisp</li>
-<li>コンパクトなのが Scheme</li>
-<li>なんでもありなのが Common Lisp</li>
-<li>Common Lisp HyperSpec</li>
-<li>一番有名な処理系が sbcl</li>
-<li>clisp, Clozure CL</li>
-<li>Gauche</li>
-</ul>
-
-
-<h2>退出</h2>
-
-<p>17時を過ぎても続いていて、移動しないと間に合わなくなりそうだったので、Lisp の話の途中で出ました。</p>
 ]]></content>
   </entry>
   
