@@ -1,0 +1,201 @@
+---
+layout: post
+title: "Rails Developers Meetup #5 大阪会場に参加しました"
+date: 2017-09-28 19:30:00 +0900
+comments: true
+categories: event railsdm
+---
+[Rails Developers Meetup #5 大阪会場](https://techplay.jp/event/631423) に参加しました。
+
+<!--more-->
+
+## 会場
+
+前回と同じ場所なので、スムーズに到着することができました。
+
+今回は、ストリーミングの問題なのか、聞き取りにくいことが多かったので、特に質疑応答はメモが取れていません。
+
+## オープニング
+
+- 会場の説明
+- ハッシュタグは `#railsdm`
+- プログラムの紹介
+
+## Railsで日報共有アプリケーションをOSSとして開発している話
+
+- https://speakerdeck.com/kami/railsderi-bao-gong-you-apurikesiyonwoosstositekai-fa-siteiruhua
+
+- Rails で SPA の事例
+- Repost という日報共有アプリケーション https://github.com/kami-zh/repost
+- Slack 連携部分を例に説明
+- View → Action → API → Reducer → View
+- Mastodon の app/javascript や package.json も参考になる
+
+- Rails 5.1 での機能をどう使ったか
+- webpacker
+- rails new するときに --webpack=react をつける
+- 必要に応じて yarn add
+- 開発時は bin/webpack-dev-server
+- webpacker 3 系は多くの設定がライブラリ側に吸収されてアプリケーション側はシンプルにできる
+- `javascript_pack_tag`
+- Rails 5.1 から yarn をサポート
+- yarn は install / add / remove ぐらいを知っておけば良い
+- `ActionDispatch::SystemTestCase`
+- トランザクション管理をしてくれる
+- 参考: `Minitest::Retry` がちょっと不安定なテストに便利 https://github.com/y-yagi/minitest-retry
+
+- 工夫したこと
+- ユニットテストと E2E テストをしっかり書いた
+- Sprockets は削除した
+- セットアップを楽にする: bin/setup, bin/update をメンテナンスする
+- モーダルは慎重に導入する
+- [Install JavaScript dependencies on bin/update](https://github.com/rails/rails/pull/30614)
+- Rails の資産を活用する: Turbolinks や FormHelper など
+
+- 余談
+- 知識欲求駆動開発
+
+- 質疑応答
+- webpack-dev-server との同時起動に foreman は使っていない
+- react は使ってよかった感じ
+- react, vue, angular などから react を選んだ理由は? → 使ってみたかったから
+
+## パフォーマンス計測CIサービスを作って得た知見
+
+- https://www.slideshare.net/zaruhiroyukisakuraba/ci-80250430
+
+- 個人で開発しているパフォーマンス計測をする CI サービス
+- 現在は Rails のみサポート、プライベートベータ
+
+- OAuth Apps と GitHub Apps の違い
+- OAuth Apps (従来のもの) ユーザーに対してインストール
+- GitHub Apps はリポジトリに対してインストール、マーケットプレイスに出せる
+- コメントもユーザーとしてか、独自権限にできるかの違いがある
+- マーケットプレイスに出す条件はちょっと厳しい (250人以上にインストールされていることとか)
+
+- GitHub Apps を作るのは簡単
+- アクセストークンと API
+- JWT の expire に注意: 10分や8分だとうまくいかないことがあったので5分にした
+- 取得できるユーザー情報は限定的
+- GitHub Apps の API は少しずつ解放されている
+- GitHub Enterprise ではまだ使えないかも
+
+- GitHub Apps で気をつけるところ
+- Webhook を取りこぼすとデータロスト
+- パーミッションの変更はなるべくしない: ユーザーに承認してもらう必要があるがわかりにくい
+- GitHub Apps のインストールの導線: インストール後がわかりにくいらしい
+- ローカルで webhook を受け取る方法: ngrok は無料だと起動のたびにホスト名が変わるので面倒、ポートフォワーディングをしている
+
+- Docker in Docker
+- privileged オプションが必要
+- 良い点: 階層構造なので管理しやすい
+- 悪い点: パフォーマンス, privileged オプションで怖い, ボリュームが残ってしまう
+- そもそも製作者自身があまり推奨していない
+
+- `/var/lib/docker.sock` を共有
+- 良い点: シンプル, ビルドキャッシュも簡単
+- 悪い点: 他のコンテナが丸見え
+- 内部利用限定なら良いかも
+
+- オーケストレーション
+- GKE + k8s
+- 小規模/シンプルなら Heroku おすすめ
+
+- CI, 計測の仕方
+- CI サービスを作るのに使った小技
+- resources をちゃんと指定しないとパフォーマンスがぶれる
+- Container Builder のローカル開発環境がある https://github.com/GoogleCloudPlatform/container-builder-local
+
+- 個人開発プロジェクトについて
+- 毎日やるのが大事
+- コードを捨てるのを躊躇しない
+- 何のためにやるのか
+- 途中経過も公開する
+- やらないことを決める
+
+- 質疑応答
+- 個人開発でも k8s を使っている? → 使っている
+- heroku ではなく k8s を使う理由 → docker のため
+- (メモ取れず)
+
+## 休憩
+
+## マイクロサービスにおける非同期アーキテクチャ
+
+- https://www.slideshare.net/ota42y/ss-80254350
+
+- microservice
+- 外から見たときは一つのアプリ
+- 内部的にはドメインごとに別々のサーバー
+- API で連携
+- 非同期もある
+- 巨大かつ複雑になりやすい → 知見
+
+- 非同期処理
+- 今回は特に Job Queue の話
+- ActiveJob は Rails 標準なので一般的な構成のはず
+
+- 歴史
+- 牧歌的時代: なんでも delayed\_job に突っ込む
+- RDB に保存する
+- delay メソッドを挟むだけ
+- 障害発生: job がどんどん溜まっていった
+- delayed\_job では job の同時実行を防ぐ機構がある
+- index がきかない where 句の絞り込み＆ソート → テーブルロック
+- 処理速度 ＜ 増加速度 になって打つ手がなくなる
+- 大移行時代
+- 非同期処理の整理
+- 巨大な処理はクリティカルかどうかで場合分け
+- 重要度に応じて処理分け
+- クリティカルではないものは別バックエンドへ移動して delayed\_job の job 数を減らした
+- 移行先として sidekiq, resque から sidekiq を選んだ
+- クリティカルではないものは delayed\_job から ActiveJob(+sidekiq) に書き換え
+
+- 複数サービスへの連携
+- 結合度が高かった
+- イベント駆動アーキテクチャ
+- Event の送受信に変更
+- 具体的には AWS の SNS (Simple Notification Service) と SQS (Simple Queue Service) を利用
+- 送信側が SNS で受信側のサービスごとに SQS
+- 癖があるので注意: 複数回や並列実行を考慮して、べき等である必要がある、など
+- 統一フォーマットが必要
+- 移行するなら、送信側・受信側両方移行する必要がある
+- 楽にするための gem を作った https://github.com/ota42y/rising_dragon
+
+- 質疑応答
+- Queue をどうわけているか? → ほとんどわけていない
+
+## 5000兆人欲しい！ 優秀なRailsエンジニアを採用するための3つ(仮)の方法
+
+- 日本の Rails エンジニアの数は推定10万人ぐらい?
+- 世界中の人の数 74億人
+- `'74億人' > '5000兆人' #=> true`
+- 制限を外す
+- Rails 経験者にこだわらない
+- 日本人にこだわらない
+- エンジニアにこだわらない
+
+## Railsを6年間やってきたぼくが最近Railsでハマったこと
+
+- https://speakerdeck.com/kazumax1218/railswo6nian-jian-yatutekitabokugazui-jin-railsdehamatutakoto
+- 1: カラム追加時に index がはられない
+- `add_column` には index オプションがなかった
+- 対策: `add_index` を使う
+- 2: try
+- メソッドがない場合 (typo など) も例外を出さずに nil を返す
+- 対策: `try!` を使うか ruby 2.3 以降ならぼっち演算子 `&.` を使う
+- 3: fragment cache
+- 共通のパーシャルを変更してもキャッシュがクリアされない
+- template が見つからないのでダイジェストが計算できていなかった
+- 対策: パスを省略しない
+- パーシャルのパスが動的な場合も注意
+- プチ情報
+- Rails 5 からは `rails dev:cache` で簡単にキャッシュの ON/OFF を切り替えられるようになった
+- fragment cache のログを出す設定がある
+- 4: 新規作成画面に戻ったら作成したはずのレコードが消えた
+- 原因: `has_one` に `dependent: :destroy` がついていると `build_xxx` 時にレコードが削除される
+- 対策: new アクションで `build_xxx` を使わない
+
+## 次回予告
+
+- 次回 10/19
