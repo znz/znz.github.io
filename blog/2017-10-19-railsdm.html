@@ -5,15 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>DOCKER indexのTrusted Buildsで複数バージョンのrubyを試せるimageを作ってみた - @znz blog</title>
+  <title>Rails Developers Meetup #6 大阪会場に参加しました - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="DOCKER indexのTrusted Buildsで複数バージョンのrubyを試せるimageを作ってみた 2013-12-19 (Thu) 11:02 pm | Comments DOCKER index
-には
-Trusted Builds
-という機能があり、
-Docker index &hellip;">
+  <meta name="description" content="Rails Developers Meetup #6 大阪会場に参加しました 2017-10-19 (Thu) 7:30 pm | Comments Rails Developers Meetup #6 大阪会場 に参加しました。 会場 前回までと同じ場所なので、 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -22,7 +18,7 @@ Docker index &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2013-12-19-docker-trusted-builds.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-10-19-railsdm.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -87,7 +83,7 @@ Docker index &hellip;">
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">DOCKER indexのTrusted Buildsで複数バージョンのrubyを試せるimageを作ってみた</h1>
+      <h1 class="entry-title">Rails Developers Meetup #6 大阪会場に参加しました</h1>
       
       <!-- zenback_title_end -->
       
@@ -99,7 +95,7 @@ Docker index &hellip;">
 
 
 
-<time class='entry-date' datetime='2013-12-19T23:02:00+09:00'><span class='date'>2013-12-19 (Thu)</span> <span class='time'>11:02 pm</span></time>
+<time class='entry-date' datetime='2017-10-19T19:30:00+09:00'><span class='date'>2017-10-19 (Thu)</span> <span class='time'>7:30 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -112,159 +108,210 @@ Docker index &hellip;">
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><a href="https://index.docker.io/">DOCKER index</a>
-には
-<a href="http://blog.docker.io/2013/11/introducing-trusted-builds/">Trusted Builds</a>
-という機能があり、
-Docker index の方で
-image の作成をしてくれます。</p>
-
-<p>image の作成方法は GitHub に Dockerfile を公開して、
-それを指定します。</p>
-
-<p>今回はそれを使って複数バージョンの ruby を試せる image を作ってみました。</p>
+<div class="entry-content"><p><a href="https://techplay.jp/event/631426">Rails Developers Meetup #6 大阪会場</a> に参加しました。</p>
 
 <!--more-->
 
 
-<h2>Dockerfile の動作確認</h2>
+<h2>会場</h2>
 
-<p><code>docker build</code> への Dockerfile の指定方法は
-    docker build DockerfileのあるディレクトリへのパスやURL
-という方法と
-    docker build - &lt; Dockerfile
-のように <code>-</code> を指定して標準入力から渡す方法があります。</p>
+<p>前回までと同じ場所なので、スムーズに到着することができました。</p>
 
-<p>違いとしては
-パスや URL の指定だとファイル名が Dockerfile 固定という制限があり、
-<code>-</code> の方だと <code>ADD</code> が使えない (基準となるディレクトリがわからないため)
-という制限があるようです。
-(詳しく調べていないだけなので他にもあると思います。)</p>
+<h2>オープニング</h2>
 
-<p>そこで、
-    docker build -t local/rubys .
-または
-    docker build -t local/rubys - &lt; Dockerfile
-のようにして動作確認します。</p>
-
-<h2>DOCKER index のアカウント登録</h2>
-
-<p>英小文字か数字で4文字から30文字という制限があったので、
-<code>znzj</code> というアカウントにしました。</p>
-
-<p>メールアドレスとパスワードを設定して、
-メールの確認が済んだらアカウントの作成は完了です。</p>
-
-<p>最近はサービスごとにメールアドレスを分けていて、
-アイコンが gravatar のデフォルトになってしまっていたので、
-User Settings から Gravatar email も設定しました。</p>
-
-<p>ここはメールアドレスの確認がなかったので、
-他人のアイコンでも使えてしまうように見えたのですが、
-良いのでしょうか。
-ちょっと考えてみましたが、
-画像をコピーして使えば同じようなものなので、
-気にするほどのことではなさそうに思いました。</p>
-
-<h2>GitHub のアカウントとの連携</h2>
-
-<p>hook の登録のため、ということで多少の書き込み権限も要求されるので、
-許可したくない場合は Trusted builds は使えません。</p>
-
-<h2>Trusted Builds の追加</h2>
-
-<p>ログイン中に
-<a href="https://index.docker.io/builds/">Trusted Builds</a>
-のページの <code>+Add New</code> から、
-GitHub レポジトリを選択します。
-ここでは <a href="https://github.com/znz/docker-rubys">https://github.com/znz/docker-rubys</a> を選択しました。</p>
-
-<ol>
-<li>Default Branch は <code>master</code> のまま</li>
-<li>Repo name も <code>znzj/docker-rubys</code> のまま (<code>/</code> の右の部分は英小文字か数字か <code>-</code> か <code>.</code> で 3 文字から 30 文字)</li>
-<li>Docker Tag Name も <code>latest</code> のまま</li>
-<li>Dockerfile Location は <code>/</code> から <code>rubys/</code> に変更</li>
-<li>Active にはチェックをいれたまま</li>
-</ol>
+<ul>
+<li>プログラムの紹介</li>
+<li>ハッシュタグは <code>#railsdm</code></li>
+</ul>
 
 
-<p>という状態で作成しました。</p>
+<h2>Railsエンジニアの交換型インターンシップについて</h2>
 
-<p><code>Dockerfile</code> の push とどっちが先が良いのかわからなかったので、
-<code>Dockerfile</code> なしで追加してしまったら、
-初回は <code>Dockerfile</code> が見つからないという理由で失敗してしまったので、
-先に <code>Dockerfile</code> を push してから追加するもののようです。</p>
+<ul>
+<li>自己紹介と会社紹介</li>
+<li>インターンシップを始めた同機</li>
+<li>開発者不足</li>
+<li>交換型インターンシップとは何か</li>
+<li>プログラミングスクール的な学習週とインターン的な作業週を交互にやる</li>
+<li>学習週は 平均3ヶ月 (交互なので6ヶ月) で終わるぐらいのボリューム</li>
+<li>作業週</li>
+<li>pull request の練習にもなるということで好評</li>
+<li>ローカル (学生が多い) とリモート (社会人が多い) がある</li>
+<li>シニアインターン: バイトリーダー的な存在</li>
+<li>インターンの成果: アルバイトとしての成果とスクールとしての成果 (就職先) がある</li>
+<li>モチベーションがもたない</li>
+<li>対策としては見てますよというメッセージを送り続ける</li>
+<li>いいね！ がんばれ！ 大丈夫！</li>
+<li>不安に対してはメッセージを送り続けるしかない</li>
+<li>所属感がない</li>
+<li>対策: ミートアップや忘年会を開催</li>
+<li>ニートやひきこもりが社会復帰した</li>
+<li>就職先の会社からとても喜ばれる</li>
+<li>仕事が増えた</li>
+<li>有名じゃない会社のインターン戦略</li>
+<li>出入りしやすくして単純に人数が多いため、確率的に優秀な人も多くなる</li>
+<li>来るもの拒まず、去る者追わず</li>
+<li>社会人が7割</li>
+<li>無料なのでいろいろなところから紹介される</li>
+<li>RubyKaigi のスタッフをやったら就職できる</li>
+<li>求人への応用</li>
+<li>採用はしていない</li>
+<li>探すんじゃなくて育てる</li>
+<li>組んでくれる会社</li>
+<li>質疑応答</li>
+<li>id的には183名</li>
+<li>7割ぐらい去っている?</li>
+<li>社会人は求職中の人もいれば仕事をしながらの人もいる</li>
+<li>課金サービスはない</li>
+</ul>
 
-<h2>イメージの使用</h2>
 
-<p>しばらくまつと Trusted Builds のページで
-Status が Pending から Building に変わって、
-最終的に Done になってビルドできて使えるようになるので、
-    docker pull znzj/docker-rubys
-でダウンロードします。</p>
+<p><a href="http://docs.komagata.org/5463">発表資料</a></p>
 
-<p>ダウンロードが完了したら、
-    docker run -i -t znzj/docker-rubys
-で <code>/bin/bash -l</code> を起動します。
-(<code>CMD</code> で指定されています。)</p>
+<h2>Railsコントリビューション</h2>
 
-<p>bash で
-    rbenv versions
-で入っている ruby のバージョンを確認したり、
-    rbenv each ruby -v
-や
-    rbenv each -v gem list
-などのように
-<a href="https://github.com/chriseppstein/rbenv-each">rbenv each</a>
-を使って、
-それぞれのバージョンの ruby の環境でコマンドを実行できるようにしています。</p>
+<ul>
+<li>自己紹介</li>
+<li><a href="http://contributors.rubyonrails.org/">http://contributors.rubyonrails.org/</a> で24位</li>
+<li><a href="http://contributors.rubyonrails.org/releases">http://contributors.rubyonrails.org/releases</a> の v5.0.0 が 9999 Commits というコネタ</li>
+<li>コミットログを読むブログを続けている <a href="http://y-yagi.hatenablog.com/">http://y-yagi.hatenablog.com/</a></li>
+<li>わからないことも多かったが動かして確認した</li>
+<li>テストがちゃんと書かれるようになったころだったのでテストでなんとなくわかった</li>
+<li>2,3ヶ月で Rails のコードに慣れて、いろいろとミスに気づくようになった</li>
+<li>問題がある状態をそのままにしておくのはよくないということでコントリビュートし始めた</li>
+<li>どんな時にコントリビュートするか? 期待通りに動かない時、機能追加したい時</li>
+<li>期待通りに動かないというのはまあまあある</li>
+<li>よく使う道具なので期待通り動いて欲しい</li>
+<li>Issue をつくる or PR を作る</li>
+<li>Issue をつくるのも大事なコントリビュート</li>
+<li>英語が苦手なので PR を投げてしまうことの方が多い</li>
+<li>機能を追加したい時</li>
+<li>よく使う道具なので機能が足りてて欲しい</li>
+<li><a href="https://github.com/rails/rails">https://github.com/rails/rails</a> のみを対象 (<a href="https://github.com/rails">https://github.com/rails</a> の他のレポジトリは方針などが違うことがある)</li>
+<li><a href="http://edgeguides.rubyonrails.org/contributing_to_ruby_on_rails.html">http://edgeguides.rubyonrails.org/contributing_to_ruby_on_rails.html</a></li>
+<li>Issue はバグ管理のみ</li>
+<li>新機能提案などの issue は即 close されたりする</li>
+<li>新機能についての議論は rails-core ML</li>
+<li>PR 投げて、そこで議論をするのでも大丈夫 (その方が多そう)</li>
+<li><a href="https://github.com/rails/rails/tree/master/guides/bug_report_templates">https://github.com/rails/rails/tree/master/guides/bug_report_templates</a> を参考にして再現手順が作れると良い</li>
+<li>master ブランチでも再現するか確認</li>
+<li>サポート対象外の古い Rails での Issue は無視されるか即 close</li>
+<li>サポート対象: <a href="http://guides.rubyonrails.org/maintenance_policy.html">http://guides.rubyonrails.org/maintenance_policy.html</a></li>
+<li>似たような PR がもうないか検索してみる (open だけではなく close されているものも)</li>
+<li>close されていたら理由を確認して、それでも PR を出すなら、そのことも書く</li>
+<li>やりとりが止まっている場合は確認して引き継いでしまう</li>
+<li>Rails 本体にいるかどうか gem じゃだめなのか考える</li>
+<li>foreigner や migration_comments のように本体に取り込まれることもある</li>
+<li>フォーマットに従う <a href="https://github.com/rails/rails/blob/master/.github/pull_request_template.md">https://github.com/rails/rails/blob/master/.github/pull_request_template.md</a></li>
+<li>テストは大体は bundle exec rake test で動く</li>
+<li>CI の結果も確認する</li>
+<li>doc やコメントのみの修正は <code>[ci skip]</code> を入れる</li>
+<li>パフォーマンス改善はベンチマークスクリプトと結果もコミットログに入れる</li>
+<li>PR の description に書くようなことはコミットログに入れれば良い</li>
+<li>後から参照しやすい</li>
+<li>使われてないはずのものを消す場合は使われなくなった場所の確認の他に gem に切り出されたものが使っている可能性も考える必要がある</li>
+<li>public API の挙動を変えない</li>
+<li><a href="http://api.rubyonrails.org/">http://api.rubyonrails.org/</a> にのっているものが public API</li>
+<li>挙動を変えたい場合は deprecate から</li>
+<li>squash</li>
+<li>何から始めたらいいか</li>
+<li>doc</li>
+<li><a href="http://api.rubyonrails.org/">http://api.rubyonrails.org/</a> と <a href="http://guides.rubyonrails.org/">http://guides.rubyonrails.org/</a> がリリースされているものに対応</li>
+<li>master ブランチは <a href="http://edgeapi.rubyonrails.org/">http://edgeapi.rubyonrails.org/</a> と <a href="http://edgeguides.rubyonrails.org/">http://edgeguides.rubyonrails.org/</a></li>
+<li>新しいバージョンを触る</li>
+<li>rc をまたずに beta1 が出たら試す</li>
+<li>新しい機能はバグっていることが多い</li>
+<li>既存の機能が壊れていることもある</li>
+<li>新しい Ruby で触る</li>
+<li>Issue をみる: コードをみるとっかかりになる, 意外と簡単に直せるバグもある</li>
+<li>英語ができない: コミットログや PR を参考にする</li>
+<li>何か怖い: 慣れるしかない, <a href="https://oss-gate.github.io/">https://oss-gate.github.io/</a> もおすすめ</li>
+<li>質疑応答</li>
+</ul>
 
-<p>ホスト側とのファイルのやり取りはどうするのが良いのか
-まだ調べていないので、
-とりあえず vim でファイルを作成するか、
-wget でダウンロードすることを想定しています。</p>
 
-<h2>abuse?</h2>
+<p><a href="https://docs.google.com/presentation/d/e/2PACX-1vTQx7WQDPQmvMHRyc8Pj1kP9SOqHAlmLUUGA22G7nU7qtXJsFEwYMaMPwBHWMc-dx9OZaAPl3S7pmtw/pub">発表資料</a></p>
 
-<p><code>GitHub: Add Trusted Build</code>
-のところに
-<code>Anyone who abuses the build system, will have their accounts disabled. If you are unsure what might be considered abuse, please ask before you build.</code>
-という注意書きがあって、
-ビルドするぐらいなら大丈夫かと思っていたのですが、
-他の Trusted Builds をみるとインストールしたり
-ファイルを追加したりしているだけのものが
-多いので心配になってしまいました。
-さらに探してみると
-<a href="https://index.docker.io/u/sameersbn/gitlab/">https://index.docker.io/u/sameersbn/gitlab/</a>
-で ruby を make しているものもあったので、
-ビルドはダメということもなさそうでした。</p>
+<h2>休憩</h2>
 
-<p>しかし、頻繁にビルドして負荷をかけるのもよくなさそうなので、
-trunk の nightly build などをしようと思ったら、
-ローカルで作成して <code>docker push</code> する方がよさそうに感じました。</p>
+<h2>Railsでつくる ファイルアップロード 2017</h2>
 
-<h2>aufs の制限</h2>
+<ul>
+<li>会社紹介</li>
+<li><p>自己紹介</p></li>
+<li><p>きっかけ</p></li>
+<li>サービスを Perl の独自フレームワークから Rails に移行中に画像アップロードを作り直したことがなかったことに気づいた</li>
+<li>Active Storage の登場</li>
+<li><p>スマホ時代のファイルアップロード</p></li>
+<li><p>画像アップロードで考えるポイント</p></li>
+<li>画像アップロード自体</li>
+<li>画像の参照</li>
+<li><p>画像ファイルの置き場所</p></li>
+<li><p>UI から考える 2017 年の画像アップロード</p></li>
+<li>例: クックパッド, esa</li>
+<li><p>非同期</p></li>
+<li><p>form_with</p></li>
+<li><p>Headless browser</p></li>
+<li><p>Step 1: public に画像アップロード</p></li>
+<li>ActionDispatch::<a href="Http::UploadedFile">Http::UploadedFile</a></li>
+<li>validate が画像ファイル自体と画像と紐づく情報の2軸になる</li>
+<li>フォームオブジェクトで処理すると良さそう</li>
+<li>Step 2: S3 に画像アップロード</li>
+<li>認証、アクセス制御、モック</li>
+<li>問題発生? ファイルアップロードに時間がかかる気がする</li>
+<li>サーバー経由ではなくダイレクトにアップロードに</li>
+<li>Step 3: ダイレクトアップロード (S3)</li>
+<li>Step 4: 複数ファイルのアップロード</li>
+<li>multiple では非同期が必要だった</li>
+<li>Step 5: ECMAScript 6 や File API など</li>
+<li>新しい画像フォーマット (Live Photos?)</li>
+<li>技術の積み重ねとユーザー体験</li>
+<li><p>ユーザー体験を向上させようとすると rails から離れた技術も必要になってくる</p></li>
+<li><p>質疑応答</p></li>
+</ul>
 
-<p><a href="https://github.com/dotcloud/docker/issues/332">https://github.com/dotcloud/docker/issues/332</a>
-によると aufs は重ねられる数に限界 (40ぐらい?) があるようなので、
-<code>RUN</code> コマンドは出来るだけまとめて減らした方が良いのかもしれません。</p>
 
-<p><a href="https://index.docker.io/u/truongsinh/nodejs/">https://index.docker.io/u/truongsinh/nodejs/</a>
-のように <code>&amp;&amp;</code> でつなげて 1 個の <code>RUN</code> にまとめている例もありました。</p>
+<p><a href="https://speakerdeck.com/matsuhisa/rails-developers-meetup6-image-upload">発表資料</a></p>
 
-<p>aufs 以外が主流になるかもしれないので、
-この辺りは Dockerfile の読みやすさや
-<code>docker history</code> でわかれていた方が良いのかなど、
-利点や欠点を考えつつ、
-ベストプラクティスが決まっていくまで
-試行錯誤するのが良さそうです。</p>
+<h2>How, Why, What がわからないコードの調べ方</h2>
 
-<h2>まとめ</h2>
+<ul>
+<li>ネタバレ: 最終的には負けた</li>
+<li>ベストは、「知っている人に聞く」</li>
+<li>誰もいないなら調べるしかない</li>
+<li>git blame は -L で範囲を絞り込める</li>
+<li><code>git blame -L "/regex",+20 file</code></li>
+<li>git blame rev file</li>
+<li><a href="https://github.com/akr/vcs-ann">https://github.com/akr/vcs-ann</a></li>
+<li>tig blame file</li>
+<li><code>","</code> でカーソル行の親コミットの blame に移動</li>
+<li>歴史をみてもわからなかった</li>
+<li>ログを出す</li>
+<li><code>Kernel.#caller</code></li>
+<li><code>logger.tagged("hoge") do ... end</code></li>
+<li>歴史を見ても、動きを見ても、よくわからない</li>
+<li>それは、作り直して良いというフラグでは?</li>
+<li>結論: 強く生きよう</li>
+</ul>
 
-<p>DOCKER index には Trusted Builds という向こう側で
-<code>docker build</code> してくれる仕組みがあるので、
-<code>docker push</code> とうまく使い分けて
-公開可能なイメージはどんどん公開すると良いのではないでしょうか。</p>
+
+<h2>How to improve OSS Rails application</h2>
+
+<ul>
+<li>自己紹介</li>
+<li>GitLab</li>
+<li>時間がおしているので質疑応答はなし</li>
+</ul>
+
+
+<h2>クロージング</h2>
+
+<ul>
+<li>次回予告: #7 は 2017.11.16</li>
+<li>月1開催は次回で最終回</li>
+<li>募集は 2017.10.30 10:00から</li>
+</ul>
+
 </div>
 
 <!-- zenback_body_end -->
@@ -283,12 +330,12 @@ trunk の nightly build などをしようと思ったら、
 
 
 
-<time class='entry-date' datetime='2013-12-19T23:02:00+09:00'><span class='date'>2013-12-19 (Thu)</span> <span class='time'>11:02 pm</span></time>
+<time class='entry-date' datetime='2017-10-19T19:30:00+09:00'><span class='date'>2017-10-19 (Thu)</span> <span class='time'>7:30 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/docker/'>docker</a>, <a class='category' href='/blog/categories/rbenv/'>rbenv</a>, <a class='category' href='/blog/categories/ruby/'>ruby</a>
+    <a class='category' href='/blog/categories/event/'>event</a>, <a class='category' href='/blog/categories/railsdm/'>railsdm</a>
   
 </span>
 
@@ -315,10 +362,8 @@ trunk の nightly build などをしようと思ったら、
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2013-12-15-rubymotion-ruby-version.html" title="Previous Post: RubyMotionとRubyのバージョン">&laquo; RubyMotionとRubyのバージョン</a>
+        <a class="basic-alignment left" href="/blog/2017-10-07-rubykansai79.html" title="Previous Post: 第79回 Ruby関西 勉強会に参加しました">&laquo; 第79回 Ruby関西 勉強会に参加しました</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2013-12-21-update-octopress.html" title="Next Post: octopressをアップデートしてisolateを使い始めた">octopressをアップデートしてisolateを使い始めた &raquo;</a>
       
     </p>
   </footer>
@@ -456,8 +501,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2013-12-19-docker-trusted-builds.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2013-12-19-docker-trusted-builds.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-10-19-railsdm.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-10-19-railsdm.html';
         var disqus_script = 'embed.js';
       
     (function () {
