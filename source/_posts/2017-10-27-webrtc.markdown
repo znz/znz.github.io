@@ -1,0 +1,181 @@
+---
+layout: post
+title: "WebRTC Meetup Osaka #2 に参加しました"
+date: 2017-10-27 19:30:00 +0900
+comments: true
+categories: event
+---
+[WebRTC Meetup Osaka #2](https://atnd.org/events/91437) に参加しました。
+
+<!--more-->
+
+## 会場
+
+久しぶりにさくらインターネットさんの会場にきました。
+ゲスト Wi-Fi は SSID が同じで、パスワードが変わっていて、 iPod touch は一度覚えているのを削除して、設定し直さないと繋がりませんでした。
+
+## 会場説明等
+
+懇親会をするので参加希望者は休憩の時に。
+
+## Meetupの説明
+
+- 開催実績の紹介など
+- ハッシュタグは `#webrtcjp`
+- WebRTC-JP Slack
+- YouTube に過去の動画も公開している https://goo.gl/BjEhku
+- 参加者はほぼエンジニア
+- 初参加の人が多い
+- WebRTC で何か開発したことがあるのは半数ぐらい
+
+## ワンボタンでできる！WebRTCゲーム配信！
+
+- PLiCy という自作フリーゲームの公開・共有を目的とした SNS
+- 別途ツールを準備しなくてもブラウザだけで完結するブラウザゲームの簡易配信機能
+- 少なくとも Android 4.0 で動いたので対応環境も十分ある
+- 遊んでいる人全員に配信してもらうのが目標
+- ゲーム画面の抽出は captureStream で取得するだけ
+- ゲーム音楽の抽出は GainNode の prototype を書き換えて connect に割り込み
+- マイクを使った実況対応は getUserMedia API で HTTPS 必須
+- WebRTC の通信は PeerJS を利用
+- TURN サーバーが必要だった
+- CentOS 5 だと TURN サーバーが動かなかったので、CentOS 7 を入れ直した
+- 映像・音声とは別に RTCDataChannel API でデータ通信が使える
+- Web Speech API でチャットコメントを音声読み上げする
+- Safari に対応するのに PeerJS を修正する必要があった
+- Edge はまだダメ
+- 運用状況と課題
+- 画質の設定はないが captureStream API でフレームレートは設定できる
+- iframe を使うと Firefox や Safari で問題があった
+
+- 質疑応答
+- CentOS 5 は実験用のサーバーなので古かった
+- TURN サーバーは何を使っている? coturn ではない? → パッケージ名が「turnserver」という名前のものを使っている
+- 回線が細いと途切れるという話があったが、接続が多いと切れる? → P2P なので TURN サーバーを経由しているかどうかでも変わって来る。10人を超えると不安定になってくる。スマホでキャリア回線でみると重いとかはある。
+
+## 実践 WebRTC 〜最新事例と開発ノウハウの紹介〜
+
+- 発表資料は SlideShare で公開している: https://goo.gl/daTG2m
+- WebRTC = Web Real Time Communication
+- リアルタイムコミュニケーションの民主化
+- 最初のリアルタイムコミュニケーションは電話
+- 2011 年に WebRTC の草案が発表
+- WebRTC の特徴: カメラやマイクを利用可、ブラウザ間の P2P 通信、ストリーミングデータを扱える
+- WebRTC を構成する技術要素
+- 中身は4つ: 1から3は IETF で標準化、4は は W3C で標準化
+- 1: 暗号化などのプロトコル、2: P2P通信する手順、3: コーデック、4: JavaScript などから利用する API
+- リアルタイムのために基本的に UDP 上
+- コーデック: VP8, VP9, H.264 (Safari はこれのみ)、音声は opus
+- Can I use? でブラウザの対応状況を確認 http://caniuse.com/#feat=rtcpeerconnection
+- IE はあきらめましょう
+- Safari は 11 で対応
+- iOS でネイティブアプリを作らなくても使えるようになる
+
+- WebRTC の事例紹介
+
+- Co-Streaming (共同ストリーミング) 複数人が同時に動画配信し多人数が視聴する
+- mixer: MS が買収したゲーム動画配信サービスで Win 10 からは直接配信も可能
+- Pixiv Sketch LIVE
+
+- Serverless CDN: Peer5
+- Serverless CDN x Streaming: Streamroot
+
+- オンライン英会話: Skype から移行しているところが多い
+- カスタマサポート: videodesk
+- 遠隔診療: CLINICS 先生側(PC)と患者側(スマホアプリ)
+- IoT: petoco
+- マッチングアプリ: KoeTomo
+
+- WebRTC の活用しどころ: 既存サービスの置き換えでコスト削減よりも付加価値向上がおすすめ
+
+- ここからエンジニア向けの話
+
+- Safari の開発メニューには「レガシー WebRTC API を有効にする」という設定がある
+- API も結構変わってきている
+- ブラウザは ORTC の考え方を一部取り入れた WebRTC 1.0 API へ対応しつつある
+- WebRTC 1.0 では SDP を利用する
+- レガシー API だと SDP に全てのレイヤーについてネゴシエーションするのに必要な情報が全て記載されているので、例えば、音声ミュートで参加していたメンバーが途中からミュートを解除すると、音声トラックだけ操作したいのに、全てのレイヤーで再ネゴシエーションが発生する。
+- ORTC は各レイヤーに相当する API が公開されているので、必要なところだけ操作できる
+- API の進化に対応するのは [adapter.js (shim)](https://github.com/webrtc/adapter) を使えばだいたいうまくやってくれる
+- ブラウザー間の互換性の問題
+- Chrome, Firefox, Safari はベースになっているコアライブラリが同じなので相性が良いが、Edge は独自なので相性が悪い
+- 動画コーデック: Chrome Firefox は VP8/VP9/H264, Edge は VP8/H264UC, Safari は H264 のみ
+- H264UC は Skype 用
+- Safari はモバイルのハードウェアの対応を考慮してそう
+- API も差がある
+- ScreenShare は Edge にはないなどの機能差は adapter.js では対応できないのでアプリでどうにかする必要あり
+
+- マイクカメラの扱いにはハマりどころが多い
+- カメラの機種, OS, ブラウザの差がある
+- getUserMedia の Constraints に指定してもその通りになるとは限らない
+- [俺たちは雰囲気でgetUserMedia()をやっている](https://goo.gl/9DWMGZ)
+
+- フルメッシュ, MCU, SFU
+- SFU が主流
+- ユースケースに合わせて選択しましょう
+
+- つながらない問題
+- WebRTC にはシグナリングとメディア、2つの通信がある
+- 1: シグナリングサーバーとの接続 (だいたいWSS) ができない
+- 2: メディアの通信 (P2P) が疎通できない
+- 1 はネットワークが対応しないとどうしようもない
+- 2 はネットワークのポリシー変更や TURN サーバー
+
+- ICE, STUN, TURN
+- STUN: UDP ホールパンチングできる NAT の種類には制限がある
+- TURN は UDP が通らない時に TCP でラップしてくれる機能もある
+
+- デバッグ方法
+- chrome://webrtc-internals
+
+- プラットフォームサービスは積極的に活用しよう
+- WebRTC は総合格闘技
+- プラットフォームサービス: OpenTok, CafeX, SkyWay, Twillio, FacePeer
+- ミドルウェア: WebRTC SFU Sora
+- プラットフォームサービスを使っても、つながらない問題が全て解決するわけではない
+
+- 質疑応答
+- Safari の ScreenShare 対応? → プラグインを入れてもらう必要がある
+- コーデック? → Firefox だと VP8 が優先, SDK で設定できるものもある, 相手を Safari にすると H264 になる
+- H264UC と H264 との互換性は? → 別物で互換性はない
+- Data Connection を使わずに Edge とやり取りするには? → WebSocket を使う。 Skype で必要なさそう (WebSocket でなんとかなる) なので Data Connection の実装はあまり期待できない
+
+## 休憩
+
+早めに進んでいたので順番を入れ替えて休憩は後になりました。
+
+## WebRTCのデバッグに関するTips&Tricks
+
+- WebRTC の同人誌
+- booth.pm で「WebRTC」で検索
+- https://mzsm.booth.pm/items/628127
+
+- Safari の開発メニューには「模擬キャプチャデバイス」というものがある
+- Chrome は `--use-fake-device-for-media-stream` 付きで起動
+- Firefox は getUserMedia で fake: true を指定
+
+- getUserMedia の制限
+- Chrome は localhost は https でなくても OK
+- 他の人につないでもらいたい時は ngrok が使える
+- Homebrew か公式サイトからダウンロードしてインストール
+- 日本だと `--region ap` を指定するのが良い
+- デモ
+
+- 質疑応答
+- `/etc/hosts` で localhost の IP アドレスを別のものにしたら通る? → 不明
+- 会社ネットワークとかで外にでるのに制限がある環境では https のサーバーをたてた方が楽なのでは? → そこは適宜
+
+## iOS11は本当にWebRTCに対応したのか
+
+- Safari 11 でビデオチャットは可能
+- 他アプリでは無理
+
+- WKWebView, SFSafariViewController, UIWebView (deprecated)
+- getUserMedia が全部非対応
+- RTCPeerConnection はあるので、データ通信はできた
+
+## 次回告知等
+
+- [WebRTC Meetup Tokyo #17 Special Edition](https://techplay.jp/event/637372)
+- Youtube Live による配信あり
+- WebRTC Meetup Osaka #3 は12月か1月にやりたい、発表者募集中
