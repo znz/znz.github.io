@@ -5,13 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Vagrant の Multi VM 間で IPsec を試した - @znz blog</title>
+  <title>gitlab-ci-multi-runner パッケージから gitlab-runner パッケージへの更新 - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="Vagrant の Multi VM 間で IPsec を試した 2014-06-04 (Wed) 10:00 pm | Comments 正常に IPsec の暗号化通信ができているときの racoon のログなどを確認したかったので、
-Vagrant と ansible で
-IPsec &hellip;">
+  <meta name="description" content="gitlab-ci-multi-runner パッケージから gitlab-runner パッケージへの更新 2017-11-06 (Mon) 11:00 pm | Comments GitLab Runner が 10.0.0 だとパッケージ名が gitlab-runner に変わってしまって &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -20,7 +18,7 @@ IPsec &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-06-04-vagrant-multivm-ipsec-demo.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2017-11-06-gitlab-runner.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -85,7 +83,7 @@ IPsec &hellip;">
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">Vagrant の Multi VM 間で IPsec を試した</h1>
+      <h1 class="entry-title">gitlab-ci-multi-runner パッケージから gitlab-runner パッケージへの更新</h1>
       
       <!-- zenback_title_end -->
       
@@ -97,7 +95,7 @@ IPsec &hellip;">
 
 
 
-<time class='entry-date' datetime='2014-06-04T22:00:00+09:00'><span class='date'>2014-06-04 (Wed)</span> <span class='time'>10:00 pm</span></time>
+<time class='entry-date' datetime='2017-11-06T23:00:00+09:00'><span class='date'>2017-11-06 (Mon)</span> <span class='time'>11:00 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -110,148 +108,68 @@ IPsec &hellip;">
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p>正常に IPsec の暗号化通信ができているときの racoon のログなどを確認したかったので、
-Vagrant と ansible で
-IPsec で通信できる Multi VM 環境を作ってみました。</p>
-
-<p>playbook は
-<a href="https://github.com/znz/ansible-playbook-ipsec-demo">https://github.com/znz/ansible-playbook-ipsec-demo</a>
-で公開しています。</p>
+<div class="entry-content"><p>GitLab Runner が 10.0.0 だとパッケージ名が gitlab-runner に変わってしまって、そのままだと 9.5.1 から更新されなくなってしまったので、対応しました。</p>
 
 <!--more-->
 
 
-<h2>動作確認バージョン</h2>
+<h2>対象バージョン</h2>
 
 <ul>
-<li>ホスト OS : Mac OS X 10.9.3</li>
-<li>VirtualBox 4.3.12</li>
-<li>Vagrant 1.6.3</li>
-<li>ansible 1.6.2</li>
-<li>ゲスト OS : Ubuntu 14.04 &times; 2</li>
+<li>Ubuntu 16.04.3 LTS</li>
+<li>gitlab-ci-multi-runner (9.5.1) から gitlab-runner (10.1.0)</li>
 </ul>
 
 
-<p>Ubuntu は <a href="https://cloud-images.ubuntu.com/vagrant/trusty/current/">https://cloud-images.ubuntu.com/vagrant/trusty/current/</a> のイメージを使ったので、
-daily build の状態によっては動作が変わっているかもしれません。</p>
+<h2>GitLab Runner とは?</h2>
 
-<h2>ホストオンリーネットワーク</h2>
+<p><a href="https://docs.gitlab.com/runner/">GitLab Runner</a> とは GitLab CI のジョブを実行する部分のことです。</p>
 
-<p>使った後は</p>
+<p>詳細は<a href="/blog/2017-07-09-gitlab-runner.html">インストール時の記事</a>を参照してください。</p>
 
-<ul>
-<li>vboxnet1 (192.168.50.1/24)</li>
-<li>vboxnet2 (192.168.11.1/24)</li>
-<li>vboxnet3 (192.168.12.1/24)</li>
-</ul>
+<h2>インストール方法</h2>
 
+<p><a href="https://docs.gitlab.com/runner/install/linux-repository.html">Install GitLab Runner using the official GitLab repositories - GitLab Documentation</a> が gitlab-runner に改名後のインストール方法になっているので、参考にして移行しました。</p>
 
-<p>が勝手に増えているので、不要なら設定で消しておくと良いと思います。</p>
+<h2>移行方法</h2>
 
-<p>ネットワークとしては以下のように 192.168.50.0/24 の部分で IPsec 接続をして、
-192.168.11.11 と 192.168.12.12 をつなぐ、という感じにしています。
-デフォルトの eth0 は外部への接続用としてそのままにしています。</p>
+<p>簡単にまとめると apt の設定を変えて <code>gitlab-runner</code> パッケージを入れ直すだけでした。</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>192.168.11.11 (vm1:eth2)
-</span><span class='line'>       |
-</span><span class='line'>192.168.50.11 (vm1:eth1)
-</span><span class='line'>       |
-</span><span class='line'>192.168.50.12 (vm2:eth1)
-</span><span class='line'>       |
-</span><span class='line'>192.168.12.12 (vm2:eth2)</span></code></pre></td></tr></table></div></figure>
+<p>GitLab (GitLab CI) への登録や <code>/etc/gitlab-runner/config.toml</code> はそのままで大丈夫でした。</p>
 
+<h2>apt-line の更新</h2>
 
-<h2>準備</h2>
+<p><code>/etc/apt/sources.list.d/</code> 以下に入っている</p>
 
-<p>Usage に書いてあるように準備をしておきます。
-先日作った <code>ja_jp</code> role は git submodule にしているので、</p>
+<pre><code>deb https://packages.gitlab.com/runner/gitlab-ci-multi-runner/ubuntu xenial main
+</code></pre>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>% git submodule init
-</span><span class='line'>% git submodule update</span></code></pre></td></tr></table></div></figure>
+<p>の apt-line を削除して、</p>
 
+<pre><code>deb https://packages.gitlab.com/runner/gitlab-runner/ubuntu xenial main
+</code></pre>
 
-<p>で取得する必要があります。</p>
+<p>を追加しました。</p>
 
-<h2>試し方</h2>
+<h2>pinning 設定変更</h2>
 
-<p><code>vagrant up</code>
-すると
-<code>/etc/ipsec-tools.conf</code>
-と
-<code>/etc/racoon/racoon.conf</code>
-に設定が入っている状態になっているので、
-始点アドレスを指定して
-<code>ipsec-tools.conf</code>
-に設定した経路を通るようにパケットを送ると
-IPsec VPN がつながります。</p>
+<p><code>/etc/apt/preferences.d/pin-gitlab-runner.pref</code> で <code>gitlab-ci-multi-runner</code> パッケージを <code>packages.gitlab.com</code> のものを優先するように設定していたのを、 <code>gitlab-runner</code> パッケージに変更しました。</p>
 
-<p><code>ping</code> コマンドのように直接始点アドレスを指定するオプションがない場合は
-<code>ping -I eth2 192.168.12.12</code> のように network interface で指定すれば
-良いようです。</p>
+<h2>パッケージのインストール</h2>
 
-<h2>動作確認</h2>
+<p><code>gitlab-runner</code> パッケージをインストールすると自動的に <code>gitlab-ci-multi-runner</code> パッケージと置き換わりました。</p>
 
-<p>以下のコマンドの出力が接続前後で変わることが確認できます。</p>
+<p><code>gitlab-ci-multi-runner</code> パッケージを purge しても <code>/etc/gitlab-runner/config.toml</code> が消えたりすることもないので、特に注意するような点はなさそうでした。</p>
 
-<ul>
-<li><code>racoonctl -l show-sa isakmp</code></li>
-<li><code>racoonctl -l show-sa ipsec</code></li>
-<li><code>setkey -D</code></li>
-</ul>
+<h2>ansible での例</h2>
 
+<p><a href="https://github.com/znz/ansible-role-gitlab-runner/commit/616a9da561360fbae940940aec49483a5ee1ce9b">Use gitlab-runner instead of gitlab-ci-multi-runner</a> のように変更しました。</p>
 
-<p>racoon のログが <code>/var/log/syslog</code> に大量に出ているのを確認できます。
-(<code>racoon.conf</code> で <code>log debug</code> にしているため)</p>
+<p>移行措置として、 gitlab-ci-multi-runner の apt-line を消す処理も入れています。</p>
 
-<h2>tshark でパケットの確認</h2>
+<h2>まとめ</h2>
 
-<p><code>tshark</code> パッケージをインストールした後、
-<code>sudo dpkg-reconfigure wireshark-common</code>
-で一般ユーザーでも実行を許可するようにして、
-実行を許可するユーザーを <code>wireshark</code> に追加します。</p>
-
-<p>グループの追加を反映するためにログインし直すと、
-<code>tshark -i eth1 -V 'port 500'</code>
-などでパケットの確認ができるようになります。</p>
-
-<p>暗号化されていて詳細はわかりませんが、
-UDP の 500 番ポートで Informational のパケットが流れていることが確認できました。</p>
-
-<p>GUI の wireshark の方では
-<a href="http://ask.wireshark.org/questions/12019/how-can-i-decrypt-ikev1-andor-esp-packets">http://ask.wireshark.org/questions/12019/how-can-i-decrypt-ikev1-andor-esp-packets</a>
-の方法で暗号化の解除もできるようです。</p>
-
-<p>syslog の方で racoon のログをみると、
-DPD のパケットらしいということが確認できました。
-syslog の方で <code>#012</code> となっている部分がありますが、
-これは rsyslog で改行が変換されたたもので空白として無視すれば良くて、
-例えば</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>Jun  4 17:54:43 vm1 racoon: DEBUG: new cookie:#012831d33d46e20f8e6
-</span><span class='line'>Jun  4 17:54:43 vm1 racoon: DEBUG: final encryption key computed:
-</span><span class='line'>Jun  4 17:54:43 vm1 racoon: DEBUG: #012932d361f fc62ddc2 6164d513 d40d211f b7364166 232cf490</span></code></pre></td></tr></table></div></figure>
-
-
-<p>というログなら cookie は <code>831d33d46e20f8e6</code> になります。</p>
-
-<p>鍵は <code>932d361ffc62ddc26164d513d40d211fb7364166232cf490</code> になると思ったのですが、
-これを
-Edit -> Preferences -> Protocols -> ISAKMP -> IKEv1 Decryption Table:
-に設定すれば良いはずなのですが、試したところ decrypt されなかったので、
-あっているのかどうかはわかりませんでした。
-cookie の方は他のログなどで確認できたので、あっているはずです。</p>
+<p><code>gitlab-ci-multi-runner</code> パッケージから <code>gitlab-runner</code> パッケージへの移行は GitLab (GitLab CI) への登録し直しが必要だと面倒そうと思って、 10.0.x の間は躊躇してそのままにしてしまっていましたが、 vagrant 環境で確認したところ、パッケージの更新だけで大丈夫ということがわかったので、問題なく上げることができました。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -270,12 +188,12 @@ cookie の方は他のログなどで確認できたので、あっているは�
 
 
 
-<time class='entry-date' datetime='2014-06-04T22:00:00+09:00'><span class='date'>2014-06-04 (Wed)</span> <span class='time'>10:00 pm</span></time>
+<time class='entry-date' datetime='2017-11-06T23:00:00+09:00'><span class='date'>2017-11-06 (Mon)</span> <span class='time'>11:00 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/ipsec/'>ipsec</a>, <a class='category' href='/blog/categories/linux/'>linux</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>, <a class='category' href='/blog/categories/vagrant/'>vagrant</a>, <a class='category' href='/blog/categories/virtualbox/'>virtualbox</a>
+    <a class='category' href='/blog/categories/gitlab/'>gitlab</a>, <a class='category' href='/blog/categories/linux/'>linux</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>
   
 </span>
 
@@ -302,10 +220,8 @@ cookie の方は他のログなどで確認できたので、あっているは�
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2014-06-02-ansible-galaxy.html" title="Previous Post: ansible-galaxy を使ってみた">&laquo; ansible-galaxy を使ってみた</a>
+        <a class="basic-alignment left" href="/blog/2017-10-27-webrtc.html" title="Previous Post: WebRTC Meetup Osaka #2 に参加しました">&laquo; WebRTC Meetup Osaka #2 に参加しました</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2014-06-06-squeeze-lts.html" title="Next Post: Debian squeeze (6.0) LTS の使い方">Debian squeeze (6.0) LTS の使い方 &raquo;</a>
       
     </p>
   </footer>
@@ -443,8 +359,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-06-04-vagrant-multivm-ipsec-demo.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2014-06-04-vagrant-multivm-ipsec-demo.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2017-11-06-gitlab-runner.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2017-11-06-gitlab-runner.html';
         var disqus_script = 'embed.js';
       
     (function () {

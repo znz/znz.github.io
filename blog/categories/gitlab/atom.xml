@@ -4,7 +4,7 @@
   <title><![CDATA[Category: gitlab | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/gitlab/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-10-27T22:50:29+09:00</updated>
+  <updated>2017-11-07T23:02:57+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,76 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[gitlab-ci-multi-runner パッケージから gitlab-runner パッケージへの更新]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-11-06-gitlab-runner.html"/>
+    <updated>2017-11-06T23:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/gitlab-runner</id>
+    <content type="html"><![CDATA[<p>GitLab Runner が 10.0.0 だとパッケージ名が gitlab-runner に変わってしまって、そのままだと 9.5.1 から更新されなくなってしまったので、対応しました。</p>
+
+<!--more-->
+
+
+<h2>対象バージョン</h2>
+
+<ul>
+<li>Ubuntu 16.04.3 LTS</li>
+<li>gitlab-ci-multi-runner (9.5.1) から gitlab-runner (10.1.0)</li>
+</ul>
+
+
+<h2>GitLab Runner とは?</h2>
+
+<p><a href="https://docs.gitlab.com/runner/">GitLab Runner</a> とは GitLab CI のジョブを実行する部分のことです。</p>
+
+<p>詳細は<a href="/blog/2017-07-09-gitlab-runner.html">インストール時の記事</a>を参照してください。</p>
+
+<h2>インストール方法</h2>
+
+<p><a href="https://docs.gitlab.com/runner/install/linux-repository.html">Install GitLab Runner using the official GitLab repositories - GitLab Documentation</a> が gitlab-runner に改名後のインストール方法になっているので、参考にして移行しました。</p>
+
+<h2>移行方法</h2>
+
+<p>簡単にまとめると apt の設定を変えて <code>gitlab-runner</code> パッケージを入れ直すだけでした。</p>
+
+<p>GitLab (GitLab CI) への登録や <code>/etc/gitlab-runner/config.toml</code> はそのままで大丈夫でした。</p>
+
+<h2>apt-line の更新</h2>
+
+<p><code>/etc/apt/sources.list.d/</code> 以下に入っている</p>
+
+<pre><code>deb https://packages.gitlab.com/runner/gitlab-ci-multi-runner/ubuntu xenial main
+</code></pre>
+
+<p>の apt-line を削除して、</p>
+
+<pre><code>deb https://packages.gitlab.com/runner/gitlab-runner/ubuntu xenial main
+</code></pre>
+
+<p>を追加しました。</p>
+
+<h2>pinning 設定変更</h2>
+
+<p><code>/etc/apt/preferences.d/pin-gitlab-runner.pref</code> で <code>gitlab-ci-multi-runner</code> パッケージを <code>packages.gitlab.com</code> のものを優先するように設定していたのを、 <code>gitlab-runner</code> パッケージに変更しました。</p>
+
+<h2>パッケージのインストール</h2>
+
+<p><code>gitlab-runner</code> パッケージをインストールすると自動的に <code>gitlab-ci-multi-runner</code> パッケージと置き換わりました。</p>
+
+<p><code>gitlab-ci-multi-runner</code> パッケージを purge しても <code>/etc/gitlab-runner/config.toml</code> が消えたりすることもないので、特に注意するような点はなさそうでした。</p>
+
+<h2>ansible での例</h2>
+
+<p><a href="https://github.com/znz/ansible-role-gitlab-runner/commit/616a9da561360fbae940940aec49483a5ee1ce9b">Use gitlab-runner instead of gitlab-ci-multi-runner</a> のように変更しました。</p>
+
+<p>移行措置として、 gitlab-ci-multi-runner の apt-line を消す処理も入れています。</p>
+
+<h2>まとめ</h2>
+
+<p><code>gitlab-ci-multi-runner</code> パッケージから <code>gitlab-runner</code> パッケージへの移行は GitLab (GitLab CI) への登録し直しが必要だと面倒そうと思って、 10.0.x の間は躊躇してそのままにしてしまっていましたが、 vagrant 環境で確認したところ、パッケージの更新だけで大丈夫ということがわかったので、問題なく上げることができました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[.gitlab-ci.ymlでDokkuとHerokuにdeployする]]></title>
@@ -900,273 +970,6 @@ register の時に指定し忘れていた場合は、後から config.toml に 
 
 <p>GitLab Runner の設定と Lint の使い方、 GitLab Container Registry と連携方法を紹介しました。
 次は Dokku の設定になります。</p>
-
-<p><a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Omnibus GitLabをContainer RegistryやMattermostを有効にして使う]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-07-08-omnibus-gitlab.html"/>
-    <updated>2017-07-08T16:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/omnibus-gitlab</id>
-    <content type="html"><![CDATA[<p>GitLab と Dokku (と一部 Heroku) を使って CI/CD (Continuous Integration / Continuous Deployment) 環境を作ってみたので、何回かにわけてその話を書いていきます。
-最初は Omnibus GitLab 自体の設定の話です。
-certbot で https を有効にして、 GitLab Container Registry や GitLab Mattermost も有効にします。
-GitLab Pages も有効にしますが、 certbot での自動化はできなかったので http のみの設定です。</p>
-
-<p><a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Ubuntu 16.04.2 LTS</li>
-<li>Omnibus GitLab 9.1.4-ce.0 (インストール時) から 9.3.5-ce.0 (記事執筆時)</li>
-<li>gitlab-ci-multi-runner 9.2.0 (インストール時) から 9.3.0 (記事執筆時)</li>
-<li>Dokku 0.9.4 (インストール時) から 0.10.2 (記事執筆時)</li>
-</ul>
-
-
-<h2>インストール方法選択</h2>
-
-<p><a href="https://about.gitlab.com/installation/">Installation methods for GitLab</a> にある方法のうち、Omnibus package installation (recommended) を選択しました。
-理由としては以下のようなことを考慮しました。</p>
-
-<ul>
-<li>ソースインストールはインストールもバージョンアップも管理も大変そうなので除外</li>
-<li>Docker でのインストールはバージョンを上げて問題がおきた場合に戻しやすそうだが、バージョンアップ情報を自分で追いかけないといけない</li>
-<li>Omnibus package は apt で他のパッケージの更新と同様にバージョンアップが検知可能</li>
-<li>GitLab 自体は仮想マシン1台で動かすのでバージョンアップ時に停止時間が発生するのは許容</li>
-</ul>
-
-
-<h2>カスタマイズ方法</h2>
-
-<p>Docker イメージは <code>GITLAB_OMNIBUS_CONFIG</code> で、 Omnibus package は <code>/etc/gitlab/gitlab.rb</code> でカスタマイズできます。
-(設定できる項目は <a href="https://docs.gitlab.com/omnibus/docker/README.html">https://docs.gitlab.com/omnibus/docker/README.html</a> からリンクされている <a href="https://gitlab.com/gitlab-org/omnibus-gitlab/blob/master/files/gitlab-config-template/gitlab.rb.template">Omnibus GitLab template</a> 参照)</p>
-
-<p>自動構築したい場合は <code>gitlab_rails['initial_root_password']</code> や <code>gitlab_rails['initial_shared_runners_registration_token']</code> が設定できるというのを知っておくと良さそうです。</p>
-
-<p>設定項目によっては Web UI で変更しても <code>sudo gitlab-ctl reconfigure</code> を実行すると再設定されてしまうものもあるようなので、影響しそうな設定を変更するときは気にしておくと良さそうです。
-(気づいた範囲では GitLab Mattermost 関係の設定が再設定されました。)</p>
-
-<h2>最低限の設定</h2>
-
-<p>相対時間で表示されることも多いので、デフォルトのままでもあまり気にならないかもしれませんが、</p>
-
-<pre><code>gitlab_rails['time_zone'] = 'Asia/Tokyo'
-</code></pre>
-
-<p>でタイムゾーンの設定をしておくと良いと思います。</p>
-
-<h2>メール設定</h2>
-
-<p><a href="https://docs.gitlab.com/omnibus/settings/smtp.html">SMTP settings</a> を参考にしてメール送信の設定をしておきます。</p>
-
-<p>以下は SMTP over TLS (smtps) で送信する例です。</p>
-
-<pre><code># https://docs.gitlab.com/omnibus/settings/smtp.html
-gitlab_rails['smtp_enable'] = true
-gitlab_rails['smtp_address'] = 'smtp.example.com'
-gitlab_rails['smtp_port'] = 465
-gitlab_rails['smtp_user_name'] = 'username'
-gitlab_rails['smtp_password'] = 'password'
-gitlab_rails['smtp_tls'] = true
-</code></pre>
-
-<p>Mattermost も使うなら一緒に設定しておきます。</p>
-
-<pre><code>mattermost['email_smtp_username'] = 'username'
-mattermost['email_smtp_password'] = 'password'
-mattermost['email_smtp_server'] = 'smtp.example.com'
-mattermost['email_smtp_port'] = 465
-mattermost['email_connection_security'] = 'TLS'
-mattermost['email_feedback_name'] = 'GitLab Mattermost'
-mattermost['email_feedback_email'] = 'email@example.com'
-mattermost['support_email'] =  'support@example.com'
-</code></pre>
-
-<h2>後で使う変数設定</h2>
-
-<p>config は ruby のコードなので、ローカル変数でドメインをまとめて設定できるようにしておきます。</p>
-
-<pre><code>base_domain = 'example.test'
-gitlab_domain = "gitlab.#{base_domain}"
-registry_domain = "registry.#{base_domain}"
-mattermost_domain = "mattermost.#{base_domain}"
-</code></pre>
-
-<h2>https 設定</h2>
-
-<p>GitLab で <a href="https://launchpad.net/~certbot/+archive/ubuntu/certbot">Certbot</a> で <a href="https://letsencrypt.org/">Let&rsquo;s Encrypt - Free SSL/TLS Certificates</a> の証明書を使うので、そのファイルの有無で設定を分岐します。</p>
-
-<p>これで、最初の証明書がない状態や vagrant などでの検証環境では http でつながり、証明書発行後に <code>sudo gitlab-ctl reconfigure</code> すれば https でつながるようになる、という設定が実現できます。</p>
-
-<pre><code>if File.exist?("/etc/letsencrypt/live/#{gitlab_domain}/fullchain.pem")
-  external_url "https://#{gitlab_domain}"
-  nginx['redirect_http_to_https'] = true
-  nginx['ssl_certificate'] = "/etc/letsencrypt/live/#{gitlab_domain}/fullchain.pem"
-  nginx['ssl_certificate_key'] = "/etc/letsencrypt/live/#{gitlab_domain}/privkey.pem"
-else
-  external_url "http://#{gitlab_domain}"
-end
-nginx['custom_gitlab_server_config'] = 'location ^~ /.well-known { root /var/www/letsencrypt; }'
-</code></pre>
-
-<h2>GitLab Container Registry 設定</h2>
-
-<p>Docker の Container Registry の <a href="https://docs.gitlab.com/ce/user/project/container_registry.html">GitLab Container Registry</a> も設定します。
-GitLab と同様に証明書の有無で分岐しています。</p>
-
-<p>Container Registry は https を使わない場合、 insecure-registry で困ることになると思います。</p>
-
-<pre><code>if File.exist?("/etc/letsencrypt/live/#{registry_domain}/fullchain.pem")
-  registry_external_url "https://#{registry_domain}"
-  registry_nginx['redirect_http_to_https'] = true
-  registry_nginx['ssl_certificate'] = "/etc/letsencrypt/live/#{registry_domain}/fullchain.pem"
-  registry_nginx['ssl_certificate_key'] = "/etc/letsencrypt/live/#{registry_domain}/privkey.pem"
-else
-  registry_external_url "http://#{registry_domain}"
-end
-registry_nginx['custom_gitlab_server_config'] = 'location ^~ /.well-known { root /var/www/letsencrypt; }'
-</code></pre>
-
-<p>設定はしましたが、今のところ使っていません。</p>
-
-<h2>GitLab Mattermost 設定</h2>
-
-<p>GitLab Mattermost も同様に https の設定をします。</p>
-
-<pre><code>if File.exist?("/etc/letsencrypt/live/#{mattermost_domain}/fullchain.pem")
-  mattermost_scheme = "https"
-  mattermost_port = 443
-  mattermost_external_url "#{mattermost_scheme}://#{mattermost_domain}"
-  mattermost_nginx['redirect_http_to_https'] = true
-  mattermost_nginx['ssl_certificate'] = "/etc/letsencrypt/live/#{mattermost_domain}/fullchain.pem"
-  mattermost_nginx['ssl_certificate_key'] = "/etc/letsencrypt/live/#{mattermost_domain}/privkey.pem"
-  mattermost['service_use_ssl'] = true
-else
-  mattermost_scheme = "http"
-  mattermost_port = 80
-  mattermost_external_url "#{mattermost_scheme}://#{mattermost_domain}"
-end
-mattermost_nginx['custom_gitlab_mattermost_server_config'] = 'location ^~ /.well-known { root /var/www/letsencrypt; }'
-</code></pre>
-
-<p><a href="https://docs.gitlab.com/omnibus/gitlab-mattermost/#email-batching">Email Batching</a> にはポート番号付きで書いてありますが、ポート番号付きで設定していると Omnibus GitLab 9.2.0 の Mattermost で Bad token type error になってしまってログインできなくなってしまったので、ポート番号なしで設定しています。</p>
-
-<pre><code># required by Email Batching
-#mattermost['service_site_url'] = "#{mattermost_scheme}://#{mattermost_domain}:#{mattermost_port}"
-# port causes Bad token type error https://github.com/mattermost/platform/issues/6489
-mattermost['service_site_url'] = "#{mattermost_scheme}://#{mattermost_domain}"
-mattermost['email_enable_batching'] = true
-</code></pre>
-
-<p>Mattermost の方だけにアカウントを作れる必要はなかったので、 GitLab 連携のアカウントだけに制限しています。</p>
-
-<pre><code>mattermost['email_enable_sign_in_with_email'] = false # gitlab accounts only
-mattermost['email_enable_sign_up_with_email'] = false # default
-</code></pre>
-
-<p>チーム作成も GitLab のグループ作成のときに連動して作ることを想定して制限しています。
-ただし Admin Area の方からグループを作成しようとすると「Create a Mattermost team for this group」のチェックボックスが出てこないので、 Dashboard の Groups の方から New group で作成する必要があるようです。</p>
-
-<pre><code>mattermost['team_enable_team_creation'] = false
-mattermost['team_enable_user_creation'] = true # default, required by GitLab SSO
-mattermost['team_restrict_creation_to_domains'] = 'example.com'
-</code></pre>
-
-<p>デフォルトの言語設定をしておきます。</p>
-
-<pre><code>mattermost['localization_server_locale'] = 'ja'
-mattermost['localization_client_locale'] = 'ja'
-</code></pre>
-
-<p>Webhook を有効にします。
-このあたりの設定は Web UI から変更しても <code>sudo gitlab-ctl reconfigure</code> すると、こちらの設定が優先されるようです。</p>
-
-<pre><code>mattermost['service_enable_incoming_webhooks'] = true
-</code></pre>
-
-<h2>GitLab Pages</h2>
-
-<p><a href="https://docs.gitlab.com/ce/user/project/pages/index.html">GitLab Pages</a> の設定をします。</p>
-
-<p>github.io と同様にグループやユーザーのサブドメインで見えるようになるので、 xip.io や nip.io などのようなワイルドカード DNS を使うのが簡単だと思います。</p>
-
-<pre><code>pages_external_url 'http://10.0.0.10.nip.io'
-</code></pre>
-
-<p>この設定で <code>http://hello.10.0.0.10.nip.io/world/</code> などでみえるようになります。</p>
-
-<p>https を使うには証明書と秘密鍵を Web UI から設定する必要があるようなので、自動化は難しそうな印象を受けました。</p>
-
-<h2>機能制限</h2>
-
-<p>デフォルトではグループを作成できないようにしました。</p>
-
-<pre><code># GitLab user privileges
-gitlab_rails['gitlab_default_can_create_group'] = false
-gitlab_rails['gitlab_username_changing_enabled'] = false
-</code></pre>
-
-<p>すべてのプロジェクトですべての機能を使うわけではないので、デフォルトでは無効にしました。</p>
-
-<pre><code># Default project feature settings
-gitlab_rails['gitlab_default_projects_features_issues'] = false
-gitlab_rails['gitlab_default_projects_features_merge_requests'] = false
-gitlab_rails['gitlab_default_projects_features_wiki'] = false
-gitlab_rails['gitlab_default_projects_features_snippets'] = false
-gitlab_rails['gitlab_default_projects_features_builds'] = false
-gitlab_rails['gitlab_default_projects_features_container_registry'] = false
-</code></pre>
-
-<h2>certbot 実行</h2>
-
-<p>Ubuntu 16.04.2 LTS にはまだ certbot が含まれていないので、 <a href="https://launchpad.net/~certbot/+archive/ubuntu/certbot">Certbot PPA</a> から certbot パッケージをインストールして、</p>
-
-<pre><code>sudo certbot certonly --webroot --webroot-path=/var/www/letsencrypt -d gitlab.example.jp
-sudo certbot certonly --webroot --webroot-path=/var/www/letsencrypt -d registry.example.jp
-sudo certbot certonly --webroot --webroot-path=/var/www/letsencrypt -d mattermost.example.jp
-</code></pre>
-
-<p>のように証明書を発行して、</p>
-
-<pre><code>sudo gitlab-ctl reconfigure
-</code></pre>
-
-<p>で反映させました。</p>
-
-<p>後は certbot の timer で 60 日ごとに証明書が自動更新されるはずです。</p>
-
-<h2>Web から設定</h2>
-
-<p>以上で <code>/etc/gitlab/gitlab.rb</code> での設定や端末での作業は終わりなので、 Web から設定していきます。</p>
-
-<h2>グループ作成</h2>
-
-<p>Mattermost のチーム作成に必要だったので、 GitLab の Administrator (@root) ユーザーには Web UI からグループ作成権限をつけて、 Dashboard の Groups の方から New group で「Create a Mattermost team for this group」のチェックを入れてグループを作成しました。</p>
-
-<p>チェックを入れて作成しても、特にリンクなどはつかないようなので、 Group の Description に <code>https://mattermost.example.jp/</code> の URL を書いておきました。</p>
-
-<h2>GitLab からの通知用 Webhook 設定</h2>
-
-<p>Mattermost のチャンネルのサイドバー3点マークから「統合機能」を選んで「内向きのウェブフック」を追加します。
-事前に通知用にチャンネルを作成して、送信先を分離しておくと良いかもしれません。
-追加したら URL を控えておきます。</p>
-
-<p>GitLab の Admin area (上のレンチ) を開いて、右上の歯車から「Service Templates」を開きます。
-「Mattermost notifications」を選んで「Active」にチェックを入れて、「Webhook」に先ほどの URL を貼り付けます。
-できるだけ通知して欲しいので「Notify only broken pipelines」と「Notify only default branch」のチェックは外しました。
-最後に「Save」で設定を保存するとプロジェクトを作成する時に自動で通知する設定が入るようになります。</p>
-
-<h2>まとめ</h2>
-
-<p>以上で GitLab の基本的な機能は使えるようになります。
-後は GitLab CI (GitLab Runner) の設定と Dokku の設定とバックアップの設定になります。</p>
 
 <p><a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
 ]]></content>
