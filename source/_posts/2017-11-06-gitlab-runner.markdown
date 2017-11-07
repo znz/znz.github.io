@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "gitlab-ci-multi-runner パッケージから gitlab-runner パッケージへの更新"
-date: 2017-07-09 23:00:00 +0900
+date: 2017-11-06 23:00:00 +0900
 comments: true
 categories: gitlab linux ubuntu
 ---
