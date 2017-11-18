@@ -1,0 +1,336 @@
+---
+layout: post
+title: " カーネル/VM探検隊@関西 8回目に参加しました"
+date: 2017-11-18 13:00:00 +0900
+comments: true
+categories: event kernelvm
+---
+[カーネル/VM探検隊@関西 8回目](https://connpass.com/event/68374/) に参加しました。
+
+<!--more-->
+
+## 会場
+
+久しぶりに京都大学にきました。
+大統一Debian勉強会で来たのは覚えているのですが、それ以降来たことがあったかどうか思い出せませんでした。
+
+## uwabami さんによる会場説明
+
+## rui314 さんによる場つなぎ
+
+配信の準備ができるまで rui314 さんの自己紹介などの話がありました。
+
+- Accidentally Turing-Complete
+- elvm の話
+- constexpr で云々
+- Life Game 上で C コンパイラとかやってる人はまだいなさそう
+- Go 言語の話
+- Go opinionated な言語
+- template が欲しいという人向けの回答のテンプレートがある
+- language spec がある
+- ライブラリを読んでいくと勉強になる
+- (C++ の std のアルゴリズムとか読んでいくと勉強になる)
+- たまにバグを見つけてパッチを投げるとコミット権がもらえる
+- tar の生成とかを読んだりとか
+- ディレクトリ区切りは内部では `/` で扱って Windows では入出力の時に置き換えでも問題ない
+- 文字列も内部は utf-8 というのも良い
+
+- 質問受け付け
+- Google に入ったきっかけは?
+- メールが来て渋谷のセルリアンタワーにいった
+- 東京も Chrome などのプロジェクトをやっている
+- Tensorflow とか東京にプロジェクトがないものはできないなどの理由で本社へ
+
+- 最近スタンフォードの大学院にいっている
+- オンラインでフルタイムではなくできる
+- SCPD
+- ドラゴンブック: 龍がコンパイラの複雑さを表している
+- <!-- 1個の授業が70万円ぐらいだが Google が補助してくれるらしい -->毎週の宿題が難しい (授業を聴いていても難しい)
+
+13:44 で準備が完了したということで突然終了。
+
+## CODE BLUE CTF 2017で出した問題の話
+
+- CODE BLUE : 世界トップクラスのセキュリティ専門家による日本発の情報セキュリティ国際会議
+- CODE BLUE CTF 2017 : CODE BLUE で開かれたコンテストのひとつ
+
+- Simple Memo Pad (pwn)
+- CTF における pwn (pwnable) とは : 脆弱性でメモリ書き換えをして不正な動作をさせる
+- realworld での pwn の応用例 : EthernalBlue (WannaCry で使われた), BlueBorne, Jailbreak
+- どこを書き換えるとプログラムを乗っ取れる? : 関数ポインタ関連
+- `puts@plt` という仕組みの解説
+- GOT overwrite
+- データ領域に置いたコードに向ける
+- system に向ける
+- これを阻むセキュリティ機構の数々
+- NX bit (No eXecute)
+- RELRO (RELocation Read-Only) : No RELRO, Partial RELRO, Full RELRO
+- ASLR, PIE
+- ここからさらに掘り下げる
+
+- Simple Memo Pad (pwn)
+- 脆弱性: 1回だけ Buffer overflow でリンクリストを壊せる
+- 脆弱性を使ってできること: 任意の場所にメモのアドレスを1回だけ書き込める, メモの内容は攻撃者がコントロール可能
+- セキュリティ機構の有無 (ツールを使って確認できる): No RELRO, NX Enabled, ASLR Enabled, No PIE
+- GOT overwrite : NX Enabled なのでメモに置いた機械語が実行できない → NG
+- glibc 内部にある関数ポインタの配列へのポインタを上書き: ASLR で無理 → NG
+- Partial RELRO, Full RELRO の問題が多いのに No RELRO なのが不自然
+- No RELRO と Partial RELRO の違いのうち `.dynamic` セクションに注目
+- 偽の文字列テーブル strtab (.dynstr) を参照するように `.dynamic` セクションを書き換え
+- `strcmp(user_input, "y")` の代わりに `system(user_input)` が呼ばれるようにできた
+
+- fs hell (rev)
+- `printf("%d", 0);`
+- `printf("%3$d", 2, 1, 0);`
+- `printf("%3$5d", 2, 1, 0);`
+- `printf("%3$*$4d", 2, 1, 0, 5);`
+- `printf("%3$*$4d%5$n", 2, 1, 0, 5, &a);`
+- `printf("%4$.*1$d%4$.*2$d%3$n", 2, 3, &a, 0);`
+- format string で足し算ができる!
+- `./fs_hell program.txt input.txt` の `fs_hell` と `program.txt` を解析して指定した出力が出る `input.txt` を作る問題
+- `program.txt` は format string が並んだファイル
+- `fs_hell` は snprintf で処理していく
+- `fs_hell` でできること: 足し算, 引き算, 左シフト, 右シフト, ジャンプ, 条件分岐
+
+- 質疑応答
+- 他の問題についての質問
+- 作問のアイデアを思いつくタイミング
+
+## Linux + 9p = process migration
+
+- この発表ではネットワーク越しにプロセスを移動させる話
+- 計算資源の共有
+- Plan 9
+- 9P : ファイルシステム共有のためのネットワークプロトコル
+- https://github.com/pfpacket/rust-9p
+- 9P = FUSE + network transparency
+- CRIU : プロセスをダンプして保存して復帰するもの
+- 問題点: open file, network stack (state), socket, 周辺機器の状態, 通信先のプロセスなど
+- 同じファイルパスがあればシーク位置なども含めて復帰できる
+- すべてファイルで表現すれば解決
+- デモ動画は準備する時間がなかったのでなし
+- 質疑応答も質問なしで終了
+
+## ニューラルFM音源
+
+- 発表資料: [ニューラルFM音源](https://speakerdeck.com/fadis/niyurarufmyin-yuan)
+
+- FM 音源の説明
+- 含まれている倍音が変わると別の楽器の音に聞こえる
+- 周波数変調 (FM)
+- (式の説明とかゆっくりみないと理解できなさそうだった)
+- 音からパラメーターを決めるのが難しい
+- 前に発表したネタ 遺伝的FM音源 は時間がかる
+- いろいろ反響があった中の深層学習を使えば良いのでは?というのに注目
+- ニューラルネットワークの説明
+- 音のサンプル: 最初の例は違うと言われて聞くと違うっぽいとわかるぐらいの差、次の例は明らかに違う感じ
+- 位相の差はほぼ知覚できないので無視する
+- ほとんどの部分はノイズでちゃんとした音がでる範囲は限られる
+- ノイズソムリエを作ってもしょうがないので試す範囲を絞り込む
+- 深層学習
+- シグモイド関数 → ReLU
+- ResNet
+- 1台のマシンにのる限りのせても長すぎることはないんじゃないかなと予想
+- ResNet-36 の理由は GPU の VRAM の容量が 8 GB で ResNet-50 にはメモリ不足だったから
+- 遺伝的アルゴリズムに比べて結果はよくなかったが、学習済みなので、入力からパラメーターが出てくるのは高速
+
+## xHCI（USB3.0 HC）デバドラを自作してみよう
+
+- USB のデバイスドライバーの話は新規性はない?
+- 会場アンケート: 書いたことがある人は少なかった
+- Host Controller の話
+- USB 2.0 の頃は Companion Host Controller で USB 1.1 と互換性があった
+- xHCI は USB 1.1 や 2.0 の HC のデバドラがあっても無駄
+- https://github.com/liva/xhci_uio
+- なぜ作り始めたか
+- 自作 OS でネットワークと USB のサポートが必要
+- 1,2週間でできると思っていたら3ヶ月かかった
+- ユーザー空間でデバドラ開発
+- メリット: やらかしても SEGV するだけですぐに開発に戻れる, いちいち再起動せずにビルド即テスト可能, libc 使い放題
+- EHCI と xHCI は仕組みが大幅に変わっていた
+- UHCI はデバドラがパケット転送をスケジューリング
+- xHCI は全ての通信が Ring というリングバッファ的な何かで行われる
+- USB デバイスごとに slot を確保
+- Ring 自体はリングバッファではなく Link TRB を使ってリンクドリストを作る (最後の要素が別のリストへのリンクという特殊なものになっている)
+- HHKB (一部機種) はハブだったので、ハブのデバドラも必要になった
+- いろいろあったけど、動いた https://github.com/liva/xhci_uio
+- マイクがミュートされていた
+
+発表資料: https://drive.google.com/file/d/1TyEIFXcXl6kHvjXVVct-6BtYPykUdege/view
+
+## Portable Driver Architecture (PDA) でユーザ空間PCIデバイスドライバ
+
+- uio, DPDK, SPDK : ユーザー空間が流行り?
+- Portable Driver Architecture (PDA) : ユーザー空間で PCI デバイスのドライバを書くための仕組み
+- ユーザー空間デバイスドライバ: カーネル最小化, 安全性, 移植性, 高性能
+- PDA の主な目標は 移植性, 高性能
+- 必要な機能: 割り込みハンドリング, デバイスの管理, デバイスの入出力
+- PDA ができた経緯
+- PDA の利用例
+- PDA の性能
+- PDA vs DPDK
+- DPDK は NIC のパケット処理向けなので、そういう用途向け便利機能がある (Linux (`uio_pci_generic`), FreeBSD)
+- PDA は汎用で Linux 向け (`uio_pci_dma`)
+- `uio_pci_generic` : 126 行 (コメント含む)
+- `uio_pci_dma` : 1328 行 (コメント含む)
+- なぜ長いのか : sysfs に独自の I/F を提供, メモリ管理がらみ
+- DMA のためのメモリ管理 : スワップアウトして欲しくない, なるべく連続した十分な大きさの物理アドレス空間を確保したい, NUMA 環境下ではソケットの境界を超えてほしくない
+- 単に malloc しただけではうまくいかない
+- PDA のメモリ管理戦略 : カーネルモジュールが DMA バッファを用意するなど
+- wrap-mapping : カーネルで確保したリングバッファを2度繰り返してメモリ空間にマップ
+- upstream のものは最近のカーネルでは動かなかった https://github.com/kdiff3/pda
+- CERN ALICE (動いた) https://github.com/AliceO2Group/pda や FAIR CBM https://github.com/cbm-fles/pda のは最近でもメンテナンスされている
+
+- 質疑応答
+- `uio_pci_dma` をメインラインに入れようという動きはない
+- fork も徐々にコードが離れていってしまっているかも
+
+## VMM食べ比べ / KVM vs AHF vs HAXM
+
+- 未踏2016 で Noah という Mac で ELF を動かすものを作った時に VMM を使った
+- Virtual Machine Monitor
+- Libisolation : Noah を応用したサンドボックス
+- Noah on Windows
+- OS が全部違う
+- qemu-kvm ではなくカーネルモジュール部分の話
+- 参加者から2名ほど選んで需要を調査
+- そもそもの最近の VM の仕組み
+- KVM
+- Apple Hypervisor Framework (AHF)
+- Intel HAXM : Android エミューレーターの高速化モジュールとして有名
+- 4スライドでわかる VMM の作り方
+- 詳細は [ハイパーバイザの作り方](http://syuu1228.github.io/howto_implement_hypervisor/) 参照
+- AHF, KVM, HAXM の順でだいたい柔軟性が高く使いやすい
+- ドキュメントはほぼない
+- VM はデバッグがつらい
+- EPT の活用 : ゲストとホストのメモリアドレスのマッピング
+- 例外ハンドリング
+- AHF が一番柔軟性が高く OS を自由に選べるならおすすめ
+- 普通の VM を作るのなら KVM, HAXM でも十分
+- HAXM はドキュメントがないので初めての VMM としてはやめておけ
+
+- HAXM の機能についてはどうやって調べたのか?
+- API の構造体などをみて AHF や KVM の経験と勘から
+- 偽陰性の可能性はある
+
+## Blend XMODEM 〜UEFI de XMODEM〜
+
+- 発表資料: [Blend XMODEM -UEFI de XMODEM-/KernelvmKansai8](https://speakerdeck.com/tnishinaga/kernelvmkansai8)
+- (ハシビロコウのマスクを被って発表かと思いきや、息苦しいということですぐに脱いだ)
+- AARCH64 ボードの話
+- UEFI から起動する OS もどきを作ってみたい
+- リモートからプログラムを送りたい
+- 送る方法: シリアル転送, ネットワークブート
+- XMODEM を選択
+- XMODEM のプロトコルの説明
+- UEFI の文字コードは UTF-16 で 1 byte read/write はどうする? → SERIAL IO PROTOCOL を使う
+- 一定時間ごとに受信待ちループを解除して NAK 送信? (UEFI は割り込み処理が大変) → `SERIAL_IO_PROTOCOL` の SetAttributes でタイムアウト設定
+- デバッグ? シリアルはすでに使っていて、どこで printf debug? → シリアルを2本生やす
+- qemu の AARCH64 だとシリアルが2本生えない → `x86_64` の QEMU に生やす
+- minicom vs tmux : pts を奪い合う
+- データが受け取れずに NAK を送り続ける → タイムアウト数回繰り返してからにした
+- 実機で動かない
+- デバッグしたいがシリアル1本しかない → ファイルに書き出せば良い
+- 書き込んだ文字が文字化け → ファームウェアをアップデート
+- ダウンロードするファイルがわかりづらい
+- grub が勝手に起動して UEFI shell に落ちない
+- ログが取れるようになったところで時間切れ
+
+## インサイドNintendo Switch
+
+- Hardware spec とか Software spec とか
+- FreeBSD は使われていない
+- NSO バイナリフォーマット
+- NRO バイナリフォーマット (NRR に正規の署名があるものしかロードできない)
+- MOD バイナリフォーマット : NRO や NSO 内に埋め込まれている動的リンクに必要な情報を管理する専用領域
+- Homebrew ソフトウェア
+- ReSwitched Team https://github.com/reswitched
+- 解析ツール : ELF に変換するツールはあったが直接ディスアセンブルするツールはなかった
+- 今は radare2 が対応
+- セキュリティ事情
+- (WebKit は無限に脆弱性が)
+- エミュレータ NSEMU を開発中
+- 今後の課題
+- 発表資料: [インサイドNintendo Switch](https://speakerdeck.com/rkx1209/insaidonintendo-switch)
+
+## Unikernels report
+
+- 発表資料: [Unikernel report](https://speakerdeck.com/orumin/unikernel-report)
+- Unikernel とは?
+- 会場では知っている人はほとんどいなかった
+- OSv とか
+- 最近の Unikernel
+- RumpRun
+- IncludeOS
+- EbbRT
+- LightVM
+- ("My VM is Lighter (and Safer) than your Container" という煽り文句から your がなくなっていた)
+- 試そうとしたらカーネルコンフィグが悪かったのかうまくいかなかった
+- まとめ
+
+- 質疑応答
+- ミラージュ OS はスコープ外? → Unikernel の元になったものなのでスコープ外というか前提
+
+## RISC-V ユーザランド ISA
+
+- RISC-V はフツー
+- 命令の個別の簡単な説明
+- hart : ハードウェア・スレッド
+
+## lld: 速くてシンプルなリンカ
+
+- https://github.com/rui314/8cc
+- goo.gl/kTwXem
+- lld の実装状況
+- ELF (Unix), COFF (Windows), Mach-O (macOS) をサポート
+- lld/ELF はプロダクションクオリティ
+- FreeBSD は GPL 3 のものをメインに入れない都合でリンカーが古かったところに lld が出て来たので使われるように
+- Chrome が移行中, Firefox, Rust なども移行中っぽい
+- RISC-V と WebAssembly のような珍しいものもある
+- WebAssembly のリンカーは今までなかった
+- lld/COFF は PDB デバッグ情報を含めプロダクションクオリティ
+- lld/Mach-O は未完成
+- デザインゴール : シンプル, 速い, 使うのが簡単
+- /usr/bin/ld を置き換える (勇気が必要)
+- clang で "-fuse-ld=lld" オプション
+- 質問: リンカースクリプトも同じものが使える? → ほぼ使える (が、そもそも GNU のリンカーも2個あって互換性が完全ではない)
+- GNU binutils には bfd と gold という2つのリンカーが入っている
+- bfd は ELF より前からあり抽象化レイヤーがある
+- gold は bfd より速いリンカーとして登場
+- lld も速いリンカーとして開発された
+- 比較グラフ
+- コードを最適化したくはない、自然に速く動くコードを書きたい
+- 問題の規模 : Chrome (デバッグ情報付き) は 2 GiB ほど
+- シンボル処理で1マイクロ秒増えると6秒増える
+- シンボルテーブルのルックアップが重いので減らす
+- 並行処理
+- シングルスレッドでも速い方が良い
+- 再現可能なリンクのために出力は決定論的な方が良い
+- マルチスレッド化
+- 入力から出力にコピーとリロケーションはマルチスレッドにできる
+- 文字列マージの並行処理はトリッキー。単に正しい出力を作るのは簡単だが、毎回同じ出力にするのは難しい。
+- ハッシュ値の計算は終わった状態で、下位ビットでシャーディング
+- コードの行数は gold より少ない
+- gold はアーキテクチャ依存部分が大きい、作りも凝ったことをしているので複雑
+- エラーメッセージ: clang が C++ のエラーメッセージクオリティを引き上げたのと同じようなことがしたかった
+- セマンティックスの違い
+- 伝統的な Unix リンカーでは順番が重要だったが、順番を気にしなくてもよくした
+- FreeBSD 全体でも少ししか失敗しなかったので、大きな問題はなかった
+- リンク時最適化
+- clang で `C{,XX}FLAGS=-flto` と `LDFLAGS=-fuse=lld` をコンパイラフラグに追加するだけ
+- クロスリンク
+- すべてのターゲットが常にサポート
+- クロスビルドツールチェインで lld を使うのが簡単になるはず
+- ホスト環境に出力が依存しない
+
+- OpenBSD では起動ごとに ASLR よりももっとランダムにしたいという話があるらしい。
+- 質疑応答
+- GPL 3 なのが理由で macOS では bash が古いままだが、同じ理由で lld に需要がある? → そもそも ld64 が GNU のものではないので関係ない
+- そもそも情報源は? → まず Microsoft が出している仕様をみて、何もしない Windows プログラムを作って、 Hello world ぐらいを作って、と順番にやっていった。 ELF もドキュメントがある。 Linkers & Loaders は良い本なので、古い部分もあるが参考になる。既存のリンカーのソースコードも参考になる。 MIPS がひどい。
+
+## まとめ
+
+京都 (大学) は遠いですが、面白かったので行ってよかったと思いました。
+
+リンカーはデフォルトがどっちなのか確認して、 bfd だったら gold を使うように変更してみようかなと思いました。
+lld は Debian に入っているのが buster (今の testing) からで、 stretch (今の stable) には入っていないようなので、使うのはまだ先かなと思いました。
