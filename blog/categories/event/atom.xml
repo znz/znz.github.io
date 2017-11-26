@@ -4,7 +4,7 @@
   <title><![CDATA[Category: event | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/event/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-11-24T00:58:17+09:00</updated>
+  <updated>2017-11-26T21:52:24+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,258 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第 129 回関西 Debian 勉強会 に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-11-26-kansai-debian-meeting.html"/>
+    <updated>2017-11-26T21:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/kansai-debian-meeting</id>
+    <content type="html"><![CDATA[<p><a href="https://wiki.debian.org/KansaiDebianMeeting/20171126">第 129 回関西 Debian 勉強会</a> に参加しました。
+一般ユーザー権限で LXC を使ってみるという内容でした。</p>
+
+<!--more-->
+
+
+<h2>会場</h2>
+
+<p>いつもの福島区民センターでした。</p>
+
+<h2>事前課題</h2>
+
+<pre><code> lxc libvirt0 libpam-cgroup libpan-cgroup libpam-cgfs bridge-utils
+</code></pre>
+
+<p>とあったうち libpan-cgroup というのは間違いだったようです。</p>
+
+<p><a href="https://wiki.debian.org/LXC">https://wiki.debian.org/LXC</a> 参照。</p>
+
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/Eucalyptus_%28software%29">Eucalyptus (software)</a> は開発が止まっている?</li>
+<li><a href="https://ja.wikipedia.org/wiki/Xen_%28%E4%BB%AE%E6%83%B3%E5%8C%96%E3%82%BD%E3%83%95%E3%83%88%E3%82%A6%E3%82%A7%E3%82%A2%29#Hyper-V.E3.81.A8.E3.81.AE.E9.96.A2.E4.BF.82">Hyper-Vとの関係</a> によると Microsoft と XenSource は共同でやっているかも。</li>
+</ul>
+
+
+<h2>仮想化について</h2>
+
+<p><a href="http://www.kernelvm.org/ima-made-no-matome/kaneru-vm-mian-qiang-hui-guan-xi-qino-can">カーネル/VM勉強会@関西 其の参 - カーネル／VM探検隊</a> から「BHyVeってなんや」を参考にしながら概要を解説</p>
+
+<h2>Debian Stretch で LXC を使う</h2>
+
+<ul>
+<li>vagrant で <a href="https://app.vagrantup.com/bento/boxes/debian-9.2">bento/debian-9.2</a> の box を使って試しました</li>
+<li>lxc-net を有効にするために <code>/etc/default/lxc</code> で <code>USE_LXC_BRIDGE="true"</code> に変更 (Debian Wiki は記述が古い (testing の時のパッケージが変更途中の内容?) のか <code>/etc/default/lxc-net</code> と書いてあるがそんなファイルはなかった)</li>
+<li>lxc-net の変更を反映するために再起動した (<code>sudo systemctl start lxc-net</code> とかでも反映できるかもしれないが未確認)</li>
+<li><code>lxc-checkconfig</code> でチェック (今の安定版は全部緑の enabled になるはず (昔はカーネルが対応していなくてダメなものがあったはず) )</li>
+<li><code>sudo sh -c 'echo "kernel.unprivileged_userns_clone=1" &gt; /etc/sysctl.d/80-lxc-userns.conf'</code></li>
+<li><code>sudo sysctl --system</code></li>
+<li><p><code>kernel.unprivileged_userns_clone</code> の設定は Debian 固有のパッチの設定らしい? (1の方がバニラカーネルのデフォルト動作っぽい?)</p></li>
+<li><p><code>sudo usermod --add-subuids 1258512-1324047 $USER</code> と <code>sudo usermod --add-subgids 1258512-1324047 $USER</code> はしなくても <code>/etc/subuid</code> と <code>/etc/subgid</code> に入っていた (<code>usermod</code> の引数は端の値の指定で <code>/etc/sub[ug]id</code> ファイルに書かれているのは開始 id と個数で別の意味なので注意)</p></li>
+</ul>
+
+
+<pre><code>vagrant@debian-9:~$ cat /etc/subuid
+vagrant:100000:65536
+vagrant@debian-9:~$ cat /etc/subgid
+vagrant:100000:65536
+</code></pre>
+
+<ul>
+<li><code>echo "$USER veth lxcbr0 10"| sudo tee -i /etc/lxc/lxc-usernet</code> で一般ユーザー権限で作成できるブリッジの数を制限するらしい (<code>lxcbr0</code> の部分はブリッジ名依存)</li>
+<li><code>mkdir -p .config/lxc</code></li>
+<li><code>.config/lxc/default.conf</code> を作成</li>
+<li><code>id_map</code> の部分は subuid と subgid と同じ値にする必要あり</li>
+<li><code>lxcbr0</code> の部分も <code>ip</code> コマンドなどで確認して合わせる必要あり</li>
+</ul>
+
+
+<pre><code>vagrant@debian-9:~$ cat .config/lxc/default.conf
+lxc.include = /etc/lxc/default.conf
+# Subuids and subgids mapping
+lxc.id_map = u 0 100000 65536
+lxc.id_map = g 0 100000 65536
+# "Secure" mounting
+lxc.mount.auto = proc:mixed sys:ro cgroup:mixed
+
+# Network configuration
+lxc.network.type = veth
+lxc.network.link = lxcbr0
+lxc.network.flags = up
+#lxc.network.hwaddr = 00:16:3e:xx:xx:xx
+</code></pre>
+
+<ul>
+<li>hwaddr は <a href="https://ja.wikipedia.org/wiki/MAC%E3%82%A2%E3%83%89%E3%83%AC%E3%82%B9">MACアドレス</a> 参照</li>
+<li>コメントアウトしてみると自動設定になった</li>
+</ul>
+
+
+<h2>lxc-create</h2>
+
+<p>特権だと <code>/var/lib/lxc</code> を使われるが、一般ユーザー権限だと普通は書き込めないのでディレクトリ指定をする必要あり (絶対パスじゃないとダメらしい)</p>
+
+<pre><code>vagrant@debian-9:~$ lxc-create -n stretch -t download -P ~/work/lxc
+Setting up the GPG keyring
+Downloading the image index
+
+---
+DIST    RELEASE ARCH    VARIANT BUILD
+---
+(略)
+debian  stretch amd64   default 20171124_22:42
+(略)
+---
+Distribution: debian
+Release: stretch
+Architecture: amd64
+
+Downloading the image index
+Downloading the rootfs
+Downloading the metadata
+The image cache is now ready
+Unpacking the rootfs
+
+---
+You just created a Debian container (release=stretch, arch=amd64, variant=default)
+
+To enable sshd, run: apt-get install openssh-server
+
+For security reason, container images ship without user accounts
+and without a root password.
+
+Use lxc-attach or chroot directly into the rootfs to set a root password
+or create user accounts.
+vagrant@debian-9:~$
+</code></pre>
+
+<h2>起動</h2>
+
+<pre><code>vagrant@debian-9:~$ lxc-ls --fancy -P ~/work/lxc
+NAME    STATE   AUTOSTART GROUPS IPV4 IPV6
+stretch STOPPED 0         -      -    -
+vagrant@debian-9:~$ lxc-start -d -n stretch -P ~/work/lxc
+vagrant@debian-9:~$ lxc-ls --fancy -P ~/work/lxc
+NAME    STATE   AUTOSTART GROUPS IPV4 IPV6
+stretch RUNNING 0         -      -    -
+vagrant@debian-9:~$ lxc-ls --fancy -P ~/work/lxc
+NAME    STATE   AUTOSTART GROUPS IPV4       IPV6
+stretch RUNNING 0         -      10.0.3.146 -
+</code></pre>
+
+<h2>接続して動作確認</h2>
+
+<pre><code>vagrant@debian-9:~$ lxc-attach -n stretch
+You lack access to /home/vagrant/.local/share/lxc
+vagrant@debian-9:~$ lxc-attach -n stretch -P ~/work/lxc
+root@stretch:/# apt update
+...
+1 package can be upgraded. Run 'apt list --upgradable' to see it.
+root@stretch:/# ls -al /var/lib/apt/lists/
+total 65872
+drwxr-xr-x 3 root root     4096 Nov 26 06:32 .
+drwxr-xr-x 5 root root     4096 Nov 24 22:47 ..
+-rw-r--r-- 1 root root 38923281 Oct  7 09:04 deb.debian.org_debian_dists_stretch_main_binary-amd64_Packages
+-rw-r--r-- 1 root root 26443489 Oct  7 09:04 deb.debian.org_debian_dists_stretch_main_i18n_Translation-en
+-rw-r--r-- 1 root root   117945 Oct  7 09:46 deb.debian.org_debian_dists_stretch_Release
+-rw-r--r-- 1 root root     2479 Oct  7 09:52 deb.debian.org_debian_dists_stretch_Release.gpg
+-rw-r----- 1 root root        0 Nov 26 06:32 lock
+drwx------ 2 _apt root     4096 Nov 26 06:32 partial
+-rw-r--r-- 1 root root    62959 Nov 25 10:01 security.debian.org_dists_stretch_updates_InRelease
+-rw-r--r-- 1 root root  1257072 Nov 21 22:08 security.debian.org_dists_stretch_updates_main_binary-amd64_Packages
+-rw-r--r-- 1 root root   624275 Nov 21 22:08 security.debian.org_dists_stretch_updates_main_i18n_Translation-en
+root@stretch:/# exit
+vagrant@debian-9:~$ ls -al ~/work/lxc/stretch/rootfs/var/lib/apt/lists/
+total 65872
+drwxr-xr-x 3 100000 100000     4096 Nov 26 06:32 .
+drwxr-xr-x 5 100000 100000     4096 Nov 24 22:47 ..
+-rw-r--r-- 1 100000 100000 38923281 Oct  7 09:04 deb.debian.org_debian_dists_stretch_main_binary-amd64_Packages
+-rw-r--r-- 1 100000 100000 26443489 Oct  7 09:04 deb.debian.org_debian_dists_stretch_main_i18n_Translation-en
+-rw-r--r-- 1 100000 100000   117945 Oct  7 09:46 deb.debian.org_debian_dists_stretch_Release
+-rw-r--r-- 1 100000 100000     2479 Oct  7 09:52 deb.debian.org_debian_dists_stretch_Release.gpg
+-rw-r----- 1 100000 100000        0 Nov 26 06:32 lock
+drwx------ 2 100104 100000     4096 Nov 26 06:32 partial
+-rw-r--r-- 1 100000 100000    62959 Nov 25 10:01 security.debian.org_dists_stretch_updates_InRelease
+-rw-r--r-- 1 100000 100000  1257072 Nov 21 22:08 security.debian.org_dists_stretch_updates_main_binary-amd64_Packages
+-rw-r--r-- 1 100000 100000   624275 Nov 21 22:08 security.debian.org_dists_stretch_updates_main_i18n_Translation-en
+</code></pre>
+
+<h2>NAT</h2>
+
+<p><a href="https://wiki.debian.org/LXC/SimpleBridge">https://wiki.debian.org/LXC/SimpleBridge</a> の</p>
+
+<pre><code>up iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
+</code></pre>
+
+<p>は</p>
+
+<pre><code>down iptables -t nat -D POSTROUTING -o wlan0 -j MASQUERADE
+</code></pre>
+
+<p>もないと up down を繰り返すと増えそう。</p>
+
+<p>lxc-net で試した環境は自動で NAT 設定が入っていた。</p>
+
+<pre><code>vagrant@debian-9:~$ sudo iptables -nL -t nat
+Chain PREROUTING (policy ACCEPT)
+target     prot opt source               destination
+
+Chain INPUT (policy ACCEPT)
+target     prot opt source               destination
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination
+
+Chain POSTROUTING (policy ACCEPT)
+target     prot opt source               destination
+MASQUERADE  all  --  10.0.3.0/24         !10.0.3.0/24
+</code></pre>
+
+<h2>停止</h2>
+
+<p>資料にはなかったけど、個人的に停止と削除も試しました。</p>
+
+<pre><code>vagrant@debian-9:~$ lxc-stop -n stretch -P ~/work/lxc
+vagrant@debian-9:~$ lxc-ls --fancy -P ~/work/lxc
+NAME    STATE   AUTOSTART GROUPS IPV4 IPV6
+stretch STOPPED 0         -      -    -
+</code></pre>
+
+<h2>削除</h2>
+
+<pre><code>vagrant@debian-9:~$ lxc-destroy -n stretch -P ~/work/lxc
+Destroyed container stretch
+vagrant@debian-9:~$ lxc-ls --fancy -P ~/work/lxc
+vagrant@debian-9:~$ ls work/lxc/
+lxc-monitord.log
+</code></pre>
+
+<h2>休憩中の話</h2>
+
+<ul>
+<li><a href="https://www.ubuntu.com/server/maas">https://www.ubuntu.com/server/maas</a></li>
+</ul>
+
+
+<h2>ネットワーク図</h2>
+
+<ul>
+<li>ネットワーク図を書いて議論</li>
+<li><a href="https://twitter.com/YukiharuYABUKI/status/934688472845058054">https://twitter.com/YukiharuYABUKI/status/934688472845058054</a></li>
+</ul>
+
+
+<h2>次回</h2>
+
+<ul>
+<li>2017/12/24(日)</li>
+</ul>
+
+
+<h2>まとめ</h2>
+
+<p>発表者の佐々木さんが病欠で、時間に余裕があったので、資料や Wiki の記述や不足点などをツッコミを入れたりするような感じになっていました。
+その後は、ネットワーク図を書いて色々と議論をして、少し早めに終わりました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ カーネル/VM探検隊@関西 8回目に参加しました]]></title>
@@ -886,194 +1138,6 @@ lld は Debian に入っているのが buster (今の testing) からで、 str
 <li>募集は 2017.10.30 10:00から</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第79回 Ruby関西 勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-10-07-rubykansai79.html"/>
-    <updated>2017-10-07T14:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubykansai79</id>
-    <content type="html"><![CDATA[<p><a href="https://rubykansai.doorkeeper.jp/events/65609">第79回 Ruby関西 勉強会</a>
-に参加しました。</p>
-
-<!--more-->
-
-
-<p>以下、そのメモです。</p>
-
-<h2>会場</h2>
-
-<p>今回は amagasakirb でよく来ていた尼崎市立小田公民館でした。</p>
-
-<p>プロジェクターは 800x600 でした。</p>
-
-<h2>How to specify <code>frozen_string_literal: true</code></h2>
-
-<p>発表資料は RubyKaigi 2017 で使ったものと同じで、 <a href="https://github.com/znz/rubykaigi2017-frozen_string_literal">github</a>, <a href="https://slide.rabbit-shocker.org/authors/znz/rubykaigi2017-how-to-specify-frozenstringliteral-true/">Rabbit Slide Show</a>, <a href="https://www.slideshare.net/znzjp/how-to-specify-frozenstringliteral-true">slideshare</a>, <a href="https://speakerdeck.com/znz/how-to-specify-frozen-string-literal-true">Speaker Deck</a>, <a href="https://rubygems.org/gems/rabbit-slide-znz-rubykaigi2017-frozen_string_literal">RubyGems</a> にあげているものを、 <code>allotted-time</code> を 5m から 10m に変更して使いました。</p>
-
-<iframe src="https://slide.rabbit-shocker.org/authors/znz/rubykaigi2017-frozen_string_literal/viewer.html"
-        width="640" height="524"
-        frameborder="0"
-        marginwidth="0"
-        marginheight="0"
-        scrolling="no"
-        style="border: 1px solid #ccc; border-width: 1px 1px 0; margin-bottom: 5px"
-        allowfullscreen> </iframe>
-
-
-<div style="margin-bottom: 5px">
-  <a href="https://slide.rabbit-shocker.org/authors/znz/rubykaigi2017-frozen_string_literal/" title="How to specify `frozen_string_literal: true`">How to specify `frozen_string_literal: true`</a>
-</div>
-
-
-<h2>西谷さんの文書管理の話</h2>
-
-<ul>
-<li>会場アンケート: 初参加の人が多かった</li>
-<li>OSS Gate で rubocop にバグ報告したら直してもらえた <a href="https://github.com/bbatsov/rubocop/issues/4644">https://github.com/bbatsov/rubocop/issues/4644</a></li>
-<li><a href="https://ja.wikipedia.org/wiki/%E5%8F%8C%E6%9B%B2%E5%89%B2%E5%BC%95">双曲割引</a></li>
-<li>今18万円もらうか、1年後に20万円もらうか</li>
-<li>2年後に18万円もらうか、3年後に20万円もらうか</li>
-<li>マシュマロテスト</li>
-<li>既知感</li>
-<li>記憶
-
-<ul>
-<li>記述記憶</li>
-<li>非記述記憶
-
-<ul>
-<li>身体的記憶</li>
-<li>経験記憶</li>
-<li>場所の記憶</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>文書管理</li>
-<li>文書管理の原則: 決める, 見える, tight binding, 利用する</li>
-<li>会場に質問 → markdown や org-mode でメモしている人がいた<!-- e-文書法 関連の仕事をしているという人がいた --></li>
-<li>おすすめの本は? → <a href="http://amzn.to/2hT6Qdq">野口 悠紀雄の「超」整理法</a>, あとはだいたい失敗している</li>
-<li>日付で整理している人は多い</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>14:45 まで休憩</li>
-</ul>
-
-
-<h2>もう放置しない！画面遷移図の作り方</h2>
-
-<ul>
-<li>今までの発表中に急遽発表資料を作った</li>
-<li>Sky Grid の山本さん</li>
-<li>西谷さんのところの卒業生</li>
-<li>急いでショッピングサイトを作っていて、急遽画面遷移が必要になった</li>
-<li>移動中に UI Flows というのをみつけた</li>
-<li>手書き or ホワイトボード ? (or Excel ?)</li>
-<li>おうおうにして放置される</li>
-<li>guiflow というものをみつけた</li>
-<li><a href="https://qiita.com/hirokidaichi/items/ff54a968bdd7bcc50d42">もう保守されない画面遷移図は嫌なので、UI Flow図を簡単にマークダウンぽく書くエディタ作った</a></li>
-<li>質疑応答</li>
-<li>rails なら routes から自動生成できないか?</li>
-<li>画面遷移図を先に作るのなら無理そう</li>
-<li>漏れをなくすよりも主要な遷移だけにしたい?</li>
-<li>feature テストからならできそう?</li>
-</ul>
-
-
-<h2>RubyKaigi 2017 のキーノート紹介</h2>
-
-<ul>
-<li>なかださんの発表</li>
-<li>事務処理できる人がいなくなった</li>
-<li>概要</li>
-<li>Subversion を使っていて、なぜ Git を使わないのかという話</li>
-<li>新機能/課題の管理: Redmine で管理している</li>
-<li>開発者会議: 月1回</li>
-<li>Ruby のビルドの仕方</li>
-<li>バグフィックスの事例</li>
-<li>Ruby は「簡単な文法」だと「錯覚」させている</li>
-<li><a href="http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-list/50578">[ruby-list:50578] [質問] 変数pが定義されている時のabsの動作について</a></li>
-<li><code>String#intern</code> と refinements の話</li>
-<li>Ruby 2.5 の新機能の話</li>
-<li>右代入についても話題になっている</li>
-<li>感想: もっと「Rubyを」いじってね、ということだと思った</li>
-<li><a href="https://codeiq.jp/magazine/2017/09/53932/">Rubyのなかを覗いてみよう！「Cookpad Ruby Hack Challenge」に参加してみた</a></li>
-<li><p><a href="https://github.com/ko1/rubyhackchallenge">https://github.com/ko1/rubyhackchallenge</a></p></li>
-<li><p>GitPitch というのを使ってスライドを作っている</p></li>
-<li><a href="https://github.com/urimaro/79th_workshop_1">https://github.com/urimaro/79th_workshop_1</a></li>
-<li><a href="https://gitpitch.com/urimaro/79th_workshop_1">https://gitpitch.com/urimaro/79th_workshop_1</a></li>
-<li><a href="https://github.com/urimaro/79th_workshop_2">https://github.com/urimaro/79th_workshop_2</a></li>
-<li><p><a href="https://gitpitch.com/urimaro/79th_workshop_2">https://gitpitch.com/urimaro/79th_workshop_2</a></p></li>
-<li><p>Matz のキーノート</p></li>
-<li>概要: module について</li>
-<li>RubyKaigi について</li>
-<li>RubyConf より大きい</li>
-<li>module の話</li>
-<li>単一継承</li>
-<li>多重継承 (C3アルゴリズム)</li>
-<li>Mixin の話</li>
-<li>module の使われ方</li>
-<li>Mixin 以外の使われ方もするようになった</li>
-<li>namespace とか</li>
-<li>alias method chain は2回呼び出すと壊れる</li>
-<li><code>Module#prepend</code> の登場</li>
-<li>CLOS の method combination が実現できる</li>
-<li>aspect 指向プログラミングを実現できる</li>
-<li>refinements</li>
-<li>Structural signature</li>
-<li>質疑応答</li>
-<li>prepend は外せないという話があったが include も外せない? → たぶん外せない</li>
-<li>Rails の concern と helper の使い分け? → まだ helper の方がよく使われていて concern はそんなに使われていない?</li>
-</ul>
-
-
-<h2><a href="https://qiita.com/yuyakato">Kato Yuya</a> さん</h2>
-
-<ul>
-<li>概要: zeromq, GitHub, ハードウェア工作</li>
-<li>GitHub の private repo の issues で色々管理している</li>
-<li>ベッド型体重計: 9月にベッドを買い直したのをきっかけに再度挑戦開始</li>
-<li>zeromq というライブラリの紹介</li>
-<li>コネクションの方向と中身の通信の方向の自由度が高い (Pub-Sub のどちらからの接続開始でも良いなど)</li>
-<li>zeromq は対応言語が多いので言語の勉強にもおすすめ</li>
-<li>Pub-Sub とかも簡単にかける</li>
-<li>ロードセル専用のアンプモジュールが安価に手に入るようになった</li>
-<li>水のペットボトルで校正</li>
-<li>校正は大変なので、体重計はよくできているなあと感じた</li>
-<li>GitHub 上で 3D データもプレビューできる</li>
-<li>UDP のデータを zeromq に流すのに久しぶりに ruby を書いた</li>
-<li><p>後の処理はデータ処理の都合により python</p></li>
-<li><p>質疑応答</p></li>
-<li>製品化はしないんですか? → 製品化する予定はない。情報は全部公開する予定</li>
-<li>pycall は使わない? → 無理に ruby にする必要はなさそう</li>
-<li>ruby だとターミナルで作業することが多いが python だと jupyter で完結することが多いと感じているがどうか? → テストコードを書くような部品化できる部分は別ファイルにする、適材適所で使っている</li>
-</ul>
-
-
-<h2>Ruby初級者向けレッスン 63回 ─ Array と Hash</h2>
-
-<p>今回は初心者の人も多かったようです。</p>
-
-<h2>RubyKaigi 2017 のノベルティプレゼント</h2>
-
-<p>トートバッグなどの RubyKaigi 2017 の入り口で配布していたノベルティの一部を、今年もRuby関西のスタッフの人があらかじめいくつかもらってきていたのをプレゼントしていました。</p>
-
-<p>トートバッグは、広島なので瀬戸内海と四国が見えてるようなデザインなのかなと思っていたら <a href="https://twitter.com/is8r_/status/909752063323754496">https://twitter.com/is8r_/status/909752063323754496</a> ということだったらしいです。
-プレゼントの時にこのヒントを紹介しようかと思っていたら、時間がなかったので、できませんでした。</p>
-
-<h2>感想</h2>
-
-<p>今回は、本当に開催するかどうかを RubyKaigi 2017 の会期中に相談するなど、最終的な開催の決定から開催までの時間が短かったからか、いつもと比べて参加人数は少なめでしたが、初参加の人や初心者の人が多かったので、開催して非常によかったと思いました。</p>
-
-<p>発表内容も事前発表していたもの以外は RubyKaigi 2017 の振り返りをのんびりやって終わるのかなと思っていたら、当日発表者を募集したら3名も発表してくれる人が出てきて、時間が足りないぐらいになっていました。</p>
-
-<p>だいたい2ヶ月ごとに開催されていますが、次回は12月に開催されるかどうかはまだ未定なので、来年になるかもしれません。</p>
 ]]></content>
   </entry>
   
