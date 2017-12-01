@@ -4,7 +4,7 @@
   <title><![CDATA[Category: shell | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/shell/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-11-26T21:52:24+09:00</updated>
+  <updated>2017-12-02T02:05:30+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,141 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[shellcheck を使おう]]></title>
+    <link href="http://blog.n-z.jp/blog/2017-12-02-shellcheck.html"/>
+    <updated>2017-12-02T02:02:02+09:00</updated>
+    <id>http://blog.n-z.jp/blog/shellcheck</id>
+    <content type="html"><![CDATA[<p>シェルスクリプトを書くのなら shellcheck という lint ツールでチェックしましょう、というお話です。
+(<a href="https://qiita.com/znz/items/63a3d581e8ed6ff11b8e">Qiita の Shell Script Advent Calendar 2017 2日目</a> に投稿したものと同じ内容です。)</p>
+
+<!--more-->
+
+
+<h2>題材</h2>
+
+<p>先月<a href="https://qiita.com/piroor/items/77233173707a0baa6360">Shell Script Advent Calendar 2016 8日目のプログラマーの君！ 騙されるな！ シェルスクリプトはそう書いちゃ駄目だ！！ という話</a>がいいね数ランキングで上位にきていたこともあり、<a href="https://github.com/piroor/tweet.sh">piroor/tweet.sh</a> を例に使いたいと思います。</p>
+
+<h2>shellcheck の準備</h2>
+
+<p>macOS なら <code>brew install shellcheck</code> とか、 Debian や Ubuntu なら <code>sudo apt install shellcheck</code> とかでインストールできます。
+ちょっと試すだけなら <a href="https://www.shellcheck.net/">https://www.shellcheck.net/</a> でもできるようです。</p>
+
+<h2>ソースの準備</h2>
+
+<p>clone して中に移動します。</p>
+
+<ul>
+<li><code>git clone https://github.com/piroor/tweet.sh</code></li>
+<li><code>cd tweet.sh</code></li>
+</ul>
+
+
+<p>最新だと直っているものもあるので、2016年の11月末のバージョンにします。</p>
+
+<ul>
+<li><code>git checkout 72c657e15c2cb3ea868d1a4e4061d80d0db6adb7</code></li>
+</ul>
+
+
+<p>detached HEAD になるため、いろいろメッセージがでますが、コミットするのでなければ気にしなくて構いません。
+後で <code>git checkout master</code> か <code>git checkout -</code> で master ブランチに戻れます。</p>
+
+<!--
+git checkout '@{2016-12-01}' にしていたらうまくいかなかったので変更したら、以下の文が無関係になってしまった。
+
+個人的には、ブレース展開を避けるために `{}` を含む引数は常にクオートするようにしていますが、この例の場合は展開されないのでクオートしなくても良いようです。
+大丈夫かどうか考えるのが面倒なら、そのまま渡したい場合は常にクオートする方が考えるのが楽です。
+-->
+
+
+<h2>チェックしてみる</h2>
+
+<p><code>shellcheck tweet.sh</code> で実行してみるとたくさん出ます。</p>
+
+<p><code>shellcheck --format=gcc tweet.sh | wc -l</code> でカウントしてみたところ、ちょうど 100 でした。</p>
+
+<p>多すぎるので多いものはとりあえず無視していきます。</p>
+
+<ul>
+<li><code>shellcheck -e SC2155 tweet.sh</code></li>
+<li><code>shellcheck -e SC2155,SC2086 tweet.sh</code></li>
+</ul>
+
+
+<p>まだ多いです。</p>
+
+<p>頻出するのを無視していった結果、このくらい残りました。</p>
+
+<pre><code>%  shellcheck -e SC2155,SC2086,SC2196,SC2166,SC2164,SC2001,SC1090 tweet.sh
+
+In tweet.sh line 38:
+tmp="/tmp/$$"
+^-- SC2034: tmp appears unused. Verify it or export it.
+
+
+In tweet.sh line 257:
+    while read -r tweet; do echo "found!: ${tweet}"; done
+                                          ^-- SC2154: tweet is referenced but not assigned.
+
+
+In tweet.sh line 642:
+    [ $? != 0 ] &amp;&amp; continue;
+      ^-- SC2181: Check exit code directly with e.g. 'if mycmd;', not indirectly with $?.
+
+
+In tweet.sh line 1173:
+    if echo "$url" | egrep -i "$URL_REDIRECTORS_MATCHER" 2&gt;&amp;1 &gt;/dev/null
+                                                         ^-- SC2069: The order of the 2&gt;&amp;1 and the redirect matters. The 2&gt;&amp;1 has to be last.
+
+
+In tweet.sh line 1337:
+    kill $target_pid 2&gt;&amp;1 &gt; /dev/null
+                     ^-- SC2069: The order of the 2&gt;&amp;1 and the redirect matters. The 2&gt;&amp;1 has to be last.
+
+
+In tweet.sh line 1347:
+  trap 'kill_descendants $self_pid; exit 0' HUP INT QUIT KILL TERM
+                                                         ^-- SC2173: SIGKILL/SIGSTOP can not be trapped.
+</code></pre>
+
+<p>このうち SC2154 は Usage の中で表示すべき文字がエスケープされずに変数展開されてしまっているという感じで、明らかにバグだったので、<a href="https://github.com/piroor/tweet.sh/pull/2">pull request を送って取り込まれています</a>。</p>
+
+<p>SC2034 や SC2173 は実害がないので、特に pull request は送りませんでした。</p>
+
+<p>SC2069 は本当に標準出力を捨てて、標準エラー出力を標準出力に出したいだけかもしれないと思って、深追いしませんでした。</p>
+
+<p>他にも正常時には問題なさそうなものだったり、意図的にやっているのかどうかソースコードを深追いしないとわからなさそうなものだったりしたので、詳しくはチェックしていません。</p>
+
+<h2>よくある指摘</h2>
+
+<p>SC2155 と SC2086 は、 shellcheck を使っていなかったシェルスクリプトに対して shellcheck を実行するとよく見かける気がします。</p>
+
+<pre><code>In tweet.sh line 1330:
+  local children=$(ps --no-heading --ppid $target_pid -o pid)
+        ^-- SC2155: Declare and assign separately to avoid masking return values.
+                                          ^-- SC2086: Double quote to prevent globbing and word splitting.
+</code></pre>
+
+<p>SC2086 は、一般的に変数展開は <code>""</code> でくくるべき、という指摘です。</p>
+
+<p>SC2086 は本当に複数引数に展開して欲しい場合には指摘される必要はないので、そういう場合は直前の行に</p>
+
+<pre><code># shellcheck disable=SC2086
+</code></pre>
+
+<p>というコメントを書いておくと次の行だけ警告を抑制できます。</p>
+
+<p>SC2155 はシェルスクリプトをよく書く人でも知らない人が多い内容で、 <code>export</code> や <code>local</code> などの返り値で <code>$()</code> の返り値が隠れてしまって、 <code>set -e</code> にしていても中断してくれない、という問題です。</p>
+
+<p>shellcheck は Wiki に説明がしっかり書いてあるので、指摘の番号で検索すると <a href="https://github.com/koalaman/shellcheck/wiki/SC2155">SC2155 Declare and assign separately to avoid masking return values.</a> という説明が簡単に見つかります。</p>
+
+<h2>まとめ</h2>
+
+<p>SC2154 や SC2034 のような変更が重なると発生してしまいそうなバグの指摘から SC2086 や SC2155 のような知らなければやってしまいそうな間違いの指摘まで、幅広くチェックしてくれて、シェルスクリプトの上達の手助けをしてくれるので、シェルスクリプトを書くときは積極的に使うことをおすすめします。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[bash で PATH を配列に分解の続き]]></title>
@@ -435,78 +570,6 @@ pull などは git プロトコル (昔は Git Read-Only と書いてあった U
 <p>詳細は
 <a href="http://blog.n-z.jp/blog/2013-11-28-git-insteadof.html" title="githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法">githubでhttpsのURLを指定してもgitプロトコルやssh経由にする方法</a>
 を参照してください。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[シェルで glob 結果を事前に確認する方法]]></title>
-    <link href="http://blog.n-z.jp/blog/2014-06-21-confirm-glob.html"/>
-    <updated>2014-06-21T13:16:56+09:00</updated>
-    <id>http://blog.n-z.jp/blog/confirm-glob</id>
-    <content type="html"><![CDATA[<p><code>rm *~</code> のつもりで <code>rm * ~</code> (半角スペースが混ざっている) のように実行してしまうような間違いをすると危険です。</p>
-
-<p>その対策として <code>tcsh</code> には <code>rmstar</code> という設定があったり
-<code>zsh</code> には <code>RM_STAR_SILENT</code> や <code>RM_STAR_WAIT</code> という設定があるのですが、
-ちゃんと展開結果を確認してからコマンドを実行する方が安全です。</p>
-
-<p>また <code>rm</code> 以外でも展開結果を事前に確認できると便利なことが多いです。</p>
-
-<!--more-->
-
-
-<h2>展開結果の確認方法</h2>
-
-<p><code>bash</code> や <code>zsh</code> の一般的なキー割り当てだと <code>C-x g</code> (Control を押しながら x を押して Control を離して g) で展開結果を確認できます。</p>
-
-<p>Tab キーだとコマンドライン中に展開されてしまいますが、
-<code>C-x g</code> だと確認だけ出来ます。</p>
-
-<h3>bash の場合</h3>
-
-<p>たとえば <code>bash</code> なら以下のように展開結果が出て、
-プロンプトの行が出てきます。</p>
-
-<pre><code class="console bash">    $ echo /etc/host*&lt;C-x&gt;g
-    host.conf    hostname     hosts        hosts.allow  hosts.deny
-    $ echo /etc/host*
-</code></pre>
-
-<h3>zsh の場合</h3>
-
-<p><code>zsh</code> ならプロンプトの行の下に展開結果が出てきます。</p>
-
-<pre><code class="console zsh">    % echo /etc/host*
-    /etc/host.conf    /etc/hostname     /etc/hosts        /etc/hosts.allow  /etc/hosts.deny
-</code></pre>
-
-<h2>Tab キーの動作</h2>
-
-<p>比較のため Tab キーでの動作例も載せておきます。</p>
-
-<h3>bash の場合</h3>
-
-<p>実際には同じ行でしたが、最初の展開結果に置き換わりました。</p>
-
-<pre><code class="console bash">    $ echo /etc/host*&lt;tab&gt;
-    $ echo /etc/host.conf
-</code></pre>
-
-<h3>zsh の場合</h3>
-
-<p>こちらも実際には同じ行ですが、すべての展開結果に置き換わりました。</p>
-
-<pre><code class="console zsh">    % echo /etc/host*&lt;tab&gt;
-    % echo /etc/host.conf /etc/hostname /etc/hosts /etc/hosts.allow /etc/hosts.deny
-</code></pre>
-
-<p>glob で指定しにくい一部のファイルだけ除外するなど、展開された方が便利な時は
-Tab キーで展開してからコマンドラインを編集して実行することもあります。</p>
-
-<h2>まとめ</h2>
-
-<p>一般的な bash 環境ならどこでも使えて、
-複雑な glob の展開結果の確認にも便利なので、
-<code>C-x g</code> は非常にオススメです。</p>
 ]]></content>
   </entry>
   
