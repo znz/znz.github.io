@@ -10,6 +10,8 @@ categories: lilo event linux
 
 <!--more-->
 
+以下、メモです。
+
 ## 会場
 
 いつもより遅い14時からでした。
