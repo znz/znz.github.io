@@ -106,7 +106,7 @@ categories: lilo event linux
 スライドはいつも通り、
 - [Rabbit Slide Show](https://slide.rabbit-shocker.org/authors/znz/change-license/)
 - [SlideShare](https://www.slideshare.net/znzjp/ss-84299220)
-- [Speaker Deck](https://speakerdeck.com/znz/raisensubian-geng-falsehua) (We had issues processing your talk になっていて見えない?)
+- [Speaker Deck](https://speakerdeck.com/znz/raisensubian-geng-falsehua)
 - [RubyGems.org](https://rubygems.org/gems/rabbit-slide-znz-change-license)
 - [GitHub.com](https://github.com/znz/change-license)
 で公開しています。
