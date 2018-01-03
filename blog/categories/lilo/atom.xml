@@ -4,7 +4,7 @@
   <title><![CDATA[Category: lilo | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/lilo/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2017-12-20T21:51:43+09:00</updated>
+  <updated>2018-01-03T18:41:29+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,143 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[webhook でサイトの git pull をする設定をした]]></title>
+    <link href="http://blog.n-z.jp/blog/2018-01-03-webhook-git-pull.html"/>
+    <updated>2018-01-03T18:00:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/webhook-git-pull</id>
+    <content type="html"><![CDATA[<p>GitLab.com に git push した時に webhook で通知を受け取って git pull という設定をしました。</p>
+
+<p>方針としては Web サーバーの実行ユーザー権限の cgi で通知用のファイルを更新して、 systemd の <code>*.path</code> で監視して、別途ディレクトリの所有者権限でアップデートのシェルスクリプトを実行して、アップデートのログは journald に任せるという感じにしました。</p>
+
+<!--more-->
+
+
+<h2>GitLab.com の設定</h2>
+
+<p>Webhook が使えるシステムなら GitHub などでも同様に設定可能だと思います。</p>
+
+<ul>
+<li>Settings - Integrations で Webhooks 設定</li>
+<li>URL: <code>https://lilo.linux.or.jp/trigger/update.cgi</code> のような感じ</li>
+<li>Secret Token あり</li>
+<li>Trigger : Push events のみ</li>
+<li>Enable SSL verification はチェックありのまま</li>
+</ul>
+
+
+<h2>trigger cgi</h2>
+
+<p>URL がわかっていても Secret Token がちゃんと設定されていないリクエストはエラーを返すようにしました。</p>
+
+<p>内容はチェックせずに通知用のファイルにリクエスト内容をそのまま書き込んでデバッグ用に使えるようにしました。</p>
+
+<p><code>/home/www</code> は CGI の権限で書き込めるディレクトリです。</p>
+
+<pre><code class="sh">#!/bin/sh
+set -e
+if [ x"$HTTP_X_GITLAB_TOKEN" = x"XXXXXXXXXXXXXXXXXXXX" ]; then
+  cat &gt; /home/www/trigger_update_web
+  echo "Content-Type: text/plain; charset=utf-8"
+  echo
+  echo OK
+else
+  echo "Status: 403"
+  echo "Content-Type: text/plain; charset=utf-8"
+  echo
+  echo NG
+fi
+</code></pre>
+
+<h2>systemd の設定追加</h2>
+
+<p>後述のファイルを以下のように追加して設定しました。</p>
+
+<pre><code>  sudo cp lilo_web_update.path /etc/systemd/system
+  sudo cp lilo_web_update.service /etc/systemd/system
+  sudo systemctl daemon-reload
+  sudo systemctl start lilo_web_update.path
+</code></pre>
+
+<h2><code>lilo_web_update.path</code></h2>
+
+<p><code>trigger_update_web</code> ファイルを <code>PathModified</code> で監視して変化があれば <code>lilo_web_update.service</code> を実行するようにしました。</p>
+
+<pre><code>[Unit]
+Description=Trigger update web
+
+[Path]
+PathModified=/home/www/trigger_update_web
+
+[Install]
+WantedBy=muti-user.target
+</code></pre>
+
+<h2><code>lilo_web_update.service</code></h2>
+
+<p>Web コンテンツに書き込めるユーザーでシェルスクリプトを実行します。</p>
+
+<pre><code>[Unit]
+Description=Update web
+
+[Service]
+Type=oneshot
+ExecStart=/path/to/lilo_web_update.sh
+User=someuser
+Group=someuser
+</code></pre>
+
+<h2><code>lilo_web_update.sh</code></h2>
+
+<p>flock コマンドで同時実行を抑制 (同時実行は後の方が失敗終了) した上で、何か変更されていたらそれを捨てて、 <code>git pull</code> でリモートのコンテンツで上書きするようにしています。</p>
+
+<p>とりあえず自分が知っているコマンドの中でクリーンにできるものとして <code>git checkout .</code> と <code>git clean -dfx</code> を使っているだけなので、もっと良い方法があるかもしれません。</p>
+
+<pre><code class="bash">#!/bin/bash
+set -euxo pipefail
+exec {lock_fd}&lt;"$0"
+flock --nonblock "${lock_fd}"
+cd "$(dirname "$0")/.."
+git checkout .
+git clean -dfx
+git pull
+</code></pre>
+
+<h2>apache2 設定</h2>
+
+<p>trigger ディレクトリに cgi-bin の設定を参考にして ExecCGI と AddHandler の設定をしました。</p>
+
+<pre><code>&lt;Directory /path/to/trigger/&gt;
+        AllowOverride None
+        Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
+        Require all granted
+        AddHandler cgi-script .cgi
+&lt;/Directory&gt;
+</code></pre>
+
+<p><code>/etc/apache2/conf-enabled/security.conf</code> の <code>.svn*</code> へのアクセスを禁止する設定を参考にして、 <code>.git*</code> へのアクセスを禁止しました。</p>
+
+<pre><code>&lt;DirectoryMatch "/\.git"&gt;
+   Require all denied
+&lt;/DirectoryMatch&gt;
+</code></pre>
+
+<h2>動作確認</h2>
+
+<ul>
+<li><code>sudo -u someuser /path/to/lilo_web_update.sh</code> で git pull の動作確認</li>
+<li><code>touch /home/www/trigger_update_web</code> と <code>sudo systemctl status lilo_web_update.service</code> で PathModified 経由での実行確認</li>
+<li><code>curl -H 'X-Gitlab-Token: XXXXXXXXXXXXXXXXXXXX' https://lilo.linux.or.jp/trigger/update.cgi</code> で webhook 経由での動作確認</li>
+</ul>
+
+
+<h2>まとめ</h2>
+
+<p>git push で webhook 経由でコンテンツを更新して、 journald でログを確認できるシステムを構築しました。
+Unix 的にそれぞれは大した設定はしていないのですが、組み合わせるとそれなりの設定量になりました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[LILO 20周年記念ミートアップに参加しました]]></title>
@@ -678,70 +815,6 @@
 <li><a href="https://lilo.linux.or.jp/">https://lilo.linux.or.jp/</a></li>
 <li><a href="https://histudy.github.io/">姫路IT系勉強会</a></li>
 </ul>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[LILO&東海道らぐオフラインミーティング 2017/01/07]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-01-07-lilo-tokaidolug.html"/>
-    <updated>2017-01-07T13:20:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/lilo-tokaidolug</id>
-    <content type="html"><![CDATA[<p><a href="https://lilo.connpass.com/event/47841/" title="LILO&amp;東海道らぐオフラインミーティング 2017/01/07">LILO&amp;東海道らぐオフラインミーティング 2017/01/07</a> に参加しました。</p>
-
-<p>今回もアンカンファレンス形式でした。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<p>今回のメモです。</p>
-
-<ul>
-<li>本を読んでいたら電車を乗り過ごしてしまって一度梅田まで行ってしまってちょっと遅くなりました。(開始時刻の13時には間に合いました。)</li>
-<li>会場の建物は同じでも、いつもの4階と違って6階でした。</li>
-<li>ハッシュタグ: <code>#lilo_jp</code> <code>#東海道らぐ</code></li>
-<li>登録参加者数 8名</li>
-<li>自己紹介から</li>
-<li><a href="https://opensuseja.connpass.com/event/47907/" title="関西 Debian 勉強会 + openSUSE Meetup + LILO &amp; 東海道らぐLT大会">関西 Debian 勉強会 + openSUSE Meetup + LILO &amp; 東海道らぐLT大会</a></li>
-<li>ラズパイで音楽 (山内さん)</li>
-<li>サンハヤトのハイレゾオーディオDACボード AS-E404RAS</li>
-<li>Volumio</li>
-<li>Spotify</li>
-<li>AirPlay対応スピーカーにできた</li>
-<li>lilo.linux.or.jp のサーバー管理の話 (自分)</li>
-<li>unattended-upgrades の公式っぽさを確認するにはメンテナをみればいいのではという話があったので確認してみたところ、 unattended-upgrades のメンテナを確認すると apt のメンテナの一人でした。 cron-apt のメンテナは全然別の人でした。</li>
-<li>休憩</li>
-<li>LibreOffice Kaigi 2016.12 の時の資料を使っての話 (榎さん)</li>
-<li>LibreOffice Conference の話</li>
-<li>Debian を再インストールした話 (さとうさん)</li>
-<li>OSM の話 (さかのしたさん)</li>
-<li>Overpass API</li>
-<li>umap</li>
-<li>LOF の LILO 展示の復習 (まるいちさん)</li>
-<li>gPhoto2</li>
-<li>最後にまた <a href="https://opensuseja.connpass.com/event/47907/" title="関西 Debian 勉強会 + openSUSE Meetup + LILO &amp; 東海道らぐLT大会">関西 Debian 勉強会 + openSUSE Meetup + LILO &amp; 東海道らぐLT大会</a> についての案内</li>
-</ul>
-
-
-<h2>発表した内容</h2>
-
-<p>スライドはいつも通り <a href="http://slide.rabbit-shocker.org/authors/znz/lilo-20170107/">Rabbit Slide Show</a> (<a href="https://rubygems.org/gems/rabbit-slide-znz-lilo-20170107">RubyGems</a>), <a href="https://slideshare.net/znzjp/lilolinuxorjp-20171">SlideShare</a>, <a href="https://speakerdeck.com/u/znz/p/lilo-dot-linux-dot-or-dot-jp-falsehua-2017nian-1yue">Speaker Deck</a> にあげています。(ソースは <a href="https://github.com/znz/lilo-20170107">github</a> にあげています。)</p>
-
-<iframe src="https://slide.rabbit-shocker.org/authors/znz/lilo-20170107/viewer.html"
-        width="640" height="524"
-        frameborder="0"
-        marginwidth="0"
-        marginheight="0"
-        scrolling="no"
-        style="border: 1px solid #ccc; border-width: 1px 1px 0; margin-bottom: 5px"
-        allowfullscreen> </iframe>
-
-
-<div style="margin-bottom: 5px">
-  <a href="https://slide.rabbit-shocker.org/authors/znz/lilo-20170107/" title="lilo.linux.or.jp の話 (2017年1月)">lilo.linux.or.jp の話 (2017年1月)</a>
-</div>
 
 ]]></content>
   </entry>
