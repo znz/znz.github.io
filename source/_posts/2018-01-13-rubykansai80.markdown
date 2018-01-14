@@ -1,0 +1,198 @@
+---
+layout: post
+title: "第80回 Ruby関西 勉強会に参加しました"
+date: 2018-01-13 22:13:59 +0900
+comments: true
+categories: event ruby rubykansai
+---
+[第80回 Ruby関西 勉強会](https://rubykansai.doorkeeper.jp/events/69011) に参加しました。
+
+<!--more-->
+
+以下、メモです。
+
+## 会場
+
+railsdm できたことのある Aiming さんが会場でした。
+
+## オープニング
+
+会場案内など。
+
+## mruby搭載ボードGR-CITRUSの新しい開発環境の紹介 @momoonga
+
+- GR-CITRUS : Ruby プログラム
+- WA-MIKAN : Wi-Fi 通信
+- SAMBOU-KAN : モーター制御 が増えた
+- GR-CITRUS 開発環境 : Visual Studio Code 拡張の Rubic というのが増えた
+- mrbgem の組み合わせのバリエーションが選べる
+- Rubic のデモ
+- WA-MIKAN のデモ
+- SAMBOU-KAN のデモ
+- 「RubyRobo 192.168.4.1」という SSID で接続先 IP アドレスがわかるようになっていた
+- WiFi 接続して操作はうまくいかなかった
+- リリース
+- https://github.com/wakayamarb/wrbb-v2lib-firm/blob/master/rubic-repository.json
+- Release に data.zip
+- Rubic の方にリポジトリを追加してもらうと、後は Release を自由に増やしていける
+
+- 質疑応答
+- Q: どこで買える?
+- A: 秋月, 独自のネットショップ, 大阪だと共立電子
+- SAMBOU-KAN は扱ってもらえてないので、個人のみ
+
+## self を考える @yalab
+
+- 発表資料: https://www.slideshare.net/yalab/self-86099114
+- https://twitter.com/yalab/status/948112876027256832 rubyでプログラミングされてる方に質問です。selfというものを
+- 正式には、レシーバーを指定しないではなく、レシーバーを省略した
+- いろんな場所での self
+- private メソッドは `self.` をつけて呼ぶことができない (`self.puts "hoge"` とか)
+- irb の中で `irb "a"` でサブ irb に入って self に色々きいてみる
+- `self.class` とか
+- `self.methods.grep /plu/` (String にしなくても grep できる)
+- `self.method(:pluralize).source_location` (Active Support の場所がでてくる)
+- 質疑応答
+- Q: self の由来は?
+- A: たぶん Smalltalk 由来
+- Q: あえて self をつけたい場合は?
+- A: `self.hoge=` を呼びたいときとか
+- `self.hoge=` は private でも呼べる (`self.` を省略するとローカル変数への代入になるため)
+
+protected でも同じ:
+```
+% irb --simple-prompt -r irb/completion
+>> class A; protected def hoge=(hoge);end;end
+=> A
+>> irb A.new
+>> self.hoge=:hoge
+=> :hoge
+>> ^D
+=> #<IRB::Irb: @context=#<IRB::Context:0x00007fcec08c4ad8>, @signal_status=:IN_EVAL, @scanner=#<RubyLex:0x00007fcec08cce68>>
+>> A.new.hoge = :hoge
+NoMethodError: protected method `hoge=' called for #<A:0x00007fcec08a5318>
+```
+
+- Q: `class << self` とは?
+- A: `class << obj` で obj の特異メソッドが定義できる話
+
+- twitter からの参考情報:
+- [privateメソッドをレシーバ付きで呼び出せるケース - Qiita](https://qiita.com/jnchito/items/451018811842c2631e1e)
+- [`class << self` によるクラスメソッドの定義のイディオムの説明とその背景にある特異クラスのかんたんな解説](https://gist.github.com/sunaot/8682795)
+
+## 休憩
+
+- 追加情報:
+- [Rubyのsetterメソッドは特別扱いされる。 - こせきの技術日記](http://koseki.hatenablog.com/entry/20080125/rubysetter)
+- Thu Feb 20 04:07:06 2003 からなので [The History of Ruby](https://gist.github.com/unak/3038095) と見比べると 2003-08-04 1.8.0 から。
+
+## プロを目指す人のための例外処理（再）入門 @jnchito
+
+- 発表資料: https://speakerdeck.com/jnchito/number-rubykansai-2018-01-13
+- 西脇から高速バスで2時間
+- 例外と例外処理についておさらい
+- 「ハンマーを持つ人にはすべてが釘に見える」
+- 本当にあった怖い話
+- 例外を握りつぶしていた例
+- 例外処理は使い方を間違えると、害の方が大きくなる
+- できることと、やっていいことは異なる
+- 原則は rescue しない
+- 例外処理のバッドプラクティス
+- 例外の握りつぶし
+- Exception を rescue (普通は StandardError で良い)
+- begin と rescue の範囲が広い
+- 例外クラスを指定しないと NameError や NoMethodError まで捕捉されてしまう
+- 例外処理をテストしない
+- ネットの記事には要注意 (Exception を rescue しているものとか多いらしい)
+- 例外処理のベストプラクティス
+- 原則として rescue しない
+- ログに残したり通知したりする
+- 対象を絞り込む (`begin; Date.new(year, month, day); rescue ArgumentError; nil; end`)
+- この例なら `Date.valid_date?` があるので例外処理を使わない書き方ができる
+- 例外処理もテストする
+- 高度なトピック
+- 業務エラーとシステムエラーの区別をすべき
+- 業務エラーには原則として例外を使わない (rails の `if @model.save` とか)
+- 例外処理をなくしても業務エラーに対処できるか?
+- 使わない実装例: `all_success &=` (ロールバックも考慮すべき)
+- システムエラーは原則としてフレームワークなどの共通処理に任せる
+- 例外処理とロールバックの関係
+- 「アトミック操作は何か」を常に意識する
+- Rails で複数のレコードを同時に更新する場合: `transaction do ... end` と業務エラー時に `raise ActiveRecord::Rollback` で明示的にロールバック
+- 攻めの例外
+- 予期せぬ条件分岐で例外を発生させる
+- `else` で矛盾する可能性のある値を返すのもバグの元
+- ありえないエラーには強気で (`transaction` の中で普通はエラーにならない `update!` を使ってダメならシステムエラー)
+- Q: `&=` は `&&=` の方が良いのでは?
+- A: 良さそう
+- Q: 素人は rescue すんな!! は他のフレームワークにもあてはまる?
+- A: rails 以外 ruby 以外でもフレームワークに共通処理があるはずなので、あてはまるはず
+
+## Ruby 2.5.0 の主な変更点 @znz
+
+発表資料としては特に用意せずに https://docs.ruby-lang.org/ja/latest/doc/news=2f2_5_0.html をみながら気になった点を話しました。
+
+最初に [Rabbit Slide Show](https://slide.rabbit-shocker.org/) の過去の発表資料から適当に自己紹介のページだけ開いておいて、自己紹介をした後は、
+[Ruby 2.5.0 リリース](https://www.ruby-lang.org/ja/news/2017/12/25/ruby-2-5-0-released/) をみながら色々話をして、
+時間があるだけ[NEWS for Ruby 2.5.0](https://docs.ruby-lang.org/ja/2.5.0/doc/news=2f2_5_0.html)をみながら色々話をしていました。
+
+## GitLab にコントリビュート @ogomr
+
+- 発表資料: https://speakerdeck.com/ogom/contributing-to-gitlab-with-oss-gate
+- Contributing to GitLab with OSS Gate
+- (ギットラブと呼んでいる)
+- chef cookbook → docker
+- mac だと遅い
+- GDK = GitLab Development Kit
+- OSS 開発に参加するには?
+- フィードバック
+- ユーザーとして OSS を使う
+- 気づいたことを開発元にフィードバック
+- https://about.gitlab.com/installation/
+- SSL も Let's Encrypt でいける
+- [3Stepで Let’s Encrypt の保護された GitLab を構築する](https://qiita.com/ogomr/items/238d8649b36bcc8c14ba)
+- GitLab 開発環境構築も GitLab Development Kit で簡単にできる
+- [GitLab Development Kit で OSS開発 に参加する for MAC 2017](https://qiita.com/ogomr/items/cc404bf9373408663b11)
+
+- CONTRIBUTING を参考にして開発元にわかりやすいように書く
+- 適切な場所に報告する: GitLab は gitlab.com の issues
+- 一緒に体験しましょう
+- [OSS Gate大阪ワークショップ2018-03-10](https://oss-gate.doorkeeper.jp/events/69160)
+
+- GitLab ってどんな技術で動いているの?
+- [GitLab Architecture Overview](https://docs.gitlab.com/ce/development/architecture.html)
+- [Frontend Development Guidelines](https://docs.gitlab.com/ce/development/fe_guide/index.html)
+- Vue.js を使っている
+- gdk run
+- Gitlab Workhorse : Smart reverse proxy, language Go
+- Gitaly : Git RPC (Remote procedure call) service, language: Ruby, Go
+- GitLab Shell
+- GitLab Rails Web (unicorn)
+- GitLab Rails Background Jobs (sidekiq)
+- GitLab Frontend Web (webpack)
+- GitLab Community Edition の依存パッケージ: Gmefile.lock 226, yarn.lock 1098
+- 翻訳のイシューはマージされやすい https://github.com/mperham/sidekiq/pull/3720
+- 過去の翻訳がいまいちだったと感じたので変更した例
+
+## 休憩
+
+ちょっと用事があったので、外出。
+
+## Ruby初級者向けレッスン 64回 - クラス @higaki
+
+グループワークをしている途中で戻ってきました。
+
+## クロージング
+
+告知など
+
+- 2/10(土)に大阪(日本橋)で GR-CITRUS などのミニハッカソン
+- https://dddrb.doorkeeper.jp/ でプロを目指す人のためのRuby入門 言語仕様からテスト駆動開発・デバッグ技法まで 読書会の第2回を2月に予定
+- [OSS Gate大阪ミートアップ for React](https://oss-gate.doorkeeper.jp/events/69170)
+- 7月中頃か8月中頃にRubyビジネス推進協議会のイベントが予定されていて、その翌日にRuby関西でもちょっと大きめの勉強会 (関西 RubyKaigi になるか第n回 Ruby関西 勉強会になるかどうかは未定) をする予定なので、スタッフ募集 (興味がある方は [Ruby関西のdoorkeeper](https://rubykansai.doorkeeper.jp/) の問い合わせからどうぞ)
+- 今回の会場の [IT勉強会の会場 » Aiming 大阪スタジオ](https://www.doorkeeper.jp/%E4%BC%9A%E5%A0%B4/aiming-osaka) の紹介
+
+## 懇親会
+
+懇親会は特に事前の募集とかはなく、会場に残ってもらって一緒に移動という感じでした。
+実際にいってみると cuzic さんが予想で予約した人数でぴったりだったようでした。
