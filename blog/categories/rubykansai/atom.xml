@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rubykansai | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/rubykansai/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2018-01-03T18:41:29+09:00</updated>
+  <updated>2018-01-14T23:42:57+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,233 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第80回 Ruby関西 勉強会に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2018-01-13-rubykansai80.html"/>
+    <updated>2018-01-13T22:13:59+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubykansai80</id>
+    <content type="html"><![CDATA[<p><a href="https://rubykansai.doorkeeper.jp/events/69011">第80回 Ruby関西 勉強会</a> に参加しました。</p>
+
+<!--more-->
+
+
+<p>以下、メモです。</p>
+
+<h2>会場</h2>
+
+<p>railsdm できたことのある Aiming さんが会場でした。</p>
+
+<h2>オープニング</h2>
+
+<p>会場案内など。</p>
+
+<h2>mruby搭載ボードGR-CITRUSの新しい開発環境の紹介 @momoonga</h2>
+
+<ul>
+<li>GR-CITRUS : Ruby プログラム</li>
+<li>WA-MIKAN : Wi-Fi 通信</li>
+<li>SAMBOU-KAN : モーター制御 が増えた</li>
+<li>GR-CITRUS 開発環境 : Visual Studio Code 拡張の Rubic というのが増えた</li>
+<li>mrbgem の組み合わせのバリエーションが選べる</li>
+<li>Rubic のデモ</li>
+<li>WA-MIKAN のデモ</li>
+<li>SAMBOU-KAN のデモ</li>
+<li>「RubyRobo 192.168.4.1」という SSID で接続先 IP アドレスがわかるようになっていた</li>
+<li>WiFi 接続して操作はうまくいかなかった</li>
+<li>リリース</li>
+<li><a href="https://github.com/wakayamarb/wrbb-v2lib-firm/blob/master/rubic-repository.json">https://github.com/wakayamarb/wrbb-v2lib-firm/blob/master/rubic-repository.json</a></li>
+<li>Release に data.zip</li>
+<li><p>Rubic の方にリポジトリを追加してもらうと、後は Release を自由に増やしていける</p></li>
+<li><p>質疑応答</p></li>
+<li>Q: どこで買える?</li>
+<li>A: 秋月, 独自のネットショップ, 大阪だと共立電子</li>
+<li>SAMBOU-KAN は扱ってもらえてないので、個人のみ</li>
+</ul>
+
+
+<h2>self を考える @yalab</h2>
+
+<ul>
+<li>発表資料: <a href="https://www.slideshare.net/yalab/self-86099114">https://www.slideshare.net/yalab/self-86099114</a></li>
+<li><a href="https://twitter.com/yalab/status/948112876027256832">https://twitter.com/yalab/status/948112876027256832</a> rubyでプログラミングされてる方に質問です。selfというものを</li>
+<li>正式には、レシーバーを指定しないではなく、レシーバーを省略した</li>
+<li>いろんな場所での self</li>
+<li>private メソッドは <code>self.</code> をつけて呼ぶことができない (<code>self.puts "hoge"</code> とか)</li>
+<li>irb の中で <code>irb "a"</code> でサブ irb に入って self に色々きいてみる</li>
+<li><code>self.class</code> とか</li>
+<li><code>self.methods.grep /plu/</code> (String にしなくても grep できる)</li>
+<li><code>self.method(:pluralize).source_location</code> (Active Support の場所がでてくる)</li>
+<li>質疑応答</li>
+<li>Q: self の由来は?</li>
+<li>A: たぶん Smalltalk 由来</li>
+<li>Q: あえて self をつけたい場合は?</li>
+<li>A: <code>self.hoge=</code> を呼びたいときとか</li>
+<li><code>self.hoge=</code> は private でも呼べる (<code>self.</code> を省略するとローカル変数への代入になるため)</li>
+</ul>
+
+
+<p>protected でも同じ:
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% irb &ndash;simple-prompt -r irb/completion&lt;/p&gt;
+</span><span class='line'>
+</span><span class='line'>&lt;blockquote&gt;&lt;blockquote&gt;&lt;p&gt;class A; protected def hoge=(hoge);end;end
+</span><span class='line'>=&gt; A
+</span><span class='line'>irb A.new
+</span><span class='line'>self.hoge=:hoge
+</span><span class='line'>=&gt; :hoge
+</span><span class='line'>^D
+</span><span class='line'>=&gt; #&lt;IRB::Irb: @context=#&lt;IRB::Context:0x00007fcec08c4ad8&gt;, @signal_status=:IN_EVAL, @scanner=#&lt;RubyLex:0x00007fcec08cce68&gt;&gt;
+</span><span class='line'>A.new.hoge = :hoge
+</span><span class='line'>NoMethodError: protected method `hoge=&lsquo; called for #&lt;A:0x00007fcec08a5318&gt;</span></code></pre></td></tr></table></div></figure></p></blockquote></blockquote>
+
+<ul>
+<li>Q: <code>class &lt;&lt; self</code> とは?</li>
+<li><p>A: <code>class &lt;&lt; obj</code> で obj の特異メソッドが定義できる話</p></li>
+<li><p>twitter からの参考情報:</p></li>
+<li><a href="https://qiita.com/jnchito/items/451018811842c2631e1e">privateメソッドをレシーバ付きで呼び出せるケース - Qiita</a></li>
+<li><a href="https://gist.github.com/sunaot/8682795"><code>class &lt;&lt; self</code> によるクラスメソッドの定義のイディオムの説明とその背景にある特異クラスのかんたんな解説</a></li>
+</ul>
+
+
+<h2>休憩</h2>
+
+<ul>
+<li>追加情報:</li>
+<li><a href="http://koseki.hatenablog.com/entry/20080125/rubysetter">Rubyのsetterメソッドは特別扱いされる。 - こせきの技術日記</a></li>
+<li>Thu Feb 20 04:07:06 2003 からなので <a href="https://gist.github.com/unak/3038095">The History of Ruby</a> と見比べると 2003-08-04 1.8.0 から。</li>
+</ul>
+
+
+<h2>プロを目指す人のための例外処理（再）入門 @jnchito</h2>
+
+<ul>
+<li>発表資料: <a href="https://speakerdeck.com/jnchito/number-rubykansai-2018-01-13">https://speakerdeck.com/jnchito/number-rubykansai-2018-01-13</a></li>
+<li>西脇から高速バスで2時間</li>
+<li>例外と例外処理についておさらい</li>
+<li>「ハンマーを持つ人にはすべてが釘に見える」</li>
+<li>本当にあった怖い話</li>
+<li>例外を握りつぶしていた例</li>
+<li>例外処理は使い方を間違えると、害の方が大きくなる</li>
+<li>できることと、やっていいことは異なる</li>
+<li>原則は rescue しない</li>
+<li>例外処理のバッドプラクティス</li>
+<li>例外の握りつぶし</li>
+<li>Exception を rescue (普通は StandardError で良い)</li>
+<li>begin と rescue の範囲が広い</li>
+<li>例外クラスを指定しないと NameError や NoMethodError まで捕捉されてしまう</li>
+<li>例外処理をテストしない</li>
+<li>ネットの記事には要注意 (Exception を rescue しているものとか多いらしい)</li>
+<li>例外処理のベストプラクティス</li>
+<li>原則として rescue しない</li>
+<li>ログに残したり通知したりする</li>
+<li>対象を絞り込む (<code>begin; Date.new(year, month, day); rescue ArgumentError; nil; end</code>)</li>
+<li>この例なら <code>Date.valid_date?</code> があるので例外処理を使わない書き方ができる</li>
+<li>例外処理もテストする</li>
+<li>高度なトピック</li>
+<li>業務エラーとシステムエラーの区別をすべき</li>
+<li>業務エラーには原則として例外を使わない (rails の <code>if @model.save</code> とか)</li>
+<li>例外処理をなくしても業務エラーに対処できるか?</li>
+<li>使わない実装例: <code>all_success &amp;=</code> (ロールバックも考慮すべき)</li>
+<li>システムエラーは原則としてフレームワークなどの共通処理に任せる</li>
+<li>例外処理とロールバックの関係</li>
+<li>「アトミック操作は何か」を常に意識する</li>
+<li>Rails で複数のレコードを同時に更新する場合: <code>transaction do ... end</code> と業務エラー時に <code>raise ActiveRecord::Rollback</code> で明示的にロールバック</li>
+<li>攻めの例外</li>
+<li>予期せぬ条件分岐で例外を発生させる</li>
+<li><code>else</code> で矛盾する可能性のある値を返すのもバグの元</li>
+<li>ありえないエラーには強気で (<code>transaction</code> の中で普通はエラーにならない <code>update!</code> を使ってダメならシステムエラー)</li>
+<li>Q: <code>&amp;=</code> は <code>&amp;&amp;=</code> の方が良いのでは?</li>
+<li>A: 良さそう</li>
+<li>Q: 素人は rescue すんな!! は他のフレームワークにもあてはまる?</li>
+<li>A: rails 以外 ruby 以外でもフレームワークに共通処理があるはずなので、あてはまるはず</li>
+</ul>
+
+
+<h2>Ruby 2.5.0 の主な変更点 @znz</h2>
+
+<p>発表資料としては特に用意せずに <a href="https://docs.ruby-lang.org/ja/latest/doc/news=2f2_5_0.html">https://docs.ruby-lang.org/ja/latest/doc/news=2f2_5_0.html</a> をみながら気になった点を話しました。</p>
+
+<p>最初に <a href="https://slide.rabbit-shocker.org/">Rabbit Slide Show</a> の過去の発表資料から適当に自己紹介のページだけ開いておいて、自己紹介をした後は、
+<a href="https://www.ruby-lang.org/ja/news/2017/12/25/ruby-2-5-0-released/">Ruby 2.5.0 リリース</a> をみながら色々話をして、
+時間があるだけ<a href="https://docs.ruby-lang.org/ja/2.5.0/doc/news=2f2_5_0.html">NEWS for Ruby 2.5.0</a>をみながら色々話をしていました。</p>
+
+<h2>GitLab にコントリビュート @ogomr</h2>
+
+<ul>
+<li>発表資料: <a href="https://speakerdeck.com/ogom/contributing-to-gitlab-with-oss-gate">https://speakerdeck.com/ogom/contributing-to-gitlab-with-oss-gate</a></li>
+<li>Contributing to GitLab with OSS Gate</li>
+<li>(ギットラブと呼んでいる)</li>
+<li>chef cookbook → docker</li>
+<li>mac だと遅い</li>
+<li>GDK = GitLab Development Kit</li>
+<li>OSS 開発に参加するには?</li>
+<li>フィードバック</li>
+<li>ユーザーとして OSS を使う</li>
+<li>気づいたことを開発元にフィードバック</li>
+<li><a href="https://about.gitlab.com/installation/">https://about.gitlab.com/installation/</a></li>
+<li>SSL も Let&rsquo;s Encrypt でいける</li>
+<li><a href="https://qiita.com/ogomr/items/238d8649b36bcc8c14ba">3Stepで Let’s Encrypt の保護された GitLab を構築する</a></li>
+<li>GitLab 開発環境構築も GitLab Development Kit で簡単にできる</li>
+<li><p><a href="https://qiita.com/ogomr/items/cc404bf9373408663b11">GitLab Development Kit で OSS開発 に参加する for MAC 2017</a></p></li>
+<li><p>CONTRIBUTING を参考にして開発元にわかりやすいように書く</p></li>
+<li>適切な場所に報告する: GitLab は gitlab.com の issues</li>
+<li>一緒に体験しましょう</li>
+<li><p><a href="https://oss-gate.doorkeeper.jp/events/69160">OSS Gate大阪ワークショップ2018-03-10</a></p></li>
+<li><p>GitLab ってどんな技術で動いているの?</p></li>
+<li><a href="https://docs.gitlab.com/ce/development/architecture.html">GitLab Architecture Overview</a></li>
+<li><a href="https://docs.gitlab.com/ce/development/fe_guide/index.html">Frontend Development Guidelines</a></li>
+<li>Vue.js を使っている</li>
+<li>gdk run</li>
+<li>Gitlab Workhorse : Smart reverse proxy, language Go</li>
+<li>Gitaly : Git RPC (Remote procedure call) service, language: Ruby, Go</li>
+<li>GitLab Shell</li>
+<li>GitLab Rails Web (unicorn)</li>
+<li>GitLab Rails Background Jobs (sidekiq)</li>
+<li>GitLab Frontend Web (webpack)</li>
+<li>GitLab Community Edition の依存パッケージ: Gmefile.lock 226, yarn.lock 1098</li>
+<li>翻訳のイシューはマージされやすい <a href="https://github.com/mperham/sidekiq/pull/3720">https://github.com/mperham/sidekiq/pull/3720</a></li>
+<li>過去の翻訳がいまいちだったと感じたので変更した例</li>
+</ul>
+
+
+<h2>休憩</h2>
+
+<p>ちょっと用事があったので、外出。</p>
+
+<h2>Ruby初級者向けレッスン 64回 - クラス @higaki</h2>
+
+<p>グループワークをしている途中で戻ってきました。</p>
+
+<h2>クロージング</h2>
+
+<p>告知など</p>
+
+<ul>
+<li>2/10(土)に大阪(日本橋)で GR-CITRUS などのミニハッカソン</li>
+<li><a href="https://dddrb.doorkeeper.jp/">https://dddrb.doorkeeper.jp/</a> でプロを目指す人のためのRuby入門 言語仕様からテスト駆動開発・デバッグ技法まで 読書会の第2回を2月に予定</li>
+<li><a href="https://oss-gate.doorkeeper.jp/events/69170">OSS Gate大阪ミートアップ for React</a></li>
+<li>7月中頃か8月中頃にRubyビジネス推進協議会のイベントが予定されていて、その翌日にRuby関西でもちょっと大きめの勉強会 (関西 RubyKaigi になるか第n回 Ruby関西 勉強会になるかどうかは未定) をする予定なので、スタッフ募集 (興味がある方は <a href="https://rubykansai.doorkeeper.jp/">Ruby関西のdoorkeeper</a> の問い合わせからどうぞ)</li>
+<li>今回の会場の <a href="https://www.doorkeeper.jp/%E4%BC%9A%E5%A0%B4/aiming-osaka">IT勉強会の会場 » Aiming 大阪スタジオ</a> の紹介</li>
+</ul>
+
+
+<h2>懇親会</h2>
+
+<p>懇親会は特に事前の募集とかはなく、会場に残ってもらって一緒に移動という感じでした。
+実際にいってみると cuzic さんが予想で予約した人数でぴったりだったようでした。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第79回 Ruby関西 勉強会に参加しました]]></title>
@@ -641,188 +868,6 @@
 <ul>
 <li>懇親会の募集</li>
 <li>Rails Follow-up Osaka の紹介</li>
-</ul>
-
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第75回 Ruby関西 勉強会に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2016-11-05-rubykansai75.html"/>
-    <updated>2016-11-05T13:26:28+09:00</updated>
-    <id>http://blog.n-z.jp/blog/rubykansai75</id>
-    <content type="html"><![CDATA[<p><a href="https://rubykansai.doorkeeper.jp/events/52902" title="第75回 Ruby関西 勉強会">第75回 Ruby関西 勉強会</a>
-に参加して発表してきました。</p>
-
-<p>今回は (ustream) 中継はありませんでした。</p>
-
-<!--more-->
-
-
-<p>以下、そのメモです。</p>
-
-<h2>オープニング</h2>
-
-<ul>
-<li>会場の電源とかの話とか</li>
-<li>最初の発表者の紹介とか</li>
-</ul>
-
-
-<h2>機械学習概論</h2>
-
-<ul>
-<li>サンプルコードもないので Ruby とは全く関係のない話</li>
-<li>機械学習入門書の入門 (挫折しないために)</li>
-<li>「Machine Learning: A Probabilistic Perspective」は1000ページ超え</li>
-<li>機械学習手法の大分類: 教師あり学習, 教師なし学習, 半教師あり学習, 強化学習</li>
-<li>入門書で取り上げられる割合: 教師あり学習:9割, 教師なし学習:1割, 半教師あり学習:0割, 強化学習:0割</li>
-<li>入門書で取り上げられる割合: 教師あり学習:9割のうち: パラメトリック:9割, ノンパレメトリック:1割</li>
-<li>なので、この発表では教師あり学習・パラメトリックの話</li>
-<li>パラメトリック推定</li>
-<li><code>y=f(x)</code> となる <code>f</code> を見つけること</li>
-<li>パラメータ <code>θ</code> を持つ何らかの特定の関数群(集合) <code>f(x, θ)</code> の中で <code>y=f(x, θ)</code> と最も近似できるような <code>θ</code> を探す</li>
-<li>ベイズの定理</li>
-<li>最尤推定</li>
-<li>種々の推定</li>
-<li>MAP 推定</li>
-<li>点推定しない</li>
-<li>共役事前分布</li>
-<li>おすすめのマイルストーン</li>
-<li>tinyurl.com/ruby-boshu</li>
-<li>13:50 までの予定が 14:13 までになっていた。</li>
-<li>質疑応答</li>
-<li>14:16 までだった。</li>
-</ul>
-
-
-<h2>懇親会募集</h2>
-
-<ul>
-<li>8名?</li>
-</ul>
-
-
-<h2>Ruby 2.4.0 の主な非互換</h2>
-
-<p>発表しました。</p>
-
-<iframe src="https://slide.rabbit-shocker.org/authors/znz/rubykansai75-ruby24/viewer.html"
-        width="640" height="524"
-        frameborder="0"
-        marginwidth="0"
-        marginheight="0"
-        scrolling="no"
-        style="border: 1px solid #ccc; border-width: 1px 1px 0; margin-bottom: 5px"
-        allowfullscreen> </iframe>
-
-
-<div style="margin-bottom: 5px">
-  <a href="https://slide.rabbit-shocker.org/authors/znz/rubykansai75-ruby24/" title="Ruby 2.4.0 の主な非互換">Ruby 2.4.0 の主な非互換</a>
-</div>
-
-
-<ul>
-<li>質問は特になかった。</li>
-<li>14:38 までだった。</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>14:45頃まで</li>
-<li>発表者ということで k-of.jp で配る予定のステッカーをもらった。</li>
-</ul>
-
-
-<h2>さよならsprockets</h2>
-
-<ul>
-<li>いかに Qiita は sprockets を捨てるに至ったか</li>
-<li>前半:技術選定の話, 後半:さよならsprockets</li>
-<li>技術マネジメントの話</li>
-<li>(個人的な) 普遍的な要求: 学習コスパがいい, 撤退しやすい, 速い</li>
-<li>作るものの特性によって変わる要求</li>
-<li>SoR (System of Record), SoE (System of Engagement)</li>
-<li>さよなら sprockets</li>
-<li>sprockets のおさらい</li>
-<li>sprockets の問題点</li>
-<li>sprockets は SoE を支援する gem</li>
-<li>利点: Rails との統合が進んでいる, ハッシュダイジェスト埋め込みは便利</li>
-<li>良いところは残しつつ、もっと高速にトライ・アンド・エラーできるようにしたい</li>
-<li>browserify-rails</li>
-<li>sprockets + ES6 modules ができる</li>
-<li>脱 sprockets のための経由地</li>
-<li>JS が小さいうちはここで快適に暮らしてもいい</li>
-<li>気合いで ES6 modules 化</li>
-<li>browserify v.s. webpack</li>
-<li>webpack はなんでもできすぎて撤退しづらくなりそう → browserify を採用した</li>
-<li>(世の中的には webpack が主流になりつつある)</li>
-<li>ビルドタスクを書く</li>
-<li>全部 npm-scripts に書く (Grant gulp は使わない)</li>
-<li>ワンライナーに納まらない場合は Node.js スクリプトを書く</li>
-<li>Tips: npm-scripts 用シェル芸</li>
-<li><code>((a &amp;&amp; (b &amp; c &amp; wait)) &amp; d &amp; wait) &amp;&amp; e</code></li>
-<li>マニフェストファイル: 開発環境では admin.js で本番環境では admin-xxxxx.min.js</li>
-<li>開発環境: watchify</li>
-<li>非同期ビルドの問題</li>
-<li>CSSのビルドが微妙にかかるので反映されていないことがある</li>
-<li>コンパイル中は sleep する Rack ミドルウェアを追加して解決</li>
-<li>移行の結果何が変わった?</li>
-<li>デプロイ速度が4分速くなった</li>
-<li>開発時の待ち時間がかなり速くなった</li>
-<li>開発にすべての npm パッケージを使えるようになった</li>
-<li>15:25 までだった。</li>
-<li>質疑応答は特になし</li>
-</ul>
-
-
-<h2>社内勉強会で読んだ本とか</h2>
-
-<ul>
-<li>15:27 から</li>
-<li>Rails5 リリースノート</li>
-<li>The Twelve-Factor App</li>
-<li>The Rails Doctrine</li>
-<li>Domain Driven Design Quickly</li>
-<li>メタプログラミング Ruby 第2版</li>
-<li>15:37 まで</li>
-<li><a href="http://www.slideshare.net/ShinsukeKuroki/ss-68228347" title="社内勉強会で読んだ本とか">社内勉強会で読んだ本とか</a></li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>15:50頃まで</li>
-</ul>
-
-
-<h2>mruby 初級者向けレッスン</h2>
-
-<ul>
-<li><a href="http://qiita.com/ogomr/items/04f2734bfef0a5ef082c" title="Ruby Miniature Book">Ruby Miniature Book</a></li>
-<li><a href="http://qiita.com/ogomr/items/ca0c6cb5450bf6f86652" title="mruby on GR-CITRUS">mruby on GR-CITRUS</a></li>
-<li><a href="https://github.com/ogom/crione">https://github.com/ogom/crione</a></li>
-<li>16:57 まで</li>
-<li>質疑応答</li>
-<li>16:59 まで</li>
-</ul>
-
-
-<h2>告知タイム / クロージング</h2>
-
-<ul>
-<li>k-of.jp の手伝い募集</li>
-<li>KansaiRubyKaigi 2017 開催決定</li>
-<li>2017-05-27 に大阪産業創造館で</li>
-<li>これもスタッフの募集予定</li>
-<li>発表者やスポンサーも時期が来れば募集予定</li>
-<li><a href="http://qiita.com/advent-calendar/2016/shinosakarb" title="Shinosaka.rb Advent Calendar 2016">Shinosaka.rb Advent Calendar 2016</a></li>
-<li><a href="http://rubykansai.github.io/kansai-ruby-community/" title="関西 Ruby コミュニティー 紹介">関西 Ruby コミュニティー 紹介</a></li>
-<li><a href="http://www.coderdojo.jp/">http://www.coderdojo.jp/</a></li>
-<li>17:17 終了</li>
 </ul>
 
 ]]></content>

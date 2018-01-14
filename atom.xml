@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2018-01-03T18:41:29+09:00</updated>
+  <updated>2018-01-14T23:42:57+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,233 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第80回 Ruby関西 勉強会に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2018-01-13-rubykansai80.html"/>
+    <updated>2018-01-13T22:13:59+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubykansai80</id>
+    <content type="html"><![CDATA[<p><a href="https://rubykansai.doorkeeper.jp/events/69011">第80回 Ruby関西 勉強会</a> に参加しました。</p>
+
+<!--more-->
+
+
+<p>以下、メモです。</p>
+
+<h2>会場</h2>
+
+<p>railsdm できたことのある Aiming さんが会場でした。</p>
+
+<h2>オープニング</h2>
+
+<p>会場案内など。</p>
+
+<h2>mruby搭載ボードGR-CITRUSの新しい開発環境の紹介 @momoonga</h2>
+
+<ul>
+<li>GR-CITRUS : Ruby プログラム</li>
+<li>WA-MIKAN : Wi-Fi 通信</li>
+<li>SAMBOU-KAN : モーター制御 が増えた</li>
+<li>GR-CITRUS 開発環境 : Visual Studio Code 拡張の Rubic というのが増えた</li>
+<li>mrbgem の組み合わせのバリエーションが選べる</li>
+<li>Rubic のデモ</li>
+<li>WA-MIKAN のデモ</li>
+<li>SAMBOU-KAN のデモ</li>
+<li>「RubyRobo 192.168.4.1」という SSID で接続先 IP アドレスがわかるようになっていた</li>
+<li>WiFi 接続して操作はうまくいかなかった</li>
+<li>リリース</li>
+<li><a href="https://github.com/wakayamarb/wrbb-v2lib-firm/blob/master/rubic-repository.json">https://github.com/wakayamarb/wrbb-v2lib-firm/blob/master/rubic-repository.json</a></li>
+<li>Release に data.zip</li>
+<li><p>Rubic の方にリポジトリを追加してもらうと、後は Release を自由に増やしていける</p></li>
+<li><p>質疑応答</p></li>
+<li>Q: どこで買える?</li>
+<li>A: 秋月, 独自のネットショップ, 大阪だと共立電子</li>
+<li>SAMBOU-KAN は扱ってもらえてないので、個人のみ</li>
+</ul>
+
+
+<h2>self を考える @yalab</h2>
+
+<ul>
+<li>発表資料: <a href="https://www.slideshare.net/yalab/self-86099114">https://www.slideshare.net/yalab/self-86099114</a></li>
+<li><a href="https://twitter.com/yalab/status/948112876027256832">https://twitter.com/yalab/status/948112876027256832</a> rubyでプログラミングされてる方に質問です。selfというものを</li>
+<li>正式には、レシーバーを指定しないではなく、レシーバーを省略した</li>
+<li>いろんな場所での self</li>
+<li>private メソッドは <code>self.</code> をつけて呼ぶことができない (<code>self.puts "hoge"</code> とか)</li>
+<li>irb の中で <code>irb "a"</code> でサブ irb に入って self に色々きいてみる</li>
+<li><code>self.class</code> とか</li>
+<li><code>self.methods.grep /plu/</code> (String にしなくても grep できる)</li>
+<li><code>self.method(:pluralize).source_location</code> (Active Support の場所がでてくる)</li>
+<li>質疑応答</li>
+<li>Q: self の由来は?</li>
+<li>A: たぶん Smalltalk 由来</li>
+<li>Q: あえて self をつけたい場合は?</li>
+<li>A: <code>self.hoge=</code> を呼びたいときとか</li>
+<li><code>self.hoge=</code> は private でも呼べる (<code>self.</code> を省略するとローカル変数への代入になるため)</li>
+</ul>
+
+
+<p>protected でも同じ:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% irb --simple-prompt -r irb/completion
+</span><span class='line'>&gt;&gt; class A; protected def hoge=(hoge);end;end
+</span><span class='line'>=&gt; A
+</span><span class='line'>&gt;&gt; irb A.new
+</span><span class='line'>&gt;&gt; self.hoge=:hoge
+</span><span class='line'>=&gt; :hoge
+</span><span class='line'>&gt;&gt; ^D
+</span><span class='line'>=&gt; #&lt;IRB::Irb: @context=#&lt;IRB::Context:0x00007fcec08c4ad8&gt;, @signal_status=:IN_EVAL, @scanner=#&lt;RubyLex:0x00007fcec08cce68&gt;&gt;
+</span><span class='line'>&gt;&gt; A.new.hoge = :hoge
+</span><span class='line'>NoMethodError: protected method `hoge=' called for #&lt;A:0x00007fcec08a5318&gt;</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li>Q: <code>class &lt;&lt; self</code> とは?</li>
+<li><p>A: <code>class &lt;&lt; obj</code> で obj の特異メソッドが定義できる話</p></li>
+<li><p>twitter からの参考情報:</p></li>
+<li><a href="https://qiita.com/jnchito/items/451018811842c2631e1e">privateメソッドをレシーバ付きで呼び出せるケース - Qiita</a></li>
+<li><a href="https://gist.github.com/sunaot/8682795"><code>class &lt;&lt; self</code> によるクラスメソッドの定義のイディオムの説明とその背景にある特異クラスのかんたんな解説</a></li>
+</ul>
+
+
+<h2>休憩</h2>
+
+<ul>
+<li>追加情報:</li>
+<li><a href="http://koseki.hatenablog.com/entry/20080125/rubysetter">Rubyのsetterメソッドは特別扱いされる。 - こせきの技術日記</a></li>
+<li>Thu Feb 20 04:07:06 2003 からなので <a href="https://gist.github.com/unak/3038095">The History of Ruby</a> と見比べると 2003-08-04 1.8.0 から。</li>
+</ul>
+
+
+<h2>プロを目指す人のための例外処理（再）入門 @jnchito</h2>
+
+<ul>
+<li>発表資料: <a href="https://speakerdeck.com/jnchito/number-rubykansai-2018-01-13">https://speakerdeck.com/jnchito/number-rubykansai-2018-01-13</a></li>
+<li>西脇から高速バスで2時間</li>
+<li>例外と例外処理についておさらい</li>
+<li>「ハンマーを持つ人にはすべてが釘に見える」</li>
+<li>本当にあった怖い話</li>
+<li>例外を握りつぶしていた例</li>
+<li>例外処理は使い方を間違えると、害の方が大きくなる</li>
+<li>できることと、やっていいことは異なる</li>
+<li>原則は rescue しない</li>
+<li>例外処理のバッドプラクティス</li>
+<li>例外の握りつぶし</li>
+<li>Exception を rescue (普通は StandardError で良い)</li>
+<li>begin と rescue の範囲が広い</li>
+<li>例外クラスを指定しないと NameError や NoMethodError まで捕捉されてしまう</li>
+<li>例外処理をテストしない</li>
+<li>ネットの記事には要注意 (Exception を rescue しているものとか多いらしい)</li>
+<li>例外処理のベストプラクティス</li>
+<li>原則として rescue しない</li>
+<li>ログに残したり通知したりする</li>
+<li>対象を絞り込む (<code>begin; Date.new(year, month, day); rescue ArgumentError; nil; end</code>)</li>
+<li>この例なら <code>Date.valid_date?</code> があるので例外処理を使わない書き方ができる</li>
+<li>例外処理もテストする</li>
+<li>高度なトピック</li>
+<li>業務エラーとシステムエラーの区別をすべき</li>
+<li>業務エラーには原則として例外を使わない (rails の <code>if @model.save</code> とか)</li>
+<li>例外処理をなくしても業務エラーに対処できるか?</li>
+<li>使わない実装例: <code>all_success &amp;=</code> (ロールバックも考慮すべき)</li>
+<li>システムエラーは原則としてフレームワークなどの共通処理に任せる</li>
+<li>例外処理とロールバックの関係</li>
+<li>「アトミック操作は何か」を常に意識する</li>
+<li>Rails で複数のレコードを同時に更新する場合: <code>transaction do ... end</code> と業務エラー時に <code>raise ActiveRecord::Rollback</code> で明示的にロールバック</li>
+<li>攻めの例外</li>
+<li>予期せぬ条件分岐で例外を発生させる</li>
+<li><code>else</code> で矛盾する可能性のある値を返すのもバグの元</li>
+<li>ありえないエラーには強気で (<code>transaction</code> の中で普通はエラーにならない <code>update!</code> を使ってダメならシステムエラー)</li>
+<li>Q: <code>&amp;=</code> は <code>&amp;&amp;=</code> の方が良いのでは?</li>
+<li>A: 良さそう</li>
+<li>Q: 素人は rescue すんな!! は他のフレームワークにもあてはまる?</li>
+<li>A: rails 以外 ruby 以外でもフレームワークに共通処理があるはずなので、あてはまるはず</li>
+</ul>
+
+
+<h2>Ruby 2.5.0 の主な変更点 @znz</h2>
+
+<p>発表資料としては特に用意せずに <a href="https://docs.ruby-lang.org/ja/latest/doc/news=2f2_5_0.html">https://docs.ruby-lang.org/ja/latest/doc/news=2f2_5_0.html</a> をみながら気になった点を話しました。</p>
+
+<p>最初に <a href="https://slide.rabbit-shocker.org/">Rabbit Slide Show</a> の過去の発表資料から適当に自己紹介のページだけ開いておいて、自己紹介をした後は、
+<a href="https://www.ruby-lang.org/ja/news/2017/12/25/ruby-2-5-0-released/">Ruby 2.5.0 リリース</a> をみながら色々話をして、
+時間があるだけ<a href="https://docs.ruby-lang.org/ja/2.5.0/doc/news=2f2_5_0.html">NEWS for Ruby 2.5.0</a>をみながら色々話をしていました。</p>
+
+<h2>GitLab にコントリビュート @ogomr</h2>
+
+<ul>
+<li>発表資料: <a href="https://speakerdeck.com/ogom/contributing-to-gitlab-with-oss-gate">https://speakerdeck.com/ogom/contributing-to-gitlab-with-oss-gate</a></li>
+<li>Contributing to GitLab with OSS Gate</li>
+<li>(ギットラブと呼んでいる)</li>
+<li>chef cookbook → docker</li>
+<li>mac だと遅い</li>
+<li>GDK = GitLab Development Kit</li>
+<li>OSS 開発に参加するには?</li>
+<li>フィードバック</li>
+<li>ユーザーとして OSS を使う</li>
+<li>気づいたことを開発元にフィードバック</li>
+<li><a href="https://about.gitlab.com/installation/">https://about.gitlab.com/installation/</a></li>
+<li>SSL も Let&rsquo;s Encrypt でいける</li>
+<li><a href="https://qiita.com/ogomr/items/238d8649b36bcc8c14ba">3Stepで Let’s Encrypt の保護された GitLab を構築する</a></li>
+<li>GitLab 開発環境構築も GitLab Development Kit で簡単にできる</li>
+<li><p><a href="https://qiita.com/ogomr/items/cc404bf9373408663b11">GitLab Development Kit で OSS開発 に参加する for MAC 2017</a></p></li>
+<li><p>CONTRIBUTING を参考にして開発元にわかりやすいように書く</p></li>
+<li>適切な場所に報告する: GitLab は gitlab.com の issues</li>
+<li>一緒に体験しましょう</li>
+<li><p><a href="https://oss-gate.doorkeeper.jp/events/69160">OSS Gate大阪ワークショップ2018-03-10</a></p></li>
+<li><p>GitLab ってどんな技術で動いているの?</p></li>
+<li><a href="https://docs.gitlab.com/ce/development/architecture.html">GitLab Architecture Overview</a></li>
+<li><a href="https://docs.gitlab.com/ce/development/fe_guide/index.html">Frontend Development Guidelines</a></li>
+<li>Vue.js を使っている</li>
+<li>gdk run</li>
+<li>Gitlab Workhorse : Smart reverse proxy, language Go</li>
+<li>Gitaly : Git RPC (Remote procedure call) service, language: Ruby, Go</li>
+<li>GitLab Shell</li>
+<li>GitLab Rails Web (unicorn)</li>
+<li>GitLab Rails Background Jobs (sidekiq)</li>
+<li>GitLab Frontend Web (webpack)</li>
+<li>GitLab Community Edition の依存パッケージ: Gmefile.lock 226, yarn.lock 1098</li>
+<li>翻訳のイシューはマージされやすい <a href="https://github.com/mperham/sidekiq/pull/3720">https://github.com/mperham/sidekiq/pull/3720</a></li>
+<li>過去の翻訳がいまいちだったと感じたので変更した例</li>
+</ul>
+
+
+<h2>休憩</h2>
+
+<p>ちょっと用事があったので、外出。</p>
+
+<h2>Ruby初級者向けレッスン 64回 - クラス @higaki</h2>
+
+<p>グループワークをしている途中で戻ってきました。</p>
+
+<h2>クロージング</h2>
+
+<p>告知など</p>
+
+<ul>
+<li>2/10(土)に大阪(日本橋)で GR-CITRUS などのミニハッカソン</li>
+<li><a href="https://dddrb.doorkeeper.jp/">https://dddrb.doorkeeper.jp/</a> でプロを目指す人のためのRuby入門 言語仕様からテスト駆動開発・デバッグ技法まで 読書会の第2回を2月に予定</li>
+<li><a href="https://oss-gate.doorkeeper.jp/events/69170">OSS Gate大阪ミートアップ for React</a></li>
+<li>7月中頃か8月中頃にRubyビジネス推進協議会のイベントが予定されていて、その翌日にRuby関西でもちょっと大きめの勉強会 (関西 RubyKaigi になるか第n回 Ruby関西 勉強会になるかどうかは未定) をする予定なので、スタッフ募集 (興味がある方は <a href="https://rubykansai.doorkeeper.jp/">Ruby関西のdoorkeeper</a> の問い合わせからどうぞ)</li>
+<li>今回の会場の <a href="https://www.doorkeeper.jp/%E4%BC%9A%E5%A0%B4/aiming-osaka">IT勉強会の会場 » Aiming 大阪スタジオ</a> の紹介</li>
+</ul>
+
+
+<h2>懇親会</h2>
+
+<p>懇親会は特に事前の募集とかはなく、会場に残ってもらって一緒に移動という感じでした。
+実際にいってみると cuzic さんが予想で予約した人数でぴったりだったようでした。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[webhook でサイトの git pull をする設定をした]]></title>
@@ -4638,157 +4865,6 @@ Twitter のハッシュタグ <code>#rubykaigi</code> をみていると、会�
 <h2>退出</h2>
 
 <p>17時を過ぎても続いていて、移動しないと間に合わなくなりそうだったので、Lisp の話の途中で出ました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[第11回 HosCon - GMO Hosting Conference - @大阪 に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-09-14-hoscon.html"/>
-    <updated>2017-09-14T22:46:24+09:00</updated>
-    <id>http://blog.n-z.jp/blog/hoscon</id>
-    <content type="html"><![CDATA[<p><a href="https://gmohoscon.connpass.com/event/63440/">第11回 HosCon - GMO Hosting Conference - @大阪</a> に参加したので、そのメモです。</p>
-
-<!--more-->
-
-
-<h2>会場</h2>
-
-<p>グランフロントタワー B の 梅田・GMO Yours での開催でした。
-前に何かの勉強会で一度来たことがあるような気がするのですが、何だったか思い出せませんでした。</p>
-
-<p>タワー B 自体は最近 Rails Developers Meetup #4 大阪会場 で来ていました。</p>
-
-<h2>その他</h2>
-
-<p>ハッシュタグは <code>#hoscon</code> でしたが、ツイートはあまりありませんでした。</p>
-
-<p><a href="https://twitter.com/rzl5/status/908276901914882049">https://twitter.com/rzl5/status/908276901914882049</a> に写真がありますが、 ConoHa カードをもらったので、使ってみたいと思いました。</p>
-
-<h2>コンテナ基盤であるLXC/LXDを本番環境で運用する話</h2>
-
-<ul>
-<li>2011年に物理からKVMによる完全仮想化へ</li>
-<li>完全仮想化はリソースに無駄があるということで準仮想化、コンテナ化へ</li>
-<li>なぜLXDか?</li>
-<li>他に検討した選択肢は Docker, KVM, OpenVZ, (VMware は高いので選択肢に入らず)</li>
-<li>質問: Linux だけで Windows や BSD はなかった? カーネルモジュールなども問題なかった? → Linux で、カスタマイズはしていたが共通の kernel だったので問題なく集約できた。</li>
-<li>質問: OpenVZ が遅かった? → 一般的には遅くないかもしれないが、試した環境ではコンテナより遅かった。</li>
-<li>LXDは2017年2月から運用開始</li>
-<li>ホストOSは Ubuntu 16.04 LTS</li>
-<li>ゲストOSは使い慣れたCentOS</li>
-<li>なぜZFSか?　→ 公式がオススメしているのとベンチマークの結果がよかった</li>
-<li>今も苦労している部分はある</li>
-<li>fio で計測</li>
-<li>ZFS を採用した理由: 機能性、柔軟性, 比較対象: lvm, dir</li>
-<li>ホストシステム構築時のトラブル</li>
-<li>オープンファイル数の上限など色々な上限に引っかかった</li>
-<li>ネットワーク編</li>
-<li>NIC の MAC アドレスがかぶっていた</li>
-<li>LXD 運用編</li>
-<li>Apache RLimitNPROC にひっかかった</li>
-<li>ホストのロードアベレージが急激に上昇 → ZFS がボトルネックだったのでチューニングを実施 (ZFS ARC?)</li>
-<li>2ラック (KVM) → 1ラック (LXD)</li>
-<li>質問タイム</li>
-<li>LXD で新しくサービスできるようになったことはある? → 新たなサービスはないが、快適なディスクIOを提供できている</li>
-<li>まだリリースできていないが、準専有の基盤ができた</li>
-<li>ZFS はメモリをたくさん使って残りがユーザーの領域? → ご想像にお任せします</li>
-<li>どのようなところで運用負荷の軽減? 運用でカバーしているところ? → 物理が減ったので楽になった。リソースの制限の自動化を目標に手動でやっている。物理より柔軟にできるのが良い。</li>
-<li>ライブマイグレーションをしているかどうか? → やっていない。今後対応していく。</li>
-<li>内製でコントロールパネルのようなものを作っている? → ない。全部コマンドで。</li>
-<li>CentOS? → 既存のノウハウをいかすために選んだ。</li>
-<li>OS のアップデートはどうしている? → カーネル以外は通常のアップデート</li>
-<li>ホスト側のリソース監視はしていると思うが、コンテナ側はどうしている? → 緩めの limit を設定してる</li>
-<li>PHP などのバージョン違い? → 問い合わせで個別に対応することもある</li>
-<li>サポートが終了したものはなるべく引き継がない</li>
-<li>CentOS 6? 7? → 7</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<p><!-- 20:12 から? -->20:16 まで</p>
-
-<h2>ロリポップ！マネージドクラウド FastContainerの裏側</h2>
-
-<ul>
-<li>ロリポップ！マネージドクラウドは FastContainer アーキテクチャを採用していて、コンテナエンジンに haconiwa</li>
-<li>質問: 価格? → 価格についてはまだ未定</li>
-<li>オートスケール</li>
-<li>質問: 何をもってマネージド? → コンテナの起動の仕方が特殊 (FastContainer) で、完全に root 権限があるわけではないなど</li>
-<li>質問: データベース? → データベースはコンテナで動いていないので、オートスケールではない</li>
-<li>質問: オートスケールは php だけ? → apache + php</li>
-<li>質問: データベースがオートスケールではないのなら、ユーザーごとのリソース制御? → まだ未確定</li>
-<li>質問: 具体的にアクセスが増えると、とは? → 実際は CPU のスロットルタイムをみているので、CPU の負荷が高くなれば。</li>
-<li>逆に負荷が下がればコンテナを減らす。</li>
-<li>質問: ユーザーごとのリソースの分割? 他のユーザーの影響は受けるのか? → 基本的には影響は受けない。リソースは分離している。ホスト自体が重くなっても負荷分散できるアーキテクチャになっている。</li>
-<li>FastContainer とは?</li>
-<li>FastCGI のコンテナ版といったイメージ</li>
-<li>リクエスト契機で Web アプリのコンテナが起動</li>
-<li><p>一度起動したコンテナはその後しばらく使い回して、一定時間が経過したら終了</p></li>
-<li><p>利点</p></li>
-<li>オートスケール</li>
-<li>リクエストがないと停止するのでリソースの節約</li>
-<li>いろんなコンテナで色々なアプリを提供</li>
-<li>常に最新</li>
-<li><p>他のマシンへの載せ替えも楽</p></li>
-<li><p>マネージドクラウドの構成</p></li>
-<li>CMDB というところでコンテナの情報を管理</li>
-<li>質問: 構成が速度に影響があるか? → ある。今は動くものを優先。 nfs が重いというのは多方面から突っ込まれている</li>
-<li>質問: 起動していない時と起動している時のパフォーマンスの差? → 確かにたちがっていない状態のアクセスは時間がかかる。調整中</li>
-<li>質問: どこが大きくなっていく? compute? → 今のところ compute と datapool が増えるのを想定している。</li>
-<li>パフォーマンスは調整していく段階なので、今後機会があれば。</li>
-<li>ngx_mruby</li>
-<li>haconiwa</li>
-<li>コンテナ</li>
-<li>基本は1コンテナに1プロセス</li>
-<li>ssh も sshd コンテナ経由</li>
-<li>FastContainer リクエスト制御フロー</li>
-<li>質問 → 今はチューニングがすんでいないので初回は 2,3 秒ぐらいかかる</li>
-<li>質問 → ユーザーが予約枠を設定していて、そこまでしか上がらないようにしている</li>
-<li><p>予約枠は金額で設定できるようにしたい</p></li>
-<li><p>コンテナの死</p></li>
-<li>コンテナの寿命: lifetime が設定されていて一定時間経過で自動停止</li>
-<li>なぜ寿命?</li>
-<li>リソースの節約</li>
-<li>新しくなるタイミングでライブラリなども更新されてセキュア</li>
-<li>別ホストに移行したい時も CMDB をいじるだけ</li>
-<li>compute のメンテも簡単</li>
-<li><p>質問: リクエストが有る限り死なない? → lifetime で死ぬ</p></li>
-<li><p>オートスケール</p></li>
-<li>haconiwa が cgroup から各コンテナの CPU, I/O 負荷を計測・監視</li>
-<li>ユーザーはコンテナの予約枠を設定可能</li>
-<li>スケールインは CMDB の変更だけで停止は自動停止任せ</li>
-<li><p>予約枠を取るだけでオートスケール</p></li>
-<li><p>コンテナの種類も増やしていきたい</p></li>
-<li><p>質問タイム</p></li>
-<li>予約枠? パケット量をみる? → 設計中。基本的には使ったぶんだけ課金する予定?</li>
-<li>コンテナのサーバー自体が高負荷になったり物理的な障害が起きても自動でフェイルオーバー? → 自動ではできていない。手動でのせかえることはできる。自動化は可能ではある。</li>
-<li>SSL 証明書? Symantec のような台数分の場合とか → あとで</li>
-<li>オートスケールをする監視をしている間隔? → 暫定で1秒</li>
-<li>オートスケールの課金の指標は? ニュースで取り上げられる予定だから、とか。 → 設計中</li>
-<li>聞き逃し</li>
-<li>WAN の IP は共有? → 共有</li>
-<li>コンテナはドメインでみている</li>
-<li>IP アドレス単位で他のユーザーの影響は受ける可能性がある</li>
-<li>現状 CMDB はデータベースのフェイルオーバー任せなので、そこが止まると止まる可能性はある</li>
-<li>のせるアプリの開発環境? → 将来的には用意したい</li>
-<li>聞き逃し → コンテナ単位でどのくらいパフォーマンスが出ているかだそうとか色々話はある</li>
-</ul>
-
-
-<h2>懇親会</h2>
-
-<p>5分休憩の後で懇親会でした。</p>
-
-<h2>感想</h2>
-
-<p>LXD を採用したという話自体は以前に別の勉強会で聞いたことがあったので、それと重複した話もありましたが、もっと技術的につっこんだ話も聞けておもしろかったです。</p>
-
-<p>LXD は他では使っているという話を聞いたことがないので、使っている人はもっと情報を出してくれればいいのに、という気がしています。
-個人的には、情報がなくて探しても何もわからないよりは、Docker のように情報がたくさんあって玉石混交で、自分で見極めないといけない、という状態の方が望ましいです。</p>
-
-<p>マネージドクラウドの話は haconiwa って作ってみたというようなものじゃなくて、ちゃんと実用的に使うためのものだったのかというのが驚きました。
-FastContainer は用途があえば良さそうな感じなので、機会があれば使ってみたいと思いました。</p>
 ]]></content>
   </entry>
   

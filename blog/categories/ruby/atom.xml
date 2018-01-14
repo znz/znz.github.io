@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ruby | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ruby/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2018-01-03T18:41:29+09:00</updated>
+  <updated>2018-01-14T23:42:57+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,233 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[第80回 Ruby関西 勉強会に参加しました]]></title>
+    <link href="http://blog.n-z.jp/blog/2018-01-13-rubykansai80.html"/>
+    <updated>2018-01-13T22:13:59+09:00</updated>
+    <id>http://blog.n-z.jp/blog/rubykansai80</id>
+    <content type="html"><![CDATA[<p><a href="https://rubykansai.doorkeeper.jp/events/69011">第80回 Ruby関西 勉強会</a> に参加しました。</p>
+
+<!--more-->
+
+
+<p>以下、メモです。</p>
+
+<h2>会場</h2>
+
+<p>railsdm できたことのある Aiming さんが会場でした。</p>
+
+<h2>オープニング</h2>
+
+<p>会場案内など。</p>
+
+<h2>mruby搭載ボードGR-CITRUSの新しい開発環境の紹介 @momoonga</h2>
+
+<ul>
+<li>GR-CITRUS : Ruby プログラム</li>
+<li>WA-MIKAN : Wi-Fi 通信</li>
+<li>SAMBOU-KAN : モーター制御 が増えた</li>
+<li>GR-CITRUS 開発環境 : Visual Studio Code 拡張の Rubic というのが増えた</li>
+<li>mrbgem の組み合わせのバリエーションが選べる</li>
+<li>Rubic のデモ</li>
+<li>WA-MIKAN のデモ</li>
+<li>SAMBOU-KAN のデモ</li>
+<li>「RubyRobo 192.168.4.1」という SSID で接続先 IP アドレスがわかるようになっていた</li>
+<li>WiFi 接続して操作はうまくいかなかった</li>
+<li>リリース</li>
+<li><a href="https://github.com/wakayamarb/wrbb-v2lib-firm/blob/master/rubic-repository.json">https://github.com/wakayamarb/wrbb-v2lib-firm/blob/master/rubic-repository.json</a></li>
+<li>Release に data.zip</li>
+<li><p>Rubic の方にリポジトリを追加してもらうと、後は Release を自由に増やしていける</p></li>
+<li><p>質疑応答</p></li>
+<li>Q: どこで買える?</li>
+<li>A: 秋月, 独自のネットショップ, 大阪だと共立電子</li>
+<li>SAMBOU-KAN は扱ってもらえてないので、個人のみ</li>
+</ul>
+
+
+<h2>self を考える @yalab</h2>
+
+<ul>
+<li>発表資料: <a href="https://www.slideshare.net/yalab/self-86099114">https://www.slideshare.net/yalab/self-86099114</a></li>
+<li><a href="https://twitter.com/yalab/status/948112876027256832">https://twitter.com/yalab/status/948112876027256832</a> rubyでプログラミングされてる方に質問です。selfというものを</li>
+<li>正式には、レシーバーを指定しないではなく、レシーバーを省略した</li>
+<li>いろんな場所での self</li>
+<li>private メソッドは <code>self.</code> をつけて呼ぶことができない (<code>self.puts "hoge"</code> とか)</li>
+<li>irb の中で <code>irb "a"</code> でサブ irb に入って self に色々きいてみる</li>
+<li><code>self.class</code> とか</li>
+<li><code>self.methods.grep /plu/</code> (String にしなくても grep できる)</li>
+<li><code>self.method(:pluralize).source_location</code> (Active Support の場所がでてくる)</li>
+<li>質疑応答</li>
+<li>Q: self の由来は?</li>
+<li>A: たぶん Smalltalk 由来</li>
+<li>Q: あえて self をつけたい場合は?</li>
+<li>A: <code>self.hoge=</code> を呼びたいときとか</li>
+<li><code>self.hoge=</code> は private でも呼べる (<code>self.</code> を省略するとローカル変数への代入になるため)</li>
+</ul>
+
+
+<p>protected でも同じ:
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>% irb &ndash;simple-prompt -r irb/completion&lt;/p&gt;
+</span><span class='line'>
+</span><span class='line'>&lt;blockquote&gt;&lt;blockquote&gt;&lt;p&gt;class A; protected def hoge=(hoge);end;end
+</span><span class='line'>=&gt; A
+</span><span class='line'>irb A.new
+</span><span class='line'>self.hoge=:hoge
+</span><span class='line'>=&gt; :hoge
+</span><span class='line'>^D
+</span><span class='line'>=&gt; #&lt;IRB::Irb: @context=#&lt;IRB::Context:0x00007fcec08c4ad8&gt;, @signal_status=:IN_EVAL, @scanner=#&lt;RubyLex:0x00007fcec08cce68&gt;&gt;
+</span><span class='line'>A.new.hoge = :hoge
+</span><span class='line'>NoMethodError: protected method `hoge=&lsquo; called for #&lt;A:0x00007fcec08a5318&gt;</span></code></pre></td></tr></table></div></figure></p></blockquote></blockquote>
+
+<ul>
+<li>Q: <code>class &lt;&lt; self</code> とは?</li>
+<li><p>A: <code>class &lt;&lt; obj</code> で obj の特異メソッドが定義できる話</p></li>
+<li><p>twitter からの参考情報:</p></li>
+<li><a href="https://qiita.com/jnchito/items/451018811842c2631e1e">privateメソッドをレシーバ付きで呼び出せるケース - Qiita</a></li>
+<li><a href="https://gist.github.com/sunaot/8682795"><code>class &lt;&lt; self</code> によるクラスメソッドの定義のイディオムの説明とその背景にある特異クラスのかんたんな解説</a></li>
+</ul>
+
+
+<h2>休憩</h2>
+
+<ul>
+<li>追加情報:</li>
+<li><a href="http://koseki.hatenablog.com/entry/20080125/rubysetter">Rubyのsetterメソッドは特別扱いされる。 - こせきの技術日記</a></li>
+<li>Thu Feb 20 04:07:06 2003 からなので <a href="https://gist.github.com/unak/3038095">The History of Ruby</a> と見比べると 2003-08-04 1.8.0 から。</li>
+</ul>
+
+
+<h2>プロを目指す人のための例外処理（再）入門 @jnchito</h2>
+
+<ul>
+<li>発表資料: <a href="https://speakerdeck.com/jnchito/number-rubykansai-2018-01-13">https://speakerdeck.com/jnchito/number-rubykansai-2018-01-13</a></li>
+<li>西脇から高速バスで2時間</li>
+<li>例外と例外処理についておさらい</li>
+<li>「ハンマーを持つ人にはすべてが釘に見える」</li>
+<li>本当にあった怖い話</li>
+<li>例外を握りつぶしていた例</li>
+<li>例外処理は使い方を間違えると、害の方が大きくなる</li>
+<li>できることと、やっていいことは異なる</li>
+<li>原則は rescue しない</li>
+<li>例外処理のバッドプラクティス</li>
+<li>例外の握りつぶし</li>
+<li>Exception を rescue (普通は StandardError で良い)</li>
+<li>begin と rescue の範囲が広い</li>
+<li>例外クラスを指定しないと NameError や NoMethodError まで捕捉されてしまう</li>
+<li>例外処理をテストしない</li>
+<li>ネットの記事には要注意 (Exception を rescue しているものとか多いらしい)</li>
+<li>例外処理のベストプラクティス</li>
+<li>原則として rescue しない</li>
+<li>ログに残したり通知したりする</li>
+<li>対象を絞り込む (<code>begin; Date.new(year, month, day); rescue ArgumentError; nil; end</code>)</li>
+<li>この例なら <code>Date.valid_date?</code> があるので例外処理を使わない書き方ができる</li>
+<li>例外処理もテストする</li>
+<li>高度なトピック</li>
+<li>業務エラーとシステムエラーの区別をすべき</li>
+<li>業務エラーには原則として例外を使わない (rails の <code>if @model.save</code> とか)</li>
+<li>例外処理をなくしても業務エラーに対処できるか?</li>
+<li>使わない実装例: <code>all_success &amp;=</code> (ロールバックも考慮すべき)</li>
+<li>システムエラーは原則としてフレームワークなどの共通処理に任せる</li>
+<li>例外処理とロールバックの関係</li>
+<li>「アトミック操作は何か」を常に意識する</li>
+<li>Rails で複数のレコードを同時に更新する場合: <code>transaction do ... end</code> と業務エラー時に <code>raise ActiveRecord::Rollback</code> で明示的にロールバック</li>
+<li>攻めの例外</li>
+<li>予期せぬ条件分岐で例外を発生させる</li>
+<li><code>else</code> で矛盾する可能性のある値を返すのもバグの元</li>
+<li>ありえないエラーには強気で (<code>transaction</code> の中で普通はエラーにならない <code>update!</code> を使ってダメならシステムエラー)</li>
+<li>Q: <code>&amp;=</code> は <code>&amp;&amp;=</code> の方が良いのでは?</li>
+<li>A: 良さそう</li>
+<li>Q: 素人は rescue すんな!! は他のフレームワークにもあてはまる?</li>
+<li>A: rails 以外 ruby 以外でもフレームワークに共通処理があるはずなので、あてはまるはず</li>
+</ul>
+
+
+<h2>Ruby 2.5.0 の主な変更点 @znz</h2>
+
+<p>発表資料としては特に用意せずに <a href="https://docs.ruby-lang.org/ja/latest/doc/news=2f2_5_0.html">https://docs.ruby-lang.org/ja/latest/doc/news=2f2_5_0.html</a> をみながら気になった点を話しました。</p>
+
+<p>最初に <a href="https://slide.rabbit-shocker.org/">Rabbit Slide Show</a> の過去の発表資料から適当に自己紹介のページだけ開いておいて、自己紹介をした後は、
+<a href="https://www.ruby-lang.org/ja/news/2017/12/25/ruby-2-5-0-released/">Ruby 2.5.0 リリース</a> をみながら色々話をして、
+時間があるだけ<a href="https://docs.ruby-lang.org/ja/2.5.0/doc/news=2f2_5_0.html">NEWS for Ruby 2.5.0</a>をみながら色々話をしていました。</p>
+
+<h2>GitLab にコントリビュート @ogomr</h2>
+
+<ul>
+<li>発表資料: <a href="https://speakerdeck.com/ogom/contributing-to-gitlab-with-oss-gate">https://speakerdeck.com/ogom/contributing-to-gitlab-with-oss-gate</a></li>
+<li>Contributing to GitLab with OSS Gate</li>
+<li>(ギットラブと呼んでいる)</li>
+<li>chef cookbook → docker</li>
+<li>mac だと遅い</li>
+<li>GDK = GitLab Development Kit</li>
+<li>OSS 開発に参加するには?</li>
+<li>フィードバック</li>
+<li>ユーザーとして OSS を使う</li>
+<li>気づいたことを開発元にフィードバック</li>
+<li><a href="https://about.gitlab.com/installation/">https://about.gitlab.com/installation/</a></li>
+<li>SSL も Let&rsquo;s Encrypt でいける</li>
+<li><a href="https://qiita.com/ogomr/items/238d8649b36bcc8c14ba">3Stepで Let’s Encrypt の保護された GitLab を構築する</a></li>
+<li>GitLab 開発環境構築も GitLab Development Kit で簡単にできる</li>
+<li><p><a href="https://qiita.com/ogomr/items/cc404bf9373408663b11">GitLab Development Kit で OSS開発 に参加する for MAC 2017</a></p></li>
+<li><p>CONTRIBUTING を参考にして開発元にわかりやすいように書く</p></li>
+<li>適切な場所に報告する: GitLab は gitlab.com の issues</li>
+<li>一緒に体験しましょう</li>
+<li><p><a href="https://oss-gate.doorkeeper.jp/events/69160">OSS Gate大阪ワークショップ2018-03-10</a></p></li>
+<li><p>GitLab ってどんな技術で動いているの?</p></li>
+<li><a href="https://docs.gitlab.com/ce/development/architecture.html">GitLab Architecture Overview</a></li>
+<li><a href="https://docs.gitlab.com/ce/development/fe_guide/index.html">Frontend Development Guidelines</a></li>
+<li>Vue.js を使っている</li>
+<li>gdk run</li>
+<li>Gitlab Workhorse : Smart reverse proxy, language Go</li>
+<li>Gitaly : Git RPC (Remote procedure call) service, language: Ruby, Go</li>
+<li>GitLab Shell</li>
+<li>GitLab Rails Web (unicorn)</li>
+<li>GitLab Rails Background Jobs (sidekiq)</li>
+<li>GitLab Frontend Web (webpack)</li>
+<li>GitLab Community Edition の依存パッケージ: Gmefile.lock 226, yarn.lock 1098</li>
+<li>翻訳のイシューはマージされやすい <a href="https://github.com/mperham/sidekiq/pull/3720">https://github.com/mperham/sidekiq/pull/3720</a></li>
+<li>過去の翻訳がいまいちだったと感じたので変更した例</li>
+</ul>
+
+
+<h2>休憩</h2>
+
+<p>ちょっと用事があったので、外出。</p>
+
+<h2>Ruby初級者向けレッスン 64回 - クラス @higaki</h2>
+
+<p>グループワークをしている途中で戻ってきました。</p>
+
+<h2>クロージング</h2>
+
+<p>告知など</p>
+
+<ul>
+<li>2/10(土)に大阪(日本橋)で GR-CITRUS などのミニハッカソン</li>
+<li><a href="https://dddrb.doorkeeper.jp/">https://dddrb.doorkeeper.jp/</a> でプロを目指す人のためのRuby入門 言語仕様からテスト駆動開発・デバッグ技法まで 読書会の第2回を2月に予定</li>
+<li><a href="https://oss-gate.doorkeeper.jp/events/69170">OSS Gate大阪ミートアップ for React</a></li>
+<li>7月中頃か8月中頃にRubyビジネス推進協議会のイベントが予定されていて、その翌日にRuby関西でもちょっと大きめの勉強会 (関西 RubyKaigi になるか第n回 Ruby関西 勉強会になるかどうかは未定) をする予定なので、スタッフ募集 (興味がある方は <a href="https://rubykansai.doorkeeper.jp/">Ruby関西のdoorkeeper</a> の問い合わせからどうぞ)</li>
+<li>今回の会場の <a href="https://www.doorkeeper.jp/%E4%BC%9A%E5%A0%B4/aiming-osaka">IT勉強会の会場 » Aiming 大阪スタジオ</a> の紹介</li>
+</ul>
+
+
+<h2>懇親会</h2>
+
+<p>懇親会は特に事前の募集とかはなく、会場に残ってもらって一緒に移動という感じでした。
+実際にいってみると cuzic さんが予想で予約した人数でぴったりだったようでした。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第79回 Ruby関西 勉強会に参加しました]]></title>
@@ -1434,117 +1661,6 @@ Twitter のハッシュタグ <code>#rubykaigi</code> をみていると、会�
 <p>食べ物の列は待っていれば短くなるかなと思って、話をしながら待っていたらそんなことはなかったので、並んでみたらギリギリ少し残っていたのが食べられて、その後で野菜が残っているのをみつけたのでそれを食べたりしていたので、全然食べられないということはなかったので、二次会には行きませんでした。</p>
 
 <p>明日の懇親会と違って、オフィシャルパーティーはみんな集まっているので、複数人で話したいこと(<a href="https://bugs.ruby-lang.org/issues/13904">getter for original information of Enumerator</a>の件)は、この日のうちに話しておくべきだと思ったのですが、集められなかったので無理でした。後から確認したら、頑張って英語で書いたおかげで代わりにメンテナーを説得しようとしてくれる人がいて、結果的には大丈夫そうです。いいたかったのも、直接は関係がないので mrkn さんとかに説得を頑張って欲しいと言いたかっただけぐらいなので、明日以降に個別に言っておいても良いかもしれないと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Ruby の文字リテラルについて]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-09-10-ruby-char-literal.html"/>
-    <updated>2017-09-10T22:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/ruby-char-literal</id>
-    <content type="html"><![CDATA[<p>Ruby には <code>?a</code> で 1 文字のみの文字列を返す文字リテラルというものがあります。</p>
-
-<p>Ruby を 1.9 以降から使い始めた人には <code>'a'</code> などの文字列リテラルとの使い分けや <code>String#chr</code> の存在意義などがわからないと思ったので、知っている範囲で歴史的経緯を説明してみたいと思います。</p>
-
-<!--more-->
-
-
-<h2>Ruby 1.8 以前と Ruby 1.9 以降の違い</h2>
-
-<p>マルチエンコーディング対応が入る前の文字リテラルは1バイト文字用のリテラルで、多バイト文字は使えませんでした。
-コントロールやメタは昔から使えました。</p>
-
-<p>以降の実行例も含めて、実行例は 2.0 以降も同じなので、省略しています。
-1.8.6 以前は未確認ですが、1.8.7 とほぼ同じはずです。</p>
-
-<pre><code>% rbenv each ruby -ve 'p ?a'
-ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
-97
-ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
-"a"
-% rbenv each ruby -ve 'p ?あ'
-ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
--e:1: Invalid char `\201' in expression
--e:1: Invalid char `\202' in expression
-ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
-"あ"
-% rbenv each ruby -ve 'p ?\C-a'
-ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
-1
-ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
-"\u0001"
-% rbenv each ruby -ve 'p ?\M-a'
-ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
-225
-ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
-"\xE1"
-</code></pre>
-
-<h2>文字とは?</h2>
-
-<p>文字を表すのに専用のクラスを導入するという案もあったようですが、Ruby は大クラス主義だという点や、必要とされる機能が文字列とほとんど変わらない、文字というのを文字列とは別に定義するのは難しいなどの理由から、最終的には1文字だけの String で文字を表すことになったと記憶しています。
-詳細はメーリングリストや redmine の issue の議論などを探してみてください。</p>
-
-<h2>getc と文字リテラル</h2>
-
-<p>文字リテラルの用途として CUI アプリなどで <code>getc</code> で入力した文字との比較という使われ方があったようで、 <code>getc</code> などを使っているプログラムが、文字リテラルと比較する書き方をしていれば壊れないようになっています。</p>
-
-<pre><code>% rbenv each ruby -ve 'p ARGF.getc' /dev/zero
-ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
-0
-ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
-"\u0000"
-% rbenv each ruby -ve 'p ARGF.getc == ?\C-@' /dev/zero
-ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
-true
-ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
-true
-</code></pre>
-
-<h2><code>String#chr</code></h2>
-
-<p><a href="https://docs.ruby-lang.org/ja/latest/method/String/i/chr.html">String#chr</a> は単独で見ると <code>str[0]</code> などで代用できるので不要そうなメソッドですが、
-文字リテラルや <code>getc</code> の返り値を文字列にするのに <code>chr</code> が使われていたので、
-<code>String#chr</code> も互換性のために存在します。</p>
-
-<pre><code>% rbenv each ruby -ve 'p ?a.chr'
-ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
-"a"
-ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
-"a"
-% rbenv each ruby -ve 'p ARGF.read(1) == ?\C-@.chr' /dev/zero
-ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
-true
-ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
-true
-</code></pre>
-
-<h2>ord</h2>
-
-<p>逆に <code>ord</code> は <code>str[0]</code> の返り値が文字列に変わってしまったので、常に数値が欲しい時にも使っていました。</p>
-
-<pre><code>% rbenv each ruby -ve 'p ?\C-@.ord'
-ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
-0
-ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
-0
-% rbenv each ruby -ve 'p "a"[0]'
-ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
-97
-ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
-"a"
-% rbenv each ruby -ve 'p "a"[0].ord'
-ruby 1.8.7 (2013-12-22 patchlevel 375) [x86_64-linux]
-97
-ruby 1.9.3p551 (2014-11-13 revision 48407) [x86_64-linux]
-97
-</code></pre>
-
-<h2>結論</h2>
-
-<p>新規に書くプログラムで積極的に文字リテラル ( <code>?a</code> ) を使う必要性はほとんどないので、普通は文字列リテラルだけ使っておけば良いと思います。</p>
-
-<p><code>getc</code> などとの組み合わせのときに文字リテラルを使えば意味を明確にできますが、今更 1.8 以前との互換性を気にすることもないと思うので、古いプログラムで使われていたときに読めればいいだけで、書くときに使う必要はないと思います。</p>
 ]]></content>
   </entry>
   
