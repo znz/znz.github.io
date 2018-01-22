@@ -4,7 +4,7 @@
   <title><![CDATA[@znz blog]]></title>
   <link href="http://blog.n-z.jp/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2018-01-14T23:42:57+09:00</updated>
+  <updated>2018-01-22T21:36:34+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,57 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial) に更新したら subversion が壊れた話]]></title>
+    <link href="http://blog.n-z.jp/blog/2018-01-22-ubuntu-broken-svn.html"/>
+    <updated>2018-01-22T21:17:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ubuntu-broken-svn</id>
+    <content type="html"><![CDATA[<p>subversion のレポジトリを置いているサーバーを Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial) に更新したら <a href="https://bugs.launchpad.net/ubuntu/+source/subversion/+bug/1639406">Old repository can&rsquo;t be read: svn: E125012: Invalid character in hex checksum</a> の影響でコミットできなくなったので、他の環境にコピーして直した話です。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>壊れた環境: Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial)</li>
+<li>svnadmin dump に使った環境: Debian GNU/Linux 9</li>
+</ul>
+
+
+<h2>現象</h2>
+
+<p>レポジトリを置いているサーバーの Ubuntu のバージョンをあげたら <code>svn: E125012: Invalid character in hex checksum</code> とでるようになって svn ci などができなくなりました。</p>
+
+<p><a href="https://bugs.launchpad.net/ubuntu/+source/subversion/+bug/1639406">Old repository can&rsquo;t be read: svn: E125012: Invalid character in hex checksum</a> によると subversion の upstream ではなおっていて、 Ubuntu xenial では1年以上も放置されていて、修正される望みは薄いと思いました。</p>
+
+<h2>復旧作業</h2>
+
+<p>svnadmin dump/load で復旧できるとあったので、 svnadmin dump しようとしましたが、壊れた環境では svnadmin dump もできなかったので、一時的に他の環境に持っていって dump することにしました。</p>
+
+<ul>
+<li>壊れた環境で tarball 作成: <code>time tar acvf ~/repo.tar.xz repo</code></li>
+<li>別環境にコピー: <code>scp svn@server:repo.tar.xz .</code></li>
+<li>別環境でダンプ: <code>tar xf repo.tar.xz; time svnadmin dump repo &gt; repo.svndump</code></li>
+<li>ダンプをコピー: <code>xz -k repo.svndump; ls -lh repo.svndump*; scp repo.svndump.xz svn@server:</code></li>
+<li>load: <code>mv repo repo-2017; rm -rf repo-2017; svnadmin create repo; xzcat repo.svndump.xz | svnadmin load repo</code></li>
+<li><p>(一度 mv しているのは履歴で最新のレポジトリを消してしまう事故を防ぐため)</p></li>
+<li><p>以下のエラーが出たのでオプションを追加して再実行: <code>mv repo repo-2017; rm -rf repo-2017; svnadmin create repo; xzcat repo.svndump.xz | svnadmin load --bypass-prop-validation repo</code></p></li>
+</ul>
+
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>svnadmin: E125005: Invalid property value found in dumpstream; consider repairing the source or using --bypass-prop-validation while loading.
+</span><span class='line'>svnadmin: E125005: Cannot accept 'svn:log' property because it is not encoded in UTF-8</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p>E125012 の復旧方法についての日本語の記事が見当たらなかったので、まとめると svnadmin dump/load するというだけですが、書いてみました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[第80回 Ruby関西 勉強会に参加しました]]></title>
@@ -4664,207 +4715,6 @@ Twitter のハッシュタグ <code>#rubykaigi</code> をみていると、会�
 <p>食べ物の列は待っていれば短くなるかなと思って、話をしながら待っていたらそんなことはなかったので、並んでみたらギリギリ少し残っていたのが食べられて、その後で野菜が残っているのをみつけたのでそれを食べたりしていたので、全然食べられないということはなかったので、二次会には行きませんでした。</p>
 
 <p>明日の懇親会と違って、オフィシャルパーティーはみんな集まっているので、複数人で話したいこと(<a href="https://bugs.ruby-lang.org/issues/13904">getter for original information of Enumerator</a>の件)は、この日のうちに話しておくべきだと思ったのですが、集められなかったので無理でした。後から確認したら、頑張って英語で書いたおかげで代わりにメンテナーを説得しようとしてくれる人がいて、結果的には大丈夫そうです。いいたかったのも、直接は関係がないので mrkn さんとかに説得を頑張って欲しいと言いたかっただけぐらいなので、明日以降に個別に言っておいても良いかもしれないと思いました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[姫路IT系勉強会 2017.09 に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-09-16-histudy.html"/>
-    <updated>2017-09-16T13:40:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/histudy</id>
-    <content type="html"><![CDATA[<p>RubyKaigi 2017 への移動途中に参加可能だったので、<a href="https://histudy.connpass.com/event/66084/">姫路IT系勉強会 2017.09</a>に参加しました。
-公式の記録は勉強会のページからリンクされている HackMD のページ<!-- https://hackmd.io/s/r1rUBZF9Z -->に残っています。</p>
-
-<!--more-->
-
-
-<p>以下、メモです。</p>
-
-<h2>会場</h2>
-
-<p>iPod touch の connpass アプリの「マップで見る」でピンが表示されている場所に向かっている途中でさとうさんをみつけたので、一緒に行こうとしたら会場の建物の前だったようで、ピンが表示されていた場所はずれていたように思いました。</p>
-
-<h2>自己紹介</h2>
-
-<p>まずは connpass の参加者一覧を元に自己紹介でした。</p>
-
-<h2>休憩</h2>
-
-<h2>HTML の勉強方法</h2>
-
-<ul>
-<li>Hexo のテーマを作り始めたが HTML4 の頃の知識で止まっているので、モダンな HTML, CSS の勉強方法は?</li>
-<li>初心者向けとかのサイトではなく、差分だけ知りたい</li>
-<li><a href="https://caniuse.com/#search=flexbox">https://caniuse.com/#search=flexbox</a> とか</li>
-<li>Hexo 界隈では sass ではなく Stylus がよく使われているらしい</li>
-<li><a href="https://www.w3schools.com/cssref/css3_browsersupport.asp">https://www.w3schools.com/cssref/css3_browsersupport.asp</a></li>
-<li>Bootstrap とかフレームワークはどうかという話</li>
-<li>フルスタックなものと軽量なものを知っておくと良い?</li>
-<li><a href="http://bourbon.io/">http://bourbon.io/</a> : 軽量な sass の mixin 集</li>
-<li><a href="http://neat.bourbon.io/">http://neat.bourbon.io/</a> を組み合わせると grid system も使える</li>
-<li><a href="http://bitters.bourbon.io/">http://bitters.bourbon.io/</a> だと基本的なスタイルまで付いている</li>
-<li><a href="http://bourbon.io/docs/">http://bourbon.io/docs/</a> deprecated になっているものが多い</li>
-<li>フルスタックが鬱陶しい人にはおすすめ</li>
-<li>軽量なフレームワークで流行っているものはあまりない?</li>
-<li>node の sass は ruby の sass とほぼ互換性があるらしい</li>
-<li>node に限らないが独自作法が大変な話</li>
-<li>プラグインアーキテクチャが流行っているらしい</li>
-<li>ruby は PHP などに比べて非互換がきついことがある</li>
-<li>node はタスクランナー周りのものがたくさんあってメンテナンスされなくなってきて、npm 直接使うことが多くなっている</li>
-<li>Web 界隈は色々とカオス</li>
-<li>作った後、ちゃんと更新されていないものがきつい</li>
-<li>awesome から github を辿っていって使うと少しまし <a href="https://github.com/sindresorhus/awesome">https://github.com/sindresorhus/awesome</a></li>
-<li>CentOS とか古いので wpscan でチェックすると色々言われる?</li>
-</ul>
-
-
-<h2>WordPress の話</h2>
-
-<ul>
-<li>なぜか話が来たが、情報が少なくてよくわからず</li>
-<li>とりあえず WordPress の情報が集まっている場所は?</li>
-<li>まず WordBench がおすすめ</li>
-<li>おすすめプラグイン</li>
-<li>WordPressプラグイン100選 の目次から良さそうなプラグインを探す</li>
-<li>パーミッションをちゃんとしよう</li>
-<li>関連する話が先週の<a href="https://histudy.connpass.com/event/66082/">加古川IT系インフラ勉強会 2017.09</a>であったらしい</li>
-<li>困ったら金で解決という手段もある</li>
-</ul>
-
-
-<h2>Markdown の話</h2>
-
-<ul>
-<li>途中抜けているところがあっても手順書があるだけまし</li>
-</ul>
-
-
-<h2>女子中学生チケット詐欺事件</h2>
-
-<ul>
-<li><a href="https://gist.github.com/shunirr/2bd6a5a00b966e1e534b443790c68eda">女子中学生チケット詐欺事件</a> (オリジナル)</li>
-<li><a href="https://gist.github.com/kawabata/fefd78b84856ed7900c69eb9aba3af19">女子中学生チケット詐欺事件</a> (詳しい fork 版)</li>
-</ul>
-
-
-<h2>Markdown の話</h2>
-
-<ul>
-<li>話が戻って発表</li>
-<li><a href="https://gitpitch.com/sky-y/himeji-it-2017-09">Markdownのカオスと付き合う</a> (発表資料)</li>
-<li><a href="https://bitjourney.kibe.la/shared/entries/f740d533-0d57-44fe-a891-dfe669d16121">Markdownはなぜ拡張され続けるのか</a> は一読をおすすめ</li>
-<li><a href="https://babelmark.github.io/?text=%40__gfx__">https://babelmark.github.io/?text=%40__gfx__</a> が strong になることがある問題</li>
-<li>Markdown きつい問題 → 根本的な解決策はない</li>
-<li>他の軽量マークアップ言語: reST など以外にも Ruby の RD や Perl の POD なども昔からある</li>
-<li>表現力が高いマークアップ言語はなかなか流行らない: SGML vs HTML など (XHTML → HTML5 とか)</li>
-<li>無難な記法: CommonMark か GFM (GitHub Flavored Markdown) がおすすめ</li>
-<li><code>#</code> の後ろにスペースを入れた方が良いなど、標準的な書き方を覚えておけば方言に対応しやすい</li>
-<li><a href="http://commonmark.org/help/">http://commonmark.org/help/</a> が基本</li>
-<li>改行の扱い <a href="https://babelmark.github.io/?text=abc%0Adef%0A%0Aghi%0Ajkl">https://babelmark.github.io/?text=abc%0Adef%0A%0Aghi%0Ajkl</a> 連続の改行で p が分割されて単独の改行は br になったりならなかったり</li>
-<li>改行の扱いは CommonMark と GFM で違う</li>
-<li>ASCII Art などなら code block を使えば良い</li>
-<li>表現力の高いものから低いものに変換するとゴミ (HTML 断片) が入ったりする</li>
-<li><p>CSV から Markdown? : pandoc のフィルターにあるかも</p></li>
-<li><p>org-mode から HTML にエクスポートで使っている話</p></li>
-<li><p>markdown にエクスポートもできるらしい</p></li>
-<li><p>ドキュメントを書くことを普及させたい</p></li>
-<li><p>同じ名前なのが混乱の元?</p></li>
-<li>継承して拡張とかできるので別の名前をつけるのも難しそう</li>
-<li>CommonMark で統一しようとしている</li>
-<li><p>GFM も参考になる</p></li>
-<li><p>Markdown は英語圏のメールなどの文章を書く時の一般的な作法が元になっているらしい</p></li>
-<li><p>最低限のドキュメントは書きましょうという話</p></li>
-<li>ansible とか terraform とか</li>
-<li>Jupyter</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<p>15:50 まで</p>
-
-<h2>Perl の Acme::EyeDrops</h2>
-
-<ul>
-<li>デモ</li>
-<li>プログラム解説</li>
-<li>改行と空白削除</li>
-<li>文ごとに改行追加</li>
-<li>などなど順番に変更していってプログラム解説</li>
-<li>ビット演算とか Web 系の人はしらなさそう</li>
-<li>カラーコードで16進数は知ってそうだが、ビット演算はしらなさそう</li>
-<li>ビット演算を知らないとパーミッションとかもわからなさそう</li>
-<li><code>(?{...})</code> は Perl 5.18 から <code>use re "eval"</code> が必要になっている</li>
-</ul>
-
-
-<h2>BlueBorne</h2>
-
-<ul>
-<li>Android で Bluetooth テザリングを便利に使っていたのに使えなくなった</li>
-<li>カーナビはアップデートとかできなさそうなので厳しい</li>
-<li>車はエンジン系とエンタメ系のエンタメ系しか Bluetooth で繋がらないので問題があったとしても大丈夫?</li>
-<li>CAN という規格 (認証とかがない) でエンジン系と通信ができるので可能性はある?</li>
-<li>iOS は大丈夫だったので iPhone で Bluetooth イヤホンとか使ってる人は大丈夫</li>
-<li>サーバーは関係なさそう</li>
-</ul>
-
-
-<h2>これから未来ある開発言語またはシステムは?</h2>
-
-<ul>
-<li>言語は教養として全然違うものを勉強するのが良いのではないか。 Prolog とか PostScript とか SQL とか</li>
-<li>仕事という面では PHP がとりあえずわかれば Web 担当になれる</li>
-<li>WordPress をカスタマイズする時とか PHP が必須になる</li>
-<li>機械学習なら Python になりそう</li>
-<li>未来はわからないので直近を考える</li>
-<li>JavaScript が作れるものの幅が一番広い</li>
-<li>大穴狙いなら COBOL?</li>
-<li>COBOL のプログラムはまだなくなりそうにない</li>
-<li>Ruby のようにコミュニティの雰囲気が良いという観点で選ぶのもあり (元々楽しくプログラミングという基本思想があるので、それが影響しているのかコミュニティの雰囲気が良い)</li>
-<li>この勉強会はなんでもありなので、派生したものを作るのは歓迎</li>
-</ul>
-
-
-<h2>HoloLens とかの話</h2>
-
-<ul>
-<li>HoloLens は完全に視界をおおう VR ではなく、現実世界にホログラムを載せるようなもの</li>
-<li>最近は WinMR というのもあるらしい</li>
-<li>HoloLens は Windows 10</li>
-<li>Edge も VR に対応しているらしい</li>
-<li>開発環境とかは?</li>
-<li>Unity</li>
-<li>ユニバーサル Windows プラットフォーム (UWP)</li>
-<li>Unreal Engine</li>
-<li>まずは企業向けで使われるようになる?</li>
-<li>研究は長い間されていたが、やっと実用化されるようになってきた</li>
-<li>脆弱性対策の話</li>
-<li>VR アプリのデバッグ</li>
-<li>通常の Windows アプリとしてのデバッグ</li>
-<li>体験のデバッグ</li>
-<li>酔う対策は、まだ知見が足りない</li>
-</ul>
-
-
-<h2>Lisp 入門?</h2>
-
-<ul>
-<li>ふわっとした理由で Lisp を勉強したいということだったので色々紹介的な話</li>
-<li>Lisp-1 と Lisp-2</li>
-<li>Scheme と Common Lisp</li>
-<li>コンパクトなのが Scheme</li>
-<li>なんでもありなのが Common Lisp</li>
-<li>Common Lisp HyperSpec</li>
-<li>一番有名な処理系が sbcl</li>
-<li>clisp, Clozure CL</li>
-<li>Gauche</li>
-</ul>
-
-
-<h2>退出</h2>
-
-<p>17時を過ぎても続いていて、移動しないと間に合わなくなりそうだったので、Lisp の話の途中で出ました。</p>
 ]]></content>
   </entry>
   

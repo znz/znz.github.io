@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2018-01-14T23:42:57+09:00</updated>
+  <updated>2018-01-22T21:36:34+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,55 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial) に更新したら subversion が壊れた話]]></title>
+    <link href="http://blog.n-z.jp/blog/2018-01-22-ubuntu-broken-svn.html"/>
+    <updated>2018-01-22T21:17:00+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ubuntu-broken-svn</id>
+    <content type="html"><![CDATA[<p>subversion のレポジトリを置いているサーバーを Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial) に更新したら <a href="https://bugs.launchpad.net/ubuntu/+source/subversion/+bug/1639406">Old repository can&rsquo;t be read: svn: E125012: Invalid character in hex checksum</a> の影響でコミットできなくなったので、他の環境にコピーして直した話です。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>壊れた環境: Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial)</li>
+<li>svnadmin dump に使った環境: Debian GNU/Linux 9</li>
+</ul>
+
+
+<h2>現象</h2>
+
+<p>レポジトリを置いているサーバーの Ubuntu のバージョンをあげたら <code>svn: E125012: Invalid character in hex checksum</code> とでるようになって svn ci などができなくなりました。</p>
+
+<p><a href="https://bugs.launchpad.net/ubuntu/+source/subversion/+bug/1639406">Old repository can&rsquo;t be read: svn: E125012: Invalid character in hex checksum</a> によると subversion の upstream ではなおっていて、 Ubuntu xenial では1年以上も放置されていて、修正される望みは薄いと思いました。</p>
+
+<h2>復旧作業</h2>
+
+<p>svnadmin dump/load で復旧できるとあったので、 svnadmin dump しようとしましたが、壊れた環境では svnadmin dump もできなかったので、一時的に他の環境に持っていって dump することにしました。</p>
+
+<ul>
+<li>壊れた環境で tarball 作成: <code>time tar acvf ~/repo.tar.xz repo</code></li>
+<li>別環境にコピー: <code>scp svn@server:repo.tar.xz .</code></li>
+<li>別環境でダンプ: <code>tar xf repo.tar.xz; time svnadmin dump repo &gt; repo.svndump</code></li>
+<li>ダンプをコピー: <code>xz -k repo.svndump; ls -lh repo.svndump*; scp repo.svndump.xz svn@server:</code></li>
+<li>load: <code>mv repo repo-2017; rm -rf repo-2017; svnadmin create repo; xzcat repo.svndump.xz | svnadmin load repo</code></li>
+<li><p>(一度 mv しているのは履歴で最新のレポジトリを消してしまう事故を防ぐため)</p></li>
+<li><p>以下のエラーが出たのでオプションを追加して再実行: <code>mv repo repo-2017; rm -rf repo-2017; svnadmin create repo; xzcat repo.svndump.xz | svnadmin load --bypass-prop-validation repo</code></p></li>
+</ul>
+
+
+<pre><code>    svnadmin: E125005: Invalid property value found in dumpstream; consider repairing the source or using --bypass-prop-validation while loading.
+    svnadmin: E125005: Cannot accept 'svn:log' property because it is not encoded in UTF-8
+</code></pre>
+
+<h2>まとめ</h2>
+
+<p>E125012 の復旧方法についての日本語の記事が見当たらなかったので、まとめると svnadmin dump/load するというだけですが、書いてみました。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[webhook でサイトの git pull をする設定をした]]></title>
@@ -867,104 +916,6 @@ Heroku にデプロイするときも git でデプロイするなら同様に�
 <p>次は staging 環境と production 環境に Heroku を使う例を紹介します。</p>
 
 <p>GitLab + Dokku 関連の記事は<a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[GitLabと連携するDokkuの初期設定]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-07-10-gitlab-dokku.html"/>
-    <updated>2017-07-10T21:30:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/gitlab-dokku</id>
-    <content type="html"><![CDATA[<p>GitLab と Dokku (と一部 Heroku) を使って CI/CD (Continuous Integration / Continuous Deployment) 環境を作ってみた話の続きです。
-今回は Dokku の設定の話になります。</p>
-
-<p><a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Ubuntu 16.04.2 LTS</li>
-<li>Omnibus GitLab 9.1.4-ce.0 (インストール時) から 9.3.5-ce.0 (記事執筆時)</li>
-<li>gitlab-ci-multi-runner 9.2.0 (インストール時) から 9.3.0 (記事執筆時)</li>
-<li>Dokku 0.9.4 (インストール時) から 0.10.2 (記事執筆時)</li>
-</ul>
-
-
-<h2>Dokku とは?</h2>
-
-<p><a href="http://dokku.viewdocs.io/dokku/">Dokku - The smallest PaaS implementation you&rsquo;ve ever seen</a>は bash で書かれた OSS の PaaS です。</p>
-
-<p>Heroku のように git push でデプロイするというのが基本的な使い方になります。</p>
-
-<p>環境変数の操作などのような heroku コマンドで操作に相当することは ssh 経由と Dokku ホスト上での dokku コマンドの両方でできることが多いです。
-プラグインのインストールなど、一部の操作は Dokku ホスト上で直接実行する必要があります。</p>
-
-<p>データベースなどはプラグインで対応しています。</p>
-
-<p>Dokku の更新が止まっていた時にできた <a href="https://github.com/dokku-alt/dokku-alt">Dokku Alternative</a> という fork もありましたが、メンテナンスが止まっているので使うべきではありません。</p>
-
-<p>最近はコアプラグインから少しずつ Go 言語への移行を進めているようです。</p>
-
-<h2>インストール</h2>
-
-<p><a href="http://dokku.viewdocs.io/dokku/">Dokku</a> に書いてあるように <code>bootstrap.sh</code> を使うと自動で <code>get.docker.com</code> からの docker のインストールも含めて、 apt から dokku をインストールしてくれます。</p>
-
-<h2>初期設定</h2>
-
-<p>debconf であらかじめ設定しておくか、<code>web_config</code> を使って設定します。</p>
-
-<p>デフォルトのままなどで <code>web_config</code> が有効な場合、 Dokku をインストールしたホストをブラウザーで開くと初期設定画面が出てきます。</p>
-
-<p>そこでデプロイや ssh 経由での操作に使う ssh の公開鍵の登録とホスト名の設定をします。
-ホスト名はアプリケーションごとに個別のバーチャルホストを別途設定できるので、とりあえず xip.io や nip.io を使っておくのが手軽だと思います。</p>
-
-<h2>プラグインのインストール</h2>
-
-<p><a href="http://dokku.viewdocs.io/dokku/community/plugins/">プラグイン一覧</a>から Compatibility を確認して必要なプラグインをインストールします。</p>
-
-<p>Heroku と似た感じで使いたいのなら <a href="https://github.com/dokku/dokku-postgres">dokku postgres</a> を入れておくと良いと思います。</p>
-
-<p>Dokku ホストで</p>
-
-<pre><code>sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git postgres
-</code></pre>
-
-<p>でインストールできます。</p>
-
-<p><a href="https://github.com/dokku/dokku-maintenance">dokku-maintenance</a> のように Heroku だと標準で対応していることがプラグインになっていたり、
-<a href="https://github.com/F4-Group/dokku-apt">dokku-apt</a> のように Heroku だと複数 buildpack で対応していたようなことがプラグインになっていたりすることもあります。</p>
-
-<h2>ssh の公開鍵設定</h2>
-
-<p>後で GitLab CI の secret variables に秘密鍵を設定するので、専用の鍵ペアを作成して、 <a href="http://dokku.viewdocs.io/dokku/deployment/user-management/">User Management</a> の方法で Dokku に公開鍵を登録しておきます。</p>
-
-<pre><code>% ssh-keygen
-Generating public/private rsa key pair.
-Enter file in which to save the key (/home/vagrant/.ssh/id_rsa): /home/vagrant/.ssh/id_gitlab
-Enter passphrase (empty for no passphrase):
-Enter same passphrase again:
-Your identification has been saved in /home/vagrant/.ssh/id_gitlab.
-Your public key has been saved in /home/vagrant/.ssh/id_gitlab.pub.
-The key fingerprint is:
-(略)
-% cat ~/.ssh/id_gitlab.pub | ssh dokku@dokku.example.jp ssh-keys:add gitlab
-</code></pre>
-
-<h2>動作確認</h2>
-
-<p>データベースの必要な例を試すなら、<a href="http://dokku.viewdocs.io/dokku/deployment/application-deployment/">Deploy tutorial</a>を試してみると良いと思います。</p>
-
-<p>データベースの不要な例を試すなら、<a href="https://devcenter.heroku.com/articles/rack">Deploying Rack-based Apps | Heroku Dev Center</a> の <code>heroku create</code> を <code>git remote add dokku dokku@dokku.example.test:hello</code> に変えて、 <code>git push heroku master</code> の代わりに <code>git push dokku master</code> で試してみたりすると良いと思います。</p>
-
-<h2>まとめ</h2>
-
-<p>Dokku のインストールから簡単な動作確認方法まで紹介しました。
-次は <code>.gitlab-ci.yml</code> を作成して連携する話です。</p>
-
-<p><a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
 ]]></content>
   </entry>
   

@@ -5,13 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>第 85 回 関西 Debian 勉強会に参加した - @znz blog</title>
+  <title>Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial) に更新したら subversion が壊れた話 - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="第 85 回 関西 Debian 勉強会に参加した 2014-06-22 (Sun) 1:43 pm | Comments 第 85 回 関西 Debian 勉強会
-に参加してきました。 そのときのメモです。
-詳細は勉強会のページからリンクされている資料を参照してください。 Intro MATE &hellip;">
+  <meta name="description" content="Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial) に更新したら subversion が壊れた話 2018-01-22 (Mon) 9:17 pm | Comments subversion のレポジトリを置いているサーバーを Ubuntu 14.04.5 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -20,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-06-22-kansai-debian-meeting.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2018-01-22-ubuntu-broken-svn.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -85,7 +83,7 @@
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">第 85 回 関西 Debian 勉強会に参加した</h1>
+      <h1 class="entry-title">Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial) に更新したら subversion が壊れた話</h1>
       
       <!-- zenback_title_end -->
       
@@ -97,7 +95,7 @@
 
 
 
-<time class='entry-date' datetime='2014-06-22T13:43:06+09:00'><span class='date'>2014-06-22 (Sun)</span> <span class='time'>1:43 pm</span></time>
+<time class='entry-date' datetime='2018-01-22T21:17:00+09:00'><span class='date'>2018-01-22 (Mon)</span> <span class='time'>9:17 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -110,78 +108,49 @@
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><a href="https://wiki.debian.org/KansaiDebianMeeting/20140622" title="第 85 回 関西 Debian 勉強会">第 85 回 関西 Debian 勉強会</a>
-に参加してきました。</p>
-
-<p>そのときのメモです。
-詳細は勉強会のページからリンクされている資料を参照してください。</p>
+<div class="entry-content"><p>subversion のレポジトリを置いているサーバーを Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial) に更新したら <a href="https://bugs.launchpad.net/ubuntu/+source/subversion/+bug/1639406">Old repository can&rsquo;t be read: svn: E125012: Invalid character in hex checksum</a> の影響でコミットできなくなったので、他の環境にコピーして直した話です。</p>
 
 <!--more-->
 
 
-<h2>Intro</h2>
+<h2>環境</h2>
 
 <ul>
-<li>MATE 1.8 が Debian に入ったという話
-
-<ul>
-<li><a href="https://www.debian.org/News/weekly/2014/10/" title="Debian Project News - June 9th, 2014">Debian Project News - June 9th, 2014</a></li>
-</ul>
-</li>
-<li>Debian 6 の LTS (long term support) の話
-
-<ul>
-<li>全パッケージが対象というわけではない</li>
-<li>たとえば rails とか chromium とかは対象外</li>
-</ul>
-</li>
-<li>Berkeley DB を post jessie で外す予定
-
-<ul>
-<li>AGPL に変わったから</li>
-</ul>
-</li>
-<li>事前課題発表と自己紹介
-
-<ul>
-<li>おすすめの IM</li>
-<li>webwml-git の運用</li>
-<li>web-mode.el (melpa にはある)</li>
-</ul>
-</li>
+<li>壊れた環境: Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial)</li>
+<li>svnadmin dump に使った環境: Debian GNU/Linux 9</li>
 </ul>
 
 
-<h2>「Linuxのドライバメンテナになった体験記」(担当：坂本)</h2>
+<h2>現象</h2>
+
+<p>レポジトリを置いているサーバーの Ubuntu のバージョンをあげたら <code>svn: E125012: Invalid character in hex checksum</code> とでるようになって svn ci などができなくなりました。</p>
+
+<p><a href="https://bugs.launchpad.net/ubuntu/+source/subversion/+bug/1639406">Old repository can&rsquo;t be read: svn: E125012: Invalid character in hex checksum</a> によると subversion の upstream ではなおっていて、 Ubuntu xenial では1年以上も放置されていて、修正される望みは薄いと思いました。</p>
+
+<h2>復旧作業</h2>
+
+<p>svnadmin dump/load で復旧できるとあったので、 svnadmin dump しようとしましたが、壊れた環境では svnadmin dump もできなかったので、一時的に他の環境に持っていって dump することにしました。</p>
 
 <ul>
-<li>質問から派生して残った疑問点
-
-<ul>
-<li>character device とは何か (block device との違いは何か)</li>
-</ul>
-</li>
-</ul>
-
-
-<h2>「Debian での systemd とのつきあい方」(担当：佐々木)</h2>
-
-<p>状況確認コマンドいろいろのメモです。
-一部のコマンドは自動で <code>$PAGER</code> を通してくれるようですが、
-<code>PAGER=lv</code> の場合は <code>LV=-c</code> がないとエスケープシーケンスが解釈されなくて読みにくくなります。</p>
-
-<ul>
-<li><code>systemd-analyze</code></li>
-<li><code>systemd-analyze blame</code></li>
-<li><code>systemd-analyze plot &gt; systemd-analyze_plot.svg</code></li>
-<li><code>systemctl list-dependencies</code></li>
-<li><code>systemctl status</code></li>
-<li><code>systemctl list-unit-files</code></li>
-<li><code>systemctl list-units</code></li>
-<li><code>sudo LV=-c journalctl</code></li>
-<li><code>systemd-cgls</code></li>
+<li>壊れた環境で tarball 作成: <code>time tar acvf ~/repo.tar.xz repo</code></li>
+<li>別環境にコピー: <code>scp svn@server:repo.tar.xz .</code></li>
+<li>別環境でダンプ: <code>tar xf repo.tar.xz; time svnadmin dump repo &gt; repo.svndump</code></li>
+<li>ダンプをコピー: <code>xz -k repo.svndump; ls -lh repo.svndump*; scp repo.svndump.xz svn@server:</code></li>
+<li>load: <code>mv repo repo-2017; rm -rf repo-2017; svnadmin create repo; xzcat repo.svndump.xz | svnadmin load repo</code></li>
+<li><p>(一度 mv しているのは履歴で最新のレポジトリを消してしまう事故を防ぐため)</p></li>
+<li><p>以下のエラーが出たのでオプションを追加して再実行: <code>mv repo repo-2017; rm -rf repo-2017; svnadmin create repo; xzcat repo.svndump.xz | svnadmin load --bypass-prop-validation repo</code></p></li>
 </ul>
 
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>svnadmin: E125005: Invalid property value found in dumpstream; consider repairing the source or using --bypass-prop-validation while loading.
+</span><span class='line'>svnadmin: E125005: Cannot accept 'svn:log' property because it is not encoded in UTF-8</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p>E125012 の復旧方法についての日本語の記事が見当たらなかったので、まとめると svnadmin dump/load するというだけですが、書いてみました。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -200,12 +169,12 @@
 
 
 
-<time class='entry-date' datetime='2014-06-22T13:43:06+09:00'><span class='date'>2014-06-22 (Sun)</span> <span class='time'>1:43 pm</span></time>
+<time class='entry-date' datetime='2018-01-22T21:17:00+09:00'><span class='date'>2018-01-22 (Mon)</span> <span class='time'>9:17 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/debian/'>debian</a>, <a class='category' href='/blog/categories/event/'>event</a>, <a class='category' href='/blog/categories/kansaidebian/'>kansaidebian</a>
+    <a class='category' href='/blog/categories/linux/'>linux</a>, <a class='category' href='/blog/categories/ubuntu/'>ubuntu</a>
   
 </span>
 
@@ -232,10 +201,8 @@
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2014-06-21-ansible-yaml.html" title="Previous Post: ansible使いのためのYAML入門">&laquo; ansible使いのためのYAML入門</a>
+        <a class="basic-alignment left" href="/blog/2018-01-13-rubykansai80.html" title="Previous Post: 第80回 Ruby関西 勉強会に参加しました">&laquo; 第80回 Ruby関西 勉強会に参加しました</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2014-06-22-key-sign-caff.html" title="Next Post: caffでキーサインした">caffでキーサインした &raquo;</a>
       
     </p>
   </footer>
@@ -373,8 +340,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-06-22-kansai-debian-meeting.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2014-06-22-kansai-debian-meeting.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2018-01-22-ubuntu-broken-svn.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2018-01-22-ubuntu-broken-svn.html';
         var disqus_script = 'embed.js';
       
     (function () {
