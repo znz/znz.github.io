@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2018-01-22T21:36:34+09:00</updated>
+  <updated>2018-01-23T21:21:47+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,77 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[gitolite から gitolite3 への移行]]></title>
+    <link href="http://blog.n-z.jp/blog/2018-01-23-migrate-gitolite3.html"/>
+    <updated>2018-01-23T21:16:34+09:00</updated>
+    <id>http://blog.n-z.jp/blog/migrate-gitolite3</id>
+    <content type="html"><![CDATA[<p>Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial) に更新したら、 gitolite パッケージが消えてしまって、 gitolite3 で設定し直す必要がありました。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial)</li>
+<li>gitolite 2.3-1 から gitolite3 3.6.4-1</li>
+</ul>
+
+
+<h2>gitolite3 パッケージのインストール</h2>
+
+<p>「gitolite のアクセス設定を管理するユーザの鍵を指定」では「gitolite version 2.x から移行する場合は空白にしてください。」と書いてあったので空欄のままにしました。</p>
+
+<pre><code>% sudo apt install gitolite3
+[sudo] password for adminuser@ns6:
+パッケージリストを読み込んでいます... 完了
+依存関係ツリーを作成しています
+状態情報を読み取っています... 完了
+以下の追加パッケージがインストールされます:
+  libcommon-sense-perl libjson-perl libjson-xs-perl libtypes-serialiser-perl
+提案パッケージ:
+  git-daemon-sysvinit gitweb
+以下のパッケージが新たにインストールされます:
+  gitolite3 libcommon-sense-perl libjson-perl libjson-xs-perl libtypes-serialiser-perl
+アップグレード: 0 個、新規インストール: 5 個、削除: 0 個、保留: 0 個。
+292 kB のアーカイブを取得する必要があります。
+この操作後に追加で 970 kB のディスク容量が消費されます。
+続行しますか? [Y/n]
+</code></pre>
+
+<h2>migrate</h2>
+
+<p><a href="http://gitolite.com/gitolite/migr/index.html">migrating from gitolite v2</a> をみると gitolite-admin/conf/gitolite.conf で <code>NAME/</code> ルールを使っている場合は書き換えが必要とありましたが、 <code>RW+</code> と <code>R</code> しか使っていなかったので、そのままで大丈夫そうでした。</p>
+
+<p>移行手順には、はっきりとは書いていませんでしたが、後は <code>gitolite setup</code> を実行するだけでした。</p>
+
+<pre><code>% sudo su - git
+$ gitolite setup
+
+FATAL: '/home/git/.gitolite.rc' seems to be for older gitolite; please see
+http://gitolite.com/gitolite/migr.html
+$
+</code></pre>
+
+<p><code>-pk</code> で公開鍵を指定しても同じエラーでした。</p>
+
+<p><code>.gitolite.rc</code> は変更した覚えがなかったので、リネームして再実行したところ、正常終了しました。</p>
+
+<pre><code>$ mv .gitolite.rc .gitolite.rc.v2
+$ gitolite setup
+$
+</code></pre>
+
+<p>その後、 ssh 経由で接続確認したところ、問題なく使えるようになっていました。</p>
+
+<h2>まとめ</h2>
+
+<p>gitolite3 への移行手順の情報があまりなかったようなので、書いてみました。
+基本的には gitolite3 パッケージを入れて <code>gitolite setup</code> を実行するだけでした。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial) に更新したら subversion が壊れた話]]></title>
@@ -495,135 +566,6 @@ Unix 的にそれぞれは大した設定はしていないのですが、組み
 <h2>まとめ</h2>
 
 <p><code>gitlab-ci-multi-runner</code> パッケージから <code>gitlab-runner</code> パッケージへの移行は GitLab (GitLab CI) への登録し直しが必要だと面倒そうと思って、 10.0.x の間は躊躇してそのままにしてしまっていましたが、 vagrant 環境で確認したところ、パッケージの更新だけで大丈夫ということがわかったので、問題なく上げることができました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[LILO&東海道らぐオフラインミーティング 2017/08/27 に参加しました]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-08-27-lilo-tokaidolug.html"/>
-    <updated>2017-08-27T13:33:33+09:00</updated>
-    <id>http://blog.n-z.jp/blog/lilo-tokaidolug</id>
-    <content type="html"><![CDATA[<p><a href="https://lilo.connpass.com/event/64381/">LILO&amp;東海道らぐオフラインミーティング 2017/08/27</a> に参加しました。</p>
-
-<p>今回もアンカンファレンス形式でした。</p>
-
-<!--more-->
-
-
-<h2>メモ</h2>
-
-<ul>
-<li>会場はいつもの 4 階でした。</li>
-<li>ハッシュタグ: <code>#lilo_jp</code> <code>#東海道らぐ</code></li>
-<li>登録参加者数 12名</li>
-<li>自己紹介から</li>
-<li>最初の発表は発表者の希望により非公開</li>
-<li>途中からきた人は発表の合間に随時自己紹介</li>
-</ul>
-
-
-<h2>自分の発表</h2>
-
-<ul>
-<li>自分の lilo.linux.or.jp の話</li>
-<li>発表資料に入れていなかった部分については以下の通り</li>
-<li>OGP を入れたきっかけは <a href="https://togetter.com/li/1107707">LILO&amp;東海道らぐオフラインミーティング 2017/05/06の記録 - Togetterまとめ</a> で connpass だけ概要と画像が出ていたため</li>
-<li><a href="https://developers.facebook.com/tools/debug/">Open Graph Debugger - Developers Facebook</a> (Facebook アカウントがないと使えない?) は OGP がなくても自動検出した内容で埋められるため、本当に反映されるかどうかの確認には使えなかった覚えがあります</li>
-<li><a href="https://ja.osdn.net/projects/clamav-jp/lists/archive/users/2017-August/000280.html">[clamav-jp 281] ウィルスDB更新の異常について（解決済）</a></li>
-<li><a href="http://qiita.com/ttdoda/items/f16422d709e264cbb8a1">Postfix 2.12 の compatibility_level</a></li>
-<li>dokuwiki は <a href="https://bugs.debian.org/854592">#854592 dokuwiki: Unable to login, missing usr/share/php/Crypt/AES.php</a> で消えていた</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<h2>GPD-Pocket に Ubuntu 17.04 をインストールした話</h2>
-
-<ul>
-<li>東海道らぐ四日市 11/25</li>
-<li>GPD-Pocket でも Ubuntu 17.04 が動いた</li>
-<li>Kernel 4.13RC + Intel Graphics Driver OSS + 蓋開閉</li>
-<li>色々な条件で試してNGだったが、偶然蓋を開けたら画面がうつった</li>
-<li>ATOM はバニラカーネルの時点でバグがあるらしい</li>
-</ul>
-
-
-<h2>Fireduck OS</h2>
-
-<ul>
-<li>東海道LUG有志によるLinuxディストリビューションプロジェクト</li>
-<li>○○焼き → Fire duck (あひる焼き)</li>
-<li>タブレット向け</li>
-<li><a href="https://github.com/TokaidoLUG/fireduckos">https://github.com/TokaidoLUG/fireduckos</a></li>
-<li>アーキテクチャ説明</li>
-<li>悩み事</li>
-<li>journald が起動したプロセスの出力をファイルに書き込むので重い</li>
-<li>OSM のアプリ?</li>
-<li>UEFI32 向けに 64 bit 環境で 32 bit 向けのビルドが必要なので multilib を使った</li>
-<li><a href="https://github.com/TokaidoLUG/meta-intel-mobile">https://github.com/TokaidoLUG/meta-intel-mobile</a></li>
-<li><a href="https://github.com/TokaidoLUG">Tokaido Linux User Group</a></li>
-<li>欲しいアプリの話</li>
-<li>資料は <a href="https://www.slideshare.net/wata2ki">https://www.slideshare.net/wata2ki</a> に公開予定</li>
-</ul>
-
-
-<h2>休憩</h2>
-
-<ul>
-<li>懇親会参加者の確認</li>
-</ul>
-
-
-<h2>つなぎの発表</h2>
-
-<ul>
-<li>オープンソースカンファレンス広島の紹介</li>
-<li>Allwinner タブレットの実演</li>
-<li>firefox を動かして、ネットワークが繋がっていないので about:mozilla とか about:robots とか</li>
-</ul>
-
-
-<h2>State of the Map 2017 に行ってきたよ</h2>
-
-<ul>
-<li>Open Street Map の国際会議</li>
-<li>日本で国際会議をやるのは珍しい</li>
-<li>会津若松市は LibreOffice を使っているので、ついでに話を聞きに行った</li>
-<li>写真を見ながら色々な話</li>
-<li>Maps With Me というアプリが便利らしい</li>
-</ul>
-
-
-<h2>最後の話</h2>
-
-<p>プロジェクターに映らなかったので、集まって話をきいていました。</p>
-
-<h2>クロージング</h2>
-
-<ul>
-<li>今後の予定など</li>
-<li>会場費は学生以外が 100 円でした。</li>
-</ul>
-
-
-<h2>発表した内容</h2>
-
-<p>スライドはいつも通り <a href="http://slide.rabbit-shocker.org/authors/znz/lilo-20170827/">Rabbit Slide Show</a> (<a href="https://rubygems.org/gems/rabbit-slide-znz-lilo-20170827">RubyGems</a>), <a href="https://slideshare.net/znzjp/lilolinuxorjp-20178">SlideShare</a>, <a href="https://speakerdeck.com/u/znz/p/lilo-dot-linux-dot-or-dot-jp-falsehua-2017nian-8yue">Speaker Deck</a> にあげています。(ソースは <a href="https://github.com/znz/lilo-20170827">github</a> にあげています。)</p>
-
-<iframe src="https://slide.rabbit-shocker.org/authors/znz/lilo-20170827/viewer.html"
-        width="640" height="524"
-        frameborder="0"
-        marginwidth="0"
-        marginheight="0"
-        scrolling="no"
-        style="border: 1px solid #ccc; border-width: 1px 1px 0; margin-bottom: 5px"
-        allowfullscreen> </iframe>
-
-
-<div style="margin-bottom: 5px">
-  <a href="https://slide.rabbit-shocker.org/authors/znz/lilo-20170827/" title="lilo.linux.or.jp の話 (2017年8月)">lilo.linux.or.jp の話 (2017年8月)</a>
-</div>
-
 ]]></content>
   </entry>
   

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2018-01-22T21:36:34+09:00</updated>
+  <updated>2018-01-23T21:21:47+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,77 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[gitolite から gitolite3 への移行]]></title>
+    <link href="http://blog.n-z.jp/blog/2018-01-23-migrate-gitolite3.html"/>
+    <updated>2018-01-23T21:16:34+09:00</updated>
+    <id>http://blog.n-z.jp/blog/migrate-gitolite3</id>
+    <content type="html"><![CDATA[<p>Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial) に更新したら、 gitolite パッケージが消えてしまって、 gitolite3 で設定し直す必要がありました。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial)</li>
+<li>gitolite 2.3-1 から gitolite3 3.6.4-1</li>
+</ul>
+
+
+<h2>gitolite3 パッケージのインストール</h2>
+
+<p>「gitolite のアクセス設定を管理するユーザの鍵を指定」では「gitolite version 2.x から移行する場合は空白にしてください。」と書いてあったので空欄のままにしました。</p>
+
+<pre><code>% sudo apt install gitolite3
+[sudo] password for adminuser@ns6:
+パッケージリストを読み込んでいます... 完了
+依存関係ツリーを作成しています
+状態情報を読み取っています... 完了
+以下の追加パッケージがインストールされます:
+  libcommon-sense-perl libjson-perl libjson-xs-perl libtypes-serialiser-perl
+提案パッケージ:
+  git-daemon-sysvinit gitweb
+以下のパッケージが新たにインストールされます:
+  gitolite3 libcommon-sense-perl libjson-perl libjson-xs-perl libtypes-serialiser-perl
+アップグレード: 0 個、新規インストール: 5 個、削除: 0 個、保留: 0 個。
+292 kB のアーカイブを取得する必要があります。
+この操作後に追加で 970 kB のディスク容量が消費されます。
+続行しますか? [Y/n]
+</code></pre>
+
+<h2>migrate</h2>
+
+<p><a href="http://gitolite.com/gitolite/migr/index.html">migrating from gitolite v2</a> をみると gitolite-admin/conf/gitolite.conf で <code>NAME/</code> ルールを使っている場合は書き換えが必要とありましたが、 <code>RW+</code> と <code>R</code> しか使っていなかったので、そのままで大丈夫そうでした。</p>
+
+<p>移行手順には、はっきりとは書いていませんでしたが、後は <code>gitolite setup</code> を実行するだけでした。</p>
+
+<pre><code>% sudo su - git
+$ gitolite setup
+
+FATAL: '/home/git/.gitolite.rc' seems to be for older gitolite; please see
+http://gitolite.com/gitolite/migr.html
+$
+</code></pre>
+
+<p><code>-pk</code> で公開鍵を指定しても同じエラーでした。</p>
+
+<p><code>.gitolite.rc</code> は変更した覚えがなかったので、リネームして再実行したところ、正常終了しました。</p>
+
+<pre><code>$ mv .gitolite.rc .gitolite.rc.v2
+$ gitolite setup
+$
+</code></pre>
+
+<p>その後、 ssh 経由で接続確認したところ、問題なく使えるようになっていました。</p>
+
+<h2>まとめ</h2>
+
+<p>gitolite3 への移行手順の情報があまりなかったようなので、書いてみました。
+基本的には gitolite3 パッケージを入れて <code>gitolite setup</code> を実行するだけでした。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Ubuntu 14.04.5 (trusty) から 16.04.3 (xenial) に更新したら subversion が壊れた話]]></title>
@@ -599,321 +670,6 @@ git push による deploy の方が好みなら git push を使っても良い�
 <p>GitLab CI と Dokku と Heroku を組み合わせて CI/CD 環境を作る例を紹介しました。</p>
 
 <p>今回紹介した様に、 Heroku に似ていてもある程度違いのある Dokku で自由に review 環境を作成して、 production に近い方が良い staging 環境は Heroku を使うというのが、自前の環境のリソースには余裕がある場合には良いのではないでしょうか。</p>
-
-<p>GitLab + Dokku 関連の記事は<a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[.gitlab-ci.ymlでDokkuにdeployする]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-07-11-gitlab-ci-dokku.html"/>
-    <updated>2017-07-11T22:15:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/gitlab-ci-dokku</id>
-    <content type="html"><![CDATA[<p>GitLab と Dokku (と一部 Heroku) を使って CI/CD (Continuous Integration / Continuous Deployment) 環境を作ってみた話の続きです。
-CI 部分のメインとなる <code>.gitlab-ci.yml</code> の設定の話です。</p>
-
-<p><a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Ubuntu 16.04.2 LTS</li>
-<li>Omnibus GitLab 9.1.4-ce.0 (インストール時) から 9.3.5-ce.0 (記事執筆時)</li>
-<li>gitlab-ci-multi-runner 9.2.0 (インストール時) から 9.3.0 (記事執筆時)</li>
-<li>Dokku 0.9.4 (インストール時) から 0.10.2 (記事執筆時)</li>
-</ul>
-
-
-<h2>構成</h2>
-
-<p><a href="https://docs.gitlab.com/ce/ci/README.html">GitLab Continuous Integration (GitLab CI)</a>の冒頭の画像にあるように、
-git push すると CI が走り、 master 以外のブランチなら review 環境にデプロイされて、
-master ブランチなら staging 環境にデプロイして、その後、手動で production 環境にデプロイできる、
-という状態にします。</p>
-
-<h2>.gitlab-ci.yml</h2>
-
-<p>この後は <code>.gitlab-ci.yml</code> に設定する内容の説明になります。</p>
-
-<h2>image 設定</h2>
-
-<p>ここでは <a href="https://hub.docker.com/r/_/ruby/">library/ruby - Docker Hub</a> の 2.3.3 を使いました。
-<code>.ruby-version</code> や <code>Gemfile</code> と同じバージョンを指定します。</p>
-
-<pre><code>image: ruby:2.3.3
-</code></pre>
-
-<p>2.3 だと 2.3.4 になるので、 2.3.3 まで指定しています。
-2.3.4 はセキュリティアップデートではなかったので、まだ 2.3.3 のままですが、様子をみてあげる予定です。</p>
-
-<h2>cache 設定</h2>
-
-<p><a href="https://docs.gitlab.com/ce/ci/yaml/README.html#cache-key">cache:key</a> から per-branch caching を選んで以下のように設定しました。</p>
-
-<pre><code>cache:
-  key: "$CI_COMMIT_REF_NAME"
-  untracked: true
-</code></pre>
-
-<h2>環境変数設定</h2>
-
-<p><a href="https://hub.docker.com/r/_/postgres/">library/postgres - Docker Hub</a> で使う <code>POSTGRES_PASSWORD</code> などと、それに接続するための Rails 用の <code>DATABASE_URL</code>、
-デプロイ用の省略表記のための <code>DOKKU</code> などを設定しています。</p>
-
-<p><code>APP_NAME</code> と <code>DB_NAME</code> は <code>CI_ENVIRONMENT_SLUG</code> を使ってブランチごとに自動生成される名前を使っています。</p>
-
-<pre><code>variables:
-  # for test
-  POSTGRES_DB: dbname
-  POSTGRES_USER: dbuser
-  POSTGRES_PASSWORD: dbpass
-  DATABASE_URL: "postgres://dbuser:dbpass@postgres:5432/dbname"
-  # for deploy
-  DOKKU: ssh dokku@$DOKKU_HOST
-  APP_NAME: $CI_ENVIRONMENT_SLUG
-  DB_NAME: $CI_ENVIRONMENT_SLUG-database
-</code></pre>
-
-<h2>stages 設定</h2>
-
-<p>最初に説明したように、 test の後に review、 staging の後に production となるように stages を設定します。</p>
-
-<pre><code>stages:
-  - test
-  - review
-  - staging
-  - production
-</code></pre>
-
-<h2>before_script</h2>
-
-<p>テスト用の before_script を設定しています。(デプロイの方は個別に上書きしています。)</p>
-
-<p>apt や bundler ではキャッシュ用のディレクトリである <code>/cache</code> を使うように指定しています。</p>
-
-<p>開発環境と共通になっている都合上、 sqlite3 を入れています。
-JavaScript ランタイムも必要なので、 nodejs も入れています。</p>
-
-<pre><code>before_script:
-  - 'apt-get update -qq &amp;&amp; apt-get -o dir::cache::archives="/cache/apt" install -y -qq sqlite3 libsqlite3-dev nodejs'
-  - ruby -v
-  - gem install bundler --no-ri --no-rdoc
-  - bundle install --jobs $(nproc) --path=/cache/bundler
-  - ln -nfs .test.env .env
-</code></pre>
-
-<h2>デプロイ用の before_script</h2>
-
-<p><a href="https://docs.gitlab.com/ce/ci/yaml/README.html#hidden-keys">Hidden keys</a>に書いてあるようにキーが <code>.</code> で始まるものは無視されるので、
-YAML のアンカーを使って参照用に使えます。</p>
-
-<p>ruby image には openssh-client は入っていたのですが、他の image に変えても動くように参考にした <a href="https://docs.gitlab.com/ce/ci/ssh_keys/README.html">Using SSH keys</a> に書いてあった通り、 openssh-client のインストール手順も入れています。</p>
-
-<p><code>~/.ssh/config</code> で Hostname や Port や User などを指定したかったことがあったので、設定できるようにしました。</p>
-
-<pre><code>.before_ssh: &amp;before_ssh
-  # https://docs.gitlab.com/ce/ci/ssh_keys/README.html
-  - 'which ssh-agent || ( apt-get update -y &amp;&amp; apt-get -o dir::cache::archives="/cache/apt" install -y openssh-client )'
-  - eval $(ssh-agent -s)
-  - ssh-add &lt;(echo "$SSH_PRIVATE_KEY")
-  - mkdir -p ~/.ssh
-  # Set `ssh-keyscan $DOKKU_HOST` to SSH_SERVER_HOSTKEYS
-  - '[[ -f /.dockerenv ]] &amp;&amp; echo "$SSH_SERVER_HOSTKEYS" &gt; ~/.ssh/known_hosts'
-  - '[[ -f /.dockerenv ]] &amp;&amp; echo "$SSH_CONFIG" &gt; ~/.ssh/config'
-</code></pre>
-
-<h2>GitLab の Web での環境変数設定</h2>
-
-<p>ここで <code>.gitlab-ci.yml</code> の話は中断して、 Secret variables の設定の話です。</p>
-
-<p>GitLab で該当プロジェクトを開いて、 Settings の Pipelines から Secret variables で <code>SSH_PRIVATE_KEY</code> などを設定します。</p>
-
-<p>ここでは、以下のように設定しました。</p>
-
-<ul>
-<li><code>DOKKU_HOST</code> : Dokku に ssh するときのホスト名 (<code>dokku.example.com</code> など)</li>
-<li><code>DOKKU_DOMAIN</code> : Dokku の VHOST に設定したドメイン (<code>10.1.2.3.xip.io</code> など)</li>
-<li><code>SSH_PRIVATE_KEY</code> : 秘密鍵 (<code>~/.ssh/id_gitlab</code> など) の内容</li>
-<li><code>SSH_SERVER_HOSTKEYS</code> : <code>ssh-keyscan $DOKKU_HOST</code> の出力</li>
-<li><code>PRODUCTION_DOKKU_HOST</code> : production 用の Dokku に ssh するときのホスト名</li>
-<li><code>SSH_CONFIG</code> : <code>~/.ssh/config</code> に設定したい内容</li>
-</ul>
-
-
-<p><code>SSH_PRIVATE_KEY</code> は Protected を Yes にしたいところですが、 review 環境への deploy に失敗するので、 No のままにする必要がありました。</p>
-
-<h2>review 環境への deploy 用 script</h2>
-
-<p>まず Dokku でアプリとデータベースを作成して接続します。
-2度目以降は同じアプリを更新するので、作成などのエラーは無視します。</p>
-
-<p>環境変数は <code>TZ</code> と <code>RAILS_SERVE_STATIC_FILES</code> あたりがほぼ必須だと思いますが、他は staging 環境や review 環境用に独自に設定できるようにしています。
-<code>RACK_DEV_MARK_ENV</code> は rack-dev-mark gem の設定です。</p>
-
-<p><code>Procfile</code> で web だけではなく clockwork gem を使ったプロセスも動かしている関係で <code>letter_opener</code> 用のディレクトリをマウントしていますが、
-<code>/usr/bin/find '/var/lib/dokku/data/storage/letter_opener' -mtime '+2' -delete</code> のような感じで古いファイルは自動削除する予定です。
-(自動削除はまだしていません。)</p>
-
-<p>デプロイ本体部分の <code>git push</code> は、単純に <code>master</code> だとうまくいかないことがあったので、 <code>HEAD:refs/heads/master</code> という指定にしています。
-Heroku にデプロイするときも git でデプロイするなら同様になります。</p>
-
-<p><code>db:seed</code> の実行は <code>ssh</code> に <code>-tt</code> をつけて強制的に tty を確保する必要がありました。</p>
-
-<pre><code>.deploy_script: &amp;deploy_script
-  - $DOKKU apps:create $APP_NAME || echo $?
-  # require `sudo dokku plugin:install https://github.com/dokku/dokku-postgres`
-  - $DOKKU postgres:create $DB_NAME || echo $?
-  - $DOKKU postgres:link $DB_NAME $APP_NAME || echo $?
-  - $DOKKU config:set --no-restart $APP_NAME
-    TZ=Asia/Tokyo
-    RAILS_SERVE_STATIC_FILES=1
-    NO_FORCE_SSL=1
-    USE_LETTER_OPENER_WEB=1
-    RACK_DEV_MARK_ENV=review
-    RACK_ENV=review
-    RAILS_ENV=review
-  - $DOKKU storage:mount $APP_NAME /var/lib/dokku/data/storage/letter_opener/$APP_NAME:/app/tmp/letter_opener || echo $?
-  - git push dokku@$DOKKU_HOST:$APP_NAME HEAD:refs/heads/master
-  - $DOKKU -tt run $APP_NAME bundle exec rake db:seed db:seed_fu
-</code></pre>
-
-<h2>test stage のジョブ</h2>
-
-<p>postgres を使って rake でテストを走らせます。</p>
-
-<p>データベースの設定は <code>DATABASE_URL</code> で指定しているので、 <code>config/database.yml</code> は特に何もしていません。</p>
-
-<pre><code>rake:
-  stage: test
-  services:
-    - postgres:latest
-  script:
-    - bundle exec rake db:setup RAILS_ENV=test
-    - bundle exec rake
-</code></pre>
-
-<p>rubocop なども使うなら同様に設定します。</p>
-
-<h2>production 環境への deploy</h2>
-
-<p>順番が前後しますが、最初に production 環境への deploy 設定です。</p>
-
-<p>production 環境はちゃんと名前が決まっているので <code>APP_NAME</code> を上書きします。</p>
-
-<p><code>before_script</code> はテスト環境用のものを <code>before_ssh</code> で上書きします。
-(デプロイ用のジョブの方が多いので逆にテスト用のジョブで <code>before_script</code> を上書きする方がよかったかもしれません。)</p>
-
-<p>production 環境は環境がすでに整っているはずなので、デプロイは <code>git push</code> による更新のみです。</p>
-
-<p>environment を設定することで GitLab の Web のプロジェクトの Pipelines の Environments からリンクが貼られます。</p>
-
-<p><code>when: manual</code> にすることで手動で開始するようにしています。</p>
-
-<p>only で master のみに制限しています。</p>
-
-<pre><code>production:
-  stage: production
-  variables:
-    APP_NAME: hello-app
-  before_script: *before_ssh
-  script:
-    - git push dokku@$PRODUCTION_DOKKU_HOST:$APP_NAME HEAD:refs/heads/master
-  environment:
-    name: production
-    url: https://hello-app.example.jp/
-  when: manual
-  only:
-    - master
-</code></pre>
-
-<h2>staging 環境への deploy</h2>
-
-<p>production 環境と同様に staging 環境への deploy 設定をしています。</p>
-
-<p>テストが通ったら自動実行されるのと <code>APP_NAME</code> や URL などが違う以外は基本的に production と同じです。</p>
-
-<pre><code>staging:
-  stage: staging
-  variables:
-    APP_NAME: hello-app-staging
-  before_script: *before_ssh
-  script:
-    - git push dokku@$PRODUCTION_DOKKU_HOST:$APP_NAME HEAD:refs/heads/master
-  environment:
-    name: staging
-    url: https://hello-app-staging.example.jp/
-  only:
-    - master
-</code></pre>
-
-<h2>review 環境への deploy</h2>
-
-<p>review 環境への deploy も似たような感じです。</p>
-
-<p>deploy 本体の script は事前に定義した <code>deploy_script</code> を使います。
-結局ここでしか使っていないので、直接ここに書いても良かったかもしれません。</p>
-
-<p>environment は name に <code>review/</code> をつけることで複数の review 環境が同時に存在している時に折りたたまれるようになります。</p>
-
-<p>review 環境は動的に作ったり消したりするので、 https ではなく http になっています。</p>
-
-<p><code>on_stop</code> を指定することで環境の削除ジョブを指定できます。</p>
-
-<p>only と except で master 以外のブランチの時に review 環境が作成されるようにしています。</p>
-
-<pre><code>review:
-  stage: review
-  before_script: *before_ssh
-  script: *deploy_script
-  environment:
-    name: review/$CI_COMMIT_REF_NAME
-    url: http://$CI_ENVIRONMENT_SLUG.$DOKKU_DOMAIN
-    on_stop: stop_review
-  only:
-    - branches
-  except:
-    - master
-</code></pre>
-
-<h2>review 環境の削除</h2>
-
-<p><code>action: stop</code> で環境を削除するジョブとして設定しています。</p>
-
-<p><code>when: manual</code> で手動実行するように設定していますが、基本的にはマージリクエストがマージされた時に Remove source branch にチェックを入れて、自動で停止しています。</p>
-
-<p><code>GIT_STRATEGY: none</code> で git 関連の操作はせずに速やかに停止処理のみするようにしています。</p>
-
-<p>postgres は使用中だと停止できないので、先にアプリケーションを削除してからデータベースを削除しています。
-自動実行なので <code>--force</code> で確認なしに削除するようにしています。</p>
-
-<pre><code>stop_review:
-  stage: review
-  variables:
-    GIT_STRATEGY: none
-  before_script: *before_ssh
-  script:
-    - $DOKKU apps:destroy $CI_ENVIRONMENT_SLUG --force || echo $?
-    - $DOKKU postgres:destroy $CI_ENVIRONMENT_SLUG-database --force || echo $?
-  environment:
-    name: review/$CI_COMMIT_REF_NAME
-    action: stop
-  when: manual
-  only:
-    - branches
-  except:
-    - master
-</code></pre>
-
-<h2>まとめ</h2>
-
-<p>GitLab CI と Dokku を組み合わせて CI/CD 環境を作る例を紹介しました。</p>
-
-<p>ちゃんと動く review 環境にするには seed の設定だったり、メール関係の設定だったり、色々とアプリケーション側でも対応が必要ですが、一度環境ができてしまえば変更の確認を他の人にもしてもらいやすくなるので、便利になるのではないでしょうか。</p>
-
-<p>次は staging 環境と production 環境に Heroku を使う例を紹介します。</p>
 
 <p>GitLab + Dokku 関連の記事は<a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
 ]]></content>
