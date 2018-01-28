@@ -56,6 +56,12 @@ fi
   sudo systemctl start lilo_web_update.path
 ```
 
+2018-01-28 追記: 以下のように enable もしておかないと再起動後に止まってしまっていました。
+
+```
+  sudo systemctl enable lilo_web_update.path
+```
+
 ## `lilo_web_update.path`
 
 `trigger_update_web` ファイルを `PathModified` で監視して変化があれば `lilo_web_update.service` を実行するようにしました。
@@ -68,8 +74,10 @@ Description=Trigger update web
 PathModified=/home/www/trigger_update_web
 
 [Install]
-WantedBy=muti-user.target
+WantedBy=multi-user.target
 ```
+
+2018-01-28 追記: WantedBy の target 名が間違っていたのを修正しました。
 
 ## `lilo_web_update.service`
 
