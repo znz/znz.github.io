@@ -5,15 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>ruby-buildをrbenvと組み合わせずに使う - @znz blog</title>
+  <title>rabbitでのスライド作成から公開まで - @znz blog</title>
   <meta name="author" content="Kazuhiro NISHIYAMA">
 
   
-  <meta name="description" content="ruby-buildをrbenvと組み合わせずに使う 2014-07-27 (Sun) 5:08 pm | Comments ruby-build
-は
-rbenv
-と組み合わせて使われることが多いですが、
-単独でも使えて、その情報が少ないので少し書いておきます。 /usr/local &hellip;">
+  <meta name="description" content="rabbitでのスライド作成から公開まで 2018-01-28 (Sun) 11:30 pm | Comments Rabbit でのスライドの作り方などの話があまり見当たらない気がするので、スライド作成から公開までの流れをまとめてみました。 確認バージョン Ubuntu 16.04 LTS ( &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -22,7 +18,7 @@ rbenv
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://blog.n-z.jp/blog/2014-07-27-ruby-build-without-rbenv.html">
+  <link rel="canonical" href="http://blog.n-z.jp/blog/2018-01-28-rabbit-slide.html">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="@znz blog" type="application/atom+xml">
@@ -87,7 +83,7 @@ rbenv
       
       <!-- zenback_title_begin -->
       
-      <h1 class="entry-title">ruby-buildをrbenvと組み合わせずに使う</h1>
+      <h1 class="entry-title">rabbitでのスライド作成から公開まで</h1>
       
       <!-- zenback_title_end -->
       
@@ -99,7 +95,7 @@ rbenv
 
 
 
-<time class='entry-date' datetime='2014-07-27T17:08:00+09:00'><span class='date'>2014-07-27 (Sun)</span> <span class='time'>5:08 pm</span></time>
+<time class='entry-date' datetime='2018-01-28T23:30:00+09:00'><span class='date'>2018-01-28 (Sun)</span> <span class='time'>11:30 pm</span></time>
         
            | <a href="#disqus_thread"
              data-disqus-identifier="http://blog.n-z.jp">Comments</a>
@@ -112,63 +108,310 @@ rbenv
 
 <!-- zenback_body_begin -->
 
-<div class="entry-content"><p><a href="https://github.com/sstephenson/ruby-build" title="ruby-build">ruby-build</a>
-は
-<a href="https://github.com/sstephenson/rbenv" title="rbenv">rbenv</a>
-と組み合わせて使われることが多いですが、
-単独でも使えて、その情報が少ないので少し書いておきます。</p>
+<div class="entry-content"><p><a href="https://rabbit-shocker.org/ja/">Rabbit</a> でのスライドの作り方などの話があまり見当たらない気がするので、スライド作成から公開までの流れをまとめてみました。</p>
 
 <!--more-->
 
 
-<h2><code>/usr/local</code> にインストールする方法</h2>
+<h2>確認バージョン</h2>
 
-<p><code>ruby-build</code> 自体もインストールしてしまう場合は
-<code>install.sh</code> を使ってインストールします。</p>
+<ul>
+<li>Ubuntu 16.04 LTS (xenial)</li>
+<li>ruby 2.4.3</li>
+<li>rabbit 2.2.1</li>
+</ul>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+
+<h2>雛形作成</h2>
+
+<p><code>rabbit-slide new</code> にいくつかのオプションを指定して、雛形を作成します。</p>
+
+<p>id と base name と markup language は複数の場所に影響するので、最初からしっかり決めておくか、変更する場合は <code>rabbit-slide new</code> からやり直してスライドの内容をコピーした方が簡単かもしれません。</p>
+
+<p>他のオプションは config.yaml, スライドの1ページ目, README.md に影響するだけなので、後からでも簡単に変更できます。</p>
+
+<p>GitHub が RD に対応してくれないので、 README を markdown にするために markup language を指定します。
+スライドの記述もそれに合わせて markdown で書くことになります。</p>
+
+<p>いくつかのオプションは <code>~/.rabbit/author.yaml</code> に保存されて次からは指定しなくてもデフォルトが変わります。
+特に markup language も変わることは注意が必要かもしれません。</p>
+
+<p>tags は <code>,</code> 区切りで複数指定できます。</p>
+
+<p>allotted time はスライドの下の亀が左から右に行くまでの時間になります。
+(うさぎはスライドの枚数)
+テーマによっては表示されなかったり、別のものが表示されたりします。</p>
+
+<p>他のオプションは見た目通りの意味です。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>git clone --depth 1 https://github.com/sstephenson/ruby-build
-</span><span class='line'>ruby-build/install.sh
-</span><span class='line'>rm -rf ruby-build
-</span><span class='line'>ruby-build 2.1.2 /usr/local
-</span></code></pre></td></tr></table></div></figure>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>vagrant@vagrant:/vagrant$ rabbit-slide new --id about-boot2docker-format-me --base-name boot2docker-format-me --markup-language markdown --title "boot2docker の format-me の話" --tags linux --allotted-time 10m --presentation-date 2018/01/28 --name "Kazuhiro NISHIYAMA" --email "zn@mbf.nifty.com" --rubygems-user znz --slideshare-user znzjp --speaker-deck-user znz
+</span><span class='line'>[INFO]
+</span><span class='line'>Creating directory: about-boot2docker-format-me
+</span><span class='line'>[INFO]
+</span><span class='line'>Creating file:      about-boot2docker-format-me/.gitignore
+</span><span class='line'>[INFO]
+</span><span class='line'>Creating file:      about-boot2docker-format-me/.rabbit
+</span><span class='line'>[INFO]
+</span><span class='line'>Creating file:      about-boot2docker-format-me/config.yaml
+</span><span class='line'>[INFO]
+</span><span class='line'>Creating file:      about-boot2docker-format-me/README.md
+</span><span class='line'>[INFO]
+</span><span class='line'>Creating file:      about-boot2docker-format-me/Rakefile
+</span><span class='line'>[INFO]
+</span><span class='line'>Creating file:      about-boot2docker-format-me/boot2docker-format-me.md
+</span><span class='line'>[INFO]
+</span><span class='line'>Creating directory: /home/vagrant/.rabbit
+</span><span class='line'>[INFO]
+</span><span class='line'>Creating file:      /home/vagrant/.rabbit/author.yaml</span></code></pre></td></tr></table></div></figure>
 
 
-<p>もっと詳しい使い方は
-<a href="http://qiita.com/takahashim/items/406421d515ef1d4f1189" title="[ReVIEW Tips] DockerでRe:VIEW">[ReVIEW Tips] DockerでRe:VIEW</a>
-が参考になると思います。</p>
+<h2>表紙やテーマの設定</h2>
 
-<h2>ruby だけインストールする方法</h2>
+<p>見出しレベル1 (HTML でいう h1, markdown だと <code>#</code> で始まる行) ごとにページが分かれるので、作成されたディレクトリに入って <code>base-name.md</code> ファイルを編集していきます。</p>
 
-<p><code>bin/ruby-build</code> を直接実行すれば <code>ruby-build</code> をインストールせずに
-<code>ruby</code> だけインストールすることもできます。</p>
+<p>1ページ目は表紙とメタデータで、テーマを変更する場合は markdown なら</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>git clone --depth 1 https://github.com/sstephenson/ruby-build
-</span><span class='line'>ruby-build/bin/ruby-build 2.1.2 /usr/local
-</span><span class='line'>rm -rf ruby-build
-</span></code></pre></td></tr></table></div></figure>
+</pre></td><td class='code'><pre><code class=''><span class='line'>theme
+</span><span class='line'>:   lightning-simple</span></code></pre></td></tr></table></div></figure>
 
 
-<p>ドキュメントの生成を止めたり、
-インストール中のメッセージを出したりするために
-以下のように実行するのも良いと思います。</p>
+<p>のように書きます。</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<p>オプションで指定したものの他には</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>content-source
+</span><span class='line'>:   第1回なんとか勉強会</span></code></pre></td></tr></table></div></figure>
+
+
+<p>のように <code>content-source</code> をつけることが多いです。</p>
+
+<h2>表示確認</h2>
+
+<p><code>rake</code> で表示を確認できます。
+<code>rabbit slide.md</code> のように <code>rabbit</code> コマンドにスライドファイルを指定しても同じように表示できます。</p>
+
+<p>最大化でスクリーンサイズがあわないときに <code>rabbit -S 1920,1080 slide.md</code> のようにオプションを指定して実行するという使い方をしたこともあります。</p>
+
+<h2>スライド記述</h2>
+
+<p>プレゼンにふさわしい書き方で内容を書いていきます。</p>
+
+<p>個人的には箇条書きを使うことが多いです。</p>
+
+<p>rabbit のスライドは <code>rabbit-slide-</code> で始まる名前で gem としても公開できるので、<a href="https://rubygems.org/search?utf8=%E2%9C%93&amp;query=rabbit-slide">gem を rabbit-slide で検索</a>して、参考にすると良いと思います。
+(ダウンロード数がある程度あって、こういう gem を誰がダウンロードしてるんだろう? と思うのですが、全 gem 調査とかでダウンロードされてる回数が割とあるのではないかと推測しています。)</p>
+
+<h2>表示しながらスライド記述</h2>
+
+<p>スライドのファイルを書き換えると何もしなくても自動で反映されます。
+残念ながら亀は戻ってしまうので、発表練習をしながら途中で気づいた点を直すのは、後回しにするかタイマーを諦める必要がありそうです。</p>
+
+<h2>ページごとの追加データ</h2>
+
+<p>見出しレベル2 はページにプロパティなどをつけるのに使います。
+書き方は表紙ページのメタデータと同様です。</p>
+
+<p>見出しの行の内容は後述の「note」以外なら「プロパティ」でも「property」でもなんでも良いようです。
+試した感じだと markdown では以下のような感じで設定できるようです。
+何が設定できるのかはテーマ次第だと思います。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='sh'><span class='line'>git clone --depth 1 https://github.com/sstephenson/ruby-build
-</span><span class='line'><span class="nb">export </span><span class="nv">CONFIGURE_OPTS</span><span class="o">=</span><span class="s2">&quot;--disable-install-doc&quot;</span>
-</span><span class='line'>ruby-build/bin/ruby-build --verbose 2.1.2 /usr/local
-</span><span class='line'>rm -rf ruby-build
-</span></code></pre></td></tr></table></div></figure>
+</pre></td><td class='code'><pre><code class=''><span class='line'>## プロパティ
+</span><span class='line'>
+</span><span class='line'>background-color
+</span><span class='line'>:   gray</span></code></pre></td></tr></table></div></figure>
 
+
+<h2>情報ウィンドウと note</h2>
+
+<p>情報ウィンドウはスライド実行中に <code>I</code> で出てきます。
+プロジェクターにスライドを出して、手元に情報ウィンドウを出すという使い方が想定されているようです。
+残り時間のタイマーも付いています。</p>
+
+<p>たとえば以下のようにメモを書いておくと情報ウィンドウにメモが表示されて、情報ウィンドウの表示のされ方も変わるようです。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>## note
+</span><span class='line'>
+</span><span class='line'>メモです。</span></code></pre></td></tr></table></div></figure>
+
+
+<p>note を使ってみた例としては、昔のスライドなので markup language が RD ですが <a href="https://github.com/znz/rubykaigi2014-ruby-removed-features/blob/master/ruby-removed-features.rab">https://github.com/znz/rubykaigi2014-ruby-removed-features/blob/master/ruby-removed-features.rab</a> があります。</p>
+
+<h2>本番</h2>
+
+<p><code>rake</code> か <code>rabbit</code> コマンドで表示してプレゼンを実施します。</p>
+
+<p>スライドの内容によっては右クリックメニューから <code>Cache all slides</code> でキャッシュしておくとページの切り替えがはやくなって良いかもしれません。</p>
+
+<p>クリック、<code>→</code>、<code>f</code> などで次のページ、<code>←</code>、<code>b</code> などで前のページです。</p>
+
+<p>表紙の間はまだタイマーは止まっていて、1ページ目に切り替えた瞬間からカウントダウンが始まります。</p>
+
+<h2>スライドの公開</h2>
+
+<p><code>rake pdf</code> で PDF ファイルを生成できます。
+<code>pdf/id-base-name.pdf</code> という形式のファイル名で作成されます。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ rake pdf
+</span><span class='line'>mkdir -p pdf
+</span><span class='line'>$ ls pdf
+</span><span class='line'>about-boot2docker-format-me-boot2docker-format-me.pdf</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>rake publish:slideshare</code> はエラーでうまくいかず、 <code>rake publish:speaker_deck</code> は speaker deck 側で API が未実装なので、生成された PDF を <a href="https://www.slideshare.net/">https://www.slideshare.net/</a> や <a href="https://speakerdeck.com/">https://speakerdeck.com/</a> でアップロードします。
+情報を埋めて puslish します。</p>
+
+<p>公開されたスライドの URL の <code>/</code> で区切られた末尾の部分をそれぞれ <code>config.yaml</code> の <code>slideshare_id:</code> と <code>speaker_deck_id:</code> に設定します。</p>
+
+<p>たとえば <a href="https://www.slideshare.net/znzjp/boot2docker-formatme">https://www.slideshare.net/znzjp/boot2docker-formatme</a> と <a href="https://speakerdeck.com/znz/boot2docker-false-format-me-falsehua">https://speakerdeck.com/znz/boot2docker-false-format-me-falsehua</a> なら</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>slideshare_id: boot2docker-formatme
+</span><span class='line'>speaker_deck_id: boot2docker-false-format-me-falsehua</span></code></pre></td></tr></table></div></figure>
+
+
+<p>になります。</p>
+
+<p>両方に公開してもいいですし、片方だけでも、または後述の <a href="https://slide.rabbit-shocker.org/">Rabbit Slide Show</a> だけでも良いと思います。</p>
+
+<h2>gem での公開</h2>
+
+<p><a href="https://rubygems.org/">https://rubygems.org/</a> に gem としてスライド (のソース) を公開します。
+gem を公開して、しばらく待つと <a href="https://slide.rabbit-shocker.org/">Rabbit Slide Show</a> に同期されてスライドが公開されます。
+以下の例だと <a href="https://slide.rabbit-shocker.org/authors/znz/about-boot2docker-format-me/">https://slide.rabbit-shocker.org/authors/znz/about-boot2docker-format-me/</a> に公開されます。
+SlideShare と Speaker Deck へのリンクもここにあります。</p>
+
+<p>gem の公開は <code>rake publish:rubygems</code> でできます。
+認証情報は <code>~/.gem/credentials</code> に保存されるので、2回目以降はパスワードの入力は不要です。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ rake publish:rubygems
+</span><span class='line'>mkdir -p pkg
+</span><span class='line'>WARNING:  licenses is empty, but is recommended.  Use a license identifier from
+</span><span class='line'>http://spdx.org/licenses or 'Nonstandard' for a nonstandard license.
+</span><span class='line'>WARNING:  open-ended dependency on rabbit (&gt;= 2.0.2) is not recommended
+</span><span class='line'>  if rabbit is semantically versioned, use:
+</span><span class='line'>    add_runtime_dependency 'rabbit', '~&gt; 2.0', '&gt;= 2.0.2'
+</span><span class='line'>WARNING:  See http://guides.rubygems.org/specification-reference/ for help
+</span><span class='line'>  Successfully built RubyGem
+</span><span class='line'>  Name: rabbit-slide-znz-about-boot2docker-format-me
+</span><span class='line'>  Version: 2018.01.28
+</span><span class='line'>  File: rabbit-slide-znz-about-boot2docker-format-me-2018.01.28.gem
+</span><span class='line'>mv rabbit-slide-znz-about-boot2docker-format-me-2018.01.28.gem pkg/rabbit-slide-znz-about-boot2docker-format-me-2018.01.28.gem
+</span><span class='line'>Enter password on RubyGems.org [znz]: 
+</span><span class='line'>/home/vagrant/.anyenv/envs/rbenv/versions/2.4.3/bin/ruby -S gem push pkg/rabbit-slide-znz-about-boot2docker-format-me-2018.01.28.gem --key znz
+</span><span class='line'>Pushing gem to https://rubygems.org...
+</span><span class='line'>Successfully registered gem: rabbit-slide-znz-about-boot2docker-format-me (2018.01.28)</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>github.com にソースを公開</h2>
+
+<p>github.com に repository を作成して push します。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>%  hub create
+</span><span class='line'>Updating origin
+</span><span class='line'>created repository: znz/about-boot2docker-format-me
+</span><span class='line'>%  git push -u origin master
+</span><span class='line'>Counting objects: 17, done.
+</span><span class='line'>Delta compression using up to 4 threads.
+</span><span class='line'>Compressing objects: 100% (15/15), done.
+</span><span class='line'>Writing objects: 100% (17/17), 3.82 KiB | 1.27 MiB/s, done.
+</span><span class='line'>Total 17 (delta 6), reused 0 (delta 0)
+</span><span class='line'>remote: Resolving deltas: 100% (6/6), done.
+</span><span class='line'>To github.com:znz/about-boot2docker-format-me.git
+</span><span class='line'> * [new branch]      master -&gt; master
+</span><span class='line'>Branch master set up to track remote branch master from origin.</span></code></pre></td></tr></table></div></figure>
+
+
+<p>修正予定がなければ必要ないかもしれませんが、タグも <code>rake tag</code> で作成しておくと発表時点のものが記録できて良いと思います。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ rake tag
+</span><span class='line'>git tag -a 2018.01.28 -m Publish 2018.01.28
+</span><span class='line'>git push --tags
+</span><span class='line'>Counting objects: 1, done.
+</span><span class='line'>Writing objects: 100% (1/1), 177 bytes | 0 bytes/s, done.
+</span><span class='line'>Total 1 (delta 0), reused 0 (delta 0)
+</span><span class='line'>To git@github.com:znz/about-boot2docker-format-me.git
+</span><span class='line'> * [new tag]         2018.01.28 -&gt; 2018.01.28</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>まとめ</h2>
+
+<p>rabbit を使ってのスライドの作成から公開までの流れを紹介しました。</p>
+
+<p>公式サイトの<a href="https://rabbit-shocker.org/ja/how-to-make/">スライドの作り方</a>は概要しか書いていないので、色々なスライドの書き方は <a href="https://slide.rabbit-shocker.org/">https://slide.rabbit-shocker.org/</a> で気になったものがあれば、そのソースを取得して参考にしてみると良いと思います。
+細かい機能については <a href="https://rabbit-shocker.org/ja/news.html">news</a> ページが参考になるかもしれません。</p>
 </div>
 
 <!-- zenback_body_end -->
@@ -187,12 +430,12 @@ rbenv
 
 
 
-<time class='entry-date' datetime='2014-07-27T17:08:00+09:00'><span class='date'>2014-07-27 (Sun)</span> <span class='time'>5:08 pm</span></time>
+<time class='entry-date' datetime='2018-01-28T23:30:00+09:00'><span class='date'>2018-01-28 (Sun)</span> <span class='time'>11:30 pm</span></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/ruby/'>ruby</a>
+    <a class='category' href='/blog/categories/rabbit/'>rabbit</a>
   
 </span>
 
@@ -219,10 +462,8 @@ rbenv
 
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2014-07-26-kansaiworkshop062.html" title="Previous Post: 62nd Ruby/Rails勉強会@関西に参加した">&laquo; 62nd Ruby/Rails勉強会@関西に参加した</a>
+        <a class="basic-alignment left" href="/blog/2018-01-23-homebrew-libreoffice.html" title="Previous Post: Homebrew-CaskでLibreOfficeの日本語版をインストール">&laquo; Homebrew-CaskでLibreOfficeの日本語版をインストール</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2014-08-06-boot2docker-upgrade.html" title="Next Post: boot2docker のバージョンアップ">boot2docker のバージョンアップ &raquo;</a>
       
     </p>
   </footer>
@@ -360,8 +601,8 @@ Hatena.BookmarkWidget.load();
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://blog.n-z.jp/blog/2014-07-27-ruby-build-without-rbenv.html';
-        var disqus_url = 'http://blog.n-z.jp/blog/2014-07-27-ruby-build-without-rbenv.html';
+        var disqus_identifier = 'http://blog.n-z.jp/blog/2018-01-28-rabbit-slide.html';
+        var disqus_url = 'http://blog.n-z.jp/blog/2018-01-28-rabbit-slide.html';
         var disqus_script = 'embed.js';
       
     (function () {
