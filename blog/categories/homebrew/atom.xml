@@ -4,7 +4,7 @@
   <title><![CDATA[Category: homebrew | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/homebrew/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2018-01-28T23:38:36+09:00</updated>
+  <updated>2018-02-01T23:45:50+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,73 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[XQuartzでX転送がうまくいかなかったので調べた]]></title>
+    <link href="http://blog.n-z.jp/blog/2018-02-01-xquartz-xauth.html"/>
+    <updated>2018-02-01T23:13:13+09:00</updated>
+    <id>http://blog.n-z.jp/blog/xquartz-xauth</id>
+    <content type="html"><![CDATA[<p>XQuartz で openssh の X 転送がうまくいかなかったので、調べてみました。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>macOS High Sierra 10.13.3, macOS Sierra 10.12.6</li>
+<li>XQuartz 2.7.11</li>
+</ul>
+
+
+<h2>インストール方法</h2>
+
+<p>XQuartz は <code>brew cask install xquartz</code> で入れました。
+手動でダウンロードしてインストールした時もあまり違いはなさそうです。</p>
+
+<h2>初回の問題</h2>
+
+<p>初回インストール時はインストーラーの最後で再起動を促されますが、再起動した後でもダメでした。</p>
+
+<p>そもそも、再起動していないと ssh 経由でない状態でも X が起動しないので、今回は無関係でした。</p>
+
+<h2>X 転送の許可の問題</h2>
+
+<p>接続先の <code>/etc/ssh/sshd_config</code> は <code>X11Forwarding yes</code> になっていて、ちゃんと許可されていました。</p>
+
+<h2>xauth の問題</h2>
+
+<p>色々悩んだ末、 <code>ssh -Xv</code> のように <code>-v</code> をつけてデバッグログを表示させて、よくみてみると、</p>
+
+<pre><code>debug1: No xauth program.
+Warning: untrusted X11 forwarding setup failed: xauth key data not generated
+</code></pre>
+
+<p>と出ていて xauth の問題だとわかりました。</p>
+
+<p>なぜか <code>/opt/X11/bin</code> にパスが通っていなかったのが原因らしく、 <code>~/.ssh/config</code> に</p>
+
+<pre><code>XAuthLocation /opt/X11/bin/xauth
+</code></pre>
+
+<p>と設定して X サーバー側 (XQuartz 側) の問題は解決しました。</p>
+
+<p>これとは別に X クライアント側 (ssh で接続した先) でも xauth がない環境があったので、 <code>sudo apt install xauth</code> でインストールして解決しました。</p>
+
+<h2>PATH の問題</h2>
+
+<p>動作確認によく使っている <code>xeyes</code> などもローカル環境で起動しなかったので、普通は <code>/opt/X11/bin</code> にパスを通しておいた方が良さそうです。
+普段使っている iTerm2 + zsh ではなく Terminal.app + bash だと問題なくパスが通っていたので、パスが通らないのは、自分の設定の問題の可能性もたかそうでした。</p>
+
+<p><code>/etc/paths.d/40-XQuartz</code> に <code>/opt/X11/bin</code> と書かれていて、普通はこれでパスが通るようです。</p>
+
+<h2>まとめ</h2>
+
+<p>X 転送ができなかった環境で原因と対策を調べてみました。</p>
+
+<p>結局、ログが重要ということで、原因追求にはサーバー側のログを見たり <code>ssh</code> の <code>-v</code> の数を増やしてログをしっかりみたりするしかないようです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Homebrew-CaskでLibreOfficeの日本語版をインストール]]></title>
@@ -294,109 +361,6 @@ Mac OS X 版特有の問題があるだけのようなので、今後の正式�
 beta 版なども対応するなら
 <a href="https://github.com/caskroom/homebrew-versions">homebrew-cask-versions</a>
 に pull request を送ると良さそうです。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[MavericksでEmacs.appが起動時にホームディレクトリにならない]]></title>
-    <link href="http://blog.n-z.jp/blog/2013-11-01-emacs-on-mavericks.html"/>
-    <updated>2013-11-01T18:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/emacs-on-mavericks</id>
-    <content type="html"><![CDATA[<p>Mac OS X を Mavericks にあげたら homebrew で入れた
-Emacs.app を起動した時に <code>default-directory</code>
-がホームディレクトリから <code>/</code> に変わってしまっていたので、
-原因を調べてみました。</p>
-
-<p>2013-11-09 追記:
-現在は emacs の開発版から抜き出したパッチの pull request が homebrew に取り込まれていて、
-問題は起きなくなっています。</p>
-
-<!--more-->
-
-
-<h2>調べたきっかけ</h2>
-
-<p>きっかけは
-<a href="http://qiita.com/ksato9700/items/1ec373895b9693529f82">Mavericksにアップデートして遭遇した不具合　まとめ</a>
-を見て自分の環境だけで起きている現象ではないと知ったからです。</p>
-
-<h2>原因</h2>
-
-<p>Emacs のソースの以下の部分で <code>-psn</code> で始まる引数の有無で
-ホームディレクトリに移動するかどうかを判定しているのに、
-Mavericks だと引数なしで起動されるようになったからのようです。</p>
-
-<pre><code class="c emacs-24.3/src/emacs.c"> #ifdef HAVE_NS
-   ns_pool = ns_alloc_autorelease_pool ();
-   if (!noninteractive)
-     {
- #ifdef NS_IMPL_COCOA
-       if (skip_args &lt; argc)
-         {
-      /* FIXME: Do the right thing if getenv returns NULL, or if
-         chdir fails.  */
-           if (!strncmp (argv[skip_args], "-psn", 4))
-             {
-               skip_args += 1;
-               chdir (getenv ("HOME"));
-             }
-           else if (skip_args+1 &lt; argc &amp;&amp; !strncmp (argv[skip_args+1], "-psn", 4))
-             {
-               skip_args += 2;
-               chdir (getenv ("HOME"));
-             }
-         }
- #endif  /* COCOA */
-     }
- #endif /* HAVE_NS */
-</code></pre>
-
-<h2>状況</h2>
-
-<p>ちなみに Mac OS X 10.8.5 では、たとえば
-<code>/usr/local/Cellar/emacs/24.3/Emacs.app/Contents/MacOS/Emacs -psn_0_29637698</code>
-のように起動されていました。</p>
-
-<p>Qiita の記事では Dock から起動した時のことを書いていますが、
-<code>open -a Emacs.app</code> のように起動しても同じでした。</p>
-
-<p>RubyMotion で最小限のカレントディレクトリを表示するだけのアプリを作って試してみたところ、
-起動時にカレントディレクトリが <code>/</code> になっているのは
-Cocoa アプリでは普通の動作のようでした。</p>
-
-<h2>対応状況</h2>
-
-<p><a href="http://osdir.com/ml/general/2013-10/msg61593.html">ML での情報</a>
-によると trunk には対応がチェックインされているということで、
-調べてみると
-revision 114730 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114730 -->
-と
-revision 114882 <!-- http://bzr.savannah.gnu.org/lh/emacs/trunk/revision/114882 -->
-のパッチをあわせて以下のように対応すれば良さそうに見えました。</p>
-
-<pre><code class="diff emacs.c.diff">--- src/emacs.c.orig    2013-02-06 13:33:36.000000000 +0900
-+++ src/emacs.c 2013-11-02 22:38:45.000000000 +0900
-@@ -1158,10 +1158,13 @@
-   if (!noninteractive)
-     {
- #ifdef NS_IMPL_COCOA
-+      /* Started from GUI? */
-+      /* FIXME: Do the right thing if getenv returns NULL, or if
-+         chdir fails.  */
-+      if (! inhibit_window_system &amp;&amp; ! isatty (0))
-+        chdir (getenv ("HOME"));
-       if (skip_args &lt; argc)
-         {
--     /* FIXME: Do the right thing if getenv returns NULL, or if
--        chdir fails.  */
-           if (!strncmp (argv[skip_args], "-psn", 4))
-             {
-               skip_args += 1;
-</code></pre>
-
-<p>というわけで homebrew の方に
-<a href="https://github.com/mxcl/homebrew/pull/23897">fix default-directory on Cocoa and Mavericks</a>
-として pull request を出してみました。</p>
 ]]></content>
   </entry>
   

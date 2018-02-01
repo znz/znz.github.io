@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ssh | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ssh/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2018-01-28T23:38:36+09:00</updated>
+  <updated>2018-02-01T23:45:50+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,73 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[XQuartzでX転送がうまくいかなかったので調べた]]></title>
+    <link href="http://blog.n-z.jp/blog/2018-02-01-xquartz-xauth.html"/>
+    <updated>2018-02-01T23:13:13+09:00</updated>
+    <id>http://blog.n-z.jp/blog/xquartz-xauth</id>
+    <content type="html"><![CDATA[<p>XQuartz で openssh の X 転送がうまくいかなかったので、調べてみました。</p>
+
+<!--more-->
+
+
+<h2>環境</h2>
+
+<ul>
+<li>macOS High Sierra 10.13.3, macOS Sierra 10.12.6</li>
+<li>XQuartz 2.7.11</li>
+</ul>
+
+
+<h2>インストール方法</h2>
+
+<p>XQuartz は <code>brew cask install xquartz</code> で入れました。
+手動でダウンロードしてインストールした時もあまり違いはなさそうです。</p>
+
+<h2>初回の問題</h2>
+
+<p>初回インストール時はインストーラーの最後で再起動を促されますが、再起動した後でもダメでした。</p>
+
+<p>そもそも、再起動していないと ssh 経由でない状態でも X が起動しないので、今回は無関係でした。</p>
+
+<h2>X 転送の許可の問題</h2>
+
+<p>接続先の <code>/etc/ssh/sshd_config</code> は <code>X11Forwarding yes</code> になっていて、ちゃんと許可されていました。</p>
+
+<h2>xauth の問題</h2>
+
+<p>色々悩んだ末、 <code>ssh -Xv</code> のように <code>-v</code> をつけてデバッグログを表示させて、よくみてみると、</p>
+
+<pre><code>debug1: No xauth program.
+Warning: untrusted X11 forwarding setup failed: xauth key data not generated
+</code></pre>
+
+<p>と出ていて xauth の問題だとわかりました。</p>
+
+<p>なぜか <code>/opt/X11/bin</code> にパスが通っていなかったのが原因らしく、 <code>~/.ssh/config</code> に</p>
+
+<pre><code>XAuthLocation /opt/X11/bin/xauth
+</code></pre>
+
+<p>と設定して X サーバー側 (XQuartz 側) の問題は解決しました。</p>
+
+<p>これとは別に X クライアント側 (ssh で接続した先) でも xauth がない環境があったので、 <code>sudo apt install xauth</code> でインストールして解決しました。</p>
+
+<h2>PATH の問題</h2>
+
+<p>動作確認によく使っている <code>xeyes</code> などもローカル環境で起動しなかったので、普通は <code>/opt/X11/bin</code> にパスを通しておいた方が良さそうです。
+普段使っている iTerm2 + zsh ではなく Terminal.app + bash だと問題なくパスが通っていたので、パスが通らないのは、自分の設定の問題の可能性もたかそうでした。</p>
+
+<p><code>/etc/paths.d/40-XQuartz</code> に <code>/opt/X11/bin</code> と書かれていて、普通はこれでパスが通るようです。</p>
+
+<h2>まとめ</h2>
+
+<p>X 転送ができなかった環境で原因と対策を調べてみました。</p>
+
+<p>結局、ログが重要ということで、原因追求にはサーバー側のログを見たり <code>ssh</code> の <code>-v</code> の数を増やしてログをしっかりみたりするしかないようです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[OpenSSH の ~/.ssh/config の見直しをした]]></title>
