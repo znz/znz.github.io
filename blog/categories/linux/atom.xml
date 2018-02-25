@@ -4,7 +4,7 @@
   <title><![CDATA[Category: linux | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/linux/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2018-02-01T23:45:50+09:00</updated>
+  <updated>2018-02-25T12:03:37+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,588 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ufw 再入門]]></title>
+    <link href="http://blog.n-z.jp/blog/2018-02-25-ufw.html"/>
+    <updated>2018-02-25T11:11:11+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ufw</id>
+    <content type="html"><![CDATA[<p><a href="https://debianjp.connpass.com/event/79989/">第 132 回関西 Debian 勉強会</a>で ufw についての発表をしました。
+その資料のファイル形式を変換したものです。</p>
+
+<!--more-->
+
+
+<h2>はじめに</h2>
+
+<p>ufw はバージョンアップに伴い、機能が追加されてできることが増えています。
+そこで、現在の Debian の stable である stretch に入っている ufw 0.35-4 を元に基本的な機能やちょっと複雑なネットワークでの使用方法を紹介します。</p>
+
+<h2>ufw とは?</h2>
+
+<p>iptables のラッパーのようなもので、ファイアウォールの設定を簡単にできるようにするためのものです。
+ちなみに名前の ufw は Uncomplicated Firewall の略で、Ubuntu Firewall ではありません。</p>
+
+<h2>使用開始</h2>
+
+<p>まず「ufw enable」で有効にします。 (「ufw disable」で戻せます。)
+有効にするとすぐに反映されて、次回起動時からも有効になります。
+ssh で接続している場合は、「ufw enable」の前に、そのポートを許可しておくと良いでしょう。
+最近は大丈夫のようですが、昔は enable した直後に反応がなくなって切れてしまうことがあったので、再接続できるように許可しておいたり、他の接続手段も確保しておいたりしておく方が安全です。</p>
+
+<pre><code>  $ sudo ufw allow 22/tcp
+  Rules updated
+  Rules updated (v6)
+  $ sudo ufw enable
+  Command may disrupt existing ssh connections. Proceed with operation (y|n)? y
+  Firewall is active and enabled on system startup
+</code></pre>
+
+<h2>デフォルトの挙動</h2>
+
+<p>デフォルトでは外向きは許可、内向きは拒否という一般的に推奨される構成になっています。
+許可などの設定は IP アドレスなどの指定がない場合、IPv4 と IPv6 の両方を同時に設定できるので、iptables と ip6tables を別々に設定して二度手間になるようなことがありません。</p>
+
+<h2>基本的な使い方</h2>
+
+<p>ポート番号のみを指定すると TCP/UDP 両方許可できます。
+例えば DNS なら、以下のようになります。</p>
+
+<pre><code>  $ sudo ufw allow 53
+  Rule added
+  Rule added (v6)
+</code></pre>
+
+<p>TCP のみ許可するには「ポート番号/tcp」と指定します。
+例えば http なら、以下のようになります。</p>
+
+<pre><code>  $ sudo ufw allow 80/tcp
+  Rule added
+  Rule added (v6)
+</code></pre>
+
+<p>UDP のみ許可するには「ポート番号/udp」と指定します。
+ポート番号には「:」区切りで範囲を指定できます。
+例えば mosh で使われる範囲を許可するなら、以下のようになります。</p>
+
+<pre><code>  $ sudo ufw allow 60000:61000/udp
+  Rule added
+  Rule added (v6)
+</code></pre>
+
+<p>連続しないポート番号を「,」区切りでまとめて指定することもできます。
+(「,」で区切られた中に範囲を指定することもできます。)
+例えば SMTP などを許可するなら、以下のようになります。</p>
+
+<pre><code>  $ sudo ufw allow 25,465,587/tcp
+  Rule added
+  Rule added (v6)
+</code></pre>
+
+<h2>設定確認</h2>
+
+<p>「ufw status」で設定を確認できます。
+「ufw status verbose」でデフォルトポリシーなどを含めた設定の確認ができます。
+「ufw status numbered」で delete や insert で使う番号が確認できます。</p>
+
+<pre><code>  $ sudo ufw status
+  Status: active
+
+  To                         Action      From
+  --                         ------      ----
+  22/tcp                     ALLOW       Anywhere
+  53                         ALLOW       Anywhere
+  80/tcp                     ALLOW       Anywhere
+  60000:61000/udp            ALLOW       Anywhere
+  25,465,587/tcp             ALLOW       Anywhere
+  22/tcp (v6)                ALLOW       Anywhere (v6)
+  53 (v6)                    ALLOW       Anywhere (v6)
+  80/tcp (v6)                ALLOW       Anywhere (v6)
+  60000:61000/udp (v6)       ALLOW       Anywhere (v6)
+  25,465,587/tcp (v6)        ALLOW       Anywhere (v6)
+
+  $ sudo ufw status verbose
+  Status: active
+  Logging: on (low)
+  Default: deny (incoming), allow (outgoing), disabled (routed)
+  New profiles: skip
+
+  To                         Action      From
+  --                         ------      ----
+  22/tcp                     ALLOW IN    Anywhere
+  53                         ALLOW IN    Anywhere
+  80/tcp                     ALLOW IN    Anywhere
+  60000:61000/udp            ALLOW IN    Anywhere
+  25,465,587/tcp             ALLOW IN    Anywhere
+  22/tcp (v6)                ALLOW IN    Anywhere (v6)
+  53 (v6)                    ALLOW IN    Anywhere (v6)
+  80/tcp (v6)                ALLOW IN    Anywhere (v6)
+  60000:61000/udp (v6)       ALLOW IN    Anywhere (v6)
+  25,465,587/tcp (v6)        ALLOW IN    Anywhere (v6)
+
+  $ sudo ufw status numbered
+  Status: active
+
+       To                         Action      From
+       --                         ------      ----
+  [ 1] 22/tcp                     ALLOW IN    Anywhere
+  [ 2] 53                         ALLOW IN    Anywhere
+  [ 3] 80/tcp                     ALLOW IN    Anywhere
+  [ 4] 60000:61000/udp            ALLOW IN    Anywhere
+  [ 5] 25,465,587/tcp             ALLOW IN    Anywhere
+  [ 6] 22/tcp (v6)                ALLOW IN    Anywhere (v6)
+  [ 7] 53 (v6)                    ALLOW IN    Anywhere (v6)
+  [ 8] 80/tcp (v6)                ALLOW IN    Anywhere (v6)
+  [ 9] 60000:61000/udp (v6)       ALLOW IN    Anywhere (v6)
+  [10] 25,465,587/tcp (v6)        ALLOW IN    Anywhere (v6)
+</code></pre>
+
+<h2>ルールの削除</h2>
+
+<p>「ufw delete 追加した時のルール」や「ufw delete ルール番号」でルールを削除できます。</p>
+
+<pre><code>  $ sudo ufw delete allow 25,465,587/tcp
+  Rule deleted
+  Rule deleted (v6)
+  $ sudo ufw delete allow 60000:61000/udp
+  Rule deleted
+  Rule deleted (v6)
+</code></pre>
+
+<h2>ルールの表記方法</h2>
+
+<p>今まで使ってきた「ufw  [&ndash;dry-run] [delete] [insert NUM] allow|deny|reject|limit [in|out] [log|log-all] [ PORT[/PROTOCOL] | APP‐NAME ] [comment COMMENT]」という省略記法の他に、「ufw [&ndash;dry-run] [rule] [delete] [insert NUM] allow|deny|reject|limit  [in|out  [on  INTERFACE]]  [log|log-all] [proto  PROTOCOL]  [from  ADDRESS [port PORT | app APPNAME ]] [to ADDRESS [port PORT | app APPNAME ]] [comment COMMENT]」という細かく指定する書き方もあります。
+IP アドレスを指定するには後者の表記方法を使う必要があります。
+詳細は man を参照してください。</p>
+
+<h2>特定 IP アドレスのみ拒否</h2>
+
+<p>前述のように IP アドレスを指定するには「ポート番号/プロトコル」という指定の仕方では無理なので、細かく指定していきます。
+また、許可より前に拒否するルールがないといけないので、「insert」 を使います。ここで先ほどの「ufw status numbered」の出力をみると 3 より前にあれば良いとわかるので、「insert 3」と指定します。
+ポート番号を指定するときは IP アドレスの指定は必須なので、特に制限する必要がないときは「any」を使います。</p>
+
+<pre><code>  $ sudo ufw insert 3 deny from 192.0.2.0/24 to any port 80 proto tcp
+  Rule inserted
+  $ sudo ufw status numbered
+  Status: active
+
+       To                         Action      From
+       --                         ------      ----
+  [ 1] 22/tcp                     ALLOW IN    Anywhere
+  [ 2] 53                         ALLOW IN    Anywhere
+  [ 3] 80/tcp                     DENY IN     192.0.2.0/24
+  [ 4] 80/tcp                     ALLOW IN    Anywhere
+  [ 5] 22/tcp (v6)                ALLOW IN    Anywhere (v6)
+  [ 6] 53 (v6)                    ALLOW IN    Anywhere (v6)
+  [ 7] 80/tcp (v6)                ALLOW IN    Anywhere (v6)
+
+  $ sudo ufw delete deny from 192.0.2.0/24 to any port 80 proto tcp
+  Rule deleted
+  $ sudo ufw insert 3 deny from 192.0.2.0/24 to any port 80 proto tcp
+  Rule inserted
+  $ sudo ufw delete 3
+  Deleting:
+   deny from 192.0.2.0/24 to any port 80 proto tcp
+  Proceed with operation (y|n)? y
+  Rule deleted
+</code></pre>
+
+<p>「from」で IPv4 アドレスを指定したので、ルールは自動的に IPv4 の方だけになって IPv6 には何も影響していません。</p>
+
+<h2>on INTERFACE</h2>
+
+<p>特定のネットワークインターフェイスを通るパケットだけ対象にしたい場合は「on INTERFACE」を使います。
+例えばプロキシを必須にするなどで外部の 80,443 は直接繋がせない、とする場合は以下のようになります。
+外部への通信なので「out」もつけています。</p>
+
+<p>また、内部から外部への通信は「deny」で無視すると応答がなくなって、タイムアウト待ちなどでトラブルシューティングに時間がかかるので、すぐに拒否される「reject」を使うのがおすすめです。</p>
+
+<p>インターフェイスは iptables と同様に「ppp+」で「ppp0」や「ppp1」などをまとめて指定できます。
+そのため「enp0s3」だったり「ens3」だったりする stretch では「en+」でまとめて指定するとハードウェア構成に依存せずに設定を共有しやすくなると思います。</p>
+
+<pre><code>  $ sudo ufw reject out on en+ to any port 80,443 proto tcp
+  Rule added
+  Rule added (v6)
+  $ sudo ufw status
+  Status: active
+
+  To                         Action      From
+  --                         ------      ----
+  22/tcp                     ALLOW       Anywhere
+  53                         ALLOW       Anywhere
+  80/tcp                     ALLOW       Anywhere
+  22/tcp (v6)                ALLOW       Anywhere (v6)
+  53 (v6)                    ALLOW       Anywhere (v6)
+  80/tcp (v6)                ALLOW       Anywhere (v6)
+
+  80,443/tcp                 REJECT OUT  Anywhere on en+
+  80,443/tcp (v6)            REJECT OUT  Anywhere (v6) on en+
+
+  $ curl --head www.debian.org
+  curl: (7) Failed to connect to www.debian.org port 80: Connection refused
+  $ sudo ufw delete reject out on en+ to any port 80,443 proto tcp
+  Rule deleted
+  Rule deleted (v6)
+</code></pre>
+
+<p>deny だと応答がなくなったので Ctrl+C で止めました。</p>
+
+<pre><code>  $ sudo ufw deny out on en+ to any port 80,443 proto tcp
+  Rule added
+  Rule added (v6)
+  $ curl --head www.debian.org
+  ^C
+  $ sudo ufw delete deny out on en+ to any port 80,443 proto tcp
+  Rule deleted
+  Rule deleted (v6)
+</code></pre>
+
+<h2>アプリケーションで指定</h2>
+
+<p>「/etc/ufw/applications.d/」にアプリケーション名で設定するための情報が入っていて、「sudo ufw app list」で一覧できます。</p>
+
+<pre><code>  $ sudo ufw app list
+  Available applications:
+    AIM
+    Bonjour
+    CIFS
+    DNS
+    Deluge
+    IMAP
+    IMAPS
+    IPP
+    KTorrent
+    Kerberos Admin
+    Kerberos Full
+    Kerberos KDC
+    Kerberos Password
+    LDAP
+    LDAPS
+    LPD
+    MSN
+    MSN SSL
+    Mail submission
+    NFS
+    OpenSSH
+    POP3
+    POP3S
+    PeopleNearby
+    SMTP
+    SSH
+    Socks
+    Telnet
+    Transmission
+    Transparent Proxy
+    VNC
+    WWW
+    WWW Cache
+    WWW Full
+    WWW Secure
+    XMPP
+    Yahoo
+    qBittorrent
+    svnserve
+  $ ls /etc/ufw/applications.d/
+  openssh-server  ufw-chat             ufw-dnsserver   ufw-loginserver  ufw-printserver  ufw-webserver
+  ufw-bittorent   ufw-directoryserver  ufw-fileserver  ufw-mailserver   ufw-proxyserver
+  $ cat /etc/ufw/applications.d/openssh-server
+  [OpenSSH]
+  title=Secure shell server, an rshd replacement
+  description=OpenSSH is a free implementation of the Secure Shell protocol.
+  ports=22/tcp
+  $ cat /etc/ufw/applications.d/ufw-webserver
+  [WWW]
+  title=Web Server
+  description=Web server
+  ports=80/tcp
+
+  [WWW Secure]
+  title=Web Server (HTTPS)
+  description=Web Server (HTTPS)
+  ports=443/tcp
+
+  [WWW Full]
+  title=Web Server (HTTP,HTTPS)
+  description=Web Server (HTTP,HTTPS)
+  ports=80,443/tcp
+
+  [WWW Cache]
+  title=Web Server (8080)
+  description=Web Server (8080)
+  ports=8080/tcp
+</code></pre>
+
+<p>アプリ名をポート番号とプロトコルの組み合わせの代わりに使うことができます。
+スペースが入っているアプリ名の場合はシェルで引数が分割されないようにクォートする必要があるので、注意が必要です。</p>
+
+<pre><code>  $ sudo ufw reject out OpenSSH
+  Rule added
+  Rule added (v6)
+  $ sudo ufw reject out to 10.0.0.0/8 app 'WWW Full'
+  Rule added
+  $ sudo ufw status
+  Status: active
+
+  To                         Action      From
+  --                         ------      ----
+  22/tcp                     ALLOW       Anywhere
+  53                         ALLOW       Anywhere
+  80/tcp                     ALLOW       Anywhere
+  22/tcp (v6)                ALLOW       Anywhere (v6)
+  53 (v6)                    ALLOW       Anywhere (v6)
+  80/tcp (v6)                ALLOW       Anywhere (v6)
+
+  OpenSSH                    REJECT OUT  Anywhere
+  10.0.0.0/8 WWW Full        REJECT OUT  Anywhere
+  OpenSSH (v6)               REJECT OUT  Anywhere (v6)
+  $ sudo ufw delete reject out to 10.0.0.0/8 app WWW Full
+  ERROR: Wrong number of arguments
+  $ sudo ufw delete reject out to 10.0.0.0/8 app 'WWW Full'
+  Rule deleted
+  $ sudo ufw delete reject out OpenSSH
+  Rule deleted
+  Rule deleted (v6)
+</code></pre>
+
+<h2>limit</h2>
+
+<p>拒否の仕方に deny と reject があるのと似た感じで、許可の方にも allow と limit の2種類があります。
+limit は brute force attack の緩和に使えます。
+30 秒間に 6 回までしか新規接続ができない、という設定になるようです。
+正常な接続かどうかに関わらず、iptables の層で拒否してしまうので、例えば構成管理ツールなどで自分が短時間に頻繁に接続する可能性がある場合は避けた方が良いです。</p>
+
+<pre><code>  $ sudo ufw limit 22/tcp
+  Rule updated
+  Rule updated (v6)
+  $ sudo ufw status
+  Status: active
+
+  To                         Action      From
+  --                         ------      ----
+  22/tcp                     LIMIT       Anywhere
+  53                         ALLOW       Anywhere
+  80/tcp                     ALLOW       Anywhere
+  22/tcp (v6)                LIMIT       Anywhere (v6)
+  53 (v6)                    ALLOW       Anywhere (v6)
+  80/tcp (v6)                ALLOW       Anywhere (v6)
+</code></pre>
+
+<p>「/etc/ufw/user.rules」に設定されている内容は以下の通りです。</p>
+
+<pre><code>  ### tuple ### limit tcp 22 0.0.0.0/0 any 0.0.0.0/0 in
+  -A ufw-user-input -p tcp --dport 22 -m conntrack --ctstate NEW -m recent --set
+  -A ufw-user-input -p tcp --dport 22 -m conntrack --ctstate NEW -m recent --update --seconds 30 --hitcount 6 -j ufw-user-limit
+  -A ufw-user-input -p tcp --dport 22 -j ufw-user-limit-accept
+</code></pre>
+
+<h2>コマンドラインで指定できない設定を入れる方法</h2>
+
+<p>「/etc/ufw/before.rules」と「/etc/ufw/before6.rules」が ufw のルールの前に読み込まれる iptables-restore と ip6tables-restore のルールファイルになっているので、
+IPsec の ESP の許可などの ufw コマンドで設定できないルールはこのファイルを直接編集すれば良いでしょう。
+ufw で設定したルールより後に読み込まれる「after.rules」と「after6.rules」もあるので、用途によってはこちらを使っても良いでしょう。</p>
+
+<h2>NAT 設定</h2>
+
+<p>ちょっと複雑なネットワークだと、例えば POSTROUTING の MASQUERADE 設定はよく使うと思うのですが、「ufw」のコマンドラインでは nat テーブルの設定はできないので、「before.rules」などに追加することになります。</p>
+
+<p>以下のような設定を「*filter」より上 (または COMMIT より下) に追加すると NAT の設定ができます。
+反映させるには「ufw reload」を実行する必要があります。
+また、「-F」の行が重要で、入れていないと「ufw reload」を実行するたびに nat テーブルの設定が増えていくことになります。</p>
+
+<pre><code>  # NAT table rules
+  ,*nat
+  :POSTROUTING ACCEPT [0:0]
+  -F
+  # Allow traffic from OpenVPN client to enp0s3
+  -A POSTROUTING -s 192.168.10.0/24 -o en+ -j MASQUERADE
+  # Allow traffic from 192.168.1.0/24 (server's LAN subnet) to OpenVPN client
+  -A POSTROUTING -s 192.168.1.0/24 -o tun0 -j MASQUERADE
+  COMMIT
+</code></pre>
+
+<p>iptables-restore で直接設定したものになるので、確認は「sudo iptables -t nat -nL」になります。</p>
+
+<pre><code>  $ sudoedit /etc/ufw/before.rules
+  (-F がない場合)
+  $ sudo ufw reload
+  Firewall reloaded
+  $ sudo ufw reload
+  Firewall reloaded
+  $ sudo iptables -t nat -nL
+  Chain PREROUTING (policy ACCEPT)
+  target     prot opt source               destination
+
+  Chain INPUT (policy ACCEPT)
+  target     prot opt source               destination
+
+  Chain OUTPUT (policy ACCEPT)
+  target     prot opt source               destination
+
+  Chain POSTROUTING (policy ACCEPT)
+  target     prot opt source               destination
+  MASQUERADE  all  --  192.168.10.0/24      0.0.0.0/0
+  MASQUERADE  all  --  192.168.1.0/24       0.0.0.0/0
+  MASQUERADE  all  --  192.168.10.0/24      0.0.0.0/0
+  MASQUERADE  all  --  192.168.1.0/24       0.0.0.0/0
+  $ sudoedit /etc/ufw/before.rules
+  (-F を追加)
+  $ sudo ufw reload
+  Firewall reloaded
+  $ sudo iptables -t nat -nL
+  Chain PREROUTING (policy ACCEPT)
+  target     prot opt source               destination
+
+  Chain INPUT (policy ACCEPT)
+  target     prot opt source               destination
+
+  Chain OUTPUT (policy ACCEPT)
+  target     prot opt source               destination
+
+  Chain POSTROUTING (policy ACCEPT)
+  target     prot opt source               destination
+  MASQUERADE  all  --  192.168.10.0/24      0.0.0.0/0
+  MASQUERADE  all  --  192.168.1.0/24       0.0.0.0/0
+</code></pre>
+
+<h2>routed の有効化</h2>
+
+<p>初期状態では disabled になっていますが、「/etc/ufw/sysctl.conf」でも「/etc/sysctl.conf」でも「/etc/sysctl.d/*.conf」でも良いので、カーネルの設定を有効にすると「disabled」ではなくなります。</p>
+
+<pre><code>  $ sudo ufw status verbose | grep Default
+  Default: deny (incoming), allow (outgoing), disabled (routed)
+  $ sudo tee /etc/sysctl.d/50-local.conf
+  net.ipv4.ip_forward=1
+  net.ipv6.conf.all.forwarding=1
+  $ sudo sysctl -p /etc/sysctl.d/50-local.conf
+  net.ipv4.ip_forward = 1
+  net.ipv6.conf.all.forwarding = 1
+  $ sudo ufw status verbose | grep Default
+  Default: deny (incoming), allow (outgoing), deny (routed)
+</code></pre>
+
+<h2>FORWARD チェインの設定</h2>
+
+<p>「ufw route」で iptables の FORWARD チェインの設定もできます。
+「ufw route」は changelog によると ufw 0.34 から追加されているので、Debian だと jessie の 0.33-2 だと使えなくて stretch の 0.35-4 から使えるようです。</p>
+
+<p>iptables の FORWARD チェインに対する設定になる以外は INPUT や OUTPUT チェインに対する操作と変わりません。</p>
+
+<pre><code>  $ sudo ufw route allow from 192.168.10.0/24 to 10.0.0.0/8 port 80
+  Rule added
+  $ sudo ufw status
+  Status: active
+
+  To                         Action      From
+  --                         ------      ----
+  22/tcp                     LIMIT       Anywhere
+  53                         ALLOW       Anywhere
+  80/tcp                     ALLOW       Anywhere
+  22/tcp (v6)                LIMIT       Anywhere (v6)
+  53 (v6)                    ALLOW       Anywhere (v6)
+  80/tcp (v6)                ALLOW       Anywhere (v6)
+
+  10.0.0.0/8 80              ALLOW FWD   192.168.10.0/24
+  $ sudo ufw route delete allow from 192.168.10.0/24 to 10.0.0.0/8 port 80
+  Rule deleted
+</code></pre>
+
+<h2>デフォルトポリシーの変更</h2>
+
+<p>「 <code>ufw [--dry-run] default allow|deny|reject [incoming|outgoing|routed]</code> 」でチェーンのデフォルトのポリシーを変更できます。</p>
+
+<p>stretch の ufw では、「default reject」は「 <code>ufw*-reject-*</code> 」チェーンで reject していて、FORWARD チェインなどの指定した組み込みのチェーンの policy が REJECT に変わるわけではないようです。</p>
+
+<pre><code>  $ sudo ufw status verbose | grep Default
+  Default: deny (incoming), allow (outgoing), deny (routed)
+  $ grep FORWARD /etc/default/ufw
+  DEFAULT_FORWARD_POLICY="DROP"
+  $ sudo iptables -nL | grep FORWARD
+  Chain FORWARD (policy DROP)
+  $ sudo iptables -nL | grep -A2 'Chain.*reject-forward'
+  Chain ufw-reject-forward (1 references)
+  target     prot opt source               destination
+
+  $ sudo ufw default reject routed
+  Default routed policy changed to 'reject'
+  (be sure to update your rules accordingly)
+  $ grep FORWARD /etc/default/ufw
+  DEFAULT_FORWARD_POLICY="REJECT"
+  $ sudo iptables -nL | grep FORWARD
+  Chain FORWARD (policy DROP)
+  $ sudo ufw status verbose | grep Default
+  Default: deny (incoming), allow (outgoing), reject (routed)
+  $ sudo iptables -nL | grep -A2 'Chain.*reject-forward'
+  Chain ufw-reject-forward (1 references)
+  target     prot opt source               destination
+  REJECT     all  --  0.0.0.0/0            0.0.0.0/0            reject-with icmp-port-unreachable
+  $ sudo ufw default deny routed
+  Default routed policy changed to 'deny'
+  (be sure to update your rules accordingly)
+</code></pre>
+
+<h2>コメント</h2>
+
+<p>今の ufw のルールにはコメントがつけられるようになっています。
+コメントは ufw のルールに紐づいていて、 iptables の方には特に何も影響はないようです。</p>
+
+<pre><code>  $ sudo ufw allow 60000:61000/udp comment "mobile shell"
+  Rule added
+  Rule added (v6)
+  $ sudo ufw status | grep 60000
+  60000:61000/udp            ALLOW       Anywhere                   # mobile shell
+  60000:61000/udp (v6)       ALLOW       Anywhere (v6)              # mobile shell
+  $ sudo grep 60000 /etc/ufw/user*.rules
+  /etc/ufw/user6.rules:### tuple ### allow udp 60000:61000 ::/0 any ::/0 in comment=6d6f62696c65207368656c6c
+  /etc/ufw/user6.rules:-A ufw6-user-input -p udp -m multiport --dports 60000:61000 -j ACCEPT
+  /etc/ufw/user.rules:### tuple ### allow udp 60000:61000 0.0.0.0/0 any 0.0.0.0/0 in comment=6d6f62696c65207368656c6c
+  /etc/ufw/user.rules:-A ufw-user-input -p udp -m multiport --dports 60000:61000 -j ACCEPT
+</code></pre>
+
+<h2>ufw show REPORT</h2>
+
+<p>ufw の man の REPORTS セクションで紹介されているように、「ufw show REPORT」で設定状態などを表示できます。
+「sudo ufw show listening」は実際に待ち受けしているポートを ufw の設定状況と一緒に一覧できるので、便利そうです。</p>
+
+<ul>
+<li>sudo ufw show raw</li>
+<li>sudo ufw show builtins</li>
+<li>sudo ufw show before-rules</li>
+<li>sudo ufw show user-rules</li>
+<li>sudo ufw show after-rules</li>
+<li>sudo ufw show logging-rules</li>
+<li>sudo ufw show listening</li>
+<li>sudo ufw show added</li>
+</ul>
+
+
+<pre><code>  $ sudo ufw show listening
+  tcp:
+    111 * (rpcbind)
+    22 * (sshd)
+     [ 1] allow 22/tcp
+
+  tcp6:
+    111 * (rpcbind)
+    22 * (sshd)
+     [ 2] allow 22/tcp
+
+  udp:
+    1015 * (rpcbind)
+    111 * (rpcbind)
+    68 * (dhclient)
+  udp6:
+    1015 * (rpcbind)
+    111 * (rpcbind)
+</code></pre>
+
+<h2>ログレベル</h2>
+
+<p>デフォルトだと拒否された時のログが rate limit 付きで /var/log/ufw.log などに残りますが、「 <code>ufw [--dry-run] logging on|off|LEVEL</code> 」で、どのくらいログを残すのか設定できます。</p>
+
+<p>設定できるのは on, off, low, medium, high, full のようです。
+詳細は man を参照してください。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[gitolite から gitolite3 への移行]]></title>
@@ -503,76 +1085,6 @@ Unix 的にそれぞれは大した設定はしていないのですが、組み
 <li><a href="https://www.ospn.jp/osc2018-osaka/">OSC 2018 Osaka</a> の翌日の 2018-01-28(日) にまた関西Debian勉強会と合同で勉強会をやるらしい</li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[gitlab-ci-multi-runner パッケージから gitlab-runner パッケージへの更新]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-11-06-gitlab-runner.html"/>
-    <updated>2017-11-06T23:00:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/gitlab-runner</id>
-    <content type="html"><![CDATA[<p>GitLab Runner が 10.0.0 だとパッケージ名が gitlab-runner に変わってしまって、そのままだと 9.5.1 から更新されなくなってしまったので、対応しました。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Ubuntu 16.04.3 LTS</li>
-<li>gitlab-ci-multi-runner (9.5.1) から gitlab-runner (10.1.0)</li>
-</ul>
-
-
-<h2>GitLab Runner とは?</h2>
-
-<p><a href="https://docs.gitlab.com/runner/">GitLab Runner</a> とは GitLab CI のジョブを実行する部分のことです。</p>
-
-<p>詳細は<a href="/blog/2017-07-09-gitlab-runner.html">インストール時の記事</a>を参照してください。</p>
-
-<h2>インストール方法</h2>
-
-<p><a href="https://docs.gitlab.com/runner/install/linux-repository.html">Install GitLab Runner using the official GitLab repositories - GitLab Documentation</a> が gitlab-runner に改名後のインストール方法になっているので、参考にして移行しました。</p>
-
-<h2>移行方法</h2>
-
-<p>簡単にまとめると apt の設定を変えて <code>gitlab-runner</code> パッケージを入れ直すだけでした。</p>
-
-<p>GitLab (GitLab CI) への登録や <code>/etc/gitlab-runner/config.toml</code> はそのままで大丈夫でした。</p>
-
-<h2>apt-line の更新</h2>
-
-<p><code>/etc/apt/sources.list.d/</code> 以下に入っている</p>
-
-<pre><code>deb https://packages.gitlab.com/runner/gitlab-ci-multi-runner/ubuntu xenial main
-</code></pre>
-
-<p>の apt-line を削除して、</p>
-
-<pre><code>deb https://packages.gitlab.com/runner/gitlab-runner/ubuntu xenial main
-</code></pre>
-
-<p>を追加しました。</p>
-
-<h2>pinning 設定変更</h2>
-
-<p><code>/etc/apt/preferences.d/pin-gitlab-runner.pref</code> で <code>gitlab-ci-multi-runner</code> パッケージを <code>packages.gitlab.com</code> のものを優先するように設定していたのを、 <code>gitlab-runner</code> パッケージに変更しました。</p>
-
-<h2>パッケージのインストール</h2>
-
-<p><code>gitlab-runner</code> パッケージをインストールすると自動的に <code>gitlab-ci-multi-runner</code> パッケージと置き換わりました。</p>
-
-<p><code>gitlab-ci-multi-runner</code> パッケージを purge しても <code>/etc/gitlab-runner/config.toml</code> が消えたりすることもないので、特に注意するような点はなさそうでした。</p>
-
-<h2>ansible での例</h2>
-
-<p><a href="https://github.com/znz/ansible-role-gitlab-runner/commit/616a9da561360fbae940940aec49483a5ee1ce9b">Use gitlab-runner instead of gitlab-ci-multi-runner</a> のように変更しました。</p>
-
-<p>移行措置として、 gitlab-ci-multi-runner の apt-line を消す処理も入れています。</p>
-
-<h2>まとめ</h2>
-
-<p><code>gitlab-ci-multi-runner</code> パッケージから <code>gitlab-runner</code> パッケージへの移行は GitLab (GitLab CI) への登録し直しが必要だと面倒そうと思って、 10.0.x の間は躊躇してそのままにしてしまっていましたが、 vagrant 環境で確認したところ、パッケージの更新だけで大丈夫ということがわかったので、問題なく上げることができました。</p>
 ]]></content>
   </entry>
   

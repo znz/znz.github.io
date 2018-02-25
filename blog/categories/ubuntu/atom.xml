@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ubuntu | @znz blog]]></title>
   <link href="http://blog.n-z.jp/blog/categories/ubuntu/atom.xml" rel="self"/>
   <link href="http://blog.n-z.jp/"/>
-  <updated>2018-02-01T23:45:50+09:00</updated>
+  <updated>2018-02-25T12:03:37+09:00</updated>
   <id>http://blog.n-z.jp/</id>
   <author>
     <name><![CDATA[Kazuhiro NISHIYAMA]]></name>
@@ -12,6 +12,588 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ufw 再入門]]></title>
+    <link href="http://blog.n-z.jp/blog/2018-02-25-ufw.html"/>
+    <updated>2018-02-25T11:11:11+09:00</updated>
+    <id>http://blog.n-z.jp/blog/ufw</id>
+    <content type="html"><![CDATA[<p><a href="https://debianjp.connpass.com/event/79989/">第 132 回関西 Debian 勉強会</a>で ufw についての発表をしました。
+その資料のファイル形式を変換したものです。</p>
+
+<!--more-->
+
+
+<h2>はじめに</h2>
+
+<p>ufw はバージョンアップに伴い、機能が追加されてできることが増えています。
+そこで、現在の Debian の stable である stretch に入っている ufw 0.35-4 を元に基本的な機能やちょっと複雑なネットワークでの使用方法を紹介します。</p>
+
+<h2>ufw とは?</h2>
+
+<p>iptables のラッパーのようなもので、ファイアウォールの設定を簡単にできるようにするためのものです。
+ちなみに名前の ufw は Uncomplicated Firewall の略で、Ubuntu Firewall ではありません。</p>
+
+<h2>使用開始</h2>
+
+<p>まず「ufw enable」で有効にします。 (「ufw disable」で戻せます。)
+有効にするとすぐに反映されて、次回起動時からも有効になります。
+ssh で接続している場合は、「ufw enable」の前に、そのポートを許可しておくと良いでしょう。
+最近は大丈夫のようですが、昔は enable した直後に反応がなくなって切れてしまうことがあったので、再接続できるように許可しておいたり、他の接続手段も確保しておいたりしておく方が安全です。</p>
+
+<pre><code>  $ sudo ufw allow 22/tcp
+  Rules updated
+  Rules updated (v6)
+  $ sudo ufw enable
+  Command may disrupt existing ssh connections. Proceed with operation (y|n)? y
+  Firewall is active and enabled on system startup
+</code></pre>
+
+<h2>デフォルトの挙動</h2>
+
+<p>デフォルトでは外向きは許可、内向きは拒否という一般的に推奨される構成になっています。
+許可などの設定は IP アドレスなどの指定がない場合、IPv4 と IPv6 の両方を同時に設定できるので、iptables と ip6tables を別々に設定して二度手間になるようなことがありません。</p>
+
+<h2>基本的な使い方</h2>
+
+<p>ポート番号のみを指定すると TCP/UDP 両方許可できます。
+例えば DNS なら、以下のようになります。</p>
+
+<pre><code>  $ sudo ufw allow 53
+  Rule added
+  Rule added (v6)
+</code></pre>
+
+<p>TCP のみ許可するには「ポート番号/tcp」と指定します。
+例えば http なら、以下のようになります。</p>
+
+<pre><code>  $ sudo ufw allow 80/tcp
+  Rule added
+  Rule added (v6)
+</code></pre>
+
+<p>UDP のみ許可するには「ポート番号/udp」と指定します。
+ポート番号には「:」区切りで範囲を指定できます。
+例えば mosh で使われる範囲を許可するなら、以下のようになります。</p>
+
+<pre><code>  $ sudo ufw allow 60000:61000/udp
+  Rule added
+  Rule added (v6)
+</code></pre>
+
+<p>連続しないポート番号を「,」区切りでまとめて指定することもできます。
+(「,」で区切られた中に範囲を指定することもできます。)
+例えば SMTP などを許可するなら、以下のようになります。</p>
+
+<pre><code>  $ sudo ufw allow 25,465,587/tcp
+  Rule added
+  Rule added (v6)
+</code></pre>
+
+<h2>設定確認</h2>
+
+<p>「ufw status」で設定を確認できます。
+「ufw status verbose」でデフォルトポリシーなどを含めた設定の確認ができます。
+「ufw status numbered」で delete や insert で使う番号が確認できます。</p>
+
+<pre><code>  $ sudo ufw status
+  Status: active
+
+  To                         Action      From
+  --                         ------      ----
+  22/tcp                     ALLOW       Anywhere
+  53                         ALLOW       Anywhere
+  80/tcp                     ALLOW       Anywhere
+  60000:61000/udp            ALLOW       Anywhere
+  25,465,587/tcp             ALLOW       Anywhere
+  22/tcp (v6)                ALLOW       Anywhere (v6)
+  53 (v6)                    ALLOW       Anywhere (v6)
+  80/tcp (v6)                ALLOW       Anywhere (v6)
+  60000:61000/udp (v6)       ALLOW       Anywhere (v6)
+  25,465,587/tcp (v6)        ALLOW       Anywhere (v6)
+
+  $ sudo ufw status verbose
+  Status: active
+  Logging: on (low)
+  Default: deny (incoming), allow (outgoing), disabled (routed)
+  New profiles: skip
+
+  To                         Action      From
+  --                         ------      ----
+  22/tcp                     ALLOW IN    Anywhere
+  53                         ALLOW IN    Anywhere
+  80/tcp                     ALLOW IN    Anywhere
+  60000:61000/udp            ALLOW IN    Anywhere
+  25,465,587/tcp             ALLOW IN    Anywhere
+  22/tcp (v6)                ALLOW IN    Anywhere (v6)
+  53 (v6)                    ALLOW IN    Anywhere (v6)
+  80/tcp (v6)                ALLOW IN    Anywhere (v6)
+  60000:61000/udp (v6)       ALLOW IN    Anywhere (v6)
+  25,465,587/tcp (v6)        ALLOW IN    Anywhere (v6)
+
+  $ sudo ufw status numbered
+  Status: active
+
+       To                         Action      From
+       --                         ------      ----
+  [ 1] 22/tcp                     ALLOW IN    Anywhere
+  [ 2] 53                         ALLOW IN    Anywhere
+  [ 3] 80/tcp                     ALLOW IN    Anywhere
+  [ 4] 60000:61000/udp            ALLOW IN    Anywhere
+  [ 5] 25,465,587/tcp             ALLOW IN    Anywhere
+  [ 6] 22/tcp (v6)                ALLOW IN    Anywhere (v6)
+  [ 7] 53 (v6)                    ALLOW IN    Anywhere (v6)
+  [ 8] 80/tcp (v6)                ALLOW IN    Anywhere (v6)
+  [ 9] 60000:61000/udp (v6)       ALLOW IN    Anywhere (v6)
+  [10] 25,465,587/tcp (v6)        ALLOW IN    Anywhere (v6)
+</code></pre>
+
+<h2>ルールの削除</h2>
+
+<p>「ufw delete 追加した時のルール」や「ufw delete ルール番号」でルールを削除できます。</p>
+
+<pre><code>  $ sudo ufw delete allow 25,465,587/tcp
+  Rule deleted
+  Rule deleted (v6)
+  $ sudo ufw delete allow 60000:61000/udp
+  Rule deleted
+  Rule deleted (v6)
+</code></pre>
+
+<h2>ルールの表記方法</h2>
+
+<p>今まで使ってきた「ufw  [&ndash;dry-run] [delete] [insert NUM] allow|deny|reject|limit [in|out] [log|log-all] [ PORT[/PROTOCOL] | APP‐NAME ] [comment COMMENT]」という省略記法の他に、「ufw [&ndash;dry-run] [rule] [delete] [insert NUM] allow|deny|reject|limit  [in|out  [on  INTERFACE]]  [log|log-all] [proto  PROTOCOL]  [from  ADDRESS [port PORT | app APPNAME ]] [to ADDRESS [port PORT | app APPNAME ]] [comment COMMENT]」という細かく指定する書き方もあります。
+IP アドレスを指定するには後者の表記方法を使う必要があります。
+詳細は man を参照してください。</p>
+
+<h2>特定 IP アドレスのみ拒否</h2>
+
+<p>前述のように IP アドレスを指定するには「ポート番号/プロトコル」という指定の仕方では無理なので、細かく指定していきます。
+また、許可より前に拒否するルールがないといけないので、「insert」 を使います。ここで先ほどの「ufw status numbered」の出力をみると 3 より前にあれば良いとわかるので、「insert 3」と指定します。
+ポート番号を指定するときは IP アドレスの指定は必須なので、特に制限する必要がないときは「any」を使います。</p>
+
+<pre><code>  $ sudo ufw insert 3 deny from 192.0.2.0/24 to any port 80 proto tcp
+  Rule inserted
+  $ sudo ufw status numbered
+  Status: active
+
+       To                         Action      From
+       --                         ------      ----
+  [ 1] 22/tcp                     ALLOW IN    Anywhere
+  [ 2] 53                         ALLOW IN    Anywhere
+  [ 3] 80/tcp                     DENY IN     192.0.2.0/24
+  [ 4] 80/tcp                     ALLOW IN    Anywhere
+  [ 5] 22/tcp (v6)                ALLOW IN    Anywhere (v6)
+  [ 6] 53 (v6)                    ALLOW IN    Anywhere (v6)
+  [ 7] 80/tcp (v6)                ALLOW IN    Anywhere (v6)
+
+  $ sudo ufw delete deny from 192.0.2.0/24 to any port 80 proto tcp
+  Rule deleted
+  $ sudo ufw insert 3 deny from 192.0.2.0/24 to any port 80 proto tcp
+  Rule inserted
+  $ sudo ufw delete 3
+  Deleting:
+   deny from 192.0.2.0/24 to any port 80 proto tcp
+  Proceed with operation (y|n)? y
+  Rule deleted
+</code></pre>
+
+<p>「from」で IPv4 アドレスを指定したので、ルールは自動的に IPv4 の方だけになって IPv6 には何も影響していません。</p>
+
+<h2>on INTERFACE</h2>
+
+<p>特定のネットワークインターフェイスを通るパケットだけ対象にしたい場合は「on INTERFACE」を使います。
+例えばプロキシを必須にするなどで外部の 80,443 は直接繋がせない、とする場合は以下のようになります。
+外部への通信なので「out」もつけています。</p>
+
+<p>また、内部から外部への通信は「deny」で無視すると応答がなくなって、タイムアウト待ちなどでトラブルシューティングに時間がかかるので、すぐに拒否される「reject」を使うのがおすすめです。</p>
+
+<p>インターフェイスは iptables と同様に「ppp+」で「ppp0」や「ppp1」などをまとめて指定できます。
+そのため「enp0s3」だったり「ens3」だったりする stretch では「en+」でまとめて指定するとハードウェア構成に依存せずに設定を共有しやすくなると思います。</p>
+
+<pre><code>  $ sudo ufw reject out on en+ to any port 80,443 proto tcp
+  Rule added
+  Rule added (v6)
+  $ sudo ufw status
+  Status: active
+
+  To                         Action      From
+  --                         ------      ----
+  22/tcp                     ALLOW       Anywhere
+  53                         ALLOW       Anywhere
+  80/tcp                     ALLOW       Anywhere
+  22/tcp (v6)                ALLOW       Anywhere (v6)
+  53 (v6)                    ALLOW       Anywhere (v6)
+  80/tcp (v6)                ALLOW       Anywhere (v6)
+
+  80,443/tcp                 REJECT OUT  Anywhere on en+
+  80,443/tcp (v6)            REJECT OUT  Anywhere (v6) on en+
+
+  $ curl --head www.debian.org
+  curl: (7) Failed to connect to www.debian.org port 80: Connection refused
+  $ sudo ufw delete reject out on en+ to any port 80,443 proto tcp
+  Rule deleted
+  Rule deleted (v6)
+</code></pre>
+
+<p>deny だと応答がなくなったので Ctrl+C で止めました。</p>
+
+<pre><code>  $ sudo ufw deny out on en+ to any port 80,443 proto tcp
+  Rule added
+  Rule added (v6)
+  $ curl --head www.debian.org
+  ^C
+  $ sudo ufw delete deny out on en+ to any port 80,443 proto tcp
+  Rule deleted
+  Rule deleted (v6)
+</code></pre>
+
+<h2>アプリケーションで指定</h2>
+
+<p>「/etc/ufw/applications.d/」にアプリケーション名で設定するための情報が入っていて、「sudo ufw app list」で一覧できます。</p>
+
+<pre><code>  $ sudo ufw app list
+  Available applications:
+    AIM
+    Bonjour
+    CIFS
+    DNS
+    Deluge
+    IMAP
+    IMAPS
+    IPP
+    KTorrent
+    Kerberos Admin
+    Kerberos Full
+    Kerberos KDC
+    Kerberos Password
+    LDAP
+    LDAPS
+    LPD
+    MSN
+    MSN SSL
+    Mail submission
+    NFS
+    OpenSSH
+    POP3
+    POP3S
+    PeopleNearby
+    SMTP
+    SSH
+    Socks
+    Telnet
+    Transmission
+    Transparent Proxy
+    VNC
+    WWW
+    WWW Cache
+    WWW Full
+    WWW Secure
+    XMPP
+    Yahoo
+    qBittorrent
+    svnserve
+  $ ls /etc/ufw/applications.d/
+  openssh-server  ufw-chat             ufw-dnsserver   ufw-loginserver  ufw-printserver  ufw-webserver
+  ufw-bittorent   ufw-directoryserver  ufw-fileserver  ufw-mailserver   ufw-proxyserver
+  $ cat /etc/ufw/applications.d/openssh-server
+  [OpenSSH]
+  title=Secure shell server, an rshd replacement
+  description=OpenSSH is a free implementation of the Secure Shell protocol.
+  ports=22/tcp
+  $ cat /etc/ufw/applications.d/ufw-webserver
+  [WWW]
+  title=Web Server
+  description=Web server
+  ports=80/tcp
+
+  [WWW Secure]
+  title=Web Server (HTTPS)
+  description=Web Server (HTTPS)
+  ports=443/tcp
+
+  [WWW Full]
+  title=Web Server (HTTP,HTTPS)
+  description=Web Server (HTTP,HTTPS)
+  ports=80,443/tcp
+
+  [WWW Cache]
+  title=Web Server (8080)
+  description=Web Server (8080)
+  ports=8080/tcp
+</code></pre>
+
+<p>アプリ名をポート番号とプロトコルの組み合わせの代わりに使うことができます。
+スペースが入っているアプリ名の場合はシェルで引数が分割されないようにクォートする必要があるので、注意が必要です。</p>
+
+<pre><code>  $ sudo ufw reject out OpenSSH
+  Rule added
+  Rule added (v6)
+  $ sudo ufw reject out to 10.0.0.0/8 app 'WWW Full'
+  Rule added
+  $ sudo ufw status
+  Status: active
+
+  To                         Action      From
+  --                         ------      ----
+  22/tcp                     ALLOW       Anywhere
+  53                         ALLOW       Anywhere
+  80/tcp                     ALLOW       Anywhere
+  22/tcp (v6)                ALLOW       Anywhere (v6)
+  53 (v6)                    ALLOW       Anywhere (v6)
+  80/tcp (v6)                ALLOW       Anywhere (v6)
+
+  OpenSSH                    REJECT OUT  Anywhere
+  10.0.0.0/8 WWW Full        REJECT OUT  Anywhere
+  OpenSSH (v6)               REJECT OUT  Anywhere (v6)
+  $ sudo ufw delete reject out to 10.0.0.0/8 app WWW Full
+  ERROR: Wrong number of arguments
+  $ sudo ufw delete reject out to 10.0.0.0/8 app 'WWW Full'
+  Rule deleted
+  $ sudo ufw delete reject out OpenSSH
+  Rule deleted
+  Rule deleted (v6)
+</code></pre>
+
+<h2>limit</h2>
+
+<p>拒否の仕方に deny と reject があるのと似た感じで、許可の方にも allow と limit の2種類があります。
+limit は brute force attack の緩和に使えます。
+30 秒間に 6 回までしか新規接続ができない、という設定になるようです。
+正常な接続かどうかに関わらず、iptables の層で拒否してしまうので、例えば構成管理ツールなどで自分が短時間に頻繁に接続する可能性がある場合は避けた方が良いです。</p>
+
+<pre><code>  $ sudo ufw limit 22/tcp
+  Rule updated
+  Rule updated (v6)
+  $ sudo ufw status
+  Status: active
+
+  To                         Action      From
+  --                         ------      ----
+  22/tcp                     LIMIT       Anywhere
+  53                         ALLOW       Anywhere
+  80/tcp                     ALLOW       Anywhere
+  22/tcp (v6)                LIMIT       Anywhere (v6)
+  53 (v6)                    ALLOW       Anywhere (v6)
+  80/tcp (v6)                ALLOW       Anywhere (v6)
+</code></pre>
+
+<p>「/etc/ufw/user.rules」に設定されている内容は以下の通りです。</p>
+
+<pre><code>  ### tuple ### limit tcp 22 0.0.0.0/0 any 0.0.0.0/0 in
+  -A ufw-user-input -p tcp --dport 22 -m conntrack --ctstate NEW -m recent --set
+  -A ufw-user-input -p tcp --dport 22 -m conntrack --ctstate NEW -m recent --update --seconds 30 --hitcount 6 -j ufw-user-limit
+  -A ufw-user-input -p tcp --dport 22 -j ufw-user-limit-accept
+</code></pre>
+
+<h2>コマンドラインで指定できない設定を入れる方法</h2>
+
+<p>「/etc/ufw/before.rules」と「/etc/ufw/before6.rules」が ufw のルールの前に読み込まれる iptables-restore と ip6tables-restore のルールファイルになっているので、
+IPsec の ESP の許可などの ufw コマンドで設定できないルールはこのファイルを直接編集すれば良いでしょう。
+ufw で設定したルールより後に読み込まれる「after.rules」と「after6.rules」もあるので、用途によってはこちらを使っても良いでしょう。</p>
+
+<h2>NAT 設定</h2>
+
+<p>ちょっと複雑なネットワークだと、例えば POSTROUTING の MASQUERADE 設定はよく使うと思うのですが、「ufw」のコマンドラインでは nat テーブルの設定はできないので、「before.rules」などに追加することになります。</p>
+
+<p>以下のような設定を「*filter」より上 (または COMMIT より下) に追加すると NAT の設定ができます。
+反映させるには「ufw reload」を実行する必要があります。
+また、「-F」の行が重要で、入れていないと「ufw reload」を実行するたびに nat テーブルの設定が増えていくことになります。</p>
+
+<pre><code>  # NAT table rules
+  ,*nat
+  :POSTROUTING ACCEPT [0:0]
+  -F
+  # Allow traffic from OpenVPN client to enp0s3
+  -A POSTROUTING -s 192.168.10.0/24 -o en+ -j MASQUERADE
+  # Allow traffic from 192.168.1.0/24 (server's LAN subnet) to OpenVPN client
+  -A POSTROUTING -s 192.168.1.0/24 -o tun0 -j MASQUERADE
+  COMMIT
+</code></pre>
+
+<p>iptables-restore で直接設定したものになるので、確認は「sudo iptables -t nat -nL」になります。</p>
+
+<pre><code>  $ sudoedit /etc/ufw/before.rules
+  (-F がない場合)
+  $ sudo ufw reload
+  Firewall reloaded
+  $ sudo ufw reload
+  Firewall reloaded
+  $ sudo iptables -t nat -nL
+  Chain PREROUTING (policy ACCEPT)
+  target     prot opt source               destination
+
+  Chain INPUT (policy ACCEPT)
+  target     prot opt source               destination
+
+  Chain OUTPUT (policy ACCEPT)
+  target     prot opt source               destination
+
+  Chain POSTROUTING (policy ACCEPT)
+  target     prot opt source               destination
+  MASQUERADE  all  --  192.168.10.0/24      0.0.0.0/0
+  MASQUERADE  all  --  192.168.1.0/24       0.0.0.0/0
+  MASQUERADE  all  --  192.168.10.0/24      0.0.0.0/0
+  MASQUERADE  all  --  192.168.1.0/24       0.0.0.0/0
+  $ sudoedit /etc/ufw/before.rules
+  (-F を追加)
+  $ sudo ufw reload
+  Firewall reloaded
+  $ sudo iptables -t nat -nL
+  Chain PREROUTING (policy ACCEPT)
+  target     prot opt source               destination
+
+  Chain INPUT (policy ACCEPT)
+  target     prot opt source               destination
+
+  Chain OUTPUT (policy ACCEPT)
+  target     prot opt source               destination
+
+  Chain POSTROUTING (policy ACCEPT)
+  target     prot opt source               destination
+  MASQUERADE  all  --  192.168.10.0/24      0.0.0.0/0
+  MASQUERADE  all  --  192.168.1.0/24       0.0.0.0/0
+</code></pre>
+
+<h2>routed の有効化</h2>
+
+<p>初期状態では disabled になっていますが、「/etc/ufw/sysctl.conf」でも「/etc/sysctl.conf」でも「/etc/sysctl.d/*.conf」でも良いので、カーネルの設定を有効にすると「disabled」ではなくなります。</p>
+
+<pre><code>  $ sudo ufw status verbose | grep Default
+  Default: deny (incoming), allow (outgoing), disabled (routed)
+  $ sudo tee /etc/sysctl.d/50-local.conf
+  net.ipv4.ip_forward=1
+  net.ipv6.conf.all.forwarding=1
+  $ sudo sysctl -p /etc/sysctl.d/50-local.conf
+  net.ipv4.ip_forward = 1
+  net.ipv6.conf.all.forwarding = 1
+  $ sudo ufw status verbose | grep Default
+  Default: deny (incoming), allow (outgoing), deny (routed)
+</code></pre>
+
+<h2>FORWARD チェインの設定</h2>
+
+<p>「ufw route」で iptables の FORWARD チェインの設定もできます。
+「ufw route」は changelog によると ufw 0.34 から追加されているので、Debian だと jessie の 0.33-2 だと使えなくて stretch の 0.35-4 から使えるようです。</p>
+
+<p>iptables の FORWARD チェインに対する設定になる以外は INPUT や OUTPUT チェインに対する操作と変わりません。</p>
+
+<pre><code>  $ sudo ufw route allow from 192.168.10.0/24 to 10.0.0.0/8 port 80
+  Rule added
+  $ sudo ufw status
+  Status: active
+
+  To                         Action      From
+  --                         ------      ----
+  22/tcp                     LIMIT       Anywhere
+  53                         ALLOW       Anywhere
+  80/tcp                     ALLOW       Anywhere
+  22/tcp (v6)                LIMIT       Anywhere (v6)
+  53 (v6)                    ALLOW       Anywhere (v6)
+  80/tcp (v6)                ALLOW       Anywhere (v6)
+
+  10.0.0.0/8 80              ALLOW FWD   192.168.10.0/24
+  $ sudo ufw route delete allow from 192.168.10.0/24 to 10.0.0.0/8 port 80
+  Rule deleted
+</code></pre>
+
+<h2>デフォルトポリシーの変更</h2>
+
+<p>「 <code>ufw [--dry-run] default allow|deny|reject [incoming|outgoing|routed]</code> 」でチェーンのデフォルトのポリシーを変更できます。</p>
+
+<p>stretch の ufw では、「default reject」は「 <code>ufw*-reject-*</code> 」チェーンで reject していて、FORWARD チェインなどの指定した組み込みのチェーンの policy が REJECT に変わるわけではないようです。</p>
+
+<pre><code>  $ sudo ufw status verbose | grep Default
+  Default: deny (incoming), allow (outgoing), deny (routed)
+  $ grep FORWARD /etc/default/ufw
+  DEFAULT_FORWARD_POLICY="DROP"
+  $ sudo iptables -nL | grep FORWARD
+  Chain FORWARD (policy DROP)
+  $ sudo iptables -nL | grep -A2 'Chain.*reject-forward'
+  Chain ufw-reject-forward (1 references)
+  target     prot opt source               destination
+
+  $ sudo ufw default reject routed
+  Default routed policy changed to 'reject'
+  (be sure to update your rules accordingly)
+  $ grep FORWARD /etc/default/ufw
+  DEFAULT_FORWARD_POLICY="REJECT"
+  $ sudo iptables -nL | grep FORWARD
+  Chain FORWARD (policy DROP)
+  $ sudo ufw status verbose | grep Default
+  Default: deny (incoming), allow (outgoing), reject (routed)
+  $ sudo iptables -nL | grep -A2 'Chain.*reject-forward'
+  Chain ufw-reject-forward (1 references)
+  target     prot opt source               destination
+  REJECT     all  --  0.0.0.0/0            0.0.0.0/0            reject-with icmp-port-unreachable
+  $ sudo ufw default deny routed
+  Default routed policy changed to 'deny'
+  (be sure to update your rules accordingly)
+</code></pre>
+
+<h2>コメント</h2>
+
+<p>今の ufw のルールにはコメントがつけられるようになっています。
+コメントは ufw のルールに紐づいていて、 iptables の方には特に何も影響はないようです。</p>
+
+<pre><code>  $ sudo ufw allow 60000:61000/udp comment "mobile shell"
+  Rule added
+  Rule added (v6)
+  $ sudo ufw status | grep 60000
+  60000:61000/udp            ALLOW       Anywhere                   # mobile shell
+  60000:61000/udp (v6)       ALLOW       Anywhere (v6)              # mobile shell
+  $ sudo grep 60000 /etc/ufw/user*.rules
+  /etc/ufw/user6.rules:### tuple ### allow udp 60000:61000 ::/0 any ::/0 in comment=6d6f62696c65207368656c6c
+  /etc/ufw/user6.rules:-A ufw6-user-input -p udp -m multiport --dports 60000:61000 -j ACCEPT
+  /etc/ufw/user.rules:### tuple ### allow udp 60000:61000 0.0.0.0/0 any 0.0.0.0/0 in comment=6d6f62696c65207368656c6c
+  /etc/ufw/user.rules:-A ufw-user-input -p udp -m multiport --dports 60000:61000 -j ACCEPT
+</code></pre>
+
+<h2>ufw show REPORT</h2>
+
+<p>ufw の man の REPORTS セクションで紹介されているように、「ufw show REPORT」で設定状態などを表示できます。
+「sudo ufw show listening」は実際に待ち受けしているポートを ufw の設定状況と一緒に一覧できるので、便利そうです。</p>
+
+<ul>
+<li>sudo ufw show raw</li>
+<li>sudo ufw show builtins</li>
+<li>sudo ufw show before-rules</li>
+<li>sudo ufw show user-rules</li>
+<li>sudo ufw show after-rules</li>
+<li>sudo ufw show logging-rules</li>
+<li>sudo ufw show listening</li>
+<li>sudo ufw show added</li>
+</ul>
+
+
+<pre><code>  $ sudo ufw show listening
+  tcp:
+    111 * (rpcbind)
+    22 * (sshd)
+     [ 1] allow 22/tcp
+
+  tcp6:
+    111 * (rpcbind)
+    22 * (sshd)
+     [ 2] allow 22/tcp
+
+  udp:
+    1015 * (rpcbind)
+    111 * (rpcbind)
+    68 * (dhclient)
+  udp6:
+    1015 * (rpcbind)
+    111 * (rpcbind)
+</code></pre>
+
+<h2>ログレベル</h2>
+
+<p>デフォルトだと拒否された時のログが rate limit 付きで /var/log/ufw.log などに残りますが、「 <code>ufw [--dry-run] logging on|off|LEVEL</code> 」で、どのくらいログを残すのか設定できます。</p>
+
+<p>設定できるのは on, off, low, medium, high, full のようです。
+詳細は man を参照してください。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[gitolite から gitolite3 への移行]]></title>
@@ -344,341 +926,6 @@ Unix 的にそれぞれは大した設定はしていないのですが、組み
 <h2>まとめ</h2>
 
 <p><code>gitlab-ci-multi-runner</code> パッケージから <code>gitlab-runner</code> パッケージへの移行は GitLab (GitLab CI) への登録し直しが必要だと面倒そうと思って、 10.0.x の間は躊躇してそのままにしてしまっていましたが、 vagrant 環境で確認したところ、パッケージの更新だけで大丈夫ということがわかったので、問題なく上げることができました。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[.gitlab-ci.ymlでDokkuとHerokuにdeployする]]></title>
-    <link href="http://blog.n-z.jp/blog/2017-07-13-gitlab-ci-heroku.html"/>
-    <updated>2017-07-13T21:50:00+09:00</updated>
-    <id>http://blog.n-z.jp/blog/gitlab-ci-heroku</id>
-    <content type="html"><![CDATA[<p>GitLab と Dokku (と一部 Heroku) を使って CI/CD (Continuous Integration / Continuous Deployment) 環境を作ってみた話の続きです。
-CI 部分のメインとなる <code>.gitlab-ci.yml</code> の設定の別パターンの話です。
-review 環境は Dokku を使って、 staging と production に Heroku を使います。</p>
-
-<p><a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
-
-<!--more-->
-
-
-<h2>対象バージョン</h2>
-
-<ul>
-<li>Ubuntu 16.04.2 LTS</li>
-<li>Omnibus GitLab 9.1.4-ce.0 (インストール時) から 9.3.5-ce.0 (記事執筆時)</li>
-<li>gitlab-ci-multi-runner 9.2.0 (インストール時) から 9.3.0 (記事執筆時)</li>
-<li>Dokku 0.9.4 (インストール時) から 0.10.2 (記事執筆時)</li>
-</ul>
-
-
-<h2>構成</h2>
-
-<p>今回は、
-git push すると CI が走り、 master 以外のブランチなら review 環境にデプロイされて、
-master ブランチなら staging 環境にデプロイして、
-tag が push されたら production 環境にデプロイされる、
-という状態にします。</p>
-
-<p>そして、 staging と production の deploy 先は Dokku ではなく Heroku を使います。</p>
-
-<h2>.gitlab-ci.yml</h2>
-
-<p>この後は <code>.gitlab-ci.yml</code> に設定する内容の説明になります。</p>
-
-<h2>image 設定</h2>
-
-<p>ここは前回と同じです。</p>
-
-<p>ここでは <a href="https://hub.docker.com/r/_/ruby/">library/ruby - Docker Hub</a> の 2.3.3 を使いました。
-<code>.ruby-version</code> や <code>Gemfile</code> と同じバージョンを指定します。</p>
-
-<pre><code>image: ruby:2.3.3
-</code></pre>
-
-<p>2.3 だと 2.3.4 になるので、 2.3.3 まで指定しています。
-2.3.4 はセキュリティアップデートではなかったので、まだ 2.3.3 のままですが、様子をみてあげる予定です。</p>
-
-<h2>cache 設定</h2>
-
-<p>ここも前回と同じです。</p>
-
-<p><a href="https://docs.gitlab.com/ce/ci/yaml/README.html#cache-key">cache:key</a> から per-branch caching を選んで以下のように設定しました。</p>
-
-<pre><code>cache:
-  key: "$CI_COMMIT_REF_NAME"
-  untracked: true
-</code></pre>
-
-<h2>環境変数設定</h2>
-
-<p>ここも前回と同じです。</p>
-
-<p><a href="https://hub.docker.com/r/_/postgres/">library/postgres - Docker Hub</a> で使う <code>POSTGRES_PASSWORD</code> などと、それに接続するための Rails 用の <code>DATABASE_URL</code>、
-デプロイ用の省略表記のための <code>DOKKU</code> などを設定しています。</p>
-
-<p><code>APP_NAME</code> と <code>DB_NAME</code> は <code>CI_ENVIRONMENT_SLUG</code> を使ってブランチごとに自動生成される名前を使っています。</p>
-
-<pre><code>variables:
-  # for test
-  POSTGRES_DB: dbname
-  POSTGRES_USER: dbuser
-  POSTGRES_PASSWORD: dbpass
-  DATABASE_URL: "postgres://dbuser:dbpass@postgres:5432/dbname"
-  # for deploy
-  DOKKU: ssh dokku@$DOKKU_HOST
-  APP_NAME: $CI_ENVIRONMENT_SLUG
-  DB_NAME: $CI_ENVIRONMENT_SLUG-database
-</code></pre>
-
-<h2>stages 設定</h2>
-
-<p>ここも設定内容は前回と同じですが、 staging と production が別 Pipeline になって、それぞれで test が実行されるのが違います。</p>
-
-<p>最初に説明したように、 test の後に review、 staging、 production となるように stages を設定します。</p>
-
-<pre><code>stages:
-  - test
-  - review
-  - staging
-  - production
-</code></pre>
-
-<h2>before_script</h2>
-
-<p>ここも前回と同じです。</p>
-
-<p>テスト用の before_script を設定しています。(デプロイの方は個別に上書きしています。)</p>
-
-<p>apt や bundler ではキャッシュ用のディレクトリである <code>/cache</code> を使うように指定しています。</p>
-
-<p>開発環境と共通になっている都合上、 sqlite3 を入れています。
-JavaScript ランタイムも必要なので、 nodejs も入れています。</p>
-
-<pre><code>before_script:
-  - 'apt-get update -qq &amp;&amp; apt-get -o dir::cache::archives="/cache/apt" install -y -qq sqlite3 libsqlite3-dev nodejs'
-  - ruby -v
-  - gem install bundler --no-ri --no-rdoc
-  - bundle install --jobs $(nproc) --path=/cache/bundler
-  - ln -nfs .test.env .env
-</code></pre>
-
-<h2>デプロイ用の before_script</h2>
-
-<p>ここも前回と同じです。</p>
-
-<p><a href="https://docs.gitlab.com/ce/ci/yaml/README.html#hidden-keys">Hidden keys</a>に書いてあるようにキーが <code>.</code> で始まるものは無視されるので、
-YAML のアンカーを使って参照用に使えます。</p>
-
-<p>ruby image には openssh-client は入っていたのですが、他の image に変えても動くように参考にした <a href="https://docs.gitlab.com/ce/ci/ssh_keys/README.html">Using SSH keys</a> に書いてあった通り、 openssh-client のインストール手順も入れています。</p>
-
-<p><code>~/.ssh/config</code> で Hostname や Port や User などを指定したかったことがあったので、設定できるようにしました。</p>
-
-<pre><code>.before_ssh: &amp;before_ssh
-  # https://docs.gitlab.com/ce/ci/ssh_keys/README.html
-  - 'which ssh-agent || ( apt-get update -y &amp;&amp; apt-get -o dir::cache::archives="/cache/apt" install -y openssh-client )'
-  - eval $(ssh-agent -s)
-  - ssh-add &lt;(echo "$SSH_PRIVATE_KEY")
-  - mkdir -p ~/.ssh
-  # Set `ssh-keyscan $DOKKU_HOST` to SSH_SERVER_HOSTKEYS
-  - '[[ -f /.dockerenv ]] &amp;&amp; echo "$SSH_SERVER_HOSTKEYS" &gt; ~/.ssh/known_hosts'
-  - '[[ -f /.dockerenv ]] &amp;&amp; echo "$SSH_CONFIG" &gt; ~/.ssh/config'
-</code></pre>
-
-<h2>GitLab の Web での環境変数設定</h2>
-
-<p>ここも前回とほぼ同じですが、 production と staging の deploy 用の API 鍵を設定しているところが違います。</p>
-
-<p>ここで <code>.gitlab-ci.yml</code> の話は中断して、 Secret variables の設定の話です。</p>
-
-<p>GitLab で該当プロジェクトを開いて、 Settings の Pipelines から Secret variables で <code>SSH_PRIVATE_KEY</code> などを設定します。</p>
-
-<p>ここでは、以下のように設定しました。</p>
-
-<ul>
-<li><code>DOKKU_HOST</code> : Dokku に ssh するときのホスト名 (<code>dokku.example.com</code> など)</li>
-<li><code>DOKKU_DOMAIN</code> : Dokku の VHOST に設定したドメイン (<code>10.1.2.3.xip.io</code> など)</li>
-<li><code>SSH_PRIVATE_KEY</code> : 秘密鍵 (<code>~/.ssh/id_gitlab</code> など) の内容</li>
-<li><code>SSH_SERVER_HOSTKEYS</code> : <code>ssh-keyscan $DOKKU_HOST</code> の出力</li>
-<li><code>SSH_CONFIG</code> : <code>~/.ssh/config</code> に設定したい内容</li>
-<li><code>HEROKU_PRODUCTION_API_KEY</code> : <a href="https://dashboard.heroku.com/account">Manage Account</a> から production 用の Heroku アカウントの API key</li>
-<li><code>HEROKU_STAGING_API_KEY</code> : <a href="https://dashboard.heroku.com/account">Manage Account</a> から staging 用の Heroku アカウントの API key</li>
-</ul>
-
-
-<p><code>SSH_PRIVATE_KEY</code> は Protected を Yes にすると review 環境への deploy に失敗するので、 No のままにする必要がありそうです。</p>
-
-<p><code>HEROKU_PRODUCTION_API_KEY</code> や <code>HEROKU_STAGING_API_KEY</code> は Protected branch などの運用次第で Protected を Yes にできそうです。</p>
-
-<h2>review 環境への deploy 用 script</h2>
-
-<p>ここも前回とほぼ同じです。</p>
-
-<p>まず Dokku でアプリとデータベースを作成して接続します。
-2度目以降は同じアプリを更新するので、作成などのエラーは無視します。</p>
-
-<p>環境変数は <code>TZ</code> と <code>RAILS_SERVE_STATIC_FILES</code> あたりがほぼ必須だと思いますが、他は staging 環境や review 環境用に独自に設定できるようにしています。
-<code>RACK_DEV_MARK_ENV</code> は rack-dev-mark gem の設定です。</p>
-
-<p><code>Procfile</code> で web だけではなく clockwork gem を使ったプロセスも動かしている関係で <code>letter_opener</code> 用のディレクトリをマウントしていますが、
-<code>/usr/bin/find '/var/lib/dokku/data/storage/letter_opener' -mtime '+2' -delete</code> のような感じで古いファイルは自動削除する予定です。
-(自動削除はまだしていません。)</p>
-
-<p>デプロイ本体部分の <code>git push</code> は、単純に <code>master</code> だとうまくいかないことがあったので、 <code>HEAD:refs/heads/master</code> という指定にしています。
-Heroku にデプロイするときも git でデプロイするなら同様になります。</p>
-
-<p><code>db:seed</code> の実行は <code>ssh</code> に <code>-tt</code> をつけて強制的に tty を確保する必要がありました。</p>
-
-<pre><code>.deploy_script: &amp;deploy_script
-  - $DOKKU apps:create $APP_NAME || echo $?
-  # require `sudo dokku plugin:install https://github.com/dokku/dokku-postgres`
-  - $DOKKU postgres:create $DB_NAME || echo $?
-  - $DOKKU postgres:link $DB_NAME $APP_NAME || echo $?
-  - $DOKKU config:set --no-restart $APP_NAME
-    TZ=Asia/Tokyo
-    RAILS_SERVE_STATIC_FILES=1
-    NO_FORCE_SSL=1
-    RACK_DEV_MARK_ENV=review
-  - git push dokku@$DOKKU_HOST:$APP_NAME HEAD:refs/heads/master
-  - $DOKKU -tt run $APP_NAME bundle exec rake db:seed
-</code></pre>
-
-<p>前回と違って <code>RAILS_ENV</code> の変更をしていなかったり、 <code>letter_opener_web</code> や <code>seed_fu</code> は使っていないという違いがあります。</p>
-
-<h2>test stage のジョブ</h2>
-
-<p>ここも前回と同じです。</p>
-
-<p>postgres を使って rake でテストを走らせます。</p>
-
-<p>データベースの設定は <code>DATABASE_URL</code> で指定しているので、 <code>config/database.yml</code> は特に何もしていません。</p>
-
-<pre><code>rake:
-  stage: test
-  services:
-    - postgres:latest
-  script:
-    - bundle exec rake db:setup RAILS_ENV=test
-    - bundle exec rake
-</code></pre>
-
-<p>rubocop なども使うなら同様に設定します。</p>
-
-<h2>production 環境への deploy</h2>
-
-<p>順番が前後しますが、最初に production 環境への deploy 設定です。</p>
-
-<p>production 環境はちゃんと名前が決まっているので <code>APP_NAME</code> を上書きします。</p>
-
-<p>Heroku への deploy には <a href="https://docs.gitlab.com/ce/ci/examples/test-and-deploy-ruby-application-to-heroku.html">Test and Deploy a ruby application</a> に書いてある dpl gem を使っています。
-git push による deploy の方が好みなら git push を使っても良いと思います。</p>
-
-<p>environment を設定することで GitLab の Web のプロジェクトの Pipelines の Environments からリンクが貼られます。</p>
-
-<p>only で tags を指定することで tag が push されたら開始するようにしています。</p>
-
-<p>only で master のみに制限しています。</p>
-
-<pre><code>production:
-  stage: production
-  variables:
-    APP_NAME: hello-app
-  script:
-  - gem install dpl
-  - dpl --provider=heroku --app=$APP_NAME --api-key=$HEROKU_PRODUCTION_API_KEY
-  environment:
-    name: production
-    url: https://$APP_NAME.herokuapp.com/
-  only:
-  - tags
-</code></pre>
-
-<h2>staging 環境への deploy</h2>
-
-<p>production 環境と同様に staging 環境への deploy 設定をしています。</p>
-
-<p><code>APP_NAME</code> や API key や URL などが違う以外は基本的に production と同じです。</p>
-
-<pre><code>staging:
-  stage: staging
-  variables:
-    APP_NAME: hello-staging-app
-  script:
-  - gem install dpl
-  - dpl --provider=heroku --app=$APP_NAME --api-key=$HEROKU_STAGING_API_KEY
-  environment:
-    name: staging
-    url: https://$APP_NAME.herokuapp.com/
-  only:
-  - master
-</code></pre>
-
-<h2>review 環境への deploy</h2>
-
-<p>review 環境への deploy は前回と同じです。</p>
-
-<p>deploy 本体の script は事前に定義した <code>deploy_script</code> を使います。
-結局ここでしか使っていないので、直接ここに書いても良かったかもしれません。</p>
-
-<p>environment は name に <code>review/</code> をつけることで複数の review 環境が同時に存在している時に折りたたまれるようになります。</p>
-
-<p>review 環境は動的に作ったり消したりするので、 https ではなく http になっています。</p>
-
-<p><code>on_stop</code> を指定することで環境の削除ジョブを指定できます。</p>
-
-<p>only と except で master 以外のブランチの時に review 環境が作成されるようにしています。</p>
-
-<pre><code>review:
-  stage: review
-  before_script: *before_ssh
-  script: *deploy_script
-  environment:
-    name: review/$CI_COMMIT_REF_NAME
-    url: http://$CI_ENVIRONMENT_SLUG.$DOKKU_DOMAIN
-    on_stop: stop_review
-  only:
-    - branches
-  except:
-    - master
-</code></pre>
-
-<h2>review 環境の削除</h2>
-
-<p>ここも前回と同じです。</p>
-
-<p><code>action: stop</code> で環境を削除するジョブとして設定しています。</p>
-
-<p><code>when: manual</code> で手動実行するように設定していますが、基本的にはマージリクエストがマージされた時に Remove source branch にチェックを入れて、自動で停止しています。</p>
-
-<p><code>GIT_STRATEGY: none</code> で git 関連の操作はせずに速やかに停止処理のみするようにしています。</p>
-
-<p>postgres は使用中だと停止できないので、先にアプリケーションを削除してからデータベースを削除しています。
-自動実行なので <code>--force</code> で確認なしに削除するようにしています。</p>
-
-<pre><code>stop_review:
-  stage: review
-  variables:
-    GIT_STRATEGY: none
-  before_script: *before_ssh
-  script:
-    - $DOKKU apps:destroy $CI_ENVIRONMENT_SLUG --force || echo $?
-    - $DOKKU postgres:destroy $CI_ENVIRONMENT_SLUG-database --force || echo $?
-  environment:
-    name: review/$CI_COMMIT_REF_NAME
-    action: stop
-  when: manual
-  only:
-    - branches
-  except:
-    - master
-</code></pre>
-
-<h2>まとめ</h2>
-
-<p>GitLab CI と Dokku と Heroku を組み合わせて CI/CD 環境を作る例を紹介しました。</p>
-
-<p>今回紹介した様に、 Heroku に似ていてもある程度違いのある Dokku で自由に review 環境を作成して、 production に近い方が良い staging 環境は Heroku を使うというのが、自前の環境のリソースには余裕がある場合には良いのではないでしょうか。</p>
-
-<p>GitLab + Dokku 関連の記事は<a href="/blog/categories/gitlab/">gitlab カテゴリー</a>で一覧が見えます。</p>
 ]]></content>
   </entry>
   
